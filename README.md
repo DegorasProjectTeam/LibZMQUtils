@@ -32,7 +32,7 @@
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
 
-* [ZeroMQ](https://ilrs.gsfc.nasa.gov/](https://zeromq.org/)
+* [ZeroMQ](https://zeromq.org/)
 * [European Union Public License](https://choosealicense.com)
 * [Shields](https://shields.io)
 * [Best-README-Template](https://github.com/othneildrew/Best-README-Template)
