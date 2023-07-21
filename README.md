@@ -13,10 +13,10 @@
     <img src="images/logo.png" alt="Logo" width="80" height="80">
   </a>
 
-  <h3 align="center">LibDPSLR - Degoras Project SLR Library</h3>
+  <h3 align="center">LibZMQUtils - ZMQ Utilitites Library</h3>
 
   <p align="center">
-    A C++ libre base library for Satellite Laser Ranging (SLR) software and hardware related developments. 
+    A C++ libre library with ZMQ related useful utilities. 
     <br />
     <br />
     Developed under the context of Degoras Project for the Spanish Navy Observatory SLR 
@@ -38,10 +38,7 @@
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
 
-TODO
-
-* [International Laser Ranging Service](https://ilrs.gsfc.nasa.gov/)
-* [Naval Observatory Vector Astrometry Software (NOVAS) Version 3.1](https://aa.usno.navy.mil/software/novas_info)
+* [ZeroMQ](https://ilrs.gsfc.nasa.gov/](https://zeromq.org/)
 * [European Union Public License](https://choosealicense.com)
 * [Shields](https://shields.io)
 * [Best-README-Template](https://github.com/othneildrew/Best-README-Template)
@@ -50,7 +47,7 @@ TODO
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[cplusplus-shield]: https://img.shields.io/badge/-C++17-black?style=for-the-badge&logo=cplusplus&colorB=555
+[cplusplus-shield]: https://img.shields.io/badge/-C++14-black?style=for-the-badge&logo=cplusplus&colorB=555
 [cplusplus-url]: https://en.cppreference.com/w/cpp/17
 [license-shield]: https://img.shields.io/badge/EUPL%201.2-green.svg?style=for-the-badge
 [license-url]: https://eupl.eu/
