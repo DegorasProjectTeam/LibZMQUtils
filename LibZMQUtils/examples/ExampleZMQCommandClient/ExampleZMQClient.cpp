@@ -11,7 +11,7 @@ void parseCommand(CommandClientBase &client, const std::string &command)
 {
     void *data_out = nullptr;
     size_t out_size_bytes = 0;
-    common::CommandReqId command_response;
+    common::CmdRequestId command_response;
     int send_result = 0;
 
     char *command_str = new char[command.size()];
@@ -21,10 +21,11 @@ void parseCommand(CommandClientBase &client, const std::string &command)
 
     if (token)
     {
-        common::CommandReqId command_id = CommandClientBase::kNoCommand;
+        common::BaseServerCommand command_id;
+
         try
         {
-            command_id = static_cast<common::CommandReqId>(std::stoi(token));
+            command_id = static_cast<common::BaseServerCommand>(std::stoi(token));
         }
         catch (...)
         {
@@ -33,12 +34,7 @@ void parseCommand(CommandClientBase &client, const std::string &command)
             return;
         }
 
-        if (command_id == -1)
-        {
-            std::cerr << "Sending the bad command 1 for testing." << std::endl;
-            send_result = client.sendBadCommand1(data_out, out_size_bytes);
-        }
-        else if (CommandClientBase::kConnectCommand == command_id )
+        if (command_id == common::BaseServerCommand::REQ_CONNECT)
         {
             std::cout << "Sending connect message" << std::endl;
 
@@ -48,28 +44,6 @@ void parseCommand(CommandClientBase &client, const std::string &command)
 
             //client.startAutoAlive();
         }
-        /*
-        else if (ZMQClient::kDisconnectCommand == command_id )
-        {
-            std::cout << "Sending disconnect message" << std::endl;
-            std::uint8_t buffer[sizeof(common::CommandId)];
-            ZMQClient::binarySerializeDeserialize(&ZMQClient::kDisconnectCommand, sizeof(ZMQClient::CommandId), buffer);
-            send_result =
-                    client.sendCommand(buffer, sizeof(ZMQClient::CommandId),
-                                       data_out, out_size_bytes);
-
-            client.stopAutoAlive();
-        }
-        else if (ZMQClient::kAliveCommand == command_id )
-        {
-            std::cout << "Sending alive message" << std::endl;
-            std::uint8_t buffer[sizeof(ZMQClient::CommandId)];
-            ZMQClient::binarySerializeDeserialize(&ZMQClient::kAliveCommand, sizeof(ZMQClient::CommandId), buffer);
-            send_result =
-                    client.sendCommand(buffer, sizeof(ZMQClient::CommandId),
-                                       data_out, out_size_bytes);
-        }
-*/
         else
         {
 
@@ -87,8 +61,8 @@ void parseCommand(CommandClientBase &client, const std::string &command)
             // Restart client if sending fails
             client.resetClient();
         }
-
-        else if (out_size_bytes >= sizeof(common::CommandReqId) + sizeof(CommandClientBase::CommandError))
+        
+        else if (out_size_bytes >= sizeof(common::CmdRequestId) + sizeof(CommandClientBase::CommandError))
         {
             CommandClientBase::CommandError error_response;
 

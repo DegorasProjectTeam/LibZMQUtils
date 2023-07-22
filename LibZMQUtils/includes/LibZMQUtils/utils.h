@@ -12,6 +12,8 @@
 #include <vector>
 #include <cstring>
 #include <chrono>
+#include <array>
+#include <utility>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
@@ -54,7 +56,7 @@ LIBZMQUTILS_EXPORT std::vector<NetworkAdapterInfo> getHostIPsWithInterfaces();
 
 LIBZMQUTILS_EXPORT std::string getHostname();
 
-LIBZMQUTILS_EXPORT int getCurrentPID();
+LIBZMQUTILS_EXPORT unsigned getCurrentPID();
 
 LIBZMQUTILS_EXPORT std::string timePointToString(const HRTimePointStd& tp,
                                                  const std::string& format = "%Y-%m-%dT%H:%M:%S",
@@ -63,6 +65,22 @@ LIBZMQUTILS_EXPORT std::string timePointToString(const HRTimePointStd& tp,
 LIBZMQUTILS_EXPORT std::string timePointToIso8601(const HRTimePointStd& tp, bool add_ms = true, bool add_ns = false);
 
 LIBZMQUTILS_EXPORT std::string currentISO8601Date(bool add_ms = true);
+
+namespace internal
+{
+template <typename T, std::size_t... Is1, std::size_t... Is2>
+constexpr std::array<T, sizeof...(Is1) + sizeof...(Is2)>
+joinArrays(const std::array<T, sizeof...(Is1)>& a1, const std::array<T, sizeof...(Is2)>& a2, std::index_sequence<Is1...>, std::index_sequence<Is2...>)
+{
+    return { a1[Is1]..., a2[Is2]... };
+}
+}
+
+template <typename T, std::size_t N1, std::size_t N2>
+constexpr std::array<T, N1 + N2> joinArraysConstexpr(const std::array<T, N1>& a1, const std::array<T, N2>& a2)
+{
+    return internal::joinArrays(a1, a2, std::make_index_sequence<N1>(), std::make_index_sequence<N2>());
+}
 
 }} // END NAMESPACES.
 // =====================================================================================================================

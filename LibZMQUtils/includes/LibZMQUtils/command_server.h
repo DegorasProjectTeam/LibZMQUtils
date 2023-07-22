@@ -62,92 +62,85 @@ namespace zmq
 namespace zmqutils{
 // =====================================================================================================================
 
-using zmqutils::common::CommandReqId;
-using zmqutils::common::CommandRepId;
+using zmqutils::common::CmdRequestId;
+using zmqutils::common::CmdReplyRes;
+using zmqutils::common::BaseServerCommand;
+using zmqutils::common::BaseServerResult;
+using zmqutils::common::BaseServerResultStr;
+using zmqutils::common::HostClientInfo;
+using zmqutils::utils::NetworkAdapterInfo;
 
 
-struct HostClient
+
+
+struct CommandRequest
 {
-    std::string client_id;                      ///< Dinamic host client identification -> [ip//name//pid]
-    std::string client_pid;                     ///< PID of the host client process.
-    std::string client_ip;                      ///< Host client ip.
-    std::string client_name;                    ///< Host client name.
-    std::string client_info;                    ///< Host client information. // TODO
-    utils::HRTimePointStd last_connection;      ///< Host client last connection time.
-};
 
-struct CommandExecReq
-{
-    CommandExecReq(CommandReqId id):
-        command_id(id),
+
+    CommandRequest():
+        command(BaseServerCommand::INVALID_COMMAND),
         params(nullptr),
-        params_size(0),
-        client_ip(""),
-        client_name(""){}
+        params_size(0)
+        {}
 
-    CommandExecReq():
-        command_id(-1),
-        params(nullptr),
-        params_size(0),
-        client_ip(""),
-        client_name(""){}
-
-    std::string client_ip;
-    std::string client_name;
-    CommandReqId command_id;
+    HostClientInfo client;
+    BaseServerCommand command;
     std::unique_ptr<std::uint8_t> params;
     size_t params_size;
 };
 
+struct CommandReply
+{
+    CommandReply():
+        params(nullptr),
+        params_size(0),
+        result(BaseServerResult::COMMAND_OK)
+    {}
 
+    std::unique_ptr<std::uint8_t> params;
+    size_t params_size;
+    BaseServerResult result;
+};
 
 class LIBZMQUTILS_EXPORT CommandServerBase
 {
 
 public:
 
-    // These command ids MUST NOT be used for custom commands. They are special and reserved.
-    static const CommandReqId kNoCommand;
-    static const CommandReqId kConnectCommand;
-    static const CommandReqId kDisconnectCommand;
-    static const CommandReqId kAliveCommand;
-
-
-    enum class CommandResult : std::uint32_t
-    {
-        COMMAND_OK,
-        INTERNAL_ZMQ_ERROR,
-        EMPTY_MSG,
-        EMPTY_CLIENT_IP,
-        EMPTY_CLIENT_NAME,
-        EMPTY_PARAMS,
-        TIMEOUT_REACHED,
-        INVALID_PARTS,
-        UNKNOWN_COMMAND,
-        INVALID_COMMAND,
-        NOT_CONNECTED,
-        ALREADY_DISCONNECTED,
-        ALREADY_CONNECTED,
-        BAD_PARAMETERS,
-        COMMAND_FAILED,
-        NOT_IMPLEMENTED
-    };
-
-    // Specific base callbacks.
-    using OnDeadClientCallback = std::function<void(const CommandExecReq&)>;    /// Base callback for dead client.
-    using OnConnectCallback = std::function<void(const CommandExecReq&)>;     /// Base callback for connection.
-    using OnDisconnectCallback = std::function<void(const CommandExecReq&)>;  /// Base callback for disconnection.
-    using OnAliveCallback = std::function<void(const CommandExecReq&)>;       /// Base callback for alive message.
-
-    using CommandCallback = std::function<CommandResult(const void*, size_t, void*&, size_t&)>;
 
 
 
-    CommandServerBase(const std::string &listen_address, unsigned port);
+
+
+
+    /**
+     * @brief Base constructor for a ZeroMQ command server.
+     *
+     * This constructor initializes a ZeroMQ based command server with the specified port for listening to
+     * incoming requests. Additionally, it allows specifying local addresses on which the server will accept
+     * connections. By default, the server will accept connections on all available local addresses.
+     *
+     * @param port The port number on which the server will listen for incoming requests.
+     *
+     * @param local_addr Optional parameter to specify the local addresses on which the server will accept
+     *                   connections. By default, it is set to "*", which means the server will accept
+     *                   connections on all available local addresses.
+     *
+     * @note The server created with this constructor will be a base server and may not have the complete
+     *       implementation of specific request-response logic. It is intended to be subclassed to provide
+     *       custom request handling. You can implement the "onRequestReceived" function as an internal callback
+     *       in the subclass to handle incoming requests and provide the desired response logic. Also you
+     *       can set external callbacks to handle each specific request. Both approach will work,
+     *
+     * @warning When specifying the `local_addr`, ensure it is a valid IP address or network interface
+     *          name present on the system. Incorrect or unavailable addresses may result in connection
+     *          failures.
+     */
+    CommandServerBase(unsigned port, const std::string &local_addr = "*");
 
     const unsigned& getServerPort() const;
 
-    const std::string& getServerAddress() const;
+    const std::vector<NetworkAdapterInfo> &getServerAddresses() const;
 
     const std::string& getServerEndpoint() const;
 
@@ -156,11 +149,6 @@ public:
     void startServer();
 
     void stopServer();
-
-    void setCommandCallback(CommandReqId, CommandCallback);
-
-    void setDeadClientCallback(OnDeadClientCallback functor);
-
 
     /**
      * @brief Virtual destructor.
@@ -171,51 +159,162 @@ public:
 protected:
 
     /**
+     * @brief Internal base stop callback.
+     * @warning This function is a base callback that does nothing by default. It is implemented to prevent
+     *          this class from being pure virtual unnecessarily. Subclasses should override this function.
+     * @warning The overrided callback must be non-blocking and have minimal computation time. Blocking or
+     *          computationally intensive operations within internal callbacks can significantly affect the
+     *          server's performance and responsiveness. If complex tasks are required, it is recommended to
+     *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
+     *          threads or asynchronous mechanisms to handle time-consuming tasks.
+     */
+    virtual void onServerStop() = 0;
+
+    /**
+     * @brief Internal base start callback.
+     * @warning This function is a base callback that does nothing by default. It is implemented to prevent
+     *          this class from being pure virtual unnecessarily. Subclasses should override this function.
+     * @warning The overrided callback must be non-blocking and have minimal computation time. Blocking or
+     *          computationally intensive operations within internal callbacks can significantly affect the
+     *          server's performance and responsiveness. If complex tasks are required, it is recommended to
+     *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
+     *          threads or asynchronous mechanisms to handle time-consuming tasks.
+     */
+    virtual void onServerStart() = 0;
+
+    /**
+     * @brief Internal waiting command callback.
+     * @warning This function is a base callback that does nothing by default. It is implemented to prevent
+     *          this class from being pure virtual unnecessarily. Subclasses should override this function.
+     * @warning The overrided callback must be non-blocking and have minimal computation time. Blocking or
+     *          computationally intensive operations within internal callbacks can significantly affect the
+     *          server's performance and responsiveness. If complex tasks are required, it is recommended to
+     *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
+     *          threads or asynchronous mechanisms to handle time-consuming tasks.
+     */
+    virtual void onWaitingCommand() = 0;
+
+    /**
      * @brief Internal base connect callback.
      * @param The CommandExecReq object representing the command execution request.
-     * @warning This base callback does nothing. It is implemented to prevent this class
-     *          from being pure virtual unnecessarily.
+     * @warning This function is a base callback that does nothing by default. It is implemented to prevent
+     *          this class from being pure virtual unnecessarily. Subclasses should override this function.
+     * @warning The overrided callback must be non-blocking and have minimal computation time. Blocking or
+     *          computationally intensive operations within internal callbacks can significantly affect the
+     *          server's performance and responsiveness. If complex tasks are required, it is recommended to
+     *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
+     *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onNewConnection(const CommandExecReq&);
+    virtual void onNewConnection(const CommandRequest&) = 0;
 
     /**
      * @brief Internal base disconnect callback.
      * @param The CommandExecReq object representing the command execution request.
-     * @warning This base callback does nothing. It is implemented to prevent this class
-     *          from being pure virtual unnecessarily.
+     * @warning This function is a base callback that does nothing by default. It is implemented to prevent
+     *          this class from being pure virtual unnecessarily. Subclasses should override this function.
+     * @warning The overrided callback must be non-blocking and have minimal computation time. Blocking or
+     *          computationally intensive operations within internal callbacks can significantly affect the
+     *          server's performance and responsiveness. If complex tasks are required, it is recommended to
+     *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
+     *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onDisconnected(const CommandExecReq&);
+    virtual void onDisconnected(const CommandRequest&) = 0;
+
+
+    virtual void onDeadClient() = 0;
+
+    virtual void onBadMessageReceived(const CommandRequest&) = 0;
 
     /**
      * @brief Internal base command received callback.
+     *
      * @param The CommandExecReq object representing the command execution request.
-     * @warning This base callback does nothing. It is implemented to prevent this class
-     *          from being pure virtual unnecessarily.
+     *
+     * @warning This internal callback must be used for log or similar purposes. For specific custom command
+     *          functionalities use the internal onCustomCommandReceived or set an external callback.
+     *
+     * @warning This function is a base callback that does nothing by default. It is implemented to prevent
+      *          this class from being pure virtual unnecessarily. Subclasses should override this function.
+     *
+     * @warning The overrided callback must be non-blocking and have minimal computation time. Blocking or
+     *          computationally intensive operations within internal callbacks can significantly affect the
+     *          server's performance and responsiveness. If complex tasks are required, it is recommended to
+     *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
+     *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onCommandReceived(const CommandExecReq&);
+    virtual void onCommandReceived(const CommandRequest&) = 0;
+
+    /**
+     * @brief Internal base custom command received callback.
+     *
+     * This function is a base callback that does nothing by default. It is implemented to prevent
+     * this class from being pure virtual unnecessarily. Subclasses should override this function.
+     *
+     * @warning All internal callbacks, including this one, must be non-blocking and have minimal
+     *          computation time. Blocking or computationally intensive operations within internal
+     *          callbacks can significantly affect the server's performance and responsiveness.
+     *          If complex tasks are required, it is recommended to perform them asynchronously
+     *          to avoid blocking the server's main thread. Consider using separate threads or
+     *          asynchronous mechanisms to handle time-consuming tasks.
+     *
+     * @note The `onWaitingCommand` function is intended to be called during the server's main loop
+     *       when there are no incoming requests to process. Subclasses may implement this function
+     *       to perform periodic checks, cleanup tasks, or other non-blocking activities while waiting
+     *       for requests.
+     *
+     * @see onRequestReceived
+     * @see onServerError
+     */
+    virtual void onCustomCommandReceived(const CommandRequest&, CommandReply&);
 
     /**
      * @brief Internal base server error callback.
-     * @param The CommandExecReq object representing the command execution request.
-     * @warning This base callback does nothing. It is implemented to prevent this class
-     *          from being pure virtual unnecessarily.
+     *
+     * @param The `zmq::error_t` object representing the error that occurred.
+     *
+     * @param Optional additional information or context related to the error.
+     *                 It is an empty string by default.
+     *
+     * @note The `zmq::error_t` class provides information about ZeroMQ errors. You can
+     *       access the error code, description, and other details using the methods
+     *       provided by `zmq::error_t`.
+     *
+     * @warning This function is a base callback that does nothing by default. It is implemented to prevent
+     *          this class from being pure virtual unnecessarily. Subclasses should override this function.
+     *
+     * @warning If this function is not overridden in subclasses, it will not handle
+     *          server errors, and errors may not be handled properly.
+     *
+     * @warning The overrided callback must be non-blocking and have minimal computation time. Blocking or
+     *          computationally intensive operations within internal callbacks can significantly affect the
+     *          server's performance and responsiveness. If complex tasks are required, it is recommended to
+     *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
+     *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onServerError(const zmq::error_t &error, const std::string& ext_info = "");
+    virtual void onServerError(const zmq::error_t &error, const std::string& ext_info = "") = 0;
+
+    virtual void onSendingResponse(const CommandReply&) = 0;
+
 
 private:
 
-    // Internal base command execution function.
-    CommandRepId execConnect(const CommandExecReq&);
-    CommandRepId execDisconnect(const CommandExecReq &cmd_req);
+    // Helper for prepare the result message.
+    static void prepareCommandResult(BaseServerResult, std::unique_ptr<uint8_t>& data_out);
 
-
-    static void prepareCommandResult(CommandRepId res, std::unique_ptr<uint8_t>& data_out);
-
-    CommandRepId executeCommand(const CommandExecReq& cmd_req, void *&data_out, size_t &out_size_bytes);
-
+    // Server worker. Will be execute asynchronously.
     void serverWorker();
-    
-    CommandResult recvFromSocket(CommandExecReq &msg);
+
+    // Process command class.
+    void processCommand(const CommandRequest&, CommandReply&);
+
+    // Internal connect execution process.
+    BaseServerResult execConnect(const CommandRequest&);
+
+    // Internal disconnect execution process.
+    BaseServerResult execDisconnect(const CommandRequest&);
+
+    // Function for receive data from the client.
+    BaseServerResult recvFromSocket(CommandRequest&);
 
     void resetSocket();
 
@@ -224,22 +323,17 @@ private:
     zmq::socket_t* main_socket_;
 
     // Endpoint data.
-    std::string server_endpoint_;   ///< Final server endpoint.
-    std::string server_address_;    ///< Server address.
-    unsigned server_port_;          ///< Server port.
+    std::string server_endpoint_;                                     ///< Final server endpoint.
+    std::vector<utils::NetworkAdapterInfo> server_listen_adapters_;   ///< Listen server adapters.
+    unsigned server_port_;                                            ///< Server port.
+
+    // Mutex.
+    std::mutex mtx_;
 
     std::future<void> server_worker_future_;
     std::atomic_bool server_working_;
     std::atomic_bool client_present_;
     std::atomic_bool disconnect_requested_;
-
-    std::map<CommandReqId, CommandCallback> commands_;
-
-    // Specific base callback containers.
-    OnDeadClientCallback dead_client_callback_;
-    OnConnectCallback connect_callback_;
-    OnDisconnectCallback disconnect_callback_;
-
 };
 
 } // END NAMESPACES.

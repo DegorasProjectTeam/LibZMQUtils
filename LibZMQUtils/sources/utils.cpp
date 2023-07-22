@@ -179,7 +179,7 @@ std::string currentISO8601Date(bool add_ms)
     return timePointToIso8601(now, add_ms);
 }
 
-int getCurrentPID()
+unsigned getCurrentPID()
 {
 #if defined(_WIN32)
     return GetCurrentProcessId();

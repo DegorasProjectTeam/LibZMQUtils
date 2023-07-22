@@ -10,6 +10,7 @@
 #include <thread>
 #include <csignal>
 #include <limits>
+
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
@@ -20,7 +21,7 @@
 
 // PROJECT INCLUDES
 // =====================================================================================================================
-#include "custom_command_server.h"
+#include "drgg_example_server.h"
 // =====================================================================================================================
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -54,6 +55,7 @@ BOOL WINAPI ConsoleCtrlHandler(DWORD dwCtrlType)
 
 
 
+
 // External connect callback.
 void connectCallback(const void *, size_t , void *&data_out, size_t &out_size)
 {
@@ -83,11 +85,18 @@ void aliveCallback(const void *, size_t , void *&data_out, size_t &out_size)
 //    data_out = data_out_bytes;
 }
 
+
+
 int main(int argc, char**argv)
 {
+
+
+
+
     // Set up the Windows Console Control Handler
     SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
 
+    // Configuration variables.
     unsigned port = 9999;
 
     if (argc == 2)
@@ -108,8 +117,14 @@ int main(int argc, char**argv)
         return 0;
     }
 
+    // Instantiate the server.
+    DRGGCustomServer server(port);
 
-    CustomCommandServer server("*", port);
+    std::cout<<DRGGServerCommandStr.size()<<std::endl;
+    std::cout<<DRGGServerCommandStr[0]<<std::endl;
+    std::cout<<DRGGServerCommandStr[4]<<std::endl;
+
+    // Add external callbacks as an examples.
     //server.setDeadClientCallback([]{std::cout << "Dead client timeout reached." <<std::endl;});
     //server.setCommandCallback(ZMQServer::kConnectCommand, connectCallback);
     //server.setCommandCallback(CommandServerBase::kDisconnectCommand, disconnectCallback);
@@ -118,18 +133,12 @@ int main(int argc, char**argv)
     // Start the server.
     server.startServer();
 
-    // Log.
-    std::cout << "Server is listening at port: " << port << std::endl;
-
-
+    // Use the condition variable as an infinite loop until ctrl-c.
     std::unique_lock<std::mutex> lock(gMtx);
     gExitCv.wait(lock, [] { return gSignInterrupt == 1; });
 
-    std::cout << "Stopping the server..." << std::endl;
-
     // Stop the server and wait the future.
     server.stopServer();
-
 
     // Final log.
     std::cout << "Server stoped. Press Enter to exit!" << std::endl;

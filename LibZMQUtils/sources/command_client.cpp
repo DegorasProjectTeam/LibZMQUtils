@@ -18,10 +18,6 @@
 namespace zmqutils{
 // =====================================================================================================================
 
-const common::CommandReqId CommandClientBase::kNoCommand = static_cast<CommandReqId>(-1);
-const common::CommandReqId CommandClientBase::kConnectCommand = static_cast<CommandReqId>(0);
-const common::CommandReqId CommandClientBase::kDisconnectCommand = static_cast<CommandReqId>(1);
-const common::CommandReqId CommandClientBase::kAliveCommand = static_cast<CommandReqId>(2);
 const int CommandClientBase::kClientAliveTimeoutMsec = 3000;
 const int CommandClientBase::kClientSendAlivePeriodMsec = 1000;
 
@@ -37,19 +33,27 @@ CommandClientBase::CommandClientBase(const std::string &server_endpoint) :
 
 bool CommandClientBase::startClient(const std::string& interface_name)
 {
-    // Get the host name.
-    this->client_host_name_ = utils::getHostname();
+    // Auxiliar variables.
+    std::string ip, name, pid;
 
+    // Get the client ip.
     std::vector<utils::NetworkAdapterInfo> interfcs = utils::getHostIPsWithInterfaces();
-
     auto it = std::find_if(interfcs.begin(), interfcs.end(), [&interface_name](const utils::NetworkAdapterInfo& info)
-        {return info.name == interface_name;});
-
+                           {return info.name == interface_name;});
     if (it == interfcs.end())
         return false;
+    ip = it->ip;
 
-    // Store the client ip.
-    this->client_host_ip_ = it->ip;
+    // Get the host name.
+    name = utils::getHostname();
+
+    // Get the current pid.
+    pid = std::to_string(utils::getCurrentPID());
+
+    // Store the info.
+    this->client_info_ = common::HostClientInfo(ip, name, pid);
+
+    std::cout<<client_info_.id<<std::endl;
 
     // If server is already started, do nothing
     if (this->socket_)
@@ -156,20 +160,24 @@ int CommandClientBase::sendCommand(const CommandData& msg, void* &data_out, size
     try
     {
         // Prepare the ip data.
-        zmq::message_t message_ip(this->client_host_ip_.size());
-        std::memcpy(message_ip.data(), this->client_host_ip_.c_str(), this->client_host_ip_.size());
-        // Prepare the host data.
-        zmq::message_t message_host(this->client_host_name_.size());
-        std::memcpy(message_host.data(), this->client_host_name_.c_str(), this->client_host_name_.size());
+        zmq::message_t message_ip(this->client_info_.ip.size());
+        std::memcpy(message_ip.data(), this->client_info_.ip.c_str(), this->client_info_.ip.size());
+        // Prepare the hostname data.
+        zmq::message_t message_host(this->client_info_.hostname.size());
+        std::memcpy(message_host.data(), this->client_info_.hostname.c_str(), this->client_info_.hostname.size());
+        // Prepare the pid data.
+        zmq::message_t message_pid(this->client_info_.pid.size());
+        std::memcpy(message_pid.data(), this->client_info_.pid.c_str(), this->client_info_.pid.size());
         // Prepare the command data.
-        std::uint8_t command_buffer[sizeof(common::CommandReqId)];
-        CommandClientBase::binarySerializeDeserialize(&msg.command_id, sizeof(common::CommandReqId), command_buffer);
-        zmq::message_t message_command(&command_buffer, sizeof(common::CommandReqId));
+        std::uint8_t command_buffer[sizeof(common::CmdRequestId)];
+        CommandClientBase::binarySerializeDeserialize(&msg.command_id, sizeof(common::CmdRequestId), command_buffer);
+        zmq::message_t message_command(&command_buffer, sizeof(common::CmdRequestId));
 
         // Prepare the multipart msg.
         zmq::multipart_t multipart_msg;
         multipart_msg.add(std::move(message_ip));
         multipart_msg.add(std::move(message_host));
+        multipart_msg.add(std::move(message_pid));
         multipart_msg.add(std::move(message_command));
 
         // Send the multiple messages.
@@ -196,39 +204,6 @@ int CommandClientBase::sendCommand(const CommandData& msg, void* &data_out, size
 
 int CommandClientBase::sendBadCommand1(void* &data_out, size_t &out_bytes)
 {
-    if (!this->socket_)
-        return -1;
-    try
-    {
-        // Prepare the ip data.
-        zmq::message_t message_ip(this->client_host_ip_.size());
-        std::memcpy(message_ip.data(), this->client_host_ip_.c_str(), this->client_host_ip_.size());
-        // Prepare the host data.
-        zmq::message_t message_host(this->client_host_name_.size());
-        std::memcpy(message_host.data(), this->client_host_name_.c_str(), this->client_host_name_.size());
-
-        // Prepare the multipart msg.
-        zmq::multipart_t multipart_msg;
-        multipart_msg.add(std::move(message_ip));
-        multipart_msg.add(std::move(message_host));
-
-        // Send the multiple messages.
-        multipart_msg.send(*this->socket_);
-
-    }  catch (const zmq::error_t &error)
-    {
-        // TODO: handle error
-        return error.num();
-    }
-
-    std::cout<<"Waiting response"<<std::endl;
-
-    int res = this->recvFromSocket(this->socket_, data_out, out_bytes);
-
-    if (this->auto_alive_working_)
-        this->auto_alive_cv_.notify_one();
-
-    return res;
 
 }
 
@@ -288,14 +263,16 @@ void CommandClientBase::sendAliveCallback()
     bool recv_success = true;
     void *data_out;
     size_t out_size;
-    std::uint8_t buffer[sizeof(common::CommandReqId)];
-    CommandClientBase::binarySerializeDeserialize(&CommandClientBase::kAliveCommand, sizeof(common::CommandReqId), buffer);
+    common::CmdRequestId request_id = static_cast<common::CmdRequestId>(BaseServerCommand::REQ_ALIVE);
+    std::uint8_t buffer[sizeof(common::CmdRequestId)];
+    CommandClientBase::binarySerializeDeserialize(&request_id, sizeof(common::CmdRequestId), buffer);
     zmq::socket_t *alive_socket = new zmq::socket_t(*this->context_, zmq::socket_type::req);
     alive_socket->connect(this->server_endpoint_);
     // Set timeout so socket will not wait for answer more than client alive timeout.
     alive_socket->set(zmq::sockopt::rcvtimeo, CommandClientBase::kClientAliveTimeoutMsec);
     alive_socket->set(zmq::sockopt::linger, 0);
 
+    /*
     while(this->auto_alive_working_)
     {
         auto res =
@@ -305,7 +282,7 @@ void CommandClientBase::sendAliveCallback()
         {
             try
             {
-                alive_socket->send(zmq::buffer(buffer, sizeof(common::CommandReqId)));
+                alive_socket->send(zmq::buffer(buffer, sizeof(common::CmdRequestId)));
             }  catch (const zmq::error_t &error)
             {
                 // TODO: handle error
@@ -318,14 +295,14 @@ void CommandClientBase::sendAliveCallback()
                 auto recv_result = this->recvFromSocket(alive_socket, data_out, out_size);
                 auto *data_bytes = static_cast<std::uint8_t*>(data_out);
 
-                if (0 == recv_result && out_size >= sizeof(common::CommandReqId) + sizeof(CommandClientBase::CommandError))
+                if (0 == recv_result && out_size >= sizeof(common::CmdRequestId) + sizeof(CommandClientBase::CommandError))
                 {
-                    common::CommandReqId id;
+                    common::CmdRequestId id;
                     CommandClientBase::CommandError error;
 
 
-                    CommandClientBase::binarySerializeDeserialize(data_bytes, sizeof(common::CommandReqId), &id);
-                    CommandClientBase::binarySerializeDeserialize(data_bytes + sizeof(common::CommandReqId),
+                    CommandClientBase::binarySerializeDeserialize(data_bytes, sizeof(common::CmdRequestId), &id);
+                    CommandClientBase::binarySerializeDeserialize(data_bytes + sizeof(common::CmdRequestId),
                                                                   sizeof(CommandClientBase::CommandError), &error);
 
                     recv_success = id == CommandClientBase::kAliveCommand && error == CommandClientBase::CommandError::NOT_ERROR;
@@ -351,7 +328,8 @@ void CommandClientBase::sendAliveCallback()
 
         }
 
-    }
+
+    }*/
 
     delete alive_socket;
 }

@@ -2,7 +2,7 @@
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -std=c++14 -pthread")
 
-set(APP_NAME "ExampleZMQClient")
+set(APP_NAME "ExampleZMQCommanClient")
 set(SOURCES "ExampleZMQClient.cpp")
 set(LIBRARIES LibZMQUtils)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/Examples/${APP_NAME})

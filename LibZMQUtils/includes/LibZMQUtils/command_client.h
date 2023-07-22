@@ -1,3 +1,34 @@
+/***********************************************************************************************************************
+ *   LibZMQUtils (ZMQ Utilitites Library): A libre library with ZMQ related useful utilities.                          *
+ *                                                                                                                     *
+ *   Copyright (C) 2023 Degoras Project Team                                                                           *
+ *                      < Ángel Vera Herrera, avera@roa.es - angeldelaveracruz@gmail.com >                             *
+ *                      < Jesús Relinque Madroñal >                                                                    *
+ *                                                                                                                     *
+ *   This file is part of LibZMQUtils.                                                                                 *
+ *                                                                                                                     *
+ *   Licensed under the European Union Public License (EUPL), Version 1.2 or subsequent versions of the EUPL license   *
+ *   as soon they will be approved by the European Commission (IDABC).                                                 *
+ *                                                                                                                     *
+ *   This project is free software: you can redistribute it and/or modify it under the terms of the EUPL license as    *
+ *   published by the IDABC, either Version 1.2 or, at your option, any later version.                                 *
+ *                                                                                                                     *
+ *   This project is distributed in the hope that it will be useful. Unless required by applicable law or agreed to in *
+ *   writing, it is distributed on an "AS IS" basis, WITHOUT ANY WARRANTY OR CONDITIONS OF ANY KIND; without even the  *
+ *   implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the EUPL license to check specific   *
+ *   language governing permissions and limitations and more details.                                                  *
+ *                                                                                                                     *
+ *   You should use this project in compliance with the EUPL license. You should have received a copy of the license   *
+ *   along with this project. If not, see the license at < https://eupl.eu/ >.                                         *
+ **********************************************************************************************************************/
+
+/** ********************************************************************************************************************
+ * @file command_client.h
+ * @brief This file contains the declaration of the CommandClientBase class and related.
+ * @author Degoras Project Team
+ * @copyright EUPL License
+ * @version 2307.1
+***********************************************************************************************************************/
 
 // =====================================================================================================================
 #pragma once
@@ -15,27 +46,31 @@
 #include "LibZMQUtils/common.h"
 // =====================================================================================================================
 
-using zmqutils::common::CommandReqId;
-
+// ZMQ DECLARATIONS
+// =====================================================================================================================
 namespace zmq
 {
     class context_t;
     class socket_t;
 }
+// =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
 // =====================================================================================================================
 
+using common::CmdRequestId;
+using common::BaseServerCommand;
+
 struct LIBZMQUTILS_EXPORT CommandData
 {
-    CommandData(CommandReqId id) :
+    CommandData(BaseServerCommand id) :
         command_id(id),
         params(nullptr),
         params_size(0){}
 
-    CommandReqId command_id;
+    BaseServerCommand command_id;
     void* params;
     size_t params_size;
 };
@@ -45,10 +80,6 @@ class LIBZMQUTILS_EXPORT CommandClientBase
 
 public:
 
-    static const CommandReqId kNoCommand;
-    static const CommandReqId kConnectCommand;
-    static const CommandReqId kDisconnectCommand;
-    static const CommandReqId kAliveCommand;
 
     // TODO: maybe this should be configurable
     static const int kClientAliveTimeoutMsec;
@@ -93,18 +124,17 @@ private:
     void sendAliveCallback();
 
     // Internal client identification.
-    std::string client_host_ip_;
-    std::string client_host_name_;
-    std::string client_host_id_;
+    common::HostClientInfo client_info_;
 
     // Server endpoint.
     std::string server_endpoint_;
-
 
     // ZMQ context and socket.
     zmq::context_t *context_;
     zmq::socket_t *socket_;
 
+    // Mutex.
+    std::mutex mtx_;
 
     std::future<void> auto_alive_future_;
     std::condition_variable auto_alive_cv_;
