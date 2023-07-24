@@ -3,6 +3,7 @@
 ../build_release/
 build_debug/
 build_release/
+
 CMakeLists.txt.user
 
 # Prerequisites
