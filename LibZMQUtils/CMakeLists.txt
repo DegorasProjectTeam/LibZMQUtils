@@ -1,6 +1,7 @@
 # Cmake minimum.
 cmake_minimum_required(VERSION 2.9)
 
+# Check version.
 if (NOT ${CMAKE_VERSION} VERSION_LESS "3.1.0")
     CMAKE_POLICY(SET CMP0054 NEW)
 endif()
