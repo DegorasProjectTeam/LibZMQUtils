@@ -1,7 +1,10 @@
+# Folders
 ../build_debug/
 ../build_release/
 build_debug/
 build_release/
+
+# Cmakelist
 CMakeLists.txt.user
 
 # Prerequisites
