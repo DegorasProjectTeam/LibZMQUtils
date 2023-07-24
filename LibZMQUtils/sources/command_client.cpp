@@ -51,7 +51,7 @@ bool CommandClientBase::startClient(const std::string& interface_name)
     pid = std::to_string(utils::getCurrentPID());
 
     // Store the info.
-    this->client_info_ = common::HostClientInfo(ip, name, pid);
+    this->client_info_ = common::HostClient(ip, name, pid);
 
     std::cout<<client_info_.id<<std::endl;
 

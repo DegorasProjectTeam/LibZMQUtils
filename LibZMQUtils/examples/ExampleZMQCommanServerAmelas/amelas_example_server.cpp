@@ -131,33 +131,42 @@ void AmelasExampleServer::onWaitingCommand()
     std::cout << std::string(80, '-') << std::endl;
 }
 
-void AmelasExampleServer::onDeadClient()
+void AmelasExampleServer::onDeadClient(const HostClient& client)
 {
     std::cout << std::string(80, '-') << std::endl;
     std::cout<<"ON DEAD CLIENT: "<<std::endl;
-    std::cout<<"Client dead: TODO"<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
+    std::cout<<"Current Clients: "<<this->getConnectedClients().size()<<std::endl;
+    std::cout<<"Client Id: "<<client.id<<std::endl;
+    std::cout<<"Client Ip: "<<client.ip<<std::endl;
+    std::cout<<"Client Host: "<<client.hostname<<std::endl;
+    std::cout<<"Client Process: "<<client.pid<<std::endl;
     std::cout << std::string(80, '-') << std::endl;
 }
 
-void AmelasExampleServer::onNewConnection(const CommandRequest &cmd_req)
+void AmelasExampleServer::onConnected(const HostClient& client)
 {
     std::cout << std::string(80, '-') << std::endl;
     std::cout<<"ON CONNECTED: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
-    std::cout<<"Client Id: "<<cmd_req.client.id<<std::endl;
-    std::cout<<"Client Ip: "<<cmd_req.client.ip<<std::endl;
-    std::cout<<"Client Host: "<<cmd_req.client.hostname<<std::endl;
-    std::cout<<"Client Process: "<<cmd_req.client.pid<<std::endl;
+    std::cout<<"Current Clients: "<<this->getConnectedClients().size()<<std::endl;
+    std::cout<<"Client Id: "<<client.id<<std::endl;
+    std::cout<<"Client Ip: "<<client.ip<<std::endl;
+    std::cout<<"Client Host: "<<client.hostname<<std::endl;
+    std::cout<<"Client Process: "<<client.pid<<std::endl;
     std::cout << std::string(80, '-') << std::endl;
 }
 
-void AmelasExampleServer::onDisconnected(const CommandRequest &cmd_req)
+void AmelasExampleServer::onDisconnected(const HostClient& client)
 {
     std::cout << std::string(80, '-') << std::endl;
     std::cout<<"ON DISCONNECTED: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
-    std::cout<<"Client Id: "<<cmd_req.client.id<<std::endl;
+    std::cout<<"Current Clients: "<<this->getConnectedClients().size()<<std::endl;
+    std::cout<<"Client Id: "<<client.id<<std::endl;
+    std::cout<<"Client Ip: "<<client.ip<<std::endl;
+    std::cout<<"Client Host: "<<client.hostname<<std::endl;
+    std::cout<<"Client Process: "<<client.pid<<std::endl;
     std::cout << std::string(80, '-') << std::endl;
 }
 

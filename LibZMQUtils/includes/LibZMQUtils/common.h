@@ -1,3 +1,34 @@
+/***********************************************************************************************************************
+ *   LibZMQUtils (ZMQ Utilitites Library): A libre library with ZMQ related useful utilities.                          *
+ *                                                                                                                     *
+ *   Copyright (C) 2023 Degoras Project Team                                                                           *
+ *                      < Ángel Vera Herrera, avera@roa.es - angeldelaveracruz@gmail.com >                             *
+ *                      < Jesús Relinque Madroñal >                                                                    *
+ *                                                                                                                     *
+ *   This file is part of LibZMQUtils.                                                                                 *
+ *                                                                                                                     *
+ *   Licensed under the European Union Public License (EUPL), Version 1.2 or subsequent versions of the EUPL license   *
+ *   as soon they will be approved by the European Commission (IDABC).                                                 *
+ *                                                                                                                     *
+ *   This project is free software: you can redistribute it and/or modify it under the terms of the EUPL license as    *
+ *   published by the IDABC, either Version 1.2 or, at your option, any later version.                                 *
+ *                                                                                                                     *
+ *   This project is distributed in the hope that it will be useful. Unless required by applicable law or agreed to in *
+ *   writing, it is distributed on an "AS IS" basis, WITHOUT ANY WARRANTY OR CONDITIONS OF ANY KIND; without even the  *
+ *   implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the EUPL license to check specific   *
+ *   language governing permissions and limitations and more details.                                                  *
+ *                                                                                                                     *
+ *   You should use this project in compliance with the EUPL license. You should have received a copy of the license   *
+ *   along with this project. If not, see the license at < https://eupl.eu/ >.                                         *
+ **********************************************************************************************************************/
+
+/** ********************************************************************************************************************
+ * @file common.h
+ * @brief This file contains common elements for the whole library.
+ * @author Degoras Project Team
+ * @copyright EUPL License
+ * @version 2307.1
+***********************************************************************************************************************/
 
 // =====================================================================================================================
 #pragma once
@@ -30,7 +61,9 @@ namespace common{
 // CONSTANTS
 // =====================================================================================================================
 constexpr int kClientAliveTimeoutMsec = 5000;   ///< Default timeout for consider a client dead.
+constexpr int kServerRecvTimeout = 10;          ///< Timeout for check the clients status in the first connection.
 constexpr unsigned kReconnectTimes = 10;        ///< Reconnect default number of attempts.
+constexpr int kZmqEFSMError = 156384765;        ///< ZMQ EFSM error.
 // =====================================================================================================================
 
 // CONVENIENT ALIAS, ENUMERATIONS AND CONSTEXPR
@@ -79,7 +112,7 @@ enum class BaseServerResult : CommandType
     INVALID_PARTS          = 8, ///< The command has invalid parts.
     UNKNOWN_COMMAND        = 9, ///< The command is not recognized.
     INVALID_MSG            = 10, ///< The command is invalid.
-    NOT_CONNECTED          = 11, ///< Not connected to the target.
+    CLIENT_NOT_CONNECTED          = 11, ///< Not connected to the target.
     ALREADY_CONNECTED      = 12, ///< Already connected to the target.
     BAD_PARAMETERS         = 13, ///< The provided parameters are invalid.
     COMMAND_FAILED         = 14, ///< The command execution failed.
@@ -89,7 +122,7 @@ enum class BaseServerResult : CommandType
 
 // Usefull const expressions.
 constexpr int kMinBaseCmdId = static_cast<int>(BaseServerCommand::INVALID_COMMAND) + 1;
-constexpr int kMaxBaseCmdId = static_cast<int>(BaseServerCommand::RESERVED_COMMANDS) - 1;
+constexpr int kMaxBaseCmdId = static_cast<int>(BaseServerCommand::END_BASE_COMMANDS) - 1;
 
 static constexpr std::array<const char*, 11>  BaseServerCommandStr
 {
@@ -136,28 +169,28 @@ static constexpr std::array<const char*, 21>  BaseServerResultStr
 // COMMON STRUCTS
 // =====================================================================================================================
 
-struct LIBZMQUTILS_EXPORT HostClientInfo
+struct LIBZMQUTILS_EXPORT HostClient
 {
-    HostClientInfo() = default;
+    HostClient() = default;
 
-    HostClientInfo(const HostClientInfo&) = default;
+    HostClient(const HostClient&) = default;
 
-    HostClientInfo(HostClientInfo&&) = default;
+    HostClient(HostClient&&) = default;
 
-    HostClientInfo& operator=(const HostClientInfo&) = default;
+    HostClient& operator=(const HostClient&) = default;
 
-    HostClientInfo& operator=(HostClientInfo&&) = default;
+    HostClient& operator=(HostClient&&) = default;
 
-    HostClientInfo(const std::string& ip, const std::string& name,
+    HostClient(const std::string& ip, const std::string& name,
                    const std::string& pid, const std::string& info = "");
 
     // Struct members.
     std::string id;                          ///< Dinamic host client identification -> [ip//name//pid]
     std::string ip;                          ///< Host client ip.
-    std::string hostname;                        ///< Host client name.
+    std::string hostname;                    ///< Host client name.
     std::string pid;                         ///< PID of the host client process.
-    std::string info;                        ///< Host client information. // TODO
-    utils::HRTimePointStd last_connection;   ///< Host client last connection time.
+    std::string info;                        ///< Host client information.
+    utils::SCTimePointStd last_connection;   ///< Host client last connection time.
 };
 
 struct CommandRequest
@@ -168,7 +201,7 @@ struct CommandRequest
         params_size(0)
     {}
 
-    HostClientInfo client;
+    HostClient client;
     BaseServerCommand command;
     std::unique_ptr<std::uint8_t> params;
     zmq::multipart_t raw_msg;
@@ -188,6 +221,10 @@ struct CommandReply
     BaseServerResult result;
 };
 
+// =====================================================================================================================
+
+// CONVENIENT ALIAS
+// =====================================================================================================================
 // =====================================================================================================================
 
 }} // END NAMESPACES.

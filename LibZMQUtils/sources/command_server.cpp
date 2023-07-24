@@ -26,7 +26,6 @@ CommandServerBase::CommandServerBase(unsigned int port, const std::string& local
     server_endpoint_("tcp://" + local_addr + ":" + std::to_string(port)),
     server_port_(port),
     server_working_(false),
-    client_present_(false),
     disconnect_requested_(false)
 {
     // Get the adapters.
@@ -45,6 +44,9 @@ CommandServerBase::CommandServerBase(unsigned int port, const std::string& local
 }
 
 const std::future<void> &CommandServerBase::getServerWorkerFuture() const {return this->server_worker_future_;}
+
+const std::map<std::string, HostClient> &CommandServerBase::getConnectedClients() const
+{return this->connected_clients_;}
 
 const unsigned& CommandServerBase::getServerPort() const {return this->server_port_;}
 
@@ -88,6 +90,9 @@ void CommandServerBase::stopServer()
         delete this->context_;
         context_ = nullptr;
     }
+
+    // Clean the clients.
+    this->connected_clients_.clear();
 }
 
 CommandServerBase::~CommandServerBase()
@@ -99,39 +104,43 @@ CommandServerBase::~CommandServerBase()
 
 BaseServerResult CommandServerBase::execReqConnect(const CommandRequest& cmd_req)
 {
-    // If client is already connected and connect is issued again, report and do nothing
-    if (this->client_present_)
-    {
+    // Safe mutex lock.
+    std::unique_lock<std::mutex> lock(this->mtx_);
+
+    // Check if the client is already connected.
+    auto it = this->connected_clients_.find(cmd_req.client.id);
+    if(it != this->connected_clients_.end())
         return BaseServerResult::ALREADY_CONNECTED;
-    }
-    else
-    {
-        // Safe mutex lock
-        std::unique_lock<std::mutex> lock(this->mtx_);
 
-        // TODO multiclient.
+    // Add the new client.
+    this->connected_clients_[cmd_req.client.id] = cmd_req.client;
 
-        // Configuration for client present. The socket now has a tiemout to detect dead client.
-        this->client_present_ = true;
-        this->main_socket_->set(zmq::sockopt::rcvtimeo, common::kClientAliveTimeoutMsec);
+    // Update the timeout of the main socket.
+    this->updateServerTimeout();
 
-        // Call to the internal callback.
-        this->onNewConnection(cmd_req);
+    // Call to the internal callback.
+    this->onConnected(cmd_req.client);
 
-        // All ok.
-        return BaseServerResult::COMMAND_OK;
-    }
+    // All ok.
+    return BaseServerResult::COMMAND_OK;
 }
 
 BaseServerResult CommandServerBase::execReqDisconnect(const CommandRequest& cmd_req)
 {
-    // TODO Multiclient
+    // Safe mutex lock.
+    std::unique_lock<std::mutex> lock(this->mtx_);
+
+    // Get the client.
+    auto it = this->connected_clients_.find(cmd_req.client.id);
+
+    // Remove the client from the map of connected clients.
+    this->connected_clients_.erase(it);
 
     // Call to the internal callback.
-    this->onDisconnected(cmd_req);
+    this->onDisconnected(cmd_req.client);
 
-    // Request disconnection after sending the response
-    this->disconnect_requested_ = true;
+    // Update the timeout of the main socket.
+    this->updateServerTimeout();
 
     // All ok.
     return BaseServerResult::COMMAND_OK;
@@ -163,6 +172,9 @@ void CommandServerBase::serverWorker()
         // Receive the data.
         result = this->recvFromSocket(cmd_request);
 
+        // Check all the clients status.
+        this->checkClientsAliveStatus();
+
         // Process the data.
         if(result == BaseServerResult::COMMAND_OK && !this->server_working_)
         {
@@ -171,16 +183,7 @@ void CommandServerBase::serverWorker()
         }
         else if(result == BaseServerResult::TIMEOUT_REACHED)
         {
-            // TODO improve with multiconnection.
-
-            // Execute internal callback.
-            this->onDeadClient();
-
-            // TODO multiclient.
-            this->client_present_ = false;
-
-            // Disable the timeout.
-            this->main_socket_->set(zmq::sockopt::rcvtimeo, -1);
+            // DO NOTHING.
         }
         else if (result != BaseServerResult::COMMAND_OK)
         {
@@ -205,7 +208,7 @@ void CommandServerBase::serverWorker()
             {
                 // Check if we want to close the server.
                 // The error code is for ZMQ EFSM error.
-                if(!(error.num() == 156384765 && !this->server_working_))
+                if(!(error.num() == common::kZmqEFSMError && !this->server_working_))
                     this->onServerError(error, "Error while sending a response.");
             }
         }
@@ -245,7 +248,7 @@ void CommandServerBase::serverWorker()
             {
                 // Check if we want to close the server.
                 // The error code is for ZMQ EFSM error.
-                if(!(error.num() == 156384765 && !this->server_working_))
+                if(!(error.num() == common::kZmqEFSMError && !this->server_working_))
                     this->onServerError(error, "Error while sending a response.");
             }
 
@@ -255,6 +258,7 @@ void CommandServerBase::serverWorker()
         }
     }
 
+    // Delete pointers for clean finish the worker.
     if (this->main_socket_)
     {
         delete this->main_socket_;
@@ -287,7 +291,7 @@ BaseServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
     {
         // Check if we want to close the server.
         // The error code is for ZMQ EFSM error.
-        if(error.num() == 156384765 && !this->server_working_)
+        if(error.num() == common::kZmqEFSMError && !this->server_working_)
             return BaseServerResult::COMMAND_OK;
 
         // Else, call to error callback.
@@ -340,8 +344,11 @@ BaseServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
             return BaseServerResult::EMPTY_CLIENT_PID;
 
         // Update the client info.
-        request.client = HostClientInfo(ip, hostname, pid);
-        request.client.last_connection = std::chrono::high_resolution_clock::now();
+        request.client = HostClient(ip, hostname, pid);
+        request.client.last_connection = std::chrono::steady_clock::now();
+
+        // Update the last connection if the client is connected.
+        this->updateClientLastConnection(request.client.id);
 
         // Get the command.
         if (command_size_bytes == sizeof(CmdRequestId))
@@ -353,7 +360,6 @@ BaseServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
                 request.command = static_cast<BaseServerCommand>(raw_command);
             else
             {
-                std::cout<<"NOT VALID CMD"<<std::endl;
                 request.command = BaseServerCommand::INVALID_COMMAND;
                 return BaseServerResult::INVALID_MSG;
             }
@@ -364,6 +370,7 @@ BaseServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
             return BaseServerResult::INVALID_MSG;
         }
 
+        // Check if the command has parameters.
         if (multipart_msg.size() == 5)
         {
             zmq::message_t message_params = multipart_msg.pop();
@@ -383,6 +390,7 @@ BaseServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
     else
         return BaseServerResult::INVALID_PARTS;
 
+    // Return the result.
     return result;
 }
 
@@ -421,9 +429,9 @@ void CommandServerBase::processCommand(const CommandRequest& request, CommandRep
     {
         reply.result = this->execReqConnect(request);
     }
-    else if(!this->client_present_)
+    else if(this->connected_clients_.find(request.client.id) == this->connected_clients_.end())
     {
-        reply.result = BaseServerResult::NOT_CONNECTED;
+        reply.result = BaseServerResult::CLIENT_NOT_CONNECTED;
     }
     else if (BaseServerCommand::REQ_DISCONNECT == request.command)
     {
@@ -444,6 +452,93 @@ void CommandServerBase::processCommand(const CommandRequest& request, CommandRep
     }
 }
 
+void CommandServerBase::checkClientsAliveStatus()
+{
+    // Safe mutex lock
+    std::unique_lock<std::mutex> lock(this->mtx_);
+
+    // Auxiliar containers.
+    std::vector<std::string> dead_clients;
+    std::chrono::milliseconds timeout(common::kClientAliveTimeoutMsec);
+    std::chrono::milliseconds min_remaining_time = timeout;
+
+    // Get the current time.
+    utils::SCTimePointStd now = std::chrono::steady_clock::now();
+
+    // Check each connection.
+    for(auto& client : this->connected_clients_)
+    {
+        // Get the last connection time.
+        const auto& last_conn = client.second.last_connection;
+        // Check if the client reaches the timeout checking the last connection time.
+        auto since_last_conn = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_conn);
+        if(since_last_conn >= timeout)
+        {
+            // If dead, call the onDead callback and quit the client from the map.
+            this->onDeadClient(client.second);
+            dead_clients.push_back(client.first);
+        }
+        else
+        {
+            // If the client is not dead, check the minor timeout of the client to set
+            // with the remain time to reach the timeout.
+            min_remaining_time = std::min(min_remaining_time, timeout - since_last_conn);
+        }
+    }
+
+    // Remove dead clients from the map.
+    for(auto& client : dead_clients)
+    {
+        this->connected_clients_.erase(client);
+    }
+
+    // Disable the timeout if no clients remains or set the socket timeout to the
+    // minimum remaining time to the timeout among all clients.
+    if(this->connected_clients_.empty())
+    {
+        this->main_socket_->set(zmq::sockopt::rcvtimeo, -1);
+    }
+    else
+    {
+        this->main_socket_->set(zmq::sockopt::rcvtimeo, static_cast<int>(min_remaining_time.count()));
+    }
+}
+
+void CommandServerBase::updateClientLastConnection(const std::string &id)
+{
+    // Safe mutex lock.
+    std::unique_lock<std::mutex> lock(this->mtx_);
+    // Update the client last connection.
+    auto client_itr = this->connected_clients_.find(id);
+    if(client_itr != this->connected_clients_.end())
+        client_itr->second.last_connection = std::chrono::steady_clock::now();
+}
+
+void CommandServerBase::updateServerTimeout()
+{
+    // Calculate the minor timeout to set it into the socket.
+    auto min_timeout = std::min_element(this->connected_clients_.begin(), this->connected_clients_.end(),
+        [](const auto& a, const auto& b)
+        {
+        auto diff_a = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - a.second.last_connection);
+        auto diff_b = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - b.second.last_connection);
+        return diff_a.count() < diff_b.count();
+        });
+
+    if (min_timeout != this->connected_clients_.end())
+    {
+        auto remain_time = common::kClientAliveTimeoutMsec - std::chrono::duration_cast<std::chrono::milliseconds>(
+                                   std::chrono::steady_clock::now() - min_timeout->second.last_connection).count();
+        this->main_socket_->set(zmq::sockopt::rcvtimeo, std::max(0, static_cast<int>(remain_time)));
+    }
+    else
+    {
+        this->main_socket_->set(zmq::sockopt::rcvtimeo, -1);
+    }
+}
+
 void CommandServerBase::resetSocket()
 {
     // Auxiliar variables.
@@ -457,7 +552,7 @@ void CommandServerBase::resetSocket()
         delete this->main_socket_;
         this->main_socket_ = nullptr;
     }
-       // Try creating a new socket.
+    // Try creating a new socket.
     do
     {
         try
@@ -491,26 +586,13 @@ void CommandServerBase::resetSocket()
     }
 }
 
-void CommandServerBase::onNewConnection(const CommandRequest&){}
-
-void CommandServerBase::onDisconnected(const CommandRequest&){}
-
-void CommandServerBase::onDeadClient(){}
-
-void CommandServerBase::onCommandReceived(const CommandRequest&){}
-
 void CommandServerBase::onCustomCommandReceived(const CommandRequest&, CommandReply& rep)
 {
     rep.result = BaseServerResult::NOT_IMPLEMENTED;
 }
 
-void CommandServerBase::onServerError(const zmq::error_t &error, const std::string&){}
 
-void CommandServerBase::onServerStop(){}
 
-void CommandServerBase::onServerStart(){}
-
-void CommandServerBase::onWaitingCommand(){}
 
 } // END NAMESPACES.
 // =====================================================================================================================

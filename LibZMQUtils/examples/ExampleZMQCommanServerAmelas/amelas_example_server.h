@@ -61,13 +61,13 @@ private:
     virtual void onWaitingCommand() final;
 
     // Internal dead client callback.
-    virtual void onDeadClient() final;
+    virtual void onDeadClient(const HostClient&) final;
 
     // Internal overrided connect callback.
-    virtual void onNewConnection(const CommandRequest&) final;
+    virtual void onConnected(const HostClient&) final;
 
     // Internal overrided disconnect callback.
-    virtual void onDisconnected(const CommandRequest&) final;
+    virtual void onDisconnected(const HostClient&) final;
 
     // Internal overrided command received callback.
     virtual void onCommandReceived(const CommandRequest&) final;

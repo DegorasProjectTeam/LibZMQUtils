@@ -60,8 +60,10 @@ namespace zmq
 namespace zmqutils{
 // =====================================================================================================================
 
+// =====================================================================================================================
 using common::CmdRequestId;
 using common::BaseServerCommand;
+// =====================================================================================================================
 
 struct LIBZMQUTILS_EXPORT CommandData
 {
@@ -124,7 +126,7 @@ private:
     void sendAliveCallback();
 
     // Internal client identification.
-    common::HostClientInfo client_info_;
+    common::HostClient client_info_;
 
     // Server endpoint.
     std::string server_endpoint_;
