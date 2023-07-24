@@ -21,9 +21,9 @@
     <a href="https://github.com/othneildrew/Best-README-Template"><strong>Explore the docs »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/othneildrew/Best-README-Template">View Demo</a>
+    <a href="https://github.com/DegorasProjectTeam/LibZMQUtils/tree/master/LibZMQUtils/examples">View Examples</a>
     ·
-    <a href="https://github.com/othneildrew/Best-README-Template/issues">Report Bug</a>
+    <a href="https://github.com/DegorasProjectTeam/LibZMQUtils/issues">Report Bug</a>
     ·
     <a href="https://github.com/othneildrew/Best-README-Template/issues">Request Feature</a>
   </p>
@@ -41,7 +41,7 @@
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[cplusplus-shield]: https://img.shields.io/badge/-C++14-black?style=for-the-badge&logo=cplusplus&colorB=555
+[cplusplus-shield]: https://img.shields.io/badge/-C++17-black?style=for-the-badge&logo=cplusplus&colorB=555
 [cplusplus-url]: https://en.cppreference.com/w/cpp/17
 [license-shield]: https://img.shields.io/badge/EUPL%201.2-green.svg?style=for-the-badge
 [license-url]: https://eupl.eu/
