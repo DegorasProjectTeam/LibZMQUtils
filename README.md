@@ -33,6 +33,7 @@
 ## Acknowledgments
 
 * [ZeroMQ](https://zeromq.org/)
+* [ZMQ C++ Binging - cppzmq](https://github.com/zeromq/cppzmq)
 * [European Union Public License](https://choosealicense.com)
 * [Shields](https://shields.io)
 * [Best-README-Template](https://github.com/othneildrew/Best-README-Template)
