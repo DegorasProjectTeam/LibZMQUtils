@@ -25,8 +25,7 @@ CommandServerBase::CommandServerBase(unsigned int port, const std::string& local
     main_socket_(nullptr),
     server_endpoint_("tcp://" + local_addr + ":" + std::to_string(port)),
     server_port_(port),
-    server_working_(false),
-    disconnect_requested_(false)
+    server_working_(false)
 {
     // Get the adapters.
     std::vector<utils::NetworkAdapterInfo> interfcs = utils::getHostIPsWithInterfaces();
@@ -370,18 +369,21 @@ BaseServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
             return BaseServerResult::INVALID_MSG;
         }
 
-        // Check if the command has parameters.
-        if (multipart_msg.size() == 5)
+        // If there is still one more part, they are the parameters.
+        if (multipart_msg.size() == 1)
         {
+            // Get the message and the size.
             zmq::message_t message_params = multipart_msg.pop();
             size_t params_size_bytes = message_params.size();
-
+            // Check the parameters.
             if(params_size_bytes > 0)
             {
-                std::unique_ptr<std::uint8_t> cmd_data = std::unique_ptr<std::uint8_t>(new std::uint8_t[params_size_bytes]);
+                // Get and store the parameters data.
+                std::unique_ptr<std::uint8_t> params =
+                    std::unique_ptr<std::uint8_t>(new std::uint8_t[params_size_bytes]);
                 auto *params_pointer = static_cast<std::uint8_t*>(message_params.data());
-                std::copy(params_pointer, params_pointer + params_size_bytes, cmd_data.get());
-                request.params = std::move(cmd_data);
+                std::copy(params_pointer, params_pointer + params_size_bytes, params.get());
+                request.params = std::move(params);
             }
             else
                 return BaseServerResult::EMPTY_PARAMS;

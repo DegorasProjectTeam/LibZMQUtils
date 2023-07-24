@@ -320,6 +320,7 @@ private:
     // Update client last connection.
     void updateClientLastConnection(const std::string& id);
 
+    // Update the server timeout.
     void updateServerTimeout();
 
     // Internal connect execution process.
@@ -352,8 +353,8 @@ private:
     // Clients container.
     std::map<std::string, HostClient> connected_clients_;
 
+    // Flag for check the server working status.
     std::atomic_bool server_working_;
-    std::atomic_bool disconnect_requested_;
 };
 
 } // END NAMESPACES.
