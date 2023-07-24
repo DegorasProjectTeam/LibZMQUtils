@@ -18,8 +18,7 @@ namespace zmqutils{
 // =====================================================================================================================
 
 
-constexpr int kClientAliveTimeoutMsec = 8000;
-constexpr unsigned kReconnectTimes = 10;
+
 
 CommandServerBase::CommandServerBase(unsigned int port, const std::string& local_addr) :
     context_(nullptr),
@@ -98,7 +97,7 @@ CommandServerBase::~CommandServerBase()
 }
 
 
-BaseServerResult CommandServerBase::execConnect(const CommandRequest& cmd_req)
+BaseServerResult CommandServerBase::execReqConnect(const CommandRequest& cmd_req)
 {
     // If client is already connected and connect is issued again, report and do nothing
     if (this->client_present_)
@@ -114,7 +113,7 @@ BaseServerResult CommandServerBase::execConnect(const CommandRequest& cmd_req)
 
         // Configuration for client present. The socket now has a tiemout to detect dead client.
         this->client_present_ = true;
-        this->main_socket_->set(zmq::sockopt::rcvtimeo, kClientAliveTimeoutMsec);
+        this->main_socket_->set(zmq::sockopt::rcvtimeo, common::kClientAliveTimeoutMsec);
 
         // Call to the internal callback.
         this->onNewConnection(cmd_req);
@@ -124,7 +123,7 @@ BaseServerResult CommandServerBase::execConnect(const CommandRequest& cmd_req)
     }
 }
 
-BaseServerResult CommandServerBase::execDisconnect(const CommandRequest& cmd_req)
+BaseServerResult CommandServerBase::execReqDisconnect(const CommandRequest& cmd_req)
 {
     // TODO Multiclient
 
@@ -186,7 +185,7 @@ void CommandServerBase::serverWorker()
         else if (result != BaseServerResult::COMMAND_OK)
         {
             // Internal callback.
-            this->onBadMessageReceived(cmd_request);
+            this->onInvalidMsgReceived(cmd_request);
 
             // Prepare the message.
             std::uint8_t res_buff[sizeof(BaseServerResult)];
@@ -263,7 +262,7 @@ void CommandServerBase::serverWorker()
     }
 }
 
-BaseServerResult CommandServerBase::recvFromSocket(CommandRequest& cmd_req)
+BaseServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
 {
     // Result variable.
     BaseServerResult result = BaseServerResult::COMMAND_OK;
@@ -280,6 +279,9 @@ BaseServerResult CommandServerBase::recvFromSocket(CommandRequest& cmd_req)
 
         // Wait the command.
         recv_result = multipart_msg.recv(*(this->main_socket_));
+
+        // Store the raw data.
+        request.raw_msg = multipart_msg.clone();
     }
     catch(zmq::error_t& error)
     {
@@ -338,18 +340,29 @@ BaseServerResult CommandServerBase::recvFromSocket(CommandRequest& cmd_req)
             return BaseServerResult::EMPTY_CLIENT_PID;
 
         // Update the client info.
-        cmd_req.client = HostClientInfo(ip, hostname, pid);
-        cmd_req.client.last_connection = std::chrono::high_resolution_clock::now();
+        request.client = HostClientInfo(ip, hostname, pid);
+        request.client.last_connection = std::chrono::high_resolution_clock::now();
 
         // Get the command.
         if (command_size_bytes == sizeof(CmdRequestId))
         {
-            BaseServerCommand id;
-            utils::binarySerializeDeserialize(message_command.data(), sizeof(CmdRequestId), &id);
-            cmd_req.command = id;
+            int raw_command;
+            utils::binarySerializeDeserialize(message_command.data(), sizeof(BaseServerCommand), &raw_command);
+            // Validate the command.
+            if(CommandServerBase::validateCommand(raw_command))
+                request.command = static_cast<BaseServerCommand>(raw_command);
+            else
+            {
+                std::cout<<"NOT VALID CMD"<<std::endl;
+                request.command = BaseServerCommand::INVALID_COMMAND;
+                return BaseServerResult::INVALID_MSG;
+            }
         }
         else
-            return BaseServerResult::INVALID_COMMAND;
+        {
+            request.command = BaseServerCommand::INVALID_COMMAND;
+            return BaseServerResult::INVALID_MSG;
+        }
 
         if (multipart_msg.size() == 5)
         {
@@ -361,7 +374,7 @@ BaseServerResult CommandServerBase::recvFromSocket(CommandRequest& cmd_req)
                 std::unique_ptr<std::uint8_t> cmd_data = std::unique_ptr<std::uint8_t>(new std::uint8_t[params_size_bytes]);
                 auto *params_pointer = static_cast<std::uint8_t*>(message_params.data());
                 std::copy(params_pointer, params_pointer + params_size_bytes, cmd_data.get());
-                cmd_req.params = std::move(cmd_data);
+                request.params = std::move(cmd_data);
             }
             else
                 return BaseServerResult::EMPTY_PARAMS;
@@ -380,38 +393,54 @@ void CommandServerBase::prepareCommandResult(BaseServerResult result, std::uniqu
     utils::binarySerializeDeserialize(&result, sizeof(CmdReplyRes), data_out.get());
 }
 
-void CommandServerBase::processCommand(const CommandRequest& cmd_req, CommandReply& cmd_reply)
+bool CommandServerBase::validateCommand(int raw_command)
+{
+    // Auxiliar variables.
+    bool result = false;
+    int reserved_cmd = static_cast<int>(common::BaseServerCommand::RESERVED_COMMANDS);
+    int end_base_cmd = static_cast<int>(common::BaseServerCommand::END_BASE_COMMANDS);
+    // Check if the command is valid.
+    if (raw_command >= common::kMinBaseCmdId && raw_command < reserved_cmd)
+        result = true;
+    else if(raw_command > end_base_cmd)
+        result = true;
+    return result;
+}
+
+void CommandServerBase::processCommand(const CommandRequest& request, CommandReply& reply)
 {
     // First of all, call to the internal callback.
-    this->onCommandReceived(cmd_req);
+    this->onCommandReceived(request);
 
-    // Process the different commands. The first command to process is the connect
-    // request. If the command is other, check if the client is connected to the server
-    // and if it is, then process the rest of the base commands.
-    if (BaseServerCommand::REQ_CONNECT == cmd_req.command)
+    // Process the different commands.
+    // 1 - Process is the connect request.
+    // 2 - If the command is other, check if the client is connected to the server.
+    // 3 - If it is, check if the command is valid.
+    // 4 - If valid, process the rest of the base commands or the custom command.
+    if (BaseServerCommand::REQ_CONNECT == request.command)
     {
-        cmd_reply.result = this->execConnect(cmd_req);
+        reply.result = this->execReqConnect(request);
     }
     else if(!this->client_present_)
     {
-        cmd_reply.result = BaseServerResult::NOT_CONNECTED;
+        reply.result = BaseServerResult::NOT_CONNECTED;
     }
-    else if (BaseServerCommand::REQ_DISCONNECT == cmd_req.command)
+    else if (BaseServerCommand::REQ_DISCONNECT == request.command)
     {
-        cmd_reply.result = this->execDisconnect(cmd_req);
+        reply.result = this->execReqDisconnect(request);
     }
-    else if (BaseServerCommand::REQ_ALIVE == cmd_req.command)
+    else if (BaseServerCommand::REQ_ALIVE == request.command)
     {
-        cmd_reply.result = BaseServerResult::COMMAND_OK;
-    }
-    else if(BaseServerCommand::INVALID_COMMAND == cmd_req.command)
-    {
-        cmd_reply.result = BaseServerResult::INVALID_COMMAND;
+        reply.result = BaseServerResult::COMMAND_OK;
     }
     else
     {
         // Custom command, so call the internal callback.
-        this->onCustomCommandReceived(cmd_req, cmd_reply);
+        this->onCustomCommandReceived(request, reply);
+
+        // Chek for an invalid msg.
+        if(reply.result == BaseServerResult::INVALID_MSG)
+            this->onInvalidMsgReceived(request);
     }
 }
 
@@ -420,7 +449,7 @@ void CommandServerBase::resetSocket()
     // Auxiliar variables.
     int res = 0;
     const zmq::error_t* last_error;
-    unsigned reconnect_count = kReconnectTimes;
+    unsigned reconnect_count = common::kReconnectTimes;
 
     // Delete the previous socket.
     if (this->main_socket_)

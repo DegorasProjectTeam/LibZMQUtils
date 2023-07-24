@@ -39,6 +39,7 @@
 #include <future>
 #include <map>
 #include <zmq/zmq.hpp>
+#include <zmq/zmq_addon.hpp>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
@@ -62,56 +63,22 @@ namespace zmq
 namespace zmqutils{
 // =====================================================================================================================
 
-using zmqutils::common::CmdRequestId;
-using zmqutils::common::CmdReplyRes;
-using zmqutils::common::BaseServerCommand;
-using zmqutils::common::BaseServerResult;
-using zmqutils::common::BaseServerResultStr;
-using zmqutils::common::HostClientInfo;
-using zmqutils::utils::NetworkAdapterInfo;
+using common::BaseServerResultStr;
+using common::CommandReply;
+using common::CommandRequest;
+using common::CmdRequestId;
+using common::CmdReplyRes;
+using common::BaseServerCommand;
+using common::BaseServerResult;
+using common::HostClientInfo;
+using utils::NetworkAdapterInfo;
 
 
-
-
-struct CommandRequest
-{
-
-
-    CommandRequest():
-        command(BaseServerCommand::INVALID_COMMAND),
-        params(nullptr),
-        params_size(0)
-        {}
-
-    HostClientInfo client;
-    BaseServerCommand command;
-    std::unique_ptr<std::uint8_t> params;
-    size_t params_size;
-};
-
-struct CommandReply
-{
-    CommandReply():
-        params(nullptr),
-        params_size(0),
-        result(BaseServerResult::COMMAND_OK)
-    {}
-
-    std::unique_ptr<std::uint8_t> params;
-    size_t params_size;
-    BaseServerResult result;
-};
 
 class LIBZMQUTILS_EXPORT CommandServerBase
 {
 
 public:
-
-
-
-
-
-
 
     /**
      * @brief Base constructor for a ZeroMQ command server.
@@ -223,7 +190,7 @@ protected:
 
     virtual void onDeadClient() = 0;
 
-    virtual void onBadMessageReceived(const CommandRequest&) = 0;
+    virtual void onInvalidMsgReceived(const CommandRequest&) = 0;
 
     /**
      * @brief Internal base command received callback.
@@ -295,11 +262,13 @@ protected:
 
     virtual void onSendingResponse(const CommandReply&) = 0;
 
-
 private:
 
     // Helper for prepare the result message.
     static void prepareCommandResult(BaseServerResult, std::unique_ptr<uint8_t>& data_out);
+
+    // Helper for check if the base command is valid.
+    static bool validateCommand(int raw_command);
 
     // Server worker. Will be execute asynchronously.
     void serverWorker();
@@ -308,10 +277,10 @@ private:
     void processCommand(const CommandRequest&, CommandReply&);
 
     // Internal connect execution process.
-    BaseServerResult execConnect(const CommandRequest&);
+    BaseServerResult execReqConnect(const CommandRequest&);
 
     // Internal disconnect execution process.
-    BaseServerResult execDisconnect(const CommandRequest&);
+    BaseServerResult execReqDisconnect(const CommandRequest&);
 
     // Function for receive data from the client.
     BaseServerResult recvFromSocket(CommandRequest&);

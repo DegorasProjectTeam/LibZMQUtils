@@ -21,7 +21,7 @@
 
 // PROJECT INCLUDES
 // =====================================================================================================================
-#include "drgg_example_server.h"
+#include "amelas_example_server.h"
 // =====================================================================================================================
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -54,45 +54,8 @@ BOOL WINAPI ConsoleCtrlHandler(DWORD dwCtrlType)
 // ---------------------------------------------------------------------------------------------------------------------
 
 
-
-
-// External connect callback.
-void connectCallback(const void *, size_t , void *&data_out, size_t &out_size)
-{
-
-}
-
-// External disconnect callback.
-void disconnectCallback(const void *, size_t , void *&data_out, size_t &out_size)
-{
-
-}
-
-// External alive callback.
-void aliveCallback(const void *, size_t , void *&data_out, size_t &out_size)
-{
-//    std::cout << "Client request for alive. I AM alive." << std::endl;
-//    out_size = sizeof(common::CommandReqId) + sizeof(CommandServerBase::CommandResult);
-//    auto *data_out_bytes = new std::uint8_t[out_size];
-//    auto result = CommandServerBase::CommandResult::COMMAND_OK;
-//    // To serialize parameters insert them byte by byte consecutively
-//    // First data is command id at position [0, sizeof(CommandId))
-//    utils::binarySerializeDeserialize(&CommandServerBase::kAliveCommand,
-//                                      sizeof(common::CommandReqId), data_out_bytes);
-//    // Second data is command result at position [sizeof(CommandId), sizeof(CommandId) + sizeof(CommandError))
-//    utils::binarySerializeDeserialize(&result, sizeof(CommandServerBase::CommandResult),
-//                                      data_out_bytes + sizeof(common::CommandReqId));
-//    data_out = data_out_bytes;
-}
-
-
-
 int main(int argc, char**argv)
 {
-
-
-
-
     // Set up the Windows Console Control Handler
     SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
 
@@ -118,17 +81,7 @@ int main(int argc, char**argv)
     }
 
     // Instantiate the server.
-    DRGGCustomServer server(port);
-
-    std::cout<<DRGGServerCommandStr.size()<<std::endl;
-    std::cout<<DRGGServerCommandStr[0]<<std::endl;
-    std::cout<<DRGGServerCommandStr[4]<<std::endl;
-
-    // Add external callbacks as an examples.
-    //server.setDeadClientCallback([]{std::cout << "Dead client timeout reached." <<std::endl;});
-    //server.setCommandCallback(ZMQServer::kConnectCommand, connectCallback);
-    //server.setCommandCallback(CommandServerBase::kDisconnectCommand, disconnectCallback);
-    //server.setCommandCallback(CommandServerBase::kAliveCommand, aliveCallback);
+    AmelasExampleServer server(port);
 
     // Start the server.
     server.startServer();

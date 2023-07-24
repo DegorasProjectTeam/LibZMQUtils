@@ -5,6 +5,8 @@
 
 #include <LibZMQUtils/CommandClient>
 
+
+
 using namespace zmqutils;
 
 void parseCommand(CommandClientBase &client, const std::string &command)

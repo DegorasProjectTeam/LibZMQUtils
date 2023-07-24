@@ -1,2 +1,3 @@
 #include "LibZMQUtils/command_server.h"
+#include <LibZMQUtils/common.h>
 
