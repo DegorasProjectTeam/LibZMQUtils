@@ -97,8 +97,6 @@ public:
         return AmelasError::SUCCESS;
     }
 
-
-
     // Callback function type aliases
     using SetHomePositionCallback = std::function<AmelasError(double, double)>;
     using GetHomePositionCallback = std::function<AmelasError(double&, double&)>;
