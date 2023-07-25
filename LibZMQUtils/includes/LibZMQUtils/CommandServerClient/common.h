@@ -68,13 +68,8 @@ constexpr int kZmqEFSMError = 156384765;               ///< ZMQ EFSM error.
 // CONVENIENT ALIAS, ENUMERATIONS AND CONSTEXPR
 // =====================================================================================================================
 
-// TODO REMOVE
-using CmdRequestId = std::uint32_t;
-using CmdReplyRes = std::uint32_t;
-
-using CommandType = std::uint32_t;
-using ResultType = std::uint32_t;
-
+using CommandType = std::uint32_t;   ///< Type used for the BaseServerCommand enumeration.
+using ResultType = std::uint32_t;    ///< Type used for the BaseServerResult enumeration.
 
 /**
  * @enum BaseServerCommand
@@ -222,11 +217,6 @@ struct CommandReply
     size_t params_size;
     BaseServerResult result;
 };
-
-// =====================================================================================================================
-
-// CONVENIENT ALIAS
-// =====================================================================================================================
 
 // =====================================================================================================================
 

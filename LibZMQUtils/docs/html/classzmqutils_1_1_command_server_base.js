@@ -1,0 +1,25 @@
+var classzmqutils_1_1_command_server_base =
+[
+    [ "CommandServerBase", "classzmqutils_1_1_command_server_base.html#adbb02296b8ca7db4f51e511e09b57882", null ],
+    [ "~CommandServerBase", "classzmqutils_1_1_command_server_base.html#a6369c6f2a6c1c0d893101025af5b2ae5", null ],
+    [ "getConnectedClients", "classzmqutils_1_1_command_server_base.html#aa904873a60ce25be5a2d35953a430cde", null ],
+    [ "getServerAddresses", "classzmqutils_1_1_command_server_base.html#a99ba3d6c217a5f3cd0ad2b530830d5d9", null ],
+    [ "getServerEndpoint", "classzmqutils_1_1_command_server_base.html#a6138edd93d20f0f720ca968db77ba47d", null ],
+    [ "getServerPort", "classzmqutils_1_1_command_server_base.html#afc20b9e18733f260e053743e61b17fd0", null ],
+    [ "getServerWorkerFuture", "classzmqutils_1_1_command_server_base.html#ac8ae89dc05d0031c730dc36213dbe4e4", null ],
+    [ "isWorking", "classzmqutils_1_1_command_server_base.html#a441eafa728d6bc548aa4d476d9cdc2c9", null ],
+    [ "onCommandReceived", "classzmqutils_1_1_command_server_base.html#ad101b4f554b3c7cd9151ef8f25caba1b", null ],
+    [ "onConnected", "classzmqutils_1_1_command_server_base.html#a07ea15facd693c770101b95aab1966a9", null ],
+    [ "onCustomCommandReceived", "classzmqutils_1_1_command_server_base.html#a26fad1be17686df0c0c98580db62f8d4", null ],
+    [ "onDeadClient", "classzmqutils_1_1_command_server_base.html#a6954e796bcef984e3bd908b2b2e61d0a", null ],
+    [ "onDisconnected", "classzmqutils_1_1_command_server_base.html#ae629eb8c28e8669016437a2aa8ba8979", null ],
+    [ "onInvalidMsgReceived", "classzmqutils_1_1_command_server_base.html#a8cefe6b86be5dae38c0ed1a7ab75c0aa", null ],
+    [ "onSendingResponse", "classzmqutils_1_1_command_server_base.html#abc73bf9b4cfc6587e2b615daaf73aed0", null ],
+    [ "onServerError", "classzmqutils_1_1_command_server_base.html#a9c160ac5aa93b5071da53d32ccc4f020", null ],
+    [ "onServerStart", "classzmqutils_1_1_command_server_base.html#afcad29bed0f09f1dbd735e737ba1febd", null ],
+    [ "onServerStop", "classzmqutils_1_1_command_server_base.html#a5acce760af5d07bcf39cf4303792292c", null ],
+    [ "onWaitingCommand", "classzmqutils_1_1_command_server_base.html#a16dd809473a078ded884e8c7f9aa73e7", null ],
+    [ "setClientStatusCheck", "classzmqutils_1_1_command_server_base.html#ae431d0816adaae0d4d2b80a24c05f091", null ],
+    [ "startServer", "classzmqutils_1_1_command_server_base.html#a0a3fd25c2c54be4715e280904a0c2501", null ],
+    [ "stopServer", "classzmqutils_1_1_command_server_base.html#a7ff72915fa6f02b908752db88ac52fc5", null ]
+];
