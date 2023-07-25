@@ -7,7 +7,7 @@
 [![LinkedIn][linkedin-shield]][linkedin-url]
 
 <!-- PROJECT LOGO -->
-  <h3 align="center">LibZMQUtils - ZMQ Utilitites Library</h3>
+  <h2 align="center">LibZMQUtils - ZMQ Utilitites Library</h2>
 
   <p align="center">
     <br />
