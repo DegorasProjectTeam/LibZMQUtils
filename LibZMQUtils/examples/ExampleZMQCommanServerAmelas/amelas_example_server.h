@@ -20,13 +20,30 @@
 using namespace zmqutils;
 
 
-class DRGGController
+class AmelasExampleController
 {
 public:
 
-    DRGGController() = default;
 
+    enum class AmelasError : common::CommandType
+    {
+        NOT_ERROR = 0
+    };
 
+    AmelasExampleController() = default;
+
+    AmelasExampleController::AmelasError setHomePosition(double az, double el)
+    {
+        std::cout << std::string(80, '-') << std::endl;
+        std::cout<<"AMELAS CONTROLLER"<<std::endl;
+        std::cout<<"<SET_HOME_POSITION>"<<std::endl;
+        std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
+        std::cout<<"Az: "<<az<<std::endl;
+        std::cout<<"El: "<<az<<std::endl;
+        std::cout << std::string(80, '-') << std::endl;
+
+        return AmelasError::NOT_ERROR;
+    }
 };
 
 
@@ -36,6 +53,11 @@ class AmelasExampleServer : public CommandServerBase
 public:
 
     AmelasExampleServer(unsigned port, const std::string& local_addr = "*");
+
+    void setCallback(AmelasServerCommand name, void* func)
+    {
+        callback_map_[name] = reinterpret_cast<common::generic_t>(&func);
+    }
 
 private:
 
@@ -81,5 +103,6 @@ private:
     // Internal overrided server error callback.
     virtual void onServerError(const zmq::error_t&, const std::string& ext_info) final;
 
-    // Containers.
+    // External callbacks map.
+    std::map<AmelasServerCommand, common::generic_t> callback_map_;
 };

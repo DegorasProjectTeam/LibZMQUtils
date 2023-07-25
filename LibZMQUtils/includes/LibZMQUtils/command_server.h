@@ -163,12 +163,39 @@ public:
      */
     bool isWorking() const{return this->server_working_;}
 
+    /**
+     * @brief Enables or disables the client's alive status checking.
+     *
+     * Enables or disables the checking of the client's alive status. This is a very important
+     * functionality in the context of critical systems that often use these types of servers.
+     *
+     * @param The desired status of the client's alive status checking (true to enable, false to disable).
+     *
+     * @warning It is strongly recommended to keep this check active, due to the critical nature of the systems
+     *          that usually use this kind of servers. Disabling the client alive status check could result in
+     *          unexpected behavior or system instability in case of sudden client disconnections or failures.
+     */
+    void setClientStatusCheck(bool);
+
+    /**
+     * @brief Starts the command server.
+     *
+     * If the server is already running, the function does nothing. Otherwise, it creates the ZMQ
+     * context if it doesn't exist and launches the server worker in a separate thread.
+     */
     void startServer();
 
+    /**
+     * @brief Stops the command server.
+     *
+     * If the server is already stopped, the function does nothing. Otherwise
+     * deletes the ZMQ context and cleans up the connected clients.
+     */
     void stopServer();
 
     /**
      * @brief Virtual destructor.
+     *
      * This destructor is virtual to ensure proper cleanup when the derived class is destroyed.
      */
     virtual ~CommandServerBase();
@@ -215,7 +242,7 @@ protected:
     /**
      * @brief Base connected callback. Subclasses must override this function.
      *
-     * @param The CommandRequest object representing the command execution request.
+     * @param The HostClient object representing the connected client.
      *
      * @warning The overrided callback must be non-blocking and have minimal computation time. Blocking or
      *          computationally intensive operations within internal callbacks can significantly affect the
@@ -228,7 +255,7 @@ protected:
     /**
      * @brief Base disconnected callback. Subclasses must override this function.
      *
-     * @param The CommandRequest object representing the command execution request.
+     * @param The HostClient object representing the disconnected client.
      *
      * @warning The overrided callback must be non-blocking and have minimal computation time. Blocking or
      *          computationally intensive operations within internal callbacks can significantly affect the
@@ -238,9 +265,30 @@ protected:
      */
     virtual void onDisconnected(const HostClient&) = 0;
 
-
+    /**
+     * @brief Base dead client callback. Subclasses must override this function.
+     *
+     * @param The HostClient object representing the dead client.
+     *
+     * @warning The overridden callback must be non-blocking and have minimal computation time. Blocking or
+     *          computationally intensive operations within internal callbacks can significantly affect the
+     *          server's performance and responsiveness. If complex tasks are required, it is recommended to
+     *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
+     *          threads or asynchronous mechanisms to handle time-consuming tasks.
+     */
     virtual void onDeadClient(const HostClient&) = 0;
 
+    /**
+     * @brief Base invalid message received callback. Subclasses must override this function.
+     *
+     * @param The CommandRequest object representing the invalid command request.
+     *
+     * @warning The overridden callback must be non-blocking and have minimal computation time. Blocking or
+     *          computationally intensive operations within internal callbacks can significantly affect the
+     *          server's performance and responsiveness. If complex tasks are required, it is recommended to
+     *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
+     *          threads or asynchronous mechanisms to handle time-consuming tasks.
+     */
     virtual void onInvalidMsgReceived(const CommandRequest&) = 0;
 
     /**
@@ -298,6 +346,17 @@ protected:
      */
     virtual void onServerError(const zmq::error_t &error, const std::string& ext_info = "") = 0;
 
+    /**
+     * @brief Base sending response callback. Subclasses must override this function.
+     *
+     * @param The CommandReply object representing the command reply being sent.
+     *
+     * @warning The overridden callback must be non-blocking and have minimal computation time. Blocking or
+     *          computationally intensive operations within internal callbacks can significantly affect the
+     *          server's performance and responsiveness. If complex tasks are required, it is recommended to
+     *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
+     *          threads or asynchronous mechanisms to handle time-consuming tasks.
+     */
     virtual void onSendingResponse(const CommandReply&) = 0;
 
 private:
@@ -351,10 +410,11 @@ private:
     std::future<void> server_worker_future_;
 
     // Clients container.
-    std::map<std::string, HostClient> connected_clients_;
+    std::map<std::string, HostClient> connected_clients_;   ///< Dictionary with the connected clients.
 
-    // Flag for check the server working status.
-    std::atomic_bool server_working_;
+    // Usefull flags.
+    std::atomic_bool server_working_;       ///< Flag for check the server working status.
+    std::atomic_bool check_clients_alive_;  ///< Flag that enables and disables the client status checking.
 };
 
 } // END NAMESPACES.

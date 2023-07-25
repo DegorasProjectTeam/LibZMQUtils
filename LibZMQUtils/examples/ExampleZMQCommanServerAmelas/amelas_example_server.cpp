@@ -38,6 +38,8 @@ void AmelasExampleServer::execSetHomePosition(const CommandRequest& request, Com
 
     // Process the command.
     std::cout<<"Processing REQ_SET_HOME_POSITION with params: "<<std::endl;
+    std::cout<<"Az: "<<az<<std::endl;
+    std::cout<<"El: "<<el<<std::endl;
 
 
 
@@ -107,6 +109,7 @@ void AmelasExampleServer::onServerStart()
     ips.pop_back();
     ips.pop_back();
 
+    // Log.
     std::cout << std::string(80, '-') << std::endl;
     std::cout<<"ON SERVER START: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
@@ -117,6 +120,7 @@ void AmelasExampleServer::onServerStart()
 
 void AmelasExampleServer::onServerStop()
 {
+    // Log.
     std::cout << std::string(80, '-') << std::endl;
     std::cout<<"ON SERVER CLOSE: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
@@ -125,6 +129,7 @@ void AmelasExampleServer::onServerStop()
 
 void AmelasExampleServer::onWaitingCommand()
 {
+    // Log.
     std::cout << std::string(80, '-') << std::endl;
     std::cout<<"ON WAITING COMMAND: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
@@ -133,6 +138,7 @@ void AmelasExampleServer::onWaitingCommand()
 
 void AmelasExampleServer::onDeadClient(const HostClient& client)
 {
+    // Log.
     std::cout << std::string(80, '-') << std::endl;
     std::cout<<"ON DEAD CLIENT: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
@@ -146,6 +152,7 @@ void AmelasExampleServer::onDeadClient(const HostClient& client)
 
 void AmelasExampleServer::onConnected(const HostClient& client)
 {
+    // Log.
     std::cout << std::string(80, '-') << std::endl;
     std::cout<<"ON CONNECTED: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
@@ -159,6 +166,7 @@ void AmelasExampleServer::onConnected(const HostClient& client)
 
 void AmelasExampleServer::onDisconnected(const HostClient& client)
 {
+    // Log.
     std::cout << std::string(80, '-') << std::endl;
     std::cout<<"ON DISCONNECTED: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
@@ -172,6 +180,7 @@ void AmelasExampleServer::onDisconnected(const HostClient& client)
 
 void AmelasExampleServer::onServerError(const zmq::error_t &error, const std::string &ext_info)
 {
+    // Log.
     std::cout << std::string(80, '-') << std::endl;
     std::cout<<"ON SERVER ERROR: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
@@ -187,7 +196,7 @@ void AmelasExampleServer::onCommandReceived(const CommandRequest &cmd_req)
     std::string cmd_str;
     std::uint32_t command = static_cast<std::uint32_t>(cmd_req.command);
     cmd_str = (command < AmelasServerCommandStr.size()) ? AmelasServerCommandStr[command] : "Unknown command";
-
+    // Log.
     std::cout << std::string(80, '-') << std::endl;
     std::cout<<"ON COMMAND RECEIVED: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
@@ -198,6 +207,7 @@ void AmelasExampleServer::onCommandReceived(const CommandRequest &cmd_req)
 
 void AmelasExampleServer::onInvalidMsgReceived(const CommandRequest &cmd_req)
 {
+    // Log.
     std::cout << std::string(80, '-') << std::endl;
     std::cout<<"ON BAD COMMAND RECEIVED: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
@@ -213,11 +223,13 @@ void AmelasExampleServer::onInvalidMsgReceived(const CommandRequest &cmd_req)
 
 void AmelasExampleServer::onSendingResponse(const CommandReply &cmd_rep)
 {
+    // Log.
     int result = static_cast<int>(cmd_rep.result);
     std::cout << std::string(80, '-') << std::endl;
     std::cout<<"ON SENDING RESPONSE: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
     std::cout<<"Result: "<<result<<" ("<<AmelasServerResultStr[result]<<")"<<std::endl;
+    std::cout<<"Params Size: "<<cmd_rep.params_size<<std::endl;
     std::cout << std::string(80, '-') << std::endl;
 }
 

@@ -80,8 +80,14 @@ int main(int argc, char**argv)
         return 0;
     }
 
+    // Instantiate the Amelas controller.
+    AmelasExampleController amelas_controller;
+
     // Instantiate the server.
     AmelasExampleServer server(port);
+
+    server.setClientStatusCheck(false);
+    //server.setCallback(AmelasServerCommand::REQ_GET_HOME_POSITION, amelas_controller.setHomePosition);
 
     // Start the server.
     server.startServer();

@@ -83,7 +83,18 @@ struct LIBZMQUTILS_EXPORT NetworkAdapterInfo
     std::string ip;
 };
 
-LIBZMQUTILS_EXPORT void binarySerializeDeserialize(const void *data, size_t data_size_bytes, void *dest);
+/**
+ * @brief Binary serialization and deserialization.
+ *
+ * This function is responsible for binary serialization and deserialization
+ * by reversing the byte order of the data in a binary safe manner. This can be
+ * used for transforming data from little-endian to big-endian and vice versa.
+ *
+ * @param[in] data Pointer to the input data that needs to be serialized/deserialized.
+ * @param[in] data_size_bytes Size of the input data in bytes.
+ * @param[out] dest Pointer to the destination where the output (reversed bytes) is to be stored.
+ */
+LIBZMQUTILS_EXPORT void binarySerializeDeserialize(const void* data, size_t data_size_bytes, void* dest);
 
 LIBZMQUTILS_EXPORT std::vector<NetworkAdapterInfo> getHostIPsWithInterfaces();
 

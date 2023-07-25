@@ -1,31 +1,61 @@
+/***********************************************************************************************************************
+ *   LibZMQUtils (ZMQ Utilitites Library): A libre library with ZMQ related useful utilities.                          *
+ *                                                                                                                     *
+ *   Copyright (C) 2023 Degoras Project Team                                                                           *
+ *                      < Ángel Vera Herrera, avera@roa.es - angeldelaveracruz@gmail.com >                             *
+ *                      < Jesús Relinque Madroñal >                                                                    *
+ *                                                                                                                     *
+ *   This file is part of LibZMQUtils.                                                                                 *
+ *                                                                                                                     *
+ *   Licensed under the European Union Public License (EUPL), Version 1.2 or subsequent versions of the EUPL license   *
+ *   as soon they will be approved by the European Commission (IDABC).                                                 *
+ *                                                                                                                     *
+ *   This project is free software: you can redistribute it and/or modify it under the terms of the EUPL license as    *
+ *   published by the IDABC, either Version 1.2 or, at your option, any later version.                                 *
+ *                                                                                                                     *
+ *   This project is distributed in the hope that it will be useful. Unless required by applicable law or agreed to in *
+ *   writing, it is distributed on an "AS IS" basis, WITHOUT ANY WARRANTY OR CONDITIONS OF ANY KIND; without even the  *
+ *   implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the EUPL license to check specific   *
+ *   language governing permissions and limitations and more details.                                                  *
+ *                                                                                                                     *
+ *   You should use this project in compliance with the EUPL license. You should have received a copy of the license   *
+ *   along with this project. If not, see the license at < https://eupl.eu/ >.                                         *
+ **********************************************************************************************************************/
 
+/** ********************************************************************************************************************
+ * @file command_server.cpp
+ * @brief This file contains the implementation of the CommandServerBase class and related.
+ * @author Degoras Project Team
+ * @copyright EUPL License
+ * @version 2307.1
+***********************************************************************************************************************/
 
-
-#include <signal.h>
+// C++ INCLUDES
+// =====================================================================================================================
 #include <iostream>
 #include <stdio.h>
-
 #include <zmq/zmq_addon.hpp>
 #include <zmq/zmq.h>
+// =====================================================================================================================
 
+// ZMQUTILS INCLUDES
+// =====================================================================================================================
 #include "LibZMQUtils/command_server.h"
 #include "LibZMQUtils/utils.h"
-
+// =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
 // =====================================================================================================================
 
-
-
-
 CommandServerBase::CommandServerBase(unsigned int port, const std::string& local_addr) :
     context_(nullptr),
     main_socket_(nullptr),
     server_endpoint_("tcp://" + local_addr + ":" + std::to_string(port)),
     server_port_(port),
-    server_working_(false)
+    server_working_(false),
+    check_clients_alive_(true)
 {
     // Get the adapters.
     std::vector<utils::NetworkAdapterInfo> interfcs = utils::getHostIPsWithInterfaces();
@@ -46,6 +76,16 @@ const std::future<void> &CommandServerBase::getServerWorkerFuture() const {retur
 
 const std::map<std::string, HostClient> &CommandServerBase::getConnectedClients() const
 {return this->connected_clients_;}
+
+void CommandServerBase::setClientStatusCheck(bool)
+{
+    // Safe mutex lock
+    std::unique_lock<std::mutex> lock(this->mtx_);
+    // Disable the client alive checking.
+    this->check_clients_alive_ = false;
+    if(this->main_socket_)
+        this->main_socket_->set(zmq::sockopt::rcvtimeo, -1);
+}
 
 const unsigned& CommandServerBase::getServerPort() const {return this->server_port_;}
 
@@ -100,7 +140,6 @@ CommandServerBase::~CommandServerBase()
     this->stopServer();
 }
 
-
 BaseServerResult CommandServerBase::execReqConnect(const CommandRequest& cmd_req)
 {
     // Safe mutex lock.
@@ -115,7 +154,8 @@ BaseServerResult CommandServerBase::execReqConnect(const CommandRequest& cmd_req
     this->connected_clients_[cmd_req.client.id] = cmd_req.client;
 
     // Update the timeout of the main socket.
-    this->updateServerTimeout();
+    if(this->check_clients_alive_)
+        this->updateServerTimeout();
 
     // Call to the internal callback.
     this->onConnected(cmd_req.client);
@@ -139,7 +179,8 @@ BaseServerResult CommandServerBase::execReqDisconnect(const CommandRequest& cmd_
     this->onDisconnected(cmd_req.client);
 
     // Update the timeout of the main socket.
-    this->updateServerTimeout();
+    if(this->check_clients_alive_)
+        this->updateServerTimeout();
 
     // All ok.
     return BaseServerResult::COMMAND_OK;
@@ -172,7 +213,8 @@ void CommandServerBase::serverWorker()
         result = this->recvFromSocket(cmd_request);
 
         // Check all the clients status.
-        this->checkClientsAliveStatus();
+        if(this->check_clients_alive_)
+            this->checkClientsAliveStatus();
 
         // Process the data.
         if(result == BaseServerResult::COMMAND_OK && !this->server_working_)
@@ -250,10 +292,6 @@ void CommandServerBase::serverWorker()
                 if(!(error.num() == common::kZmqEFSMError && !this->server_working_))
                     this->onServerError(error, "Error while sending a response.");
             }
-
-            // TODO rmv
-            std::cout<<"Sending response: "<<static_cast<int>(cmd_reply.result)<<std::endl;
-            std::cout<<"Sending msg size: "<<multipart_msg.size()<<std::endl;
         }
     }
 
@@ -375,6 +413,10 @@ BaseServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
             // Get the message and the size.
             zmq::message_t message_params = multipart_msg.pop();
             size_t params_size_bytes = message_params.size();
+
+            std::cout<<multipart_msg.str()<<std::endl;
+            std::cout<<params_size_bytes<<std::endl;
+
             // Check the parameters.
             if(params_size_bytes > 0)
             {
@@ -384,6 +426,7 @@ BaseServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
                 auto *params_pointer = static_cast<std::uint8_t*>(message_params.data());
                 std::copy(params_pointer, params_pointer + params_size_bytes, params.get());
                 request.params = std::move(params);
+                request.params_size = params_size_bytes;
             }
             else
                 return BaseServerResult::EMPTY_PARAMS;
@@ -395,7 +438,6 @@ BaseServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
     // Return the result.
     return result;
 }
-
 
 void CommandServerBase::prepareCommandResult(BaseServerResult result, std::unique_ptr<std::uint8_t>& data_out)
 {
@@ -461,7 +503,7 @@ void CommandServerBase::checkClientsAliveStatus()
 
     // Auxiliar containers.
     std::vector<std::string> dead_clients;
-    std::chrono::milliseconds timeout(common::kClientAliveTimeoutMsec);
+    std::chrono::milliseconds timeout(common::kDefaultClientAliveTimeoutMsec);
     std::chrono::milliseconds min_remaining_time = timeout;
 
     // Get the current time.
@@ -531,7 +573,7 @@ void CommandServerBase::updateServerTimeout()
 
     if (min_timeout != this->connected_clients_.end())
     {
-        auto remain_time = common::kClientAliveTimeoutMsec - std::chrono::duration_cast<std::chrono::milliseconds>(
+        auto remain_time = common::kDefaultClientAliveTimeoutMsec - std::chrono::duration_cast<std::chrono::milliseconds>(
                                    std::chrono::steady_clock::now() - min_timeout->second.last_connection).count();
         this->main_socket_->set(zmq::sockopt::rcvtimeo, std::max(0, static_cast<int>(remain_time)));
     }
@@ -592,9 +634,6 @@ void CommandServerBase::onCustomCommandReceived(const CommandRequest&, CommandRe
 {
     rep.result = BaseServerResult::NOT_IMPLEMENTED;
 }
-
-
-
 
 } // END NAMESPACES.
 // =====================================================================================================================

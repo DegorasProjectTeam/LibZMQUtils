@@ -60,10 +60,9 @@ namespace common{
 
 // CONSTANTS
 // =====================================================================================================================
-constexpr int kClientAliveTimeoutMsec = 5000;   ///< Default timeout for consider a client dead.
-constexpr int kServerRecvTimeout = 10;          ///< Timeout for check the clients status in the first connection.
-constexpr unsigned kReconnectTimes = 10;        ///< Reconnect default number of attempts.
-constexpr int kZmqEFSMError = 156384765;        ///< ZMQ EFSM error.
+constexpr int kDefaultClientAliveTimeoutMsec = 8000;   ///< Default timeout for consider a client dead.
+constexpr unsigned kReconnectTimes = 10;               ///< Server reconnection default number of attempts.
+constexpr int kZmqEFSMError = 156384765;               ///< ZMQ EFSM error.
 // =====================================================================================================================
 
 // CONVENIENT ALIAS, ENUMERATIONS AND CONSTEXPR
@@ -112,7 +111,7 @@ enum class BaseServerResult : CommandType
     INVALID_PARTS          = 8, ///< The command has invalid parts.
     UNKNOWN_COMMAND        = 9, ///< The command is not recognized.
     INVALID_MSG            = 10, ///< The command is invalid.
-    CLIENT_NOT_CONNECTED          = 11, ///< Not connected to the target.
+    CLIENT_NOT_CONNECTED   = 11, ///< Not connected to the target.
     ALREADY_CONNECTED      = 12, ///< Already connected to the target.
     BAD_PARAMETERS         = 13, ///< The provided parameters are invalid.
     COMMAND_FAILED         = 14, ///< The command execution failed.
@@ -225,6 +224,7 @@ struct CommandReply
 
 // CONVENIENT ALIAS
 // =====================================================================================================================
+typedef void (*generic_t)(void);
 // =====================================================================================================================
 
 }} // END NAMESPACES.
