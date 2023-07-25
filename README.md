@@ -81,7 +81,7 @@ Don't forget to give the project a star! Thanks again!
 <!-- LICENSE -->
 ## License
 
-Distributed under the European Union Public License License. See `LICENSE` file for more information.
+Distributed under the European Union Public License. See `LICENSE` file for more information.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
