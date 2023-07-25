@@ -37,7 +37,7 @@ void AmelasExampleServer::processSetHomePosition(const CommandRequest& request, 
                                                                            az, el);
     // Store the amelas error.
     reply.params = std::unique_ptr<std::uint8_t>(new std::uint8_t[sizeof(common::ResultType)]);
-    common::ResultType amelas_res = static_cast<common::ResultType>(amelas_res);
+    common::ResultType amelas_res = static_cast<common::ResultType>(amelas_err);
     zmqutils::utils::binarySerializeDeserialize(&amelas_res, sizeof(common::ResultType), reply.params.get());
     reply.params_size = sizeof(common::ResultType);
 
