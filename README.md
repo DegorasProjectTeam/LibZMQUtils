@@ -7,9 +7,10 @@
 [![LinkedIn][linkedin-shield]][linkedin-url]
 
 <!-- PROJECT LOGO -->
-  <h1 align="center">LibZMQUtils - ZMQ Utilitites Library</h1>
+  <h3 align="center">LibZMQUtils - ZMQ Utilitites Library</h3>
 
   <p align="center">
+    <br />
     A C++ libre library with ZMQ related useful utilities. 
     <br />
     <br />
