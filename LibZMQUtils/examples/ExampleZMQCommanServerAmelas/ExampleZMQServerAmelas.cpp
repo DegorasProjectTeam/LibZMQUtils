@@ -53,7 +53,11 @@ BOOL WINAPI ConsoleCtrlHandler(DWORD dwCtrlType)
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-
+// Main function.
+//
+// In the main we will create an AmelasController and an AmelasServer that will
+// work together thanks to the callbacks. For safe finish, press ctrl-c.
+//
 int main(int argc, char**argv)
 {
     // Set up the Windows Console Control Handler
@@ -61,12 +65,12 @@ int main(int argc, char**argv)
 
     // Configuration variables.
     unsigned port = 9999;
+    bool client_status_check = false;
 
+    // Get the port.
     if (argc == 2)
     {
-        try
-        {
-           port = std::stoi(argv[1]);
+        try{port = std::stoi(argv[1]);
         }  catch (...)
         {
             std::cerr << "Not recognized port in input: " << argv[1] << std::endl;
@@ -86,18 +90,13 @@ int main(int argc, char**argv)
     // Instantiate the server.
     AmelasExampleServer amelas_server(port);
 
-    amelas_server.setClientStatusCheck(false);
+    // Disable or enables the client status checking.
+    amelas_server.setClientStatusCheck(client_status_check);
 
-    auto homePositionFunction = AmelasExampleController::makeFunction(&amelas_controller,
-                                                                      &AmelasExampleController::setHomePosition);
-
-    amelas_server.setCallback(AmelasServerCommand::REQ_SET_HOME_POSITION, homePositionFunction);
-
-    amelas_server.invoke<AmelasExampleController::SetHomePositionCallback>(AmelasServerCommand::REQ_SET_HOME_POSITION, 3.5, 67.5);
-
-
-
-    //server.setCallback(AmelasServerCommand::REQ_GET_HOME_POSITION, amelas_controller.setHomePosition);
+    // Set the controller callbacks in the server.
+    // Home position.
+    amelas_server.setCallback(AmelasServerCommand::REQ_SET_HOME_POSITION,
+                              &amelas_controller, &AmelasExampleController::setHomePosition);
 
     // Start the server.
     amelas_server.startServer();
@@ -116,3 +115,5 @@ int main(int argc, char**argv)
     // Return.
 	return 0;
 }
+
+// ---------------------------------------------------------------------------------------------------------------------

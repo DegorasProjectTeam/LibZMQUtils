@@ -20,6 +20,20 @@
 
 using namespace zmqutils;
 
+namespace amelascontrol{
+namespace utils{
+
+template<typename ClassType, typename ReturnType, typename... Args>
+static std::function<ReturnType(Args...)> makeCallback(ClassType* object,
+                                                       ReturnType(ClassType::*memberFunction)(Args...))
+{
+    return [object, memberFunction](Args... args) -> ReturnType
+    {
+        return (object->*memberFunction)(std::forward<Args>(args)...);
+    };
+}
+
+}}
 
 class AmelasExampleController
 {
@@ -62,15 +76,7 @@ public:
         return AmelasError::SUCCESS;
     }
 
-    template<typename ClassType, typename ReturnType, typename... Args>
-    static std::function<ReturnType(Args...)> makeFunction(ClassType* object,
-                                                           ReturnType(ClassType::*memberFunction)(Args...))
-    {
-        return [object, memberFunction](Args... args) -> ReturnType
-        {
-            return (object->*memberFunction)(std::forward<Args>(args)...);
-        };
-    }
+
 
     // Callback function type aliases
     using SetHomePositionCallback = std::function<AmelasError(double, double)>;
@@ -78,7 +84,7 @@ public:
 
     // Callback variant.
     using AmelasCallback = std::variant<SetHomePositionCallback,
-                                         GetDatetimeCallback>;
+                                        GetDatetimeCallback>;
 
 };
 
@@ -93,6 +99,14 @@ public:
     void setCallback(AmelasServerCommand command, AmelasExampleController::AmelasCallback callback)
     {
         callback_map_[command] = callback;
+    }
+
+    template<typename ClassT = void, typename ReturnT = void, typename... Args>
+    void setCallback(AmelasServerCommand command,
+                     ClassT* object,
+                     ReturnT(ClassT::*callback)(Args...))
+    {
+        callback_map_[command] = amelascontrol::utils::makeCallback(object, callback);
     }
 
     template <typename CallbackType, typename... Args>
