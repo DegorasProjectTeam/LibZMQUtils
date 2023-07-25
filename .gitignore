@@ -4,6 +4,7 @@
 build_debug/
 build_release/
 
+# User config
 CMakeLists.txt.user
 
 # Prerequisites
