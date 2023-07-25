@@ -94,10 +94,10 @@ int main(int argc, char**argv)
 
     // Disable or enables the client status checking.
     amelas_server.setClientStatusCheck(client_status_check);
-    auto setHomePositionFunction = AmelasExampleController::makeFunction(&amelas_controller,
+    auto setHomePositionFunction = amelascontrol::utils::makeCallback(&amelas_controller,
                                                                       &AmelasExampleController::setHomePosition);
 
-    auto getHomePositionFunction = AmelasExampleController::makeFunction(&amelas_controller,
+    auto getHomePositionFunction = amelascontrol::utils::makeCallback(&amelas_controller,
                                                                       &AmelasExampleController::getHomePosition);
 
     amelas_server.setCallback(AmelasServerCommand::REQ_SET_HOME_POSITION, setHomePositionFunction);
