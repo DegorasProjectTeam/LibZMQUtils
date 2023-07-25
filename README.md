@@ -30,7 +30,7 @@
 </div>
 
 <!-- ACKNOWLEDGMENTS -->
-###╔ Acknowledgments
+### Acknowledgments
 
 * [ZeroMQ](https://zeromq.org/)
 * [ZMQ C++ Binging - cppzmq](https://github.com/zeromq/cppzmq)
