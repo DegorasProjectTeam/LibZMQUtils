@@ -19,7 +19,7 @@
     (SFEL) station in San Fernando and, of course, any other station that wants to use it!
     <br />
     <br />
-    <a href="https://github.com/DegorasProjectTeam/LibZMQUtils"><strong>Explore the docs »</strong></a>
+    <a href="https://github.com/DegorasProjectTeam/LibZMQUtils/tree/master/LibZMQUtils/docs"><strong>Explore the docs »</strong></a>
     <br />
     <br />
     <a href="https://github.com/DegorasProjectTeam/LibZMQUtils/tree/master/LibZMQUtils/examples">View Examples</a>
