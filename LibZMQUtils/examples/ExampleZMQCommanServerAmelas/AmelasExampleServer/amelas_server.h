@@ -1,3 +1,6 @@
+// =====================================================================================================================
+#pragma once
+// =====================================================================================================================
 
 // C++ INCLUDES
 // =====================================================================================================================
@@ -34,6 +37,8 @@ public:
 
     AmelasServer(unsigned port, const std::string& local_addr = "*");
 
+    const std::map<common::AmelasServerCommand, common::ControllerCallback>& getCallbackMap() const;
+
     void setCallback(common::AmelasServerCommand command, common::ControllerCallback callback)
     {
         callback_map_[command] = callback;
@@ -46,6 +51,15 @@ public:
     {
         callback_map_[command] = utils::makeCallback(object, callback);
     }
+
+    // Removes a callback for a command
+    void removeCallback(common::AmelasServerCommand);
+
+    // Clears all the callbacks
+    void clearCallbacks();
+
+    // Checks if a callback is set for a command
+    bool isCallbackSet(common::AmelasServerCommand) const;
 
 private:
 

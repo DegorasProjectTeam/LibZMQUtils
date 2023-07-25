@@ -18,8 +18,7 @@
 namespace zmqutils{
 // =====================================================================================================================
 
-const int CommandClientBase::kClientAliveTimeoutMsec = 5000;
-const int CommandClientBase::kClientSendAlivePeriodMsec = 3000;
+
 
 
 CommandClientBase::CommandClientBase(const std::string &server_endpoint) :
@@ -75,7 +74,7 @@ bool CommandClientBase::startClient(const std::string& interface_name)
         this->socket_ = new zmq::socket_t(*this->context_, zmq::socket_type::req);
         this->socket_->connect(this->server_endpoint_);
         // Set timeout so socket will not wait for answer more than client alive timeout.
-        this->socket_->set(zmq::sockopt::rcvtimeo, CommandClientBase::kClientAliveTimeoutMsec);
+        this->socket_->set(zmq::sockopt::rcvtimeo, common::kDefaultServerAliveTimeoutMsec);
         this->socket_->set(zmq::sockopt::linger, 0);
     }
     catch (const zmq::error_t &error)
@@ -127,8 +126,8 @@ void CommandClientBase::resetClient()
         {
             this->socket_ = new zmq::socket_t(*this->context_, zmq::socket_type::req);
             this->socket_->connect(this->server_endpoint_);
-            // Set timeout so socket will not wait for answer more than client alive timeout.
-            this->socket_->set(zmq::sockopt::rcvtimeo, CommandClientBase::kClientAliveTimeoutMsec);
+            // Set timeout so socket will not wait for answer more than server alive timeout.
+            this->socket_->set(zmq::sockopt::rcvtimeo, common::kDefaultServerAliveTimeoutMsec);
             this->socket_->set(zmq::sockopt::linger, 0);
         }
         catch (const zmq::error_t &error)
@@ -162,7 +161,7 @@ void CommandClientBase::setClientHostIP(const std::string&){}
 
 void CommandClientBase::setClientId(const std::string &){}
 
-int CommandClientBase::sendCommand(const CommandData& msg, void* &data_out, size_t &out_bytes)
+int CommandClientBase::sendCommand(const RequestData& msg, void* &data_out, size_t &out_bytes)
 {
     if (!this->socket_)
         return -1;
@@ -191,11 +190,6 @@ int CommandClientBase::sendCommand(const CommandData& msg, void* &data_out, size
 
     return res;
 
-}
-
-int CommandClientBase::sendBadCommand1(void* &, size_t &)
-{
-    return 0;
 }
 
 int CommandClientBase::recvFromSocket(zmq::socket_t *socket, void *&data, size_t &data_size_bytes) const
@@ -251,18 +245,18 @@ void CommandClientBase::sendAliveCallback()
     zmq::socket_t *alive_socket = new zmq::socket_t(*this->context_, zmq::socket_type::req);
     alive_socket->connect(this->server_endpoint_);
     // Set timeout so socket will not wait for answer more than client alive timeout.
-    alive_socket->set(zmq::sockopt::rcvtimeo, CommandClientBase::kClientAliveTimeoutMsec);
+    alive_socket->set(zmq::sockopt::rcvtimeo, common::kDefaultServerAliveTimeoutMsec);
     alive_socket->set(zmq::sockopt::linger, 0);
 
     while(this->auto_alive_working_)
     {
         auto res =
-            this->auto_alive_cv_.wait_for(lk, std::chrono::milliseconds(CommandClientBase::kClientSendAlivePeriodMsec));
+            this->auto_alive_cv_.wait_for(lk, std::chrono::milliseconds(common::kClientAlivePeriodMsec));
 
         if (std::cv_status::timeout == res)
         {
             msg = this->prepareMessage(
-                            CommandData(static_cast<common::CommandType>(BaseServerCommand::REQ_ALIVE)));
+                            RequestData(static_cast<common::CommandType>(ServerCommand::REQ_ALIVE)));
             try
             {
                 msg.send(*alive_socket);
@@ -278,15 +272,15 @@ void CommandClientBase::sendAliveCallback()
                 auto recv_result = this->recvFromSocket(alive_socket, data_out, out_size);
                 auto *data_bytes = static_cast<std::uint8_t*>(data_out);
 
-                if (0 == recv_result && out_size == sizeof(CommandClientBase::CommandError))
+                if (0 == recv_result && out_size == sizeof(common::ServerResult))
                 {
-                    CommandClientBase::CommandError error;
+                    common::ServerResult result;
 
 
                     zmqutils::utils::binarySerializeDeserialize(
-                                data_bytes, sizeof(CommandClientBase::CommandError), &error);
+                                data_bytes, sizeof(common::CommandReply), &result);
 
-                    recv_success = error == CommandClientBase::CommandError::NOT_ERROR;
+                    recv_success = result == common::ServerResult::COMMAND_OK;
 
                 }
                 else
@@ -311,7 +305,7 @@ void CommandClientBase::sendAliveCallback()
     delete alive_socket;
 }
 
-zmq::multipart_t CommandClientBase::prepareMessage(const CommandData &msg)
+zmq::multipart_t CommandClientBase::prepareMessage(const RequestData &msg)
 {
     // Prepare the ip data.
     zmq::message_t message_ip(this->client_info_.ip.begin(), this->client_info_.ip.end());
@@ -320,9 +314,9 @@ zmq::multipart_t CommandClientBase::prepareMessage(const CommandData &msg)
     // Prepare the pid data.
     zmq::message_t message_pid(this->client_info_.pid.begin(), this->client_info_.pid.end());
     // Prepare the command data.
-    std::uint8_t command_buffer[sizeof(common::CmdRequestId)];
-    zmqutils::utils::binarySerializeDeserialize(&msg.command_id, sizeof(common::CmdRequestId), command_buffer);
-    zmq::message_t message_command(&command_buffer, sizeof(common::CmdRequestId));
+    std::uint8_t command_buffer[sizeof(common::CommandType)];
+    zmqutils::utils::binarySerializeDeserialize(&msg.command, sizeof(common::CommandType), command_buffer);
+    zmq::message_t message_command(&command_buffer, sizeof(common::CommandType));
 
 
     // Prepare the multipart msg.

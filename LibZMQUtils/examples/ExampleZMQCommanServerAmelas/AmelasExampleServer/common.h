@@ -25,15 +25,16 @@ enum class AmelasServerCommand : zmqutils::common::CommandType
     END_AMELAS_COMMANDS
 };
 
-// Specific subclass errors (0 to 15 are reserved for the base server).
+// Specific subclass errors (0 to 20 are reserved for the base server).
 enum class AmelasServerResult : zmqutils::common::ResultType
 {
-
+    EMPTY_CALLBACK = 21,
+    INVALID_CALLBACK = 22
 };
 
 // Extend the base command strings with those of the subclass.
 static constexpr auto AmelasServerCommandStr = zmqutils::utils::joinArraysConstexpr(
-    zmqutils::common::BaseServerCommandStr,
+    zmqutils::common::ServerCommandStr,
     std::array<const char*, 5>
     {
         "REQ_SET_DATETIME",
@@ -45,15 +46,15 @@ static constexpr auto AmelasServerCommandStr = zmqutils::utils::joinArraysConste
 
 // Extend the base result strings with those of the subclass.
 static constexpr auto AmelasServerResultStr = zmqutils::utils::joinArraysConstexpr(
-    zmqutils::common::BaseServerResultStr,
+    zmqutils::common::ServerResultStr,
     std::array<const char*, 2>
     {
-        "INVALID_DATETIME - Datetime provided is invalid.",
-        "INVALID_POSITION - Position (az, el) provided is invalid."
+        "EMPTY_CALLBACK - The external callback for the command is empty.",
+        "INVALID_CALLBACK - The external callback for the command is invalid."
     });
 
 // Usefull const expressions.
-constexpr int kMinCmdId = static_cast<int>(zmqutils::common::BaseServerCommand::END_BASE_COMMANDS) + 1;
+constexpr int kMinCmdId = static_cast<int>(zmqutils::common::ServerCommand::END_BASE_COMMANDS) + 1;
 constexpr int kMaxCmdId = static_cast<int>(AmelasServerCommand::END_AMELAS_COMMANDS) - 1;
 
 }} // END NAMESPACES.

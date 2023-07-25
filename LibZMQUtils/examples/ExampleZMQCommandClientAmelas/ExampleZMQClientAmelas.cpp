@@ -3,29 +3,18 @@
 #include <iostream>
 #include <cstring>
 
-#include <LibZMQUtils/CommandClient>
+#include "AmelasExampleServer/amelas_server.h"
+#include "AmelasExampleServer/common.h"
+#include "AmelasExampleClient/amelas_client.h"
 
 
 
 using namespace zmqutils;
+using namespace amelas;
 
-// Specific subclass commands (0 to 4 are reserved for the base server).
-// WARNING: In our approach, the server commands must be always in order.
-enum class AmelasServerCommand : common::CommandType
-{
-    REQ_SET_DATETIME      = 11,
-    REQ_GET_DATETIME      = 12,
-    REQ_SET_HOME_POSITION = 13,
-    REQ_GET_HOME_POSITION = 14,
-    END_AMELAS_COMMANDS
-};
-
-// Specific subclass errors (0 to 15 are reserved for the base server).
-enum class AmelasServerResult : common::CommandType
-{
-    INVALID_DATETIME = 16,
-    INVALID_POSITION = 17
-};
+using amelas::common::AmelasServerCommand;
+using amelas::common::AmelasServerResult;
+using zmqutils::common::CommandType;
 
 void parseCommand(CommandClientBase &client, const std::string &command)
 {
@@ -40,11 +29,11 @@ void parseCommand(CommandClientBase &client, const std::string &command)
 
     if (token)
     {
-        common::CommandType command_id;
+        CommandType command_id;
 
         try
         {
-            command_id = static_cast<common::CommandType>(std::stoi(token));
+            command_id = static_cast<CommandType>(std::stoi(token));
         }
         catch (...)
         {
@@ -53,38 +42,39 @@ void parseCommand(CommandClientBase &client, const std::string &command)
             return;
         }
 
-        CommandData command_msg(command_id);
+        RequestData command_msg(command_id);
+
         bool valid = true;
 
-        if (command_id == static_cast<common::CommandType>(common::BaseServerCommand::REQ_CONNECT))
+        if (command_id == static_cast<CommandType>(ServerCommand::REQ_CONNECT))
         {
             std::cout << "Sending connect message" << std::endl;
         }
-        else if (command_id == static_cast<common::CommandType>(common::BaseServerCommand::REQ_DISCONNECT))
+        else if (command_id == static_cast<CommandType>(ServerCommand::REQ_DISCONNECT))
         {
             std::cout << "Sending disconnect message" << std::endl;
         }
-        else if (command_id == static_cast<common::CommandType>(common::BaseServerCommand::REQ_ALIVE))
+        else if (command_id == static_cast<CommandType>(ServerCommand::REQ_ALIVE))
         {
             std::cout << "Sending keepalive command." << std::endl;
         }
-        else if (command_id == static_cast<common::CommandType>(AmelasServerCommand::REQ_GET_DATETIME))
+        else if (command_id == static_cast<CommandType>(AmelasServerCommand::REQ_GET_DATETIME))
         {
             std::cout << "Get datetime command not implemented yet." << std::endl;
             valid = false;
         }
-        else if (command_id == static_cast<common::CommandType>(AmelasServerCommand::REQ_SET_DATETIME))
+        else if (command_id == static_cast<CommandType>(AmelasServerCommand::REQ_SET_DATETIME))
         {
             std::cout << "Set datetime command not implemented yet." << std::endl;
             valid = false;
         }
-        else if (command_id == static_cast<common::CommandType>(AmelasServerCommand::REQ_GET_HOME_POSITION))
+        else if (command_id == static_cast<CommandType>(AmelasServerCommand::REQ_GET_HOME_POSITION))
         {
             std::cout << "Sending get home position command." << std::endl;
         }
-        else if (command_id == static_cast<common::CommandType>(AmelasServerCommand::REQ_SET_HOME_POSITION))
+        else if (command_id == static_cast<CommandType>(AmelasServerCommand::REQ_SET_HOME_POSITION))
         {
-            std::cout << "Sending get home position command." << std::endl;
+            std::cout << "Sending set home position command." << std::endl;
 
             bool valid_params = true;
             double az = 0., el = 0.;
@@ -145,31 +135,20 @@ void parseCommand(CommandClientBase &client, const std::string &command)
                 client.resetClient();
             }
 
-            else if (out_size_bytes >= sizeof(CommandClientBase::CommandError))
+            else if (out_size_bytes >= sizeof(ServerResult))
             {
-                CommandClientBase::CommandError error_response;
+                ServerResult result;
 
                 auto *data_bytes = static_cast<std::uint8_t*>(data_out);
                 zmqutils::utils::binarySerializeDeserialize(
-                            data_bytes, sizeof(CommandClientBase::CommandError), &error_response);
-                std::cout << "Response code from server: "<< static_cast<std::uint32_t>(error_response) << std::endl;
+                    data_bytes, sizeof(ServerResult), &result);
+                std::cout << "Response code from server: "<< static_cast<std::uint32_t>(result) << std::endl;
 
-                if (command_id == static_cast<common::CommandType>(AmelasServerCommand::REQ_GET_HOME_POSITION))
+                if (command_id == static_cast<CommandType>(AmelasServerCommand::REQ_GET_HOME_POSITION))
                 {
+                    // MULTIPART!!! TODO
+
                     double az, el;
-                    if (out_size_bytes == sizeof(CommandClientBase::CommandError) + 16)
-                    {
-                        zmqutils::utils::binarySerializeDeserialize(
-                                    data_bytes + sizeof(CommandClientBase::CommandError), 8, &az);
-
-                        zmqutils::utils::binarySerializeDeserialize(
-                                    data_bytes + sizeof(CommandClientBase::CommandError) + 8, 8, &el);
-
-                        std::cout << "Get home position command result is (az,el): " << az << ", " << el << std::endl;
-                    }
-                    else
-                        std::cerr << "Get home position command answer is incorrect. Params size is: " << out_size_bytes <<  std::endl;
-
                 }
 
                 delete[] data_bytes;
@@ -221,7 +200,7 @@ int main(int argc, char**argv)
     }
 
     std::string endpoint = "tcp://" + ip + ":" + std::to_string(port);
-    CommandClientBase client(endpoint);
+    AmelasClient client(endpoint);
     client.startClient("Ethernet");
     //client.setClientHostIP("");
     std::cout << "Connecting to endpoint: " <<  endpoint << std::endl;

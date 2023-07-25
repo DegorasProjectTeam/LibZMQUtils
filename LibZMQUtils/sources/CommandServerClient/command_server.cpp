@@ -140,7 +140,7 @@ CommandServerBase::~CommandServerBase()
     this->stopServer();
 }
 
-BaseServerResult CommandServerBase::execReqConnect(const CommandRequest& cmd_req)
+ServerResult CommandServerBase::execReqConnect(const CommandRequest& cmd_req)
 {
     // Safe mutex lock.
     std::unique_lock<std::mutex> lock(this->mtx_);
@@ -148,7 +148,7 @@ BaseServerResult CommandServerBase::execReqConnect(const CommandRequest& cmd_req
     // Check if the client is already connected.
     auto it = this->connected_clients_.find(cmd_req.client.id);
     if(it != this->connected_clients_.end())
-        return BaseServerResult::ALREADY_CONNECTED;
+        return ServerResult::ALREADY_CONNECTED;
 
     // Add the new client.
     this->connected_clients_[cmd_req.client.id] = cmd_req.client;
@@ -161,10 +161,10 @@ BaseServerResult CommandServerBase::execReqConnect(const CommandRequest& cmd_req
     this->onConnected(cmd_req.client);
 
     // All ok.
-    return BaseServerResult::COMMAND_OK;
+    return ServerResult::COMMAND_OK;
 }
 
-BaseServerResult CommandServerBase::execReqDisconnect(const CommandRequest& cmd_req)
+ServerResult CommandServerBase::execReqDisconnect(const CommandRequest& cmd_req)
 {
     // Safe mutex lock.
     std::unique_lock<std::mutex> lock(this->mtx_);
@@ -183,13 +183,13 @@ BaseServerResult CommandServerBase::execReqDisconnect(const CommandRequest& cmd_
         this->updateServerTimeout();
 
     // All ok.
-    return BaseServerResult::COMMAND_OK;
+    return ServerResult::COMMAND_OK;
 }
 
 void CommandServerBase::serverWorker()
 {
     // Auxiliar variables.
-    BaseServerResult result;
+    ServerResult result;
 
     // Set the working flag to true.
     this->server_working_ = true;
@@ -217,24 +217,24 @@ void CommandServerBase::serverWorker()
             this->checkClientsAliveStatus();
 
         // Process the data.
-        if(result == BaseServerResult::COMMAND_OK && !this->server_working_)
+        if(result == ServerResult::COMMAND_OK && !this->server_working_)
         {
             // In this case, we will close the server. Call to the internal callback.
             this->onServerStop();
         }
-        else if(result == BaseServerResult::TIMEOUT_REACHED)
+        else if(result == ServerResult::TIMEOUT_REACHED)
         {
             // DO NOTHING.
         }
-        else if (result != BaseServerResult::COMMAND_OK)
+        else if (result != ServerResult::COMMAND_OK)
         {
             // Internal callback.
             this->onInvalidMsgReceived(cmd_request);
 
             // Prepare the message.
-            std::uint8_t res_buff[sizeof(BaseServerResult)];
-            utils::binarySerializeDeserialize(&result, sizeof(BaseServerResult), res_buff);
-            zmq::message_t message_res(res_buff, sizeof(BaseServerResult));
+            std::uint8_t res_buff[sizeof(ServerResult)];
+            utils::binarySerializeDeserialize(&result, sizeof(ServerResult), res_buff);
+            zmq::message_t message_res(res_buff, sizeof(ServerResult));
 
             // Send response callback.
             cmd_reply.result = result;
@@ -253,7 +253,7 @@ void CommandServerBase::serverWorker()
                     this->onServerError(error, "Error while sending a response.");
             }
         }
-        else if (result == BaseServerResult::COMMAND_OK)
+        else if (result == ServerResult::COMMAND_OK)
         {
             // Reply id buffer.
             std::unique_ptr<std::uint8_t> rep_id_buff;
@@ -263,14 +263,14 @@ void CommandServerBase::serverWorker()
 
             // Prepare the command result.
             CommandServerBase::prepareCommandResult(cmd_reply.result, rep_id_buff);
-            zmq::message_t message_rep_id(rep_id_buff.get(), sizeof(common::CmdReplyRes));
+            zmq::message_t message_rep_id(rep_id_buff.get(), sizeof(ServerResult));
 
             // Prepare the multipart msg.
             zmq::multipart_t multipart_msg;
             multipart_msg.add(std::move(message_rep_id));
 
             // Specific data.
-            if(cmd_reply.result == BaseServerResult::COMMAND_OK && cmd_reply.params_size != 0)
+            if(cmd_reply.result == ServerResult::COMMAND_OK && cmd_reply.params_size != 0)
             {
                 // Prepare the custom response.
                 zmq::message_t message_rep_custom(cmd_reply.params.get(), cmd_reply.params_size);
@@ -303,10 +303,10 @@ void CommandServerBase::serverWorker()
     }
 }
 
-BaseServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
+ServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
 {
     // Result variable.
-    BaseServerResult result = BaseServerResult::COMMAND_OK;
+    ServerResult result = ServerResult::COMMAND_OK;
 
     // Containers.
     bool recv_result;
@@ -329,18 +329,18 @@ BaseServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
         // Check if we want to close the server.
         // The error code is for ZMQ EFSM error.
         if(error.num() == common::kZmqEFSMError && !this->server_working_)
-            return BaseServerResult::COMMAND_OK;
+            return ServerResult::COMMAND_OK;
 
         // Else, call to error callback.
         this->onServerError(error, "Error while receiving a request.");
-        return BaseServerResult::INTERNAL_ZMQ_ERROR;
+        return ServerResult::INTERNAL_ZMQ_ERROR;
     }
 
     // Check for empty msg or timeout reached.
     if (multipart_msg.empty() && !recv_result)
-        return BaseServerResult::TIMEOUT_REACHED;
+        return ServerResult::TIMEOUT_REACHED;
     else if (multipart_msg.empty())
-        return BaseServerResult::EMPTY_MSG;
+        return ServerResult::EMPTY_MSG;
 
     // Check the multipart msg size.
     if (multipart_msg.size() == 4 || multipart_msg.size() == 5)
@@ -366,19 +366,19 @@ BaseServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
         if (ip_size_bytes > 0)
             ip = std::string(static_cast<char*>(message_ip.data()), ip_size_bytes);
         else
-            return BaseServerResult::EMPTY_CLIENT_IP;
+            return ServerResult::EMPTY_CLIENT_IP;
 
         // Get the hostname data.
         if (host_size_bytes > 0)
             hostname = std::string(static_cast<char*>(message_hostname.data()), host_size_bytes);
         else
-            return BaseServerResult::EMPTY_CLIENT_NAME;
+            return ServerResult::EMPTY_CLIENT_NAME;
 
         // Get the pid data.
         if (host_size_bytes > 0)
             pid = std::string(static_cast<char*>(message_pid.data()), pid_size_bytes);
         else
-            return BaseServerResult::EMPTY_CLIENT_PID;
+            return ServerResult::EMPTY_CLIENT_PID;
 
         // Update the client info.
         request.client = HostClient(ip, hostname, pid);
@@ -388,23 +388,23 @@ BaseServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
         this->updateClientLastConnection(request.client.id);
 
         // Get the command.
-        if (command_size_bytes == sizeof(CmdRequestId))
+        if (command_size_bytes == sizeof(ServerCommand))
         {
             int raw_command;
-            utils::binarySerializeDeserialize(message_command.data(), sizeof(BaseServerCommand), &raw_command);
+            utils::binarySerializeDeserialize(message_command.data(), sizeof(ServerCommand), &raw_command);
             // Validate the command.
             if(CommandServerBase::validateCommand(raw_command))
-                request.command = static_cast<BaseServerCommand>(raw_command);
+                request.command = static_cast<ServerCommand>(raw_command);
             else
             {
-                request.command = BaseServerCommand::INVALID_COMMAND;
-                return BaseServerResult::INVALID_MSG;
+                request.command = ServerCommand::INVALID_COMMAND;
+                return ServerResult::INVALID_MSG;
             }
         }
         else
         {
-            request.command = BaseServerCommand::INVALID_COMMAND;
-            return BaseServerResult::INVALID_MSG;
+            request.command = ServerCommand::INVALID_COMMAND;
+            return ServerResult::INVALID_MSG;
         }
 
         // If there is still one more part, they are the parameters.
@@ -429,28 +429,28 @@ BaseServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
                 request.params_size = params_size_bytes;
             }
             else
-                return BaseServerResult::EMPTY_PARAMS;
+                return ServerResult::EMPTY_PARAMS;
         }
     }
     else
-        return BaseServerResult::INVALID_PARTS;
+        return ServerResult::INVALID_PARTS;
 
     // Return the result.
     return result;
 }
 
-void CommandServerBase::prepareCommandResult(BaseServerResult result, std::unique_ptr<std::uint8_t>& data_out)
+void CommandServerBase::prepareCommandResult(ServerResult result, std::unique_ptr<std::uint8_t>& data_out)
 {
-    data_out = std::unique_ptr<std::uint8_t>(new std::uint8_t[sizeof(BaseServerResult)]);
-    utils::binarySerializeDeserialize(&result, sizeof(CmdReplyRes), data_out.get());
+    data_out = std::unique_ptr<std::uint8_t>(new std::uint8_t[sizeof(ServerResult)]);
+    utils::binarySerializeDeserialize(&result, sizeof(ServerResult), data_out.get());
 }
 
 bool CommandServerBase::validateCommand(int raw_command)
 {
     // Auxiliar variables.
     bool result = false;
-    int reserved_cmd = static_cast<int>(common::BaseServerCommand::RESERVED_COMMANDS);
-    int end_base_cmd = static_cast<int>(common::BaseServerCommand::END_BASE_COMMANDS);
+    int reserved_cmd = static_cast<int>(common::ServerCommand::RESERVED_COMMANDS);
+    int end_base_cmd = static_cast<int>(common::ServerCommand::END_BASE_COMMANDS);
     // Check if the command is valid.
     if (raw_command >= common::kMinBaseCmdId && raw_command < reserved_cmd)
         result = true;
@@ -472,21 +472,21 @@ void CommandServerBase::processCommand(const CommandRequest& request, CommandRep
     // 2 - If the command is other, check if the client is connected to the server.
     // 3 - If it is, check if the command is valid.
     // 4 - If valid, process the rest of the base commands or the custom command.
-    if (BaseServerCommand::REQ_CONNECT == request.command)
+    if (ServerCommand::REQ_CONNECT == request.command)
     {
         reply.result = this->execReqConnect(request);
     }
     else if(this->connected_clients_.find(request.client.id) == this->connected_clients_.end())
     {
-        reply.result = BaseServerResult::CLIENT_NOT_CONNECTED;
+        reply.result = ServerResult::CLIENT_NOT_CONNECTED;
     }
-    else if (BaseServerCommand::REQ_DISCONNECT == request.command)
+    else if (ServerCommand::REQ_DISCONNECT == request.command)
     {
         reply.result = this->execReqDisconnect(request);
     }
-    else if (BaseServerCommand::REQ_ALIVE == request.command)
+    else if (ServerCommand::REQ_ALIVE == request.command)
     {
-        reply.result = BaseServerResult::COMMAND_OK;
+        reply.result = ServerResult::COMMAND_OK;
     }
     else
     {
@@ -494,7 +494,7 @@ void CommandServerBase::processCommand(const CommandRequest& request, CommandRep
         this->onCustomCommandReceived(request, reply);
 
         // Chek for an invalid msg.
-        if(reply.result == BaseServerResult::INVALID_MSG)
+        if(reply.result == ServerResult::INVALID_MSG)
             this->onInvalidMsgReceived(request);
     }
 }
@@ -635,7 +635,7 @@ void CommandServerBase::resetSocket()
 
 void CommandServerBase::onCustomCommandReceived(const CommandRequest&, CommandReply& rep)
 {
-    rep.result = BaseServerResult::NOT_IMPLEMENTED;
+    rep.result = ServerResult::NOT_IMPLEMENTED;
 }
 
 } // END NAMESPACES.

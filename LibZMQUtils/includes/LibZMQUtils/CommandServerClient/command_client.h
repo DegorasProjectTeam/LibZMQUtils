@@ -60,47 +60,19 @@ namespace zmq
 namespace zmqutils{
 // =====================================================================================================================
 
-using common::CmdRequestId;
-using common::BaseServerCommand;
+// =====================================================================================================================
+using common::ServerCommand;
 using common::CommandType;
-
-struct LIBZMQUTILS_EXPORT CommandData
-{
-    CommandData(CommandType id) :
-        command_id(id),
-        params(nullptr),
-        params_size(0){}
-
-    CommandType command_id;
-    std::unique_ptr<std::uint8_t> params;
-    size_t params_size;
-};
+using common::RequestData;
+// =====================================================================================================================
 
 class LIBZMQUTILS_EXPORT CommandClientBase
 {
 
 public:
-
-
-    // TODO: maybe this should be configurable
-    static const int kClientAliveTimeoutMsec;
-    static const int kClientSendAlivePeriodMsec;
-
-    enum class CommandError : std::uint32_t
-    {
-        NOT_ERROR,
-        NO_COMMAND,
-        NOT_CONNECTED,
-        ALREADY_DISCONNECTED,
-        ALREADY_CONNECTED,
-        BAD_PARAMETERS,
-        COMMAND_FAILED,
-        NOT_IMPLEMENTED
-    };
-
-
+    
     CommandClientBase(const std::string &server_endpoint);
-
+    
     virtual ~CommandClientBase();
 
     bool startClient(const std::string& interface_name);
@@ -114,16 +86,17 @@ public:
 
     void setClientId(const std::string &id);
 
-    virtual int sendCommand(const CommandData& msg, void* &data_out, size_t &out_bytes);
+    int sendCommand(const RequestData& msg, void* &data_out, size_t &out_bytes);
 
-    // Remove. Only for testing.
-    int sendBadCommand1(void* &data_out, size_t &out_bytes);
+protected:
+
+    virtual void onSendCommand(const RequestData&, const zmq::multipart_t&) = 0;
 
 private:
 
     int recvFromSocket(zmq::socket_t *socket, void *&data, size_t &data_size_bytes) const;
     void sendAliveCallback();
-    zmq::multipart_t prepareMessage(const CommandData &msg);
+    zmq::multipart_t prepareMessage(const RequestData &msg);
 
     // Internal client identification.
     common::HostClient client_info_;

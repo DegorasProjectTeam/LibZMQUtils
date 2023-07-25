@@ -64,13 +64,11 @@ namespace zmqutils{
 // =====================================================================================================================
 
 // =====================================================================================================================
-using common::BaseServerResultStr;
+using common::ServerResultStr;
 using common::CommandReply;
 using common::CommandRequest;
-using common::CmdRequestId;
-using common::CmdReplyRes;
-using common::BaseServerCommand;
-using common::BaseServerResult;
+using common::ServerCommand;
+using common::ServerResult;
 using common::HostClient;
 using utils::NetworkAdapterInfo;
 // =====================================================================================================================
@@ -362,7 +360,7 @@ protected:
 private:
 
     // Helper for prepare the result message.
-    static void prepareCommandResult(BaseServerResult, std::unique_ptr<uint8_t>& data_out);
+    static void prepareCommandResult(ServerResult, std::unique_ptr<uint8_t>& data_out);
 
     // Helper for check if the base command is valid.
     static bool validateCommand(int raw_command);
@@ -383,13 +381,13 @@ private:
     void updateServerTimeout();
 
     // Internal connect execution process.
-    BaseServerResult execReqConnect(const CommandRequest&);
+    ServerResult execReqConnect(const CommandRequest&);
 
     // Internal disconnect execution process.
-    BaseServerResult execReqDisconnect(const CommandRequest&);
+    ServerResult execReqDisconnect(const CommandRequest&);
 
     // Function for receive data from the client.
-    BaseServerResult recvFromSocket(CommandRequest&);
+    ServerResult recvFromSocket(CommandRequest&);
 
     // Function for reset the socket.
     void resetSocket();

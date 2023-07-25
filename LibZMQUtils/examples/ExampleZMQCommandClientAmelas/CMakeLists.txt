@@ -3,7 +3,13 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -std=c++17 -pthread")
 
 set(APP_NAME "ExampleZMQCommanClientAmelas")
-set(SOURCES "ExampleZMQClientAmelas.cpp")
+
+FILE(GLOB_RECURSE SOURCES *.cpp)
+FILE(GLOB_RECURSE HEADERS *.h)
+
+include_directories(${CMAKE_SOURCE_DIR}/examples/ExampleZMQCommanServerAmelas)
+include_directories(${CMAKE_SOURCE_DIR}/examples/ExampleZMQCommanClientAmelas)
+
 set(LIBRARIES LibZMQUtils)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/Examples/${APP_NAME})
 

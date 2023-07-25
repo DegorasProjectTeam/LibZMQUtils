@@ -9,8 +9,6 @@ FILE(GLOB_RECURSE HEADERS *.h)
 
 include_directories(${CMAKE_SOURCE_DIR}/examples/ExampleZMQCommanServerAmelas)
 
-message("CMAKE_SOURCE_DIR is ${CMAKE_SOURCE_DIR}")
-
 set(LIBRARIES LibZMQUtils)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/Examples/${APP_NAME})
 

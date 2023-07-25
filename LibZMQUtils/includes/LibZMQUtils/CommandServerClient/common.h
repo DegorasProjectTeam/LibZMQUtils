@@ -61,7 +61,9 @@ namespace common{
 // CONSTANTS
 // =====================================================================================================================
 constexpr int kDefaultClientAliveTimeoutMsec = 8000;   ///< Default timeout for consider a client dead.
+constexpr int kDefaultServerAliveTimeoutMsec = 3000;   ///< Default timeout for consider a server dead.
 constexpr unsigned kServerReconnTimes = 10;            ///< Server reconnection default number of attempts.
+constexpr unsigned kClientAlivePeriodMsec = 1000;       ///< Default period for sending alive commands.
 constexpr int kZmqEFSMError = 156384765;               ///< ZMQ EFSM error.
 // =====================================================================================================================
 
@@ -78,7 +80,7 @@ using ResultType = std::uint32_t;    ///< Type used for the BaseServerResult enu
  * @warning Only positive commands will be acepted by the server.
  * @warning Messages with the command 0, sentinel value or a reserved commands are considered invalid.
  */
-enum class BaseServerCommand : CommandType
+enum class ServerCommand : CommandType
 {
     INVALID_COMMAND   = 0,  ///< Invalid command.
     REQ_CONNECT       = 1,  ///< Request to connect to the server.
@@ -93,7 +95,7 @@ enum class BaseServerCommand : CommandType
  * @brief Enumerates the possible results of a base command operation. They can be extended in a subclass.
  * @warning These results must not be used for custom results, they are special and reserved.
  */
-enum class BaseServerResult : CommandType
+enum class ServerResult : CommandType
 {
     COMMAND_OK             = 0, ///< The command was executed successfully.
     INTERNAL_ZMQ_ERROR     = 1, ///< An internal ZeroMQ error occurred.
@@ -116,10 +118,10 @@ enum class BaseServerResult : CommandType
 };
 
 // Usefull const expressions.
-constexpr int kMinBaseCmdId = static_cast<int>(BaseServerCommand::INVALID_COMMAND) + 1;
-constexpr int kMaxBaseCmdId = static_cast<int>(BaseServerCommand::END_BASE_COMMANDS) - 1;
+constexpr int kMinBaseCmdId = static_cast<int>(ServerCommand::INVALID_COMMAND) + 1;
+constexpr int kMaxBaseCmdId = static_cast<int>(ServerCommand::END_BASE_COMMANDS) - 1;
 
-static constexpr std::array<const char*, 11>  BaseServerCommandStr
+static constexpr std::array<const char*, 11>  ServerCommandStr
 {
     "INVALID_COMMAND",
     "REQ_CONNECT",
@@ -134,7 +136,7 @@ static constexpr std::array<const char*, 11>  BaseServerCommandStr
     "END_BASE_COMMANDS"
 };
 
-static constexpr std::array<const char*, 21>  BaseServerResultStr
+static constexpr std::array<const char*, 21>  ServerResultStr
 {
     "COMMAND_OK - Command executed.",
     "INTERNAL_ZMQ_ERROR - Internal ZeroMQ error.",
@@ -191,13 +193,13 @@ struct LIBZMQUTILS_EXPORT HostClient
 struct CommandRequest
 {
     CommandRequest():
-        command(BaseServerCommand::INVALID_COMMAND),
+        command(ServerCommand::INVALID_COMMAND),
         params(nullptr),
         params_size(0)
     {}
 
     HostClient client;
-    BaseServerCommand command;
+    ServerCommand command;
     std::unique_ptr<std::uint8_t> params;
     zmq::multipart_t raw_msg;
     size_t params_size;
@@ -208,14 +210,31 @@ struct CommandReply
     CommandReply():
         params(nullptr),
         params_size(0),
-        result(BaseServerResult::COMMAND_OK),
-        request_cmd(BaseServerCommand::INVALID_COMMAND)
+        result(ServerResult::COMMAND_OK),
+        request_cmd(ServerCommand::INVALID_COMMAND)
     {}
 
-    BaseServerCommand request_cmd;
+    ServerCommand request_cmd;
     std::unique_ptr<std::uint8_t> params;
     size_t params_size;
-    BaseServerResult result;
+    ServerResult result;
+};
+
+struct LIBZMQUTILS_EXPORT RequestData
+{
+    RequestData(CommandType id) :
+        command(id),
+        params(nullptr),
+        params_size(0){}
+
+    RequestData() :
+        command(static_cast<CommandType>(ServerCommand::INVALID_COMMAND)),
+        params(nullptr),
+        params_size(0){}
+
+    CommandType command;
+    std::unique_ptr<std::uint8_t> params;
+    size_t params_size;
 };
 
 // =====================================================================================================================
