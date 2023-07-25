@@ -21,7 +21,8 @@
 
 // PROJECT INCLUDES
 // =====================================================================================================================
-#include "amelas_example_server.h"
+#include "AmelasExampleServer/amelas_server.h"
+#include "AmelasExampleController/amelas_controller.h"
 // =====================================================================================================================
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -60,6 +61,9 @@ BOOL WINAPI ConsoleCtrlHandler(DWORD dwCtrlType)
 //
 int main(int argc, char**argv)
 {
+    // Using.
+    using amelas::common::AmelasServerCommand;
+
     // Set up the Windows Console Control Handler
     SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
 
@@ -87,21 +91,26 @@ int main(int argc, char**argv)
     }
 
     // Instantiate the Amelas controller.
-    AmelasExampleController amelas_controller;
+    amelas::AmelasController amelas_controller;
 
     // Instantiate the server.
-    AmelasExampleServer amelas_server(port);
+    amelas::AmelasServer amelas_server(port);
 
     // Disable or enables the client status checking.
     amelas_server.setClientStatusCheck(client_status_check);
-    auto setHomePositionFunction = amelascontrol::utils::makeCallback(&amelas_controller,
-                                                                      &AmelasExampleController::setHomePosition);
 
-    auto getHomePositionFunction = amelascontrol::utils::makeCallback(&amelas_controller,
-                                                                      &AmelasExampleController::getHomePosition);
+    // ---------------------------------------
+    // Set the controller callbacks in the server.
 
-    amelas_server.setCallback(AmelasServerCommand::REQ_SET_HOME_POSITION, setHomePositionFunction);
-    amelas_server.setCallback(AmelasServerCommand::REQ_GET_HOME_POSITION, getHomePositionFunction);
+    amelas_server.setCallback(AmelasServerCommand::REQ_SET_HOME_POSITION,
+                              &amelas_controller,
+                              &amelas::AmelasController::setHomePosition);
+
+    amelas_server.setCallback(AmelasServerCommand::REQ_GET_HOME_POSITION,
+                              &amelas_controller,
+                              &amelas::AmelasController::getHomePosition);
+
+    // ---------------------------------------
 
     // Start the server.
     amelas_server.startServer();

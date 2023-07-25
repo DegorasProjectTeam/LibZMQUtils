@@ -1,14 +1,27 @@
-#include "amelas_example_server.h"
+#include "amelas_server.h"
 
-AmelasExampleServer::AmelasExampleServer(unsigned int port, const std::string &local_addr) :
+// AMELAS NAMESPACES
+// =====================================================================================================================
+namespace amelas{
+// =====================================================================================================================
+
+using common::AmelasServerCommandStr;
+using common::AmelasServerResultStr;
+using common::ControllerError;
+using common::AmelasServerCommand;
+using common::AmelasServerResult;
+using zmqutils::common::BaseServerCommand;
+using zmqutils::common::BaseServerResult;
+using zmqutils::common::ResultType;
+
+
+AmelasServer::AmelasServer(unsigned int port, const std::string &local_addr) :
     CommandServerBase(port, local_addr)
 {}
 
-
-
-void AmelasExampleServer::processSetHomePosition(const CommandRequest& request, CommandReply& reply)
+void AmelasServer::processSetHomePosition(const CommandRequest& request, CommandReply& reply)
 {
-    AmelasExampleController::AmelasError amelas_err;
+    ControllerError controller_err;
 
     // Auxilar variables.
     double az, el;
@@ -17,12 +30,12 @@ void AmelasExampleServer::processSetHomePosition(const CommandRequest& request, 
     // Check the request parameters size.
     if (request.params_size == 0)
     {
-        reply.result = common::BaseServerResult::EMPTY_PARAMS;
+        reply.result = BaseServerResult::EMPTY_PARAMS;
         return;
     }
     else if (request.params_size != double_sz*2)
     {
-        reply.result = common::BaseServerResult::BAD_PARAMETERS;
+        reply.result = BaseServerResult::BAD_PARAMETERS;
         return;
     }
 
@@ -30,42 +43,47 @@ void AmelasExampleServer::processSetHomePosition(const CommandRequest& request, 
     zmqutils::utils::binarySerializeDeserialize(request.params.get(), double_sz, &az);
     zmqutils::utils::binarySerializeDeserialize(request.params.get() + double_sz, double_sz, &el);
 
+    // Generate the struct.
+    common::AltAzPos pos = {az, el};
+
     // Process the command.
-    amelas_err = this->invoke<AmelasExampleController::SetHomePositionCallback>(
-                AmelasServerCommand::REQ_SET_HOME_POSITION, az, el);
+    controller_err = this->invokeCallback<common::SetHomePositionCallback>(
+                                    AmelasServerCommand::REQ_SET_HOME_POSITION, pos);
+
     // Store the amelas error.
-    reply.params = std::unique_ptr<std::uint8_t>(new std::uint8_t[sizeof(common::ResultType)]);
-    common::ResultType amelas_res = static_cast<common::ResultType>(amelas_err);
-    zmqutils::utils::binarySerializeDeserialize(&amelas_res, sizeof(common::ResultType), reply.params.get());
-    reply.params_size = sizeof(common::ResultType);
+    reply.params = std::unique_ptr<std::uint8_t>(new std::uint8_t[sizeof(ResultType)]);
+    ResultType amelas_res = static_cast<ResultType>(controller_err);
+    zmqutils::utils::binarySerializeDeserialize(&amelas_res, sizeof(ResultType), reply.params.get());
+    reply.params_size = sizeof(ResultType);
 }
 
-void AmelasExampleServer::processGetHomePosition(const CommandRequest &, CommandReply &reply)
+void AmelasServer::processGetHomePosition(const CommandRequest &, CommandReply &reply)
 {
     // Auxilar variables.
-    constexpr std::size_t res_sz = sizeof(common::ResultType);
+    constexpr std::size_t res_sz = sizeof(ResultType);
     constexpr std::size_t double_sz = sizeof(double);
-    AmelasExampleController::AmelasError amelas_err = AmelasExampleController::AmelasError::SUCCESS;
-    double az, el;
+    ControllerError amelas_err = ControllerError::SUCCESS;
+    common::AltAzPos pos;
 
     // Process the command.
-    amelas_err = this->invoke<AmelasExampleController::GetHomePositionCallback>(
-                AmelasServerCommand::REQ_GET_HOME_POSITION, az, el);
+    amelas_err = this->invokeCallback<common::GetHomePositionCallback>(
+                                AmelasServerCommand::REQ_GET_HOME_POSITION, pos);
+
     // Serialize parameters
     reply.params = std::unique_ptr<std::uint8_t>(new std::uint8_t[res_sz + 2*double_sz]);
     reply.params_size = res_sz + 2*double_sz;
 
     zmqutils::utils::binarySerializeDeserialize(&amelas_err, res_sz, reply.params.get());
-    zmqutils::utils::binarySerializeDeserialize(&az, double_sz, reply.params.get() + res_sz);
-    zmqutils::utils::binarySerializeDeserialize(&el, double_sz, reply.params.get() + res_sz + double_sz);
+    zmqutils::utils::binarySerializeDeserialize(&pos.az, double_sz, reply.params.get() + res_sz);
+    zmqutils::utils::binarySerializeDeserialize(&pos.el, double_sz, reply.params.get() + res_sz + double_sz);
 
     // Store the server result.
-    reply.result = common::BaseServerResult::COMMAND_OK;
+    reply.result = BaseServerResult::COMMAND_OK;
 
     std::cout << "Size of params is " << reply.params_size << std::endl;
 }
 
-void AmelasExampleServer::processAmelasCommand(const CommandRequest& request, CommandReply& reply)
+void AmelasServer::processAmelasCommand(const CommandRequest& request, CommandReply& reply)
 {
     AmelasServerCommand command = static_cast<AmelasServerCommand>(request.command);
 
@@ -79,11 +97,11 @@ void AmelasExampleServer::processAmelasCommand(const CommandRequest& request, Co
     }
     else
     {
-        reply.result = common::BaseServerResult::NOT_IMPLEMENTED;
+        reply.result = BaseServerResult::NOT_IMPLEMENTED;
     }
 }
 
-void AmelasExampleServer::onCustomCommandReceived(const CommandRequest& request, CommandReply& reply)
+void AmelasServer::onCustomCommandReceived(const CommandRequest& request, CommandReply& reply)
 {
     // Get the command.
     AmelasServerCommand command = static_cast<AmelasServerCommand>(request.command);
@@ -105,9 +123,9 @@ void AmelasExampleServer::onCustomCommandReceived(const CommandRequest& request,
     if(command == AmelasServerCommand::END_AMELAS_COMMANDS)
     {
         // Update the result.
-        reply.result = common::BaseServerResult::INVALID_MSG;
+        reply.result = BaseServerResult::INVALID_MSG;
     }
-    else if(AmelasExampleServer::validateAmelasCommand(command))
+    else if(AmelasServer::validateAmelasCommand(command))
     {
         this->processAmelasCommand(request, reply);
     }
@@ -118,7 +136,7 @@ void AmelasExampleServer::onCustomCommandReceived(const CommandRequest& request,
     }
 }
 
-void AmelasExampleServer::onServerStart()
+void AmelasServer::onServerStart()
 {
     // Ips.
     std::string ips;
@@ -142,7 +160,7 @@ void AmelasExampleServer::onServerStart()
     std::cout << std::string(80, '-') << std::endl;
 }
 
-void AmelasExampleServer::onServerStop()
+void AmelasServer::onServerStop()
 {
     // Log.
     std::cout << std::string(80, '-') << std::endl;
@@ -152,7 +170,7 @@ void AmelasExampleServer::onServerStop()
     std::cout << std::string(80, '-') << std::endl;
 }
 
-void AmelasExampleServer::onWaitingCommand()
+void AmelasServer::onWaitingCommand()
 {
     // Log.
     std::cout << std::string(80, '-') << std::endl;
@@ -162,7 +180,7 @@ void AmelasExampleServer::onWaitingCommand()
     std::cout << std::string(80, '-') << std::endl;
 }
 
-void AmelasExampleServer::onDeadClient(const HostClient& client)
+void AmelasServer::onDeadClient(const HostClient& client)
 {
     // Log.
     std::cout << std::string(80, '-') << std::endl;
@@ -177,7 +195,7 @@ void AmelasExampleServer::onDeadClient(const HostClient& client)
     std::cout << std::string(80, '-') << std::endl;
 }
 
-void AmelasExampleServer::onConnected(const HostClient& client)
+void AmelasServer::onConnected(const HostClient& client)
 {
     // Log.
     std::cout << std::string(80, '-') << std::endl;
@@ -192,7 +210,7 @@ void AmelasExampleServer::onConnected(const HostClient& client)
     std::cout << std::string(80, '-') << std::endl;
 }
 
-void AmelasExampleServer::onDisconnected(const HostClient& client)
+void AmelasServer::onDisconnected(const HostClient& client)
 {
     // Log.
     std::cout << std::string(80, '-') << std::endl;
@@ -207,7 +225,7 @@ void AmelasExampleServer::onDisconnected(const HostClient& client)
     std::cout << std::string(80, '-') << std::endl;
 }
 
-void AmelasExampleServer::onServerError(const zmq::error_t &error, const std::string &ext_info)
+void AmelasServer::onServerError(const zmq::error_t &error, const std::string &ext_info)
 {
     // Log.
     std::cout << std::string(80, '-') << std::endl;
@@ -220,7 +238,7 @@ void AmelasExampleServer::onServerError(const zmq::error_t &error, const std::st
     std::cout << std::string(80, '-') << std::endl;
 }
 
-void AmelasExampleServer::onCommandReceived(const CommandRequest &cmd_req)
+void AmelasServer::onCommandReceived(const CommandRequest &cmd_req)
 {
     // Get the command string.
     std::string cmd_str;
@@ -236,7 +254,7 @@ void AmelasExampleServer::onCommandReceived(const CommandRequest &cmd_req)
     std::cout << std::string(80, '-') << std::endl;
 }
 
-void AmelasExampleServer::onInvalidMsgReceived(const CommandRequest &cmd_req)
+void AmelasServer::onInvalidMsgReceived(const CommandRequest &cmd_req)
 {
     // Log.
     std::cout << std::string(80, '-') << std::endl;
@@ -253,7 +271,7 @@ void AmelasExampleServer::onInvalidMsgReceived(const CommandRequest &cmd_req)
     std::cout << std::string(80, '-') << std::endl;
 }
 
-void AmelasExampleServer::onSendingResponse(const CommandReply &cmd_rep)
+void AmelasServer::onSendingResponse(const CommandReply &cmd_rep)
 {
     // Log.
     int result = static_cast<int>(cmd_rep.result);
@@ -266,20 +284,17 @@ void AmelasExampleServer::onSendingResponse(const CommandReply &cmd_rep)
     std::cout << std::string(80, '-') << std::endl;
 }
 
-bool AmelasExampleServer::validateAmelasCommand(AmelasServerCommand command)
+bool AmelasServer::validateAmelasCommand(AmelasServerCommand command)
 {
     // Auxiliar variables.
     bool result = false;
-    common::CommandType cmd = static_cast<common::CommandType>(command);
+    zmqutils::common::CommandType cmd = static_cast<zmqutils::common::CommandType>(command);
     // Check if the command is within the range of implemented custom commands.
-    if (cmd >= kMinCmdId && cmd <= kMaxCmdId)
+    if (cmd >= common::kMinCmdId && cmd <= common::kMaxCmdId)
         result = true;
     return result;
 }
 
-AmelasExampleController::AmelasExampleController() :
-    home_pos_az_(0.),
-    home_pos_el_(0.)
-{
+} // END NAMESPACES.
+// =====================================================================================================================
 
-}

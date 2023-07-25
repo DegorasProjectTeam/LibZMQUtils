@@ -53,4 +53,4 @@ MACRO(macro_setup_launcher LAUNCHER_NAME)
                 )
     ENDFOREACH()
 
-ENDMACRO(SETUP_LAUNCHER)
+ENDMACRO(macro_setup_launcher)

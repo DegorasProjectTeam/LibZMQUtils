@@ -591,7 +591,7 @@ void CommandServerBase::resetSocket()
     // Auxiliar variables.
     int res = 0;
     const zmq::error_t* last_error;
-    unsigned reconnect_count = common::kReconnectTimes;
+    unsigned reconnect_count = common::kServerReconnTimes;
 
     // Delete the previous socket.
     if (this->main_socket_)
