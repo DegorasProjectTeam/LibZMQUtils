@@ -12,8 +12,7 @@ void AmelasExampleServer::processSetHomePosition(const CommandRequest& request, 
 
     // Auxilar variables.
     double az, el;
-    unsigned double_sz = sizeof(double);
-    bool result;
+    constexpr std::size_t double_sz = sizeof(double);
 
     // Check the request parameters size.
     if (request.params_size == 0)
@@ -32,17 +31,38 @@ void AmelasExampleServer::processSetHomePosition(const CommandRequest& request, 
     zmqutils::utils::binarySerializeDeserialize(request.params.get() + double_sz, double_sz, &el);
 
     // Process the command.
-    amelas_err =
-        this->invoke<AmelasExampleController::SetHomePositionCallback>(AmelasServerCommand::REQ_SET_HOME_POSITION,
-                                                                           az, el);
+    amelas_err = this->invoke<AmelasExampleController::SetHomePositionCallback>(
+                AmelasServerCommand::REQ_SET_HOME_POSITION, az, el);
     // Store the amelas error.
     reply.params = std::unique_ptr<std::uint8_t>(new std::uint8_t[sizeof(common::ResultType)]);
     common::ResultType amelas_res = static_cast<common::ResultType>(amelas_err);
     zmqutils::utils::binarySerializeDeserialize(&amelas_res, sizeof(common::ResultType), reply.params.get());
     reply.params_size = sizeof(common::ResultType);
+}
+
+void AmelasExampleServer::processGetHomePosition(const CommandRequest &, CommandReply &reply)
+{
+    // Auxilar variables.
+    constexpr std::size_t res_sz = sizeof(common::ResultType);
+    constexpr std::size_t double_sz = sizeof(double);
+    AmelasExampleController::AmelasError amelas_err = AmelasExampleController::AmelasError::SUCCESS;
+    double az, el;
+
+    // Process the command.
+    amelas_err = this->invoke<AmelasExampleController::GetHomePositionCallback>(
+                AmelasServerCommand::REQ_GET_HOME_POSITION, az, el);
+    // Serialize parameters
+    reply.params = std::unique_ptr<std::uint8_t>(new std::uint8_t[res_sz + 2*double_sz]);
+    reply.params_size = res_sz + 2*double_sz;
+
+    zmqutils::utils::binarySerializeDeserialize(&amelas_err, res_sz, reply.params.get());
+    zmqutils::utils::binarySerializeDeserialize(&az, double_sz, reply.params.get() + res_sz);
+    zmqutils::utils::binarySerializeDeserialize(&el, double_sz, reply.params.get() + res_sz + double_sz);
 
     // Store the server result.
     reply.result = common::BaseServerResult::COMMAND_OK;
+
+    std::cout << "Size of params is " << reply.params_size << std::endl;
 }
 
 void AmelasExampleServer::processAmelasCommand(const CommandRequest& request, CommandReply& reply)
@@ -52,6 +72,10 @@ void AmelasExampleServer::processAmelasCommand(const CommandRequest& request, Co
     if(command == AmelasServerCommand::REQ_SET_HOME_POSITION)
     {
         this->processSetHomePosition(request, reply);
+    }
+    else if (command == AmelasServerCommand::REQ_GET_HOME_POSITION)
+    {
+        this->processGetHomePosition(request, reply);
     }
     else
     {
@@ -251,4 +275,11 @@ bool AmelasExampleServer::validateAmelasCommand(AmelasServerCommand command)
     if (cmd >= kMinCmdId && cmd <= kMaxCmdId)
         result = true;
     return result;
+}
+
+AmelasExampleController::AmelasExampleController() :
+    home_pos_az_(0.),
+    home_pos_el_(0.)
+{
+
 }

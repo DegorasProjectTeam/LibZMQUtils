@@ -70,7 +70,9 @@ int main(int argc, char**argv)
     // Get the port.
     if (argc == 2)
     {
-        try{port = std::stoi(argv[1]);
+        try
+        {
+           port = std::stoul(argv[1]);
         }  catch (...)
         {
             std::cerr << "Not recognized port in input: " << argv[1] << std::endl;
@@ -92,11 +94,14 @@ int main(int argc, char**argv)
 
     // Disable or enables the client status checking.
     amelas_server.setClientStatusCheck(client_status_check);
+    auto setHomePositionFunction = AmelasExampleController::makeFunction(&amelas_controller,
+                                                                      &AmelasExampleController::setHomePosition);
 
-    // Set the controller callbacks in the server.
-    // Home position.
-    amelas_server.setCallback(AmelasServerCommand::REQ_SET_HOME_POSITION,
-                              &amelas_controller, &AmelasExampleController::setHomePosition);
+    auto getHomePositionFunction = AmelasExampleController::makeFunction(&amelas_controller,
+                                                                      &AmelasExampleController::getHomePosition);
+
+    amelas_server.setCallback(AmelasServerCommand::REQ_SET_HOME_POSITION, setHomePositionFunction);
+    amelas_server.setCallback(AmelasServerCommand::REQ_GET_HOME_POSITION, getHomePositionFunction);
 
     // Start the server.
     amelas_server.startServer();

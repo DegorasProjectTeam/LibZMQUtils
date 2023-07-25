@@ -47,7 +47,7 @@ public:
     };
 
 
-    AmelasExampleController() = default;
+    AmelasExampleController();
 
     AmelasError setHomePosition(double az, double el)
     {
@@ -58,6 +58,11 @@ public:
         if (az >= 360.0 ||  az < 0.0 || el >= 90. || el < 0.)
         {
             error = AmelasError::INVALID_POSITION;
+        }
+        else
+        {
+            this->home_pos_az_ = az;
+            this->home_pos_el_ = el;
         }
 
         std::cout << std::string(80, '-') << std::endl;
@@ -71,6 +76,22 @@ public:
         return error;
     }
 
+    AmelasError getHomePosition(double &az, double &el)
+    {
+        az = this->home_pos_az_;
+        el = this->home_pos_el_;
+
+        std::cout << std::string(80, '-') << std::endl;
+        std::cout<<"<AMELAS CONTROLLER>"<<std::endl;
+        std::cout<<"-> GET_HOME_POSITION"<<std::endl;
+        std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
+        std::cout<<"Az: "<<az<<std::endl;
+        std::cout<<"El: "<<el<<std::endl;
+        std::cout << std::string(80, '-') << std::endl;
+
+        return AmelasError::SUCCESS;
+    }
+
     AmelasError getDatetime(std::string&)
     {
         return AmelasError::SUCCESS;
@@ -80,11 +101,18 @@ public:
 
     // Callback function type aliases
     using SetHomePositionCallback = std::function<AmelasError(double, double)>;
+    using GetHomePositionCallback = std::function<AmelasError(double&, double&)>;
     using GetDatetimeCallback = std::function<AmelasError(std::string&)>;
 
     // Callback variant.
     using AmelasCallback = std::variant<SetHomePositionCallback,
+                                        GetHomePositionCallback,
                                         GetDatetimeCallback>;
+
+private:
+
+    double home_pos_az_;
+    double home_pos_el_;
 
 };
 
@@ -109,6 +137,8 @@ public:
         callback_map_[command] = amelascontrol::utils::makeCallback(object, callback);
     }
 
+private:
+
     template <typename CallbackType, typename... Args>
     AmelasExampleController::AmelasError invoke(AmelasServerCommand command, Args&&... args)
     {
@@ -119,10 +149,6 @@ public:
         throw std::runtime_error("Invalid command or incorrect callback type");
     }
 
-
-
-private:
-
     // Helper to check if the custom command is valid.
     static bool validateAmelasCommand(AmelasServerCommand command);
 
@@ -130,6 +156,7 @@ private:
     void processAmelasCommand(const CommandRequest&, CommandReply&);
 
     void processSetHomePosition(const CommandRequest&, CommandReply&);
+    void processGetHomePosition(const CommandRequest&, CommandReply&);
 
     // Internal overrided custom command received callback.
     // The most important part.

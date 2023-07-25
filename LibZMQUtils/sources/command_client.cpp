@@ -150,9 +150,12 @@ void CommandClientBase::startAutoAlive()
 
 void CommandClientBase::stopAutoAlive()
 {
-    this->auto_alive_working_ = false;
-    this->auto_alive_cv_.notify_all();
-    this->auto_alive_future_.wait();
+    if (this->auto_alive_working_)
+    {
+        this->auto_alive_working_ = false;
+        this->auto_alive_cv_.notify_all();
+        this->auto_alive_future_.wait();
+    }
 }
 
 void CommandClientBase::setClientHostIP(const std::string&){}

@@ -59,14 +59,10 @@ void parseCommand(CommandClientBase &client, const std::string &command)
         if (command_id == static_cast<common::CommandType>(common::BaseServerCommand::REQ_CONNECT))
         {
             std::cout << "Sending connect message" << std::endl;
-
-            //client.startAutoAlive();
         }
         else if (command_id == static_cast<common::CommandType>(common::BaseServerCommand::REQ_DISCONNECT))
         {
             std::cout << "Sending disconnect message" << std::endl;
-
-            client.stopAutoAlive();
         }
         else if (command_id == static_cast<common::CommandType>(common::BaseServerCommand::REQ_ALIVE))
         {
@@ -91,7 +87,7 @@ void parseCommand(CommandClientBase &client, const std::string &command)
             std::cout << "Sending get home position command." << std::endl;
 
             bool valid_params = true;
-            double az, el;
+            double az = 0., el = 0.;
             char *param_token = std::strtok(nullptr, " ");
 
             try
@@ -119,15 +115,18 @@ void parseCommand(CommandClientBase &client, const std::string &command)
                 }
             }
 
+            if (valid_params)
+            {
+                std::cout<<"Sending: " << az <<" "<<el<<std::endl;
+
+                command_msg.params = std::unique_ptr<std::uint8_t>(new std::uint8_t[16]);
+                command_msg.params_size = 16;
+
+                zmqutils::utils::binarySerializeDeserialize(&az, 8, command_msg.params.get());
+                zmqutils::utils::binarySerializeDeserialize(&el, 8, command_msg.params.get() + 8);
+            }
+
             valid = valid_params;
-
-            std::cout<<"Sending: " << az <<" "<<el<<std::endl;
-
-            command_msg.params = std::unique_ptr<std::uint8_t>(new std::uint8_t[16]);
-            command_msg.params_size = 16;
-
-            zmqutils::utils::binarySerializeDeserialize(&az, 8, command_msg.params.get());
-            zmqutils::utils::binarySerializeDeserialize(&el, 8, command_msg.params.get() + 8);
 
         }
         else
@@ -169,7 +168,7 @@ void parseCommand(CommandClientBase &client, const std::string &command)
                         std::cout << "Get home position command result is (az,el): " << az << ", " << el << std::endl;
                     }
                     else
-                        std::cerr << "Get home position command answer is incorrect." << std::endl;
+                        std::cerr << "Get home position command answer is incorrect. Params size is: " << out_size_bytes <<  std::endl;
 
                 }
 
