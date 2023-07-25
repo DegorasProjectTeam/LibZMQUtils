@@ -116,6 +116,7 @@ enum class BaseServerResult : CommandType
     BAD_PARAMETERS         = 13, ///< The provided parameters are invalid.
     COMMAND_FAILED         = 14, ///< The command execution failed.
     NOT_IMPLEMENTED        = 15, ///< The command is not implemented.
+    BAD_NO_PARAMETERS      = 16, ///< The provided number of parameters are invalid.
     END_BASE_ERRORS        = 20  ///< Sentinel value indicating the end of the base errors (not is a valid error).
 };
 
@@ -212,9 +213,11 @@ struct CommandReply
     CommandReply():
         params(nullptr),
         params_size(0),
-        result(BaseServerResult::COMMAND_OK)
+        result(BaseServerResult::COMMAND_OK),
+        request_cmd(BaseServerCommand::INVALID_COMMAND)
     {}
 
+    BaseServerCommand request_cmd;
     std::unique_ptr<std::uint8_t> params;
     size_t params_size;
     BaseServerResult result;
@@ -224,7 +227,7 @@ struct CommandReply
 
 // CONVENIENT ALIAS
 // =====================================================================================================================
-typedef void (*generic_t)(void);
+
 // =====================================================================================================================
 
 }} // END NAMESPACES.

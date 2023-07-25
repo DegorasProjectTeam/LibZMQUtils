@@ -25,10 +25,9 @@ enum class AmelasServerCommand : common::CommandType
 };
 
 // Specific subclass errors (0 to 15 are reserved for the base server).
-enum class AmelasServerResult : common::CommandType
+enum class AmelasServerResult : common::ResultType
 {
-    INVALID_DATETIME = 16,
-    INVALID_POSITION = 17
+
 };
 
 // Extend the base command strings with those of the subclass.
@@ -55,3 +54,4 @@ static constexpr auto AmelasServerResultStr = utils::joinArraysConstexpr(
 // Usefull const expressions.
 constexpr int kMinCmdId = static_cast<int>(common::BaseServerCommand::END_BASE_COMMANDS) + 1;
 constexpr int kMaxCmdId = static_cast<int>(AmelasServerCommand::END_AMELAS_COMMANDS) - 1;
+

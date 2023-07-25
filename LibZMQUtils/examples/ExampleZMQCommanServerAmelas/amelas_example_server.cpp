@@ -6,8 +6,10 @@ AmelasExampleServer::AmelasExampleServer(unsigned int port, const std::string &l
 
 
 
-void AmelasExampleServer::execSetHomePosition(const CommandRequest& request, CommandReply& reply)
+void AmelasExampleServer::processSetHomePosition(const CommandRequest& request, CommandReply& reply)
 {
+    AmelasExampleController::AmelasError amelas_err;
+
     // Auxilar variables.
     double az, el;
     unsigned double_sz = sizeof(double);
@@ -29,20 +31,17 @@ void AmelasExampleServer::execSetHomePosition(const CommandRequest& request, Com
     zmqutils::utils::binarySerializeDeserialize(request.params.get(), double_sz, &az);
     zmqutils::utils::binarySerializeDeserialize(request.params.get() + double_sz, double_sz, &el);
 
-    // Check the provided values.
-    if (az >= 360.0 ||  az < 0.0 || el >= 90. || el < 0.)
-    {
-        reply.result = static_cast<BaseServerResult>(AmelasServerResult::INVALID_POSITION);
-        return;
-    }
-
     // Process the command.
-    std::cout<<"Processing REQ_SET_HOME_POSITION with params: "<<std::endl;
-    std::cout<<"Az: "<<az<<std::endl;
-    std::cout<<"El: "<<el<<std::endl;
+    amelas_err =
+        this->invoke<AmelasExampleController::SetHomePositionCallback>(AmelasServerCommand::REQ_SET_HOME_POSITION,
+                                                                           az, el);
+    // Store the amelas error.
+    reply.params = std::unique_ptr<std::uint8_t>(new std::uint8_t[sizeof(common::ResultType)]);
+    common::ResultType amelas_res = static_cast<common::ResultType>(amelas_res);
+    zmqutils::utils::binarySerializeDeserialize(&amelas_res, sizeof(common::ResultType), reply.params.get());
+    reply.params_size = sizeof(common::ResultType);
 
-
-
+    // Store the server result.
     reply.result = common::BaseServerResult::COMMAND_OK;
 }
 
@@ -52,7 +51,7 @@ void AmelasExampleServer::processAmelasCommand(const CommandRequest& request, Co
 
     if(command == AmelasServerCommand::REQ_SET_HOME_POSITION)
     {
-        this->execSetHomePosition(request, reply);
+        this->processSetHomePosition(request, reply);
     }
     else
     {
@@ -111,7 +110,8 @@ void AmelasExampleServer::onServerStart()
 
     // Log.
     std::cout << std::string(80, '-') << std::endl;
-    std::cout<<"ON SERVER START: "<<std::endl;
+    std::cout<<"<AMELAS SERVER>"<<std::endl;
+    std::cout<<"-> ON SERVER START: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
     std::cout<<"Addresses: "<<ips<<std::endl;
     std::cout<<"Port: "<<this->getServerPort()<<std::endl;
@@ -122,7 +122,8 @@ void AmelasExampleServer::onServerStop()
 {
     // Log.
     std::cout << std::string(80, '-') << std::endl;
-    std::cout<<"ON SERVER CLOSE: "<<std::endl;
+    std::cout<<"<AMELAS SERVER>"<<std::endl;
+    std::cout<<"-> ON SERVER CLOSE: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
     std::cout << std::string(80, '-') << std::endl;
 }
@@ -131,7 +132,8 @@ void AmelasExampleServer::onWaitingCommand()
 {
     // Log.
     std::cout << std::string(80, '-') << std::endl;
-    std::cout<<"ON WAITING COMMAND: "<<std::endl;
+    std::cout<<"<AMELAS SERVER>"<<std::endl;
+    std::cout<<"-> ON WAITING COMMAND: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
     std::cout << std::string(80, '-') << std::endl;
 }
@@ -140,7 +142,8 @@ void AmelasExampleServer::onDeadClient(const HostClient& client)
 {
     // Log.
     std::cout << std::string(80, '-') << std::endl;
-    std::cout<<"ON DEAD CLIENT: "<<std::endl;
+    std::cout<<"<AMELAS SERVER>"<<std::endl;
+    std::cout<<"-> ON DEAD CLIENT: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
     std::cout<<"Current Clients: "<<this->getConnectedClients().size()<<std::endl;
     std::cout<<"Client Id: "<<client.id<<std::endl;
@@ -154,7 +157,8 @@ void AmelasExampleServer::onConnected(const HostClient& client)
 {
     // Log.
     std::cout << std::string(80, '-') << std::endl;
-    std::cout<<"ON CONNECTED: "<<std::endl;
+    std::cout<<"<AMELAS SERVER>"<<std::endl;
+    std::cout<<"-> ON CONNECTED: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
     std::cout<<"Current Clients: "<<this->getConnectedClients().size()<<std::endl;
     std::cout<<"Client Id: "<<client.id<<std::endl;
@@ -168,7 +172,8 @@ void AmelasExampleServer::onDisconnected(const HostClient& client)
 {
     // Log.
     std::cout << std::string(80, '-') << std::endl;
-    std::cout<<"ON DISCONNECTED: "<<std::endl;
+    std::cout<<"<AMELAS SERVER>"<<std::endl;
+    std::cout<<"-> ON DISCONNECTED: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
     std::cout<<"Current Clients: "<<this->getConnectedClients().size()<<std::endl;
     std::cout<<"Client Id: "<<client.id<<std::endl;
@@ -182,7 +187,8 @@ void AmelasExampleServer::onServerError(const zmq::error_t &error, const std::st
 {
     // Log.
     std::cout << std::string(80, '-') << std::endl;
-    std::cout<<"ON SERVER ERROR: "<<std::endl;
+    std::cout<<"<AMELAS SERVER>"<<std::endl;
+    std::cout<<"-> ON SERVER ERROR: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
     std::cout<<"Code: "<<error.num()<<std::endl;
     std::cout<<"Error: "<<error.what()<<std::endl;
@@ -198,7 +204,8 @@ void AmelasExampleServer::onCommandReceived(const CommandRequest &cmd_req)
     cmd_str = (command < AmelasServerCommandStr.size()) ? AmelasServerCommandStr[command] : "Unknown command";
     // Log.
     std::cout << std::string(80, '-') << std::endl;
-    std::cout<<"ON COMMAND RECEIVED: "<<std::endl;
+    std::cout<<"<AMELAS SERVER>"<<std::endl;
+    std::cout<<"-> ON COMMAND RECEIVED: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
     std::cout<<"Client Id: "<<cmd_req.client.id<<std::endl;
     std::cout<<"Command: "<<command<<" ("<<cmd_str<<")"<<std::endl;
@@ -209,7 +216,8 @@ void AmelasExampleServer::onInvalidMsgReceived(const CommandRequest &cmd_req)
 {
     // Log.
     std::cout << std::string(80, '-') << std::endl;
-    std::cout<<"ON BAD COMMAND RECEIVED: "<<std::endl;
+    std::cout<<"<AMELAS SERVER>"<<std::endl;
+    std::cout<<"-> ON BAD COMMAND RECEIVED: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
     std::cout<<"Raw Str: "<<cmd_req.raw_msg.str()<<std::endl;
     std::cout<<"Client Id: "<<cmd_req.client.id<<std::endl;
@@ -226,7 +234,8 @@ void AmelasExampleServer::onSendingResponse(const CommandReply &cmd_rep)
     // Log.
     int result = static_cast<int>(cmd_rep.result);
     std::cout << std::string(80, '-') << std::endl;
-    std::cout<<"ON SENDING RESPONSE: "<<std::endl;
+    std::cout<<"<AMELAS SERVER>"<<std::endl;
+    std::cout<<"-> ON SENDING RESPONSE: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
     std::cout<<"Result: "<<result<<" ("<<AmelasServerResultStr[result]<<")"<<std::endl;
     std::cout<<"Params Size: "<<cmd_rep.params_size<<std::endl;

@@ -374,7 +374,7 @@ BaseServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
         else
             return BaseServerResult::EMPTY_CLIENT_NAME;
 
-        // Get the ip data.
+        // Get the pid data.
         if (host_size_bytes > 0)
             pid = std::string(static_cast<char*>(message_pid.data()), pid_size_bytes);
         else
@@ -463,6 +463,9 @@ void CommandServerBase::processCommand(const CommandRequest& request, CommandRep
 {
     // First of all, call to the internal callback.
     this->onCommandReceived(request);
+
+    // Store the command in the reply.
+    reply.request_cmd = request.command;
 
     // Process the different commands.
     // 1 - Process is the connect request.

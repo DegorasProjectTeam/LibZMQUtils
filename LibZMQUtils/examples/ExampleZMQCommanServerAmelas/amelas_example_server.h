@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <string>
 #include <any>
+#include <variant>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
@@ -24,26 +25,61 @@ class AmelasExampleController
 {
 public:
 
-
-    enum class AmelasError : common::CommandType
+    enum class AmelasError : common::ResultType
     {
-        NOT_ERROR = 0
+        SUCCESS = 0,
+        INVALID_POSITION = 1,
+        UNSAFE_POSITION = 2
     };
+
 
     AmelasExampleController() = default;
 
-    AmelasExampleController::AmelasError setHomePosition(double az, double el)
+    AmelasError setHomePosition(double az, double el)
     {
+        // Auxiliar result.
+        AmelasError error = AmelasError::SUCCESS;
+
+        // Check the provided values.
+        if (az >= 360.0 ||  az < 0.0 || el >= 90. || el < 0.)
+        {
+            error = AmelasError::INVALID_POSITION;
+        }
+
         std::cout << std::string(80, '-') << std::endl;
-        std::cout<<"AMELAS CONTROLLER"<<std::endl;
-        std::cout<<"<SET_HOME_POSITION>"<<std::endl;
+        std::cout<<"<AMELAS CONTROLLER>"<<std::endl;
+        std::cout<<"-> SET_HOME_POSITION"<<std::endl;
         std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
         std::cout<<"Az: "<<az<<std::endl;
-        std::cout<<"El: "<<az<<std::endl;
+        std::cout<<"El: "<<el<<std::endl;
         std::cout << std::string(80, '-') << std::endl;
 
-        return AmelasError::NOT_ERROR;
+        return error;
     }
+
+    AmelasError getDatetime(std::string&)
+    {
+        return AmelasError::SUCCESS;
+    }
+
+    template<typename ClassType, typename ReturnType, typename... Args>
+    static std::function<ReturnType(Args...)> makeFunction(ClassType* object,
+                                                           ReturnType(ClassType::*memberFunction)(Args...))
+    {
+        return [object, memberFunction](Args... args) -> ReturnType
+        {
+            return (object->*memberFunction)(std::forward<Args>(args)...);
+        };
+    }
+
+    // Callback function type aliases
+    using SetHomePositionCallback = std::function<AmelasError(double, double)>;
+    using GetDatetimeCallback = std::function<AmelasError(std::string&)>;
+
+    // Callback variant.
+    using AmelasCallback = std::variant<SetHomePositionCallback,
+                                         GetDatetimeCallback>;
+
 };
 
 
@@ -54,10 +90,22 @@ public:
 
     AmelasExampleServer(unsigned port, const std::string& local_addr = "*");
 
-    void setCallback(AmelasServerCommand name, void* func)
+    void setCallback(AmelasServerCommand command, AmelasExampleController::AmelasCallback callback)
     {
-        callback_map_[name] = reinterpret_cast<common::generic_t>(&func);
+        callback_map_[command] = callback;
     }
+
+    template <typename CallbackType, typename... Args>
+    AmelasExampleController::AmelasError invoke(AmelasServerCommand command, Args&&... args)
+    {
+        if (auto callback = std::get_if<CallbackType>(&callback_map_[command]))
+        {
+            return (*callback)(std::forward<Args>(args)...);
+        }
+        throw std::runtime_error("Invalid command or incorrect callback type");
+    }
+
+
 
 private:
 
@@ -67,7 +115,7 @@ private:
     // Process the specific commands.
     void processAmelasCommand(const CommandRequest&, CommandReply&);
 
-    void execSetHomePosition(const CommandRequest&, CommandReply&);
+    void processSetHomePosition(const CommandRequest&, CommandReply&);
 
     // Internal overrided custom command received callback.
     // The most important part.
@@ -104,5 +152,5 @@ private:
     virtual void onServerError(const zmq::error_t&, const std::string& ext_info) final;
 
     // External callbacks map.
-    std::map<AmelasServerCommand, common::generic_t> callback_map_;
+    std::map<AmelasServerCommand, AmelasExampleController::AmelasCallback> callback_map_;
 };

@@ -84,20 +84,30 @@ int main(int argc, char**argv)
     AmelasExampleController amelas_controller;
 
     // Instantiate the server.
-    AmelasExampleServer server(port);
+    AmelasExampleServer amelas_server(port);
 
-    server.setClientStatusCheck(false);
+    amelas_server.setClientStatusCheck(false);
+
+    auto homePositionFunction = AmelasExampleController::makeFunction(&amelas_controller,
+                                                                      &AmelasExampleController::setHomePosition);
+
+    amelas_server.setCallback(AmelasServerCommand::REQ_SET_HOME_POSITION, homePositionFunction);
+
+    amelas_server.invoke<AmelasExampleController::SetHomePositionCallback>(AmelasServerCommand::REQ_SET_HOME_POSITION, 3.5, 67.5);
+
+
+
     //server.setCallback(AmelasServerCommand::REQ_GET_HOME_POSITION, amelas_controller.setHomePosition);
 
     // Start the server.
-    server.startServer();
+    amelas_server.startServer();
 
     // Use the condition variable as an infinite loop until ctrl-c.
     std::unique_lock<std::mutex> lock(gMtx);
     gExitCv.wait(lock, [] { return gSignInterrupt == 1; });
 
     // Stop the server and wait the future.
-    server.stopServer();
+    amelas_server.stopServer();
 
     // Final log.
     std::cout << "Server stoped. Press Enter to exit!" << std::endl;
