@@ -43,7 +43,7 @@
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/libzmqutils_global.h"
-#include "LibZMQUtils/common.h"
+#include "LibZMQUtils/CommandServerClient/common.h"
 // =====================================================================================================================
 
 // ZMQ DECLARATIONS

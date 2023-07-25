@@ -10,7 +10,7 @@
 #include <cstdlib>
 #include <algorithm>
 
-#include "LibZMQUtils/command_client.h"
+#include "LibZMQUtils/CommandServerClient/command_client.h"
 #include "LibZMQUtils/utils.h"
 
 // ZMQUTILS NAMESPACES

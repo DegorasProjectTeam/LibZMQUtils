@@ -22,7 +22,7 @@
  *   along with this project. If not, see the license at < https://eupl.eu/ >.                                         *
  **********************************************************************************************************************/
 
-#include "LibZMQUtils/common.h"
+#include "LibZMQUtils/CommandServerClient/common.h"
 
 
 zmqutils::common::HostClient::HostClient(const std::string &ip, const std::string &name,

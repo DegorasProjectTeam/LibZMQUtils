@@ -1,2 +1,2 @@
-#include "LibZMQUtils/command_client.h"
-#include <LibZMQUtils/common.h>
+#include "LibZMQUtils/CommandServerClient/command_client.h"
+#include <LibZMQUtils/CommandServerClient/common.h>

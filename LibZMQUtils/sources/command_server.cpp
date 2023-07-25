@@ -40,7 +40,7 @@
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/command_server.h"
+#include "LibZMQUtils/CommandServerClient/command_server.h"
 #include "LibZMQUtils/utils.h"
 // =====================================================================================================================
 
