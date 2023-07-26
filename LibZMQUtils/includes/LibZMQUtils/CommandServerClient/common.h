@@ -95,19 +95,19 @@ enum class ServerCommand : CommandType
  * @brief Enumerates the possible results of a base command operation. They can be extended in a subclass.
  * @warning These results must not be used for custom results, they are special and reserved.
  */
-enum class ServerResult : CommandType
+enum class ServerResult : ResultType
 {
-    COMMAND_OK             = 0, ///< The command was executed successfully.
-    INTERNAL_ZMQ_ERROR     = 1, ///< An internal ZeroMQ error occurred.
-    EMPTY_MSG              = 2, ///< The message is empty.
-    EMPTY_CLIENT_IP        = 3, ///< The client IP is missing or empty.
-    EMPTY_CLIENT_NAME      = 4, ///< The client name is missing or empty.
-    EMPTY_CLIENT_PID       = 5, ///< The client pid is missing or empty.
-    EMPTY_PARAMS           = 6, ///< The command parameters are missing or empty.
-    TIMEOUT_REACHED        = 7, ///< The operation timed out.
-    INVALID_PARTS          = 8, ///< The command has invalid parts.
-    UNKNOWN_COMMAND        = 9, ///< The command is not recognized.
-    INVALID_MSG            = 10, ///< The command is invalid.
+    COMMAND_OK             = 0,  ///< The command was executed successfully.
+    INTERNAL_ZMQ_ERROR     = 1,  ///< An internal ZeroMQ error occurred.
+    EMPTY_MSG              = 2,  ///< The message is empty.
+    EMPTY_CLIENT_IP        = 3,  ///< The client IP is missing or empty.
+    EMPTY_CLIENT_NAME      = 4,  ///< The client name is missing or empty.
+    EMPTY_CLIENT_PID       = 5,  ///< The client pid is missing or empty.
+    EMPTY_PARAMS           = 6,  ///< The command parameters are missing or empty.
+    TIMEOUT_REACHED        = 7,  ///< The operation timed out, the client could be dead.
+    INVALID_PARTS          = 8,  ///< The message has invalid parts.
+    UNKNOWN_COMMAND        = 9,  ///< The command is not recognized.
+    INVALID_MSG            = 10, ///< The message is invalid.
     CLIENT_NOT_CONNECTED   = 11, ///< Not connected to the target.
     ALREADY_CONNECTED      = 12, ///< Already connected to the target.
     BAD_PARAMETERS         = 13, ///< The provided parameters are invalid.
@@ -115,6 +115,23 @@ enum class ServerResult : CommandType
     NOT_IMPLEMENTED        = 15, ///< The command is not implemented.
     BAD_NO_PARAMETERS      = 16, ///< The provided number of parameters are invalid.
     END_BASE_ERRORS        = 20  ///< Sentinel value indicating the end of the base errors (not is a valid error).
+};
+
+
+// TODO MORE CASES RELATED TO THE CLIENT
+enum class ClientResult : ResultType
+{
+    COMMAND_OK = 0,
+    INTERNAL_ZMQ_ERROR     = 1,   ///< An internal ZeroMQ error occurred.
+    EMPTY_MSG              = 2,   ///< The message is empty.
+    EMPTY_PARAMS           = 6,   ///< The result parameters are missing or empty.
+    TIMEOUT_REACHED        = 7,   ///< The operation timed out, the server could be dead.
+    INVALID_PARTS          = 8,   ///< The command has invalid parts.
+    INVALID_MSG            = 10,  ///< The message is invalid.
+    CLIENT_STOPPED         = 17,  ///< The client is stopped.
+
+    END_BASE_ERRORS        = 20  ///< Sentinel value indicating the end of the base errors (not is a valid error).
+
 };
 
 // Usefull const expressions.
@@ -210,12 +227,11 @@ struct CommandReply
     CommandReply():
         params(nullptr),
         params_size(0),
-        result(ServerResult::COMMAND_OK),
-        request_cmd(ServerCommand::INVALID_COMMAND)
+        result(ServerResult::COMMAND_OK)
     {}
 
-    ServerCommand request_cmd;
     std::unique_ptr<std::uint8_t> params;
+    zmq::multipart_t raw_msg;
     size_t params_size;
     ServerResult result;
 };

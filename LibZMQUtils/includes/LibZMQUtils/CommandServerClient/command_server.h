@@ -73,7 +73,71 @@ using common::HostClient;
 using utils::NetworkAdapterInfo;
 // =====================================================================================================================
 
-
+/**
+ * @class CommandServerBase
+ *
+ * @brief This class provides the base structure for a ZeroMQ based command server.
+ *
+ * The CommandServerBase class encapsulates the common logic and functionality for a server that communicates over the
+ * ZeroMQ messaging infrastructure. It provides the basic mechanics for starting, stopping, and managing a server, and
+ * for handling client connections, commands, and responses.
+ *
+ * This base class is designed to be inherited by subclasses that provide specific implementations for various callback
+ * functions to handle server events such as the start/stop of the server, client connections/disconnections, receiving
+ * invalid or custom commands, and server errors. This design allows the creation of specialized servers for different
+ * use cases while keeping the core logic generic and reusable.
+ *
+ * The server created with this class operates asynchronously, with the main server tasks running in a separate thread.
+ * It is capable of managing multiple client connections, processing command requests, and sending responses. The server
+ * also provides optional functionalities such as checking the alive status of connected clients.
+ *
+ * @note This class is not directly useful on its own. Instead, it is intended to be subclassed and its callback methods
+ *       overridden to implement the desired server behavior.
+ *
+ * @warning When creating a subclass, make sure to avoid blocking or computationally intensive operations within the
+ *          overridden callbacks. Blocking the server thread can affect the server's performance and responsiveness. If
+ *          complex tasks are needed, consider performing them asynchronously or using separate threads.
+ *
+ * @section Usage
+ *
+ * To use this class, create a subclass and override the callback functions according to your needs. Also you can define
+ * the custom commands and the custom errors related with the sublcass, as well as extend the containers that contains
+ * the string representation of the commands and errors.
+ *
+ * Then, create an instance of your subclass, and use the startServer and stopServer methods to control the server's
+ * operation. You can query the server's state and information using the various getters (getServerPort,
+ * getServerAddresses, getServerEndpoint, getServerWorkerFuture, getConnectedClients, and isWorking). You can also use
+ * setClientStatusCheck(bool) to control the checking of clients' alive status.
+ *
+ * A similar usage pattern applies to the CommandClientBase class, which is meant to interact with a CommandServerBase
+ * instance. CommandClientBase is also designed to be subclassed with callback methods to be overridden for specific
+ * client behaviors. Therefore, a typical usage scenario involves creating subclassed instances of both classes
+ * CommandServerBase and CommandClientBase, where the server handles commands sent by the client.
+ *
+ * @section Callbacks
+ *
+ * The following callbacks need to be overridden in your subclass:
+ *
+ * - onServerStop
+ * - onServerStart
+ * - onWaitingCommand
+ * - onConnected(const HostClient&)
+ * - onDisconnected(const HostClient&)
+ * - onDeadClient(const HostClient&)
+ * - onInvalidMsgReceived(const CommandRequest&)
+ * - onCommandReceived(const CommandRequest&)
+ * - onCustomCommandReceived(const CommandRequest&, CommandReply&)
+ * - onServerError(const zmq::error_t &error, const std::string& ext_info = "")
+ * - onSendingResponse(const CommandReply&)
+ *
+ * Among these callbacks, onCustomCommandReceived is crucial because it handles all custom commands. This function
+ * receives a command request and a command reply as parameters. It is intended to deserialize the input parameters
+ * from the command request, execute the custom command, and then serialize the output parameters into the command
+ * reply. Therefore, it is necessary to override this function to add handling for the custom commands specific to
+ * your server's application.
+ *
+ * @see CommandRequest, CommandReply, HostClient, CommandClientBase, onCustomCommandReceived
+ */
 class LIBZMQUTILS_EXPORT CommandServerBase
 {
 
@@ -394,7 +458,7 @@ private:
 
     // ZMQ socket and context.
     zmq::context_t *context_;
-    zmq::socket_t* main_socket_;
+    zmq::socket_t* server_socket_;
 
     // Endpoint data.
     std::string server_endpoint_;                                     ///< Final server endpoint.

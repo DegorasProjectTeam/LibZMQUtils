@@ -3,7 +3,7 @@
 #include <iostream>
 #include <cstring>
 
-#include "AmelasExampleServer/amelas_server.h"
+#include "AmelasExampleController/common.h"
 #include "AmelasExampleServer/common.h"
 #include "AmelasExampleClient/amelas_client.h"
 
@@ -18,9 +18,7 @@ using zmqutils::common::CommandType;
 
 void parseCommand(CommandClientBase &client, const std::string &command)
 {
-    void *data_out = nullptr;
-    size_t out_size_bytes = 0;
-    int send_result = 0;
+    zmqutils::common::ClientResult send_result = ClientResult::COMMAND_OK;
 
     char *command_str = new char[command.size()];
     std::copy(command.begin(), command.end(), command_str);
@@ -124,34 +122,63 @@ void parseCommand(CommandClientBase &client, const std::string &command)
             valid = false;
         }
 
+        // TODO MOVE ALL OF THIS TO A SUBCLASS IN A PURE VIRTUAL. THE FUNCTION WILL RETURN ClientResult
+        // TODO THE ERROR CONTROL MUST BE IN THE BASE CLIENT. THE SUBCLASS MUST CONTROL THE OUTPUT DATA AND CUSTOM ERRORS ONLY.
+        // TODO DISABLE SEND WITH THIS WAY THE RESERVED COMMANDS.
+        // TODO CREATE doConnect, doDisconnect, checkServerAlive
+        // TODO CREATE IN THE CLIENT THE INTERNAL CALLBACKS LIKE THE SERVER.
+        // TODO MOVE THE PROCESSING OF EACH COMPLEX RESPONSE TO A FUNCTION.
+
         if (valid)
         {
-            send_result = client.sendCommand(command_msg, data_out, out_size_bytes);
+            // TODO MOVE ALL
+            ClientResult result = ClientResult::COMMAND_OK;
+            CommandReply reply;
 
-            if (send_result != 0)
+            send_result = client.sendCommand(command_msg, reply);
+
+
+            if (send_result != ClientResult::COMMAND_OK)
             {
-                std::cerr << "Command sending failed with code: " << send_result << std::endl;
-                // Restart client if sending fails
-                client.resetClient();
+                //std::cerr << "Command sending failed with code: " << send_result << std::endl;
             }
-
-            else if (out_size_bytes >= sizeof(ServerResult))
+            else
             {
-                ServerResult result;
+                constexpr std::size_t res_sz = sizeof(amelas::common::ControllerError);
+                constexpr std::size_t double_sz = sizeof(double);
 
-                auto *data_bytes = static_cast<std::uint8_t*>(data_out);
-                zmqutils::utils::binarySerializeDeserialize(
-                    data_bytes, sizeof(ServerResult), &result);
-                std::cout << "Response code from server: "<< static_cast<std::uint32_t>(result) << std::endl;
+                std::cout<<"Server result: "<<static_cast<int>(reply.result)<<std::endl;
+
+                // Get the controller result.
+                // TODO ERROR CONTROL
+
+
 
                 if (command_id == static_cast<CommandType>(AmelasServerCommand::REQ_GET_HOME_POSITION))
                 {
-                    // MULTIPART!!! TODO
+                    if (reply.params_size == (res_sz + 2*double_sz))
+                    {
+                        amelas::common::ControllerError error;
+                        double az;
+                        double el;
 
-                    double az, el;
+                        // Deserialize the parameters.
+                        zmqutils::utils::binarySerializeDeserialize(reply.params.get(), res_sz, reply.params.get());
+                        zmqutils::utils::binarySerializeDeserialize(reply.params.get() + res_sz, double_sz, &az);
+                        zmqutils::utils::binarySerializeDeserialize(reply.params.get() + res_sz + double_sz, double_sz, &el);
+
+                        // Generate the struct.
+                        std::cout<<"Controller error: "<<static_cast<int>(error)<<std::endl;
+                        std::cout<<"Az: "<<az<<std::endl;
+                        std::cout<<"El: "<<el<<std::endl;
+                    }
+                    else
+                    {
+                        std::cout<<"BAD PARAMS"<<std::endl;
+                        // RETURN BAD PARAMS
+                        //result = ClientResult::
+                    }
                 }
-
-                delete[] data_bytes;
             }
         }
         else

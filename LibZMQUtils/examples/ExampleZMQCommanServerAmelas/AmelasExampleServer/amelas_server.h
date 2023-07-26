@@ -39,10 +39,7 @@ public:
 
     const std::map<common::AmelasServerCommand, common::ControllerCallback>& getCallbackMap() const;
 
-    void setCallback(common::AmelasServerCommand command, common::ControllerCallback callback)
-    {
-        callback_map_[command] = callback;
-    }
+    void setCallback(common::AmelasServerCommand command, common::ControllerCallback callback);
 
     template<typename ClassT = void, typename ReturnT = void, typename... Args>
     void setCallback(common::AmelasServerCommand command,

@@ -24,7 +24,7 @@ namespace zmqutils{
 CommandClientBase::CommandClientBase(const std::string &server_endpoint) :
     server_endpoint_(server_endpoint),
     context_(nullptr),
-    socket_(nullptr),
+    client_socket_(nullptr),
     auto_alive_working_(false)
 {
 
@@ -62,7 +62,7 @@ bool CommandClientBase::startClient(const std::string& interface_name)
     std::cout<<client_info_.id<<std::endl;
 
     // If server is already started, do nothing
-    if (this->socket_)
+    if (this->client_socket_)
         return false;
 
     // Create the ZMQ context.
@@ -71,16 +71,16 @@ bool CommandClientBase::startClient(const std::string& interface_name)
 
     try
     {
-        this->socket_ = new zmq::socket_t(*this->context_, zmq::socket_type::req);
-        this->socket_->connect(this->server_endpoint_);
+        this->client_socket_ = new zmq::socket_t(*this->context_, zmq::socket_type::req);
+        this->client_socket_->connect(this->server_endpoint_);
         // Set timeout so socket will not wait for answer more than client alive timeout.
-        this->socket_->set(zmq::sockopt::rcvtimeo, common::kDefaultServerAliveTimeoutMsec);
-        this->socket_->set(zmq::sockopt::linger, 0);
+        this->client_socket_->set(zmq::sockopt::rcvtimeo, common::kDefaultServerAliveTimeoutMsec);
+        this->client_socket_->set(zmq::sockopt::linger, 0);
     }
     catch (const zmq::error_t &error)
     {
-        delete this->socket_;
-        this->socket_ = nullptr;
+        delete this->client_socket_;
+        this->client_socket_ = nullptr;
 
         std::cerr << "Error at socket creation: " << error.num();
         // TODO: handle error
@@ -94,13 +94,13 @@ bool CommandClientBase::startClient(const std::string& interface_name)
 void CommandClientBase::stopClient()
 {
     // If server is already stopped, do nothing.
-    if (!this->socket_)
+    if (!this->client_socket_)
         return;
 
 
     // Destroy the  socket.
-    delete this->socket_;
-    this->socket_ = nullptr;
+    delete this->client_socket_;
+    this->client_socket_ = nullptr;
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1050));
 
@@ -115,25 +115,25 @@ void CommandClientBase::stopClient()
 
 void CommandClientBase::resetClient()
 {
-    if (this->socket_)
+    if (this->client_socket_)
     {
         // Destroy the socket and create again to flush.
-        delete this->socket_;
+        delete this->client_socket_;
 
         std::this_thread::sleep_for(std::chrono::milliseconds(1050));
 
         try
         {
-            this->socket_ = new zmq::socket_t(*this->context_, zmq::socket_type::req);
-            this->socket_->connect(this->server_endpoint_);
+            this->client_socket_ = new zmq::socket_t(*this->context_, zmq::socket_type::req);
+            this->client_socket_->connect(this->server_endpoint_);
             // Set timeout so socket will not wait for answer more than server alive timeout.
-            this->socket_->set(zmq::sockopt::rcvtimeo, common::kDefaultServerAliveTimeoutMsec);
-            this->socket_->set(zmq::sockopt::linger, 0);
+            this->client_socket_->set(zmq::sockopt::rcvtimeo, common::kDefaultServerAliveTimeoutMsec);
+            this->client_socket_->set(zmq::sockopt::linger, 0);
         }
         catch (const zmq::error_t &error)
         {
-            delete this->socket_;
-            this->socket_ = nullptr;
+            delete this->client_socket_;
+            this->client_socket_ = nullptr;
 
             std::cerr << "Error at socket creation: " << error.num();
             // TODO: handle error
@@ -161,80 +161,143 @@ void CommandClientBase::setClientHostIP(const std::string&){}
 
 void CommandClientBase::setClientId(const std::string &){}
 
-int CommandClientBase::sendCommand(const RequestData& msg, void* &data_out, size_t &out_bytes)
+ClientResult CommandClientBase::sendCommand(const RequestData& msg, CommandReply& reply)
 {
-    if (!this->socket_)
-        return -1;
+    // Result.
+    ClientResult result;
+
+    // Check if we start the client.
+    if (!this->client_socket_)
+        return ClientResult::CLIENT_STOPPED;
+
+    // Send the command.
     try
     {
 
         zmq::multipart_t multipart_msg(this->prepareMessage(msg));
 
-        // Send the multiple messages.
-        multipart_msg.send(*this->socket_);
+        // Internal send callback.
+        this->onSendCommand(msg, multipart_msg);
 
-        std::cout<<"Data sent"<<std::endl;
+        // Send the multiple messages.
+        multipart_msg.send(*this->client_socket_);
 
     }  catch (const zmq::error_t &error)
     {
         // TODO: handle error
-        return error.num();
+        std::cout<<error.what()<<std::endl;
+        return ClientResult::INTERNAL_ZMQ_ERROR;
     }
 
     std::cout<<"Waiting response"<<std::endl;
 
-    int res = this->recvFromSocket(this->socket_, data_out, out_bytes);
+
+    // TODO multipart.
+
+    result = this->recvFromSocket(reply);
+
+
+
+
 
     if (this->auto_alive_working_)
         this->auto_alive_cv_.notify_one();
 
-    return res;
+    return result;
 
 }
 
-int CommandClientBase::recvFromSocket(zmq::socket_t *socket, void *&data, size_t &data_size_bytes) const
+ClientResult CommandClientBase::recvFromSocket(CommandReply& reply)
 {
-    // Reset output variables
-    data = nullptr;
-    data_size_bytes = 0;
+    // Result variable.
+    ClientResult result = ClientResult::COMMAND_OK;
+
+    // Containers.
+    bool recv_result;
+    zmq::multipart_t multipart_msg;
 
     // Try to receive data. If an execption is thrown, receiving fails and an error code is generated.
-    int result = 0;
-    zmq::recv_result_t recv_result;
-    zmq::message_t message_recv;
-
     try
     {
-        recv_result = socket->recv(message_recv);
+        // Call to the internal waiting command callback. TODO
+        //this->onWaitingCommand();
+
+        // Wait the command.
+        recv_result = multipart_msg.recv(*(this->client_socket_));
+
+        // Store the raw data.
+        reply.raw_msg = multipart_msg.clone();
     }
     catch(zmq::error_t& error)
     {
-        result = error.num();
+        // Call to error callback. TODO
+        //this->onServerError(error, "Error while receiving a request.");
+
+        std::cout<<"INTERNAL ERRROR "<<error.what()<<std::endl;
+
+        return ClientResult::INTERNAL_ZMQ_ERROR;
     }
 
-    // Return error code if receiving fails or if no data was received
-    if (!recv_result.has_value())
+    // Check for empty msg or timeout reached.
+    if (multipart_msg.empty() && !recv_result)
+        return ClientResult::TIMEOUT_REACHED;
+    else if (multipart_msg.empty())
+        return ClientResult::EMPTY_MSG;
+
+    // Check the multipart msg size.
+    if (multipart_msg.size() == 1 || multipart_msg.size() == 2)
     {
-        result = EAGAIN;
-    }
-    else if (0 == result)
-    {
-        // If data was received, copy received data to out parameters and return not error code
-        data_size_bytes = message_recv.size();
-        if (data_size_bytes > 0)
+        // Get the multipart data.
+        zmq::message_t message_result = multipart_msg.pop();
+
+        // Get the sizes.
+        size_t result_size_bytes = message_result.size();
+
+        // Get the command.
+        if (result_size_bytes == sizeof(ServerCommand))
         {
-            uint8_t *msg_data = new uint8_t[data_size_bytes];
-            uint8_t *message_recv_pointer = static_cast<uint8_t*>(message_recv.data());
-            std::copy(message_recv_pointer, message_recv_pointer + data_size_bytes, msg_data);
-            data = msg_data;
+            int raw_result;
+            utils::binarySerializeDeserialize(message_result.data(), sizeof(ServerCommand), &raw_result);
+            reply.result = static_cast<common::ServerResult>(raw_result);
+        }
+        else
+            return ClientResult::INVALID_MSG;
+
+        // If there is still one more part, they are the parameters.
+        if (multipart_msg.size() == 1)
+        {
+            // Get the message and the size.
+            zmq::message_t message_params = multipart_msg.pop();
+            size_t params_size_bytes = message_params.size();
+
+            std::cout<<multipart_msg.str()<<std::endl;
+            std::cout<<params_size_bytes<<std::endl;
+
+            // Check the parameters.
+            if(params_size_bytes > 0)
+            {
+                // Get and store the parameters data.
+                std::unique_ptr<std::uint8_t> params =
+                    std::unique_ptr<std::uint8_t>(new std::uint8_t[params_size_bytes]);
+                auto *params_pointer = static_cast<std::uint8_t*>(message_params.data());
+                std::copy(params_pointer, params_pointer + params_size_bytes, params.get());
+                reply.params = std::move(params);
+                reply.params_size = params_size_bytes;
+            }
+            else
+                return ClientResult::EMPTY_PARAMS;
         }
     }
+    else
+        return ClientResult::INVALID_PARTS;
 
+    // Return the result.
     return result;
 }
 
 void CommandClientBase::sendAliveCallback()
 {
+    /*
     std::mutex m;
     std::unique_lock<std::mutex> lk(m);
     bool send_success = true;
@@ -303,6 +366,7 @@ void CommandClientBase::sendAliveCallback()
     }
 
     delete alive_socket;
+    */
 }
 
 zmq::multipart_t CommandClientBase::prepareMessage(const RequestData &msg)

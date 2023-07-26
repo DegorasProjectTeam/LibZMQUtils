@@ -55,7 +55,7 @@ public:
 
 
     AmelasController() :
-        home_pos_({0,0})
+        home_pos_({-1,-1})
     {}
 
     ControllerError setHomePosition(const AltAzPos& pos)
@@ -73,13 +73,13 @@ public:
             this->home_pos_ = pos;
         }
 
-        std::cout << std::string(80, '-') << std::endl;
+        std::cout << std::string(100, '-') << std::endl;
         std::cout<<"<AMELAS CONTROLLER>"<<std::endl;
         std::cout<<"-> SET_HOME_POSITION"<<std::endl;
         std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
         std::cout<<"Az: "<<pos.az<<std::endl;
         std::cout<<"El: "<<pos.el<<std::endl;
-        std::cout << std::string(80, '-') << std::endl;
+        std::cout << std::string(100, '-') << std::endl;
 
         return error;
     }
@@ -88,11 +88,11 @@ public:
     {
         pos = this->home_pos_;
 
-        std::cout << std::string(80, '-') << std::endl;
+        std::cout << std::string(100, '-') << std::endl;
         std::cout<<"<AMELAS CONTROLLER>"<<std::endl;
         std::cout<<"-> GET_HOME_POSITION"<<std::endl;
         std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
-        std::cout << std::string(80, '-') << std::endl;
+        std::cout << std::string(100, '-') << std::endl;
 
         return ControllerError::SUCCESS;
     }

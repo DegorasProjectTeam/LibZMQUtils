@@ -62,6 +62,9 @@ namespace zmqutils{
 
 // =====================================================================================================================
 using common::ServerCommand;
+using common::ServerResult;
+using common::ClientResult;
+using common::CommandReply;
 using common::CommandType;
 using common::RequestData;
 // =====================================================================================================================
@@ -86,7 +89,7 @@ public:
 
     void setClientId(const std::string &id);
 
-    int sendCommand(const RequestData& msg, void* &data_out, size_t &out_bytes);
+    ClientResult sendCommand(const RequestData&, CommandReply&);
 
 protected:
 
@@ -94,7 +97,9 @@ protected:
 
 private:
 
-    int recvFromSocket(zmq::socket_t *socket, void *&data, size_t &data_size_bytes) const;
+
+    ClientResult recvFromSocket(CommandReply&);
+
     void sendAliveCallback();
     zmq::multipart_t prepareMessage(const RequestData &msg);
 
@@ -106,7 +111,7 @@ private:
 
     // ZMQ context and socket.
     zmq::context_t *context_;
-    zmq::socket_t *socket_;
+    zmq::socket_t *client_socket_;
 
     // Mutex.
     std::mutex mtx_;

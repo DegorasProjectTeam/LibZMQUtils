@@ -51,7 +51,7 @@ namespace zmqutils{
 
 CommandServerBase::CommandServerBase(unsigned int port, const std::string& local_addr) :
     context_(nullptr),
-    main_socket_(nullptr),
+    server_socket_(nullptr),
     server_endpoint_("tcp://" + local_addr + ":" + std::to_string(port)),
     server_port_(port),
     server_working_(false),
@@ -83,8 +83,8 @@ void CommandServerBase::setClientStatusCheck(bool)
     std::unique_lock<std::mutex> lock(this->mtx_);
     // Disable the client alive checking.
     this->check_clients_alive_ = false;
-    if(this->main_socket_)
-        this->main_socket_->set(zmq::sockopt::rcvtimeo, -1);
+    if(this->server_socket_)
+        this->server_socket_->set(zmq::sockopt::rcvtimeo, -1);
 }
 
 const unsigned& CommandServerBase::getServerPort() const {return this->server_port_;}
@@ -201,7 +201,7 @@ void CommandServerBase::serverWorker()
     // If there is no client connected wait for a client to connect or for an exit message. If there
     // is a client connected set timeout, so if no command comes in time, check the last time connection
     // for each client. The loop can be stopped (in a safe way) if using the stopServer() function.
-    while(this->main_socket_ && this->server_working_)
+    while(this->server_socket_ && this->server_working_)
     {
         // Message container.
         CommandRequest cmd_request;
@@ -243,7 +243,7 @@ void CommandServerBase::serverWorker()
             // Send the response.
             try
             {
-                this->main_socket_->send(message_res, zmq::send_flags::none);
+                this->server_socket_->send(message_res, zmq::send_flags::none);
             }
             catch (const zmq::error_t &error)
             {
@@ -283,7 +283,7 @@ void CommandServerBase::serverWorker()
             // Send the message.
             try
             {
-                multipart_msg.send(*this->main_socket_);
+                multipart_msg.send(*this->server_socket_);
             }
             catch (const zmq::error_t &error)
             {
@@ -296,10 +296,10 @@ void CommandServerBase::serverWorker()
     }
 
     // Delete pointers for clean finish the worker.
-    if (this->main_socket_)
+    if (this->server_socket_)
     {
-        delete this->main_socket_;
-        this->main_socket_ = nullptr;
+        delete this->server_socket_;
+        this->server_socket_ = nullptr;
     }
 }
 
@@ -319,7 +319,7 @@ ServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
         this->onWaitingCommand();
 
         // Wait the command.
-        recv_result = multipart_msg.recv(*(this->main_socket_));
+        recv_result = multipart_msg.recv(*(this->server_socket_));
 
         // Store the raw data.
         request.raw_msg = multipart_msg.clone();
@@ -414,9 +414,6 @@ ServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
             zmq::message_t message_params = multipart_msg.pop();
             size_t params_size_bytes = message_params.size();
 
-            std::cout<<multipart_msg.str()<<std::endl;
-            std::cout<<params_size_bytes<<std::endl;
-
             // Check the parameters.
             if(params_size_bytes > 0)
             {
@@ -463,9 +460,6 @@ void CommandServerBase::processCommand(const CommandRequest& request, CommandRep
 {
     // First of all, call to the internal callback.
     this->onCommandReceived(request);
-
-    // Store the command in the reply.
-    reply.request_cmd = request.command;
 
     // Process the different commands.
     // 1 - Process is the connect request.
@@ -543,11 +537,11 @@ void CommandServerBase::checkClientsAliveStatus()
     // minimum remaining time to the timeout among all clients.
     if(this->connected_clients_.empty())
     {
-        this->main_socket_->set(zmq::sockopt::rcvtimeo, -1);
+        this->server_socket_->set(zmq::sockopt::rcvtimeo, -1);
     }
     else
     {
-        this->main_socket_->set(zmq::sockopt::rcvtimeo, static_cast<int>(min_remaining_time.count()));
+        this->server_socket_->set(zmq::sockopt::rcvtimeo, static_cast<int>(min_remaining_time.count()));
     }
 }
 
@@ -578,11 +572,11 @@ void CommandServerBase::updateServerTimeout()
     {
         auto remain_time = common::kDefaultClientAliveTimeoutMsec - std::chrono::duration_cast<std::chrono::milliseconds>(
                                    std::chrono::steady_clock::now() - min_timeout->second.last_connection).count();
-        this->main_socket_->set(zmq::sockopt::rcvtimeo, std::max(0, static_cast<int>(remain_time)));
+        this->server_socket_->set(zmq::sockopt::rcvtimeo, std::max(0, static_cast<int>(remain_time)));
     }
     else
     {
-        this->main_socket_->set(zmq::sockopt::rcvtimeo, -1);
+        this->server_socket_->set(zmq::sockopt::rcvtimeo, -1);
     }
 }
 
@@ -594,10 +588,10 @@ void CommandServerBase::resetSocket()
     unsigned reconnect_count = common::kServerReconnTimes;
 
     // Delete the previous socket.
-    if (this->main_socket_)
+    if (this->server_socket_)
     {
-        delete this->main_socket_;
-        this->main_socket_ = nullptr;
+        delete this->server_socket_;
+        this->server_socket_ = nullptr;
     }
     // Try creating a new socket.
     do
@@ -606,21 +600,21 @@ void CommandServerBase::resetSocket()
         {
             // Create the ZMQ rep socket.
             std::this_thread::sleep_for(std::chrono::microseconds(500));
-            this->main_socket_ = new zmq::socket_t(*this->context_, zmq::socket_type::rep);
-            this->main_socket_->bind(this->server_endpoint_);
-            this->main_socket_->set(zmq::sockopt::linger, 0);
+            this->server_socket_ = new zmq::socket_t(*this->context_, zmq::socket_type::rep);
+            this->server_socket_->bind(this->server_endpoint_);
+            this->server_socket_->set(zmq::sockopt::linger, 0);
         }
         catch (const zmq::error_t& error)
         {
             // Delete the socket and store the last error.
-            delete this->main_socket_;
-            this->main_socket_ = nullptr;
+            delete this->server_socket_;
+            this->server_socket_ = nullptr;
             last_error = &error;
         }
         reconnect_count--;
     } while (res == EADDRINUSE && reconnect_count > 0);
 
-    if (!this->main_socket_ )
+    if (!this->server_socket_ )
     {
         // Update the working flag and calls to the callback.
         this->server_working_ = false;
