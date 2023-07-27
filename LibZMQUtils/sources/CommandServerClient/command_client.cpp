@@ -11,7 +11,8 @@
 #include <algorithm>
 
 #include "LibZMQUtils/CommandServerClient/command_client.h"
-#include "LibZMQUtils/utils.h"
+#include "LibZMQUtils/Utilities/utils.h"
+#include "LibZMQUtils/Utilities/binary_serializer.h"
 
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
@@ -266,21 +267,28 @@ ClientResult CommandClientBase::recvFromSocket(CommandReply& reply)
         // If there is still one more part, they are the parameters.
         if (multipart_msg.size() == 1)
         {
+            std::cout<<"MULTIPART "<<std::endl;
+
             // Get the message and the size.
             zmq::message_t message_params = multipart_msg.pop();
             size_t params_size_bytes = message_params.size();
 
-            std::cout<<multipart_msg.str()<<std::endl;
+
             std::cout<<params_size_bytes<<std::endl;
+            std::cout<<"MULTIPART END"<<std::endl;
 
             // Check the parameters.
             if(params_size_bytes > 0)
             {
+                utils::BinarySerializer ser(static_cast<std::uint8_t*>(message_params.data()), params_size_bytes);
+                std::cout<<ser.toString()<<std::endl;
+
                 // Get and store the parameters data.
                 std::unique_ptr<std::uint8_t> params =
                     std::unique_ptr<std::uint8_t>(new std::uint8_t[params_size_bytes]);
-                auto *params_pointer = static_cast<std::uint8_t*>(message_params.data());
-                std::copy(params_pointer, params_pointer + params_size_bytes, params.get());
+                std::copy(static_cast<std::uint8_t*>(message_params.data()),
+                          static_cast<std::uint8_t*>(message_params.data()) + params_size_bytes,
+                          params.get());
                 reply.params = std::move(params);
                 reply.params_size = params_size_bytes;
             }

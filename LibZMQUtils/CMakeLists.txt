@@ -37,20 +37,21 @@ include(CMakeMacros)
 # Get the include aliases files.
 macro_get_files_without_extension(ALIAS ${CMAKE_SOURCE_DIR}/includes/LibZMQUtils/*)
 
-# Create a custom group for the templates and aliases.
-source_group("Alias Files" FILES ${ALIAS})
-
 # Get the headers, sources and template files.
 FILE(GLOB_RECURSE HEADERS ${CMAKE_SOURCE_DIR}/includes/LibZMQUtils/*.h)
 FILE(GLOB_RECURSE TEMPLTS ${CMAKE_SOURCE_DIR}/includes/LibZMQUtils/*.tpp)
 FILE(GLOB_RECURSE SOURCES ${CMAKE_SOURCE_DIR}/sources/*.cpp)
+
+# Create a custom group for the templates and aliases.
+source_group("Alias Files" FILES ${ALIAS})
+source_group("Header Files" FILES ${TEMPLTS})
 
 include_directories(${CMAKE_SOURCE_DIR}/includes)
 include_directories("external/zmq/includes")
 
 # Add definitions and the library.
 add_definitions(-DLIBZMQUTILS_LIBRARY)
-add_library(LibZMQUtils SHARED ${SOURCES} ${HEADERS} ${ALIAS})
+add_library(LibZMQUtils SHARED ${SOURCES} ${HEADERS} ${TEMPLTS} ${ALIAS})
 
 # Link libraries. For win32 only.
 if (WIN32)

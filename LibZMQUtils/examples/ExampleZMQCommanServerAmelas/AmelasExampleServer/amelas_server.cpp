@@ -1,3 +1,6 @@
+
+
+
 #include "amelas_server.h"
 
 // AMELAS NAMESPACES
@@ -13,6 +16,7 @@ using common::AmelasServerResult;
 using zmqutils::common::ServerCommand;
 using zmqutils::common::ServerResult;
 using zmqutils::common::ResultType;
+using zmqutils::utils::BinarySerializer;
 
 
 AmelasServer::AmelasServer(unsigned int port, const std::string &local_addr) :
@@ -48,33 +52,40 @@ void AmelasServer::processSetHomePosition(const CommandRequest& request, Command
 {
     // Command and error.
     AmelasServerCommand cmd = AmelasServerCommand::REQ_SET_HOME_POSITION;
+    ServerCommand cmd_aux = static_cast<ServerCommand>(AmelasServerCommand::REQ_SET_HOME_POSITION);
+
     ControllerError controller_err;
 
     // Auxilar variables.
     double az, el;
-    constexpr std::size_t double_sz = sizeof(double);
     bool result;
 
     // Check the request parameters size.
-    if (request.params_size == 0)
+    if (request.params_size == 0 || !request.params)
     {
         reply.result = ServerResult::EMPTY_PARAMS;
         return;
     }
-    else if (request.params_size != double_sz*2)
+
+    // Prepare the binary serializer.
+    BinarySerializer serializer(request.params.get(), request.params_size);
+
+    // Try to read the parameters data.
+    try
+    {
+        serializer.readMultiple(az, el);
+    }
+    catch(...)
     {
         reply.result = ServerResult::BAD_PARAMETERS;
         return;
     }
 
-    // Deserialize the parameters.
-    zmqutils::utils::binarySerializeDeserialize(request.params.get(), double_sz, &az);
-    zmqutils::utils::binarySerializeDeserialize(request.params.get() + double_sz, double_sz, &el);
-
     // Generate the struct.
     common::AltAzPos pos = {az, el};
 
-    // Process the command.
+    // Now we will process the command in the controller.
+
     // Check the callback.
     if(!this->isCallbackSet(cmd))
     {
@@ -83,18 +94,24 @@ void AmelasServer::processSetHomePosition(const CommandRequest& request, Command
     }
 
     // Process the command.
-    try{controller_err = this->invokeCallback<common::SetHomePositionCallback>(cmd, pos);}
+    try
+    {
+        controller_err = this->invokeCallback<common::SetHomePositionCallback>(cmd, pos);
+
+        //controller_err = this->invokeCallbackInternal<common::SetHomePositionCallback, ControllerError>(cmd_aux, pos);
+    }
     catch(...)
     {
         reply.result = static_cast<ServerResult>(AmelasServerResult::INVALID_CALLBACK);
         return;
     }
 
-    // Store the amelas error.
-    reply.params = std::unique_ptr<std::uint8_t>(new std::uint8_t[sizeof(ResultType)]);
-    ResultType amelas_res = static_cast<ResultType>(controller_err);
-    zmqutils::utils::binarySerializeDeserialize(&amelas_res, sizeof(ResultType), reply.params.get());
-    reply.params_size = sizeof(ResultType);
+    // Prepare and store the amelas controller error.
+    serializer.clearData();
+    serializer.writeSingle(controller_err);
+    std::cout<<serializer.getDataHexString()<<std::endl;
+    reply.params = serializer.moveData(reply.params_size);
+
 }
 
 void AmelasServer::processGetHomePosition(const CommandRequest &, CommandReply &reply)
@@ -106,7 +123,6 @@ void AmelasServer::processGetHomePosition(const CommandRequest &, CommandReply &
     // Auxilar variables.
     constexpr std::size_t res_sz = sizeof(ControllerError);
     constexpr std::size_t double_sz = sizeof(double);
-    ControllerError amelas_err = ControllerError::SUCCESS;
     common::AltAzPos pos;
 
     // Process the command.
@@ -117,10 +133,12 @@ void AmelasServer::processGetHomePosition(const CommandRequest &, CommandReply &
         return;
     }
 
+
+
     // Serialize parameters
     reply.params = std::unique_ptr<std::uint8_t>(new std::uint8_t[res_sz + 2*double_sz]);
     reply.params_size = res_sz + 2*double_sz;
-    zmqutils::utils::binarySerializeDeserialize(&amelas_err, res_sz, reply.params.get());
+    zmqutils::utils::binarySerializeDeserialize(&controller_err, res_sz, reply.params.get());
     zmqutils::utils::binarySerializeDeserialize(&pos.az, double_sz, reply.params.get() + res_sz);
     zmqutils::utils::binarySerializeDeserialize(&pos.el, double_sz, reply.params.get() + res_sz + double_sz);
 
@@ -283,49 +301,56 @@ void AmelasServer::onServerError(const zmq::error_t &error, const std::string &e
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void AmelasServer::onCommandReceived(const CommandRequest &cmd_req)
+void AmelasServer::onCommandReceived(const CommandRequest &request)
 {
     // Get the command string.
     std::string cmd_str;
-    std::uint32_t command = static_cast<std::uint32_t>(cmd_req.command);
+    std::uint32_t command = static_cast<std::uint32_t>(request.command);
     cmd_str = (command < AmelasServerCommandStr.size()) ? AmelasServerCommandStr[command] : "Unknown command";
     // Log.
+    BinarySerializer serializer(request.params.get(), request.params_size);
     std::cout << std::string(100, '-') << std::endl;
     std::cout<<"<AMELAS SERVER>"<<std::endl;
     std::cout<<"-> ON COMMAND RECEIVED: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
-    std::cout<<"Client Id: "<<cmd_req.client.id<<std::endl;
+    std::cout<<"Client Id: "<<request.client.id<<std::endl;
     std::cout<<"Command: "<<command<<" ("<<cmd_str<<")"<<std::endl;
+    std::cout<<"Params Size: "<<request.params_size<<std::endl;
+    std::cout<<"Params Hex: "<<serializer.getDataHexString()<<std::endl;
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void AmelasServer::onInvalidMsgReceived(const CommandRequest &cmd_req)
+void AmelasServer::onInvalidMsgReceived(const CommandRequest &request)
 {
     // Log.
+    BinarySerializer serializer(request.params.get(), request.params_size);
     std::cout << std::string(100, '-') << std::endl;
     std::cout<<"<AMELAS SERVER>"<<std::endl;
     std::cout<<"-> ON BAD COMMAND RECEIVED: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
-    std::cout<<"Raw Str: "<<cmd_req.raw_msg.str()<<std::endl;
-    std::cout<<"Client Id: "<<cmd_req.client.id<<std::endl;
-    std::cout<<"Client Ip: "<<cmd_req.client.ip<<std::endl;
-    std::cout<<"Client Host: "<<cmd_req.client.hostname<<std::endl;
-    std::cout<<"Client Process: "<<cmd_req.client.pid<<std::endl;
-    std::cout<<"Command: "<<static_cast<int>(cmd_req.command)<<std::endl;
-    std::cout<<"Params Size: "<<cmd_req.params_size<<std::endl;
+    std::cout<<"Raw Str: "<<request.raw_msg.str()<<std::endl;
+    std::cout<<"Client Id: "<<request.client.id<<std::endl;
+    std::cout<<"Client Ip: "<<request.client.ip<<std::endl;
+    std::cout<<"Client Host: "<<request.client.hostname<<std::endl;
+    std::cout<<"Client Process: "<<request.client.pid<<std::endl;
+    std::cout<<"Command: "<<static_cast<int>(request.command)<<std::endl;
+    std::cout<<"Params Size: "<<request.params_size<<std::endl;
+    std::cout<<"Params Hex: "<<serializer.getDataHexString()<<std::endl;
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void AmelasServer::onSendingResponse(const CommandReply &cmd_rep)
+void AmelasServer::onSendingResponse(const CommandReply &reply)
 {
     // Log.
-    int result = static_cast<int>(cmd_rep.result);
+    BinarySerializer serializer(reply.params.get(), reply.params_size);
+    int result = static_cast<int>(reply.result);
     std::cout << std::string(100, '-') << std::endl;
     std::cout<<"<AMELAS SERVER>"<<std::endl;
     std::cout<<"-> ON SENDING RESPONSE: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
     std::cout<<"Result: "<<result<<" ("<<AmelasServerResultStr[result]<<")"<<std::endl;
-    std::cout<<"Params Size: "<<cmd_rep.params_size<<std::endl;
+    std::cout<<"Params Size: "<<reply.params_size<<std::endl;
+    std::cout<<"Params Hex: "<<serializer.getDataHexString()<<std::endl;
     std::cout << std::string(100, '-') << std::endl;
 }
 

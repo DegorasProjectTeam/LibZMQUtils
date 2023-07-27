@@ -41,12 +41,12 @@ public:
 
     void setCallback(common::AmelasServerCommand command, common::ControllerCallback callback);
 
-    template<typename ClassT = void, typename ReturnT = void, typename... Args>
+    template<typename ClassT = void, typename RetT = void, typename... Args>
     void setCallback(common::AmelasServerCommand command,
                      ClassT* object,
-                     ReturnT(ClassT::*callback)(Args...))
+                     RetT(ClassT::*callback)(Args...))
     {
-        callback_map_[command] = utils::makeCallback(object, callback);
+        callback_map_[command] = zmqutils::utils::makeCallback(object, callback);
     }
 
     // Removes a callback for a command

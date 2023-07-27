@@ -41,7 +41,7 @@
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/CommandServerClient/command_server.h"
-#include "LibZMQUtils/utils.h"
+#include "LibZMQUtils/Utilities/utils.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
@@ -54,8 +54,9 @@ CommandServerBase::CommandServerBase(unsigned int port, const std::string& local
     server_socket_(nullptr),
     server_endpoint_("tcp://" + local_addr + ":" + std::to_string(port)),
     server_port_(port),
-    server_working_(false),
-    check_clients_alive_(true)
+    flag_server_working_(false),
+    flag_check_clients_alive_(true),
+    flag_alive_callbacks_(true)
 {
     // Get the adapters.
     std::vector<utils::NetworkAdapterInfo> interfcs = utils::getHostIPsWithInterfaces();
@@ -82,10 +83,12 @@ void CommandServerBase::setClientStatusCheck(bool)
     // Safe mutex lock
     std::unique_lock<std::mutex> lock(this->mtx_);
     // Disable the client alive checking.
-    this->check_clients_alive_ = false;
+    this->flag_check_clients_alive_ = false;
     if(this->server_socket_)
         this->server_socket_->set(zmq::sockopt::rcvtimeo, -1);
 }
+
+void CommandServerBase::setAliveCallbacksEnabled(bool flag){this->flag_alive_callbacks_ = flag;}
 
 const unsigned& CommandServerBase::getServerPort() const {return this->server_port_;}
 
@@ -100,7 +103,7 @@ void CommandServerBase::startServer()
     std::unique_lock<std::mutex> lock(this->mtx_);
 
     // If server is already started, do nothing
-    if (this->server_working_)
+    if (this->flag_server_working_)
         return;
 
     // Create the ZMQ context.
@@ -117,11 +120,11 @@ void CommandServerBase::stopServer()
     std::unique_lock<std::mutex> lock(this->mtx_);
 
     // If server is already stopped, do nothing.
-    if (!this->server_working_)
+    if (!this->flag_server_working_)
         return;
 
     // Set the shared working flag to false (is atomic).
-    this->server_working_ = false;
+    this->flag_server_working_ = false;
 
     // Delete the context.
     if (this->context_)
@@ -154,7 +157,7 @@ ServerResult CommandServerBase::execReqConnect(const CommandRequest& cmd_req)
     this->connected_clients_[cmd_req.client.id] = cmd_req.client;
 
     // Update the timeout of the main socket.
-    if(this->check_clients_alive_)
+    if(this->flag_check_clients_alive_)
         this->updateServerTimeout();
 
     // Call to the internal callback.
@@ -179,7 +182,7 @@ ServerResult CommandServerBase::execReqDisconnect(const CommandRequest& cmd_req)
     this->onDisconnected(cmd_req.client);
 
     // Update the timeout of the main socket.
-    if(this->check_clients_alive_)
+    if(this->flag_check_clients_alive_)
         this->updateServerTimeout();
 
     // All ok.
@@ -188,11 +191,13 @@ ServerResult CommandServerBase::execReqDisconnect(const CommandRequest& cmd_req)
 
 void CommandServerBase::serverWorker()
 {
-    // Auxiliar variables.
+    // Containers.
     ServerResult result;
+    CommandRequest request;
+    CommandReply reply;
 
     // Set the working flag to true.
-    this->server_working_ = true;
+    this->flag_server_working_ = true;
 
     // Start server socket
     this->resetSocket();
@@ -201,23 +206,25 @@ void CommandServerBase::serverWorker()
     // If there is no client connected wait for a client to connect or for an exit message. If there
     // is a client connected set timeout, so if no command comes in time, check the last time connection
     // for each client. The loop can be stopped (in a safe way) if using the stopServer() function.
-    while(this->server_socket_ && this->server_working_)
+    while(this->server_socket_ && this->flag_server_working_)
     {
-        // Message container.
-        CommandRequest cmd_request;
+        // Call to the internal waiting command callback (check first the last request).
+        if (request.command != ServerCommand::REQ_ALIVE || this->flag_alive_callbacks_)
+            this->onWaitingCommand();
 
-        // Result container.
-        CommandReply cmd_reply;
+        // Clean the containers.
+        request = CommandRequest();
+        reply = CommandReply();
 
         // Receive the data.
-        result = this->recvFromSocket(cmd_request);
+        result = this->recvFromSocket(request);
 
         // Check all the clients status.
-        if(this->check_clients_alive_)
+        if(this->flag_check_clients_alive_)
             this->checkClientsAliveStatus();
 
         // Process the data.
-        if(result == ServerResult::COMMAND_OK && !this->server_working_)
+        if(result == ServerResult::COMMAND_OK && !this->flag_server_working_)
         {
             // In this case, we will close the server. Call to the internal callback.
             this->onServerStop();
@@ -229,7 +236,7 @@ void CommandServerBase::serverWorker()
         else if (result != ServerResult::COMMAND_OK)
         {
             // Internal callback.
-            this->onInvalidMsgReceived(cmd_request);
+            this->onInvalidMsgReceived(request);
 
             // Prepare the message.
             std::uint8_t res_buff[sizeof(ServerResult)];
@@ -237,8 +244,8 @@ void CommandServerBase::serverWorker()
             zmq::message_t message_res(res_buff, sizeof(ServerResult));
 
             // Send response callback.
-            cmd_reply.result = result;
-            this->onSendingResponse(cmd_reply);
+            reply.result = result;
+            this->onSendingResponse(reply);
 
             // Send the response.
             try
@@ -249,7 +256,7 @@ void CommandServerBase::serverWorker()
             {
                 // Check if we want to close the server.
                 // The error code is for ZMQ EFSM error.
-                if(!(error.num() == common::kZmqEFSMError && !this->server_working_))
+                if(!(error.num() == common::kZmqEFSMError && !this->flag_server_working_))
                     this->onServerError(error, "Error while sending a response.");
             }
         }
@@ -259,10 +266,10 @@ void CommandServerBase::serverWorker()
             std::unique_ptr<std::uint8_t> rep_id_buff;
 
             // Execute the command.
-            this->processCommand(cmd_request, cmd_reply);
+            this->processCommand(request, reply);
 
             // Prepare the command result.
-            CommandServerBase::prepareCommandResult(cmd_reply.result, rep_id_buff);
+            CommandServerBase::prepareCommandResult(reply.result, rep_id_buff);
             zmq::message_t message_rep_id(rep_id_buff.get(), sizeof(ServerResult));
 
             // Prepare the multipart msg.
@@ -270,15 +277,16 @@ void CommandServerBase::serverWorker()
             multipart_msg.add(std::move(message_rep_id));
 
             // Specific data.
-            if(cmd_reply.result == ServerResult::COMMAND_OK && cmd_reply.params_size != 0)
+            if(reply.result == ServerResult::COMMAND_OK && reply.params_size != 0)
             {
                 // Prepare the custom response.
-                zmq::message_t message_rep_custom(cmd_reply.params.get(), cmd_reply.params_size);
+                zmq::message_t message_rep_custom(reply.params.get(), reply.params_size);
                 multipart_msg.add(std::move(message_rep_custom));
             }
 
             // Sending callback.
-            this->onSendingResponse(cmd_reply);
+            if (request.command != ServerCommand::REQ_ALIVE || this->flag_alive_callbacks_)
+                this->onSendingResponse(reply);
 
             // Send the message.
             try
@@ -289,7 +297,7 @@ void CommandServerBase::serverWorker()
             {
                 // Check if we want to close the server.
                 // The error code is for ZMQ EFSM error.
-                if(!(error.num() == common::kZmqEFSMError && !this->server_working_))
+                if(!(error.num() == common::kZmqEFSMError && !this->flag_server_working_))
                     this->onServerError(error, "Error while sending a response.");
             }
         }
@@ -315,9 +323,6 @@ ServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
     // Try to receive data. If an execption is thrown, receiving fails and an error code is generated.
     try
     {
-        // Call to the internal waiting command callback.
-        this->onWaitingCommand();
-
         // Wait the command.
         recv_result = multipart_msg.recv(*(this->server_socket_));
 
@@ -328,7 +333,7 @@ ServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
     {
         // Check if we want to close the server.
         // The error code is for ZMQ EFSM error.
-        if(error.num() == common::kZmqEFSMError && !this->server_working_)
+        if(error.num() == common::kZmqEFSMError && !this->flag_server_working_)
             return ServerResult::COMMAND_OK;
 
         // Else, call to error callback.
@@ -617,7 +622,7 @@ void CommandServerBase::resetSocket()
     if (!this->server_socket_ )
     {
         // Update the working flag and calls to the callback.
-        this->server_working_ = false;
+        this->flag_server_working_ = false;
         this->onServerError(*last_error, "Error during socket creation.");
     }
     else

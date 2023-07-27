@@ -40,7 +40,7 @@
 #include <sstream>
 #include <iphlpapi.h>
 
-#include "LibZMQUtils/utils.h"
+#include "LibZMQUtils/Utilities/utils.h"
 
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x0600

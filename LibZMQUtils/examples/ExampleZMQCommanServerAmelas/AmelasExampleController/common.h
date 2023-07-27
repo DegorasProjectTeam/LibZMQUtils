@@ -33,6 +33,13 @@ enum class ControllerError : std::uint32_t
     UNSAFE_POSITION = 2
 };
 
+static constexpr std::array<const char*, 21>  ControllerErrorStr
+{
+    "SUCCESS - Controller process success",
+    "INVALID_POSITION - The provided position (az/alt) is invalid.",
+    "UNSAFE_POSITION - The provided position (az/alt) is unsafe."
+};
+
 struct AltAzPos
 {
     AltAzPos(double az, double el):

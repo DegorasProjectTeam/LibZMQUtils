@@ -23,8 +23,8 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file utils.h
- * @brief This file contains the declaration of several utilities for the project development.
+ * @file binary_serializer.h
+ * @brief This file contains the declaration of the BinarySerializer class.
  * @author Degoras Project Team
  * @copyright EUPL License
  * @version 2307.1
@@ -37,28 +37,19 @@
 // C++ INCLUDES
 // =====================================================================================================================
 #include <algorithm>
-#include <string>
+#include <cstddef>
+#include <cstdint>
+#include <iomanip>
 #include <iostream>
-#include <map>
-#include <vector>
+#include <memory>
 #include <cstring>
-#include <chrono>
-#include <array>
-#include <utility>
+#include <mutex>
+#include <atomic>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/libzmqutils_global.h"
-// =====================================================================================================================
-
-// DEFINITIONS
-// =====================================================================================================================
-#if defined(__MINGW32__) || defined(_MSC_VER)
-#define MKGMTIME _mkgmtime
-#else
-#define MKGMTIME timegm
-#endif
+#include "LibZMQUtils/Utilities/binary_serializer.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
@@ -67,63 +58,53 @@ namespace zmqutils{
 namespace utils{
 // =====================================================================================================================
 
-// CONVENIENT ALIAS AND ENUMERATIONS
-// =====================================================================================================================
-/// High resolution time point to store datetimes (uses Unix Time).
-using HRTimePointStd = std::chrono::time_point<std::chrono::high_resolution_clock>;
-/// Steady clock time point for measuring intervals.
-using SCTimePointStd =  std::chrono::steady_clock::time_point;
-// =====================================================================================================================
-
-struct LIBZMQUTILS_EXPORT NetworkAdapterInfo
+template<typename... Args>
+void BinarySerializer::writeMultiple(const Args&... args)
 {
-    std::string id;
-    std::string name;
-    std::string descr;
-    std::string ip;
-};
-
-/**
- * @brief Binary serialization and deserialization.
- *
- * This function is responsible for binary serialization and deserialization
- * by reversing the byte order of the data in a binary safe manner. This can be
- * used for transforming data from little-endian to big-endian and vice versa.
- *
- * @param[in] data Pointer to the input data that needs to be serialized/deserialized.
- * @param[in] data_size_bytes Size of the input data in bytes.
- * @param[out] dest Pointer to the destination where the output (reversed bytes) is to be stored.
- */
-LIBZMQUTILS_EXPORT void binarySerializeDeserialize(const void* data, size_t data_size_bytes, void* dest);
-
-LIBZMQUTILS_EXPORT std::vector<NetworkAdapterInfo> getHostIPsWithInterfaces();
-
-LIBZMQUTILS_EXPORT std::string getHostname();
-
-LIBZMQUTILS_EXPORT unsigned getCurrentPID();
-
-LIBZMQUTILS_EXPORT std::string timePointToString(const HRTimePointStd& tp,
-                                                 const std::string& format = "%Y-%m-%dT%H:%M:%S",
-                                                 bool add_ms = true, bool add_ns = false, bool utc = true);
-
-LIBZMQUTILS_EXPORT std::string timePointToIso8601(const HRTimePointStd& tp, bool add_ms = true, bool add_ns = false);
-
-LIBZMQUTILS_EXPORT std::string currentISO8601Date(bool add_ms = true);
-
-namespace internal
-{
-template <typename T, std::size_t... Is1, std::size_t... Is2>
-constexpr std::array<T, sizeof...(Is1) + sizeof...(Is2)>
-joinArrays(const std::array<T, sizeof...(Is1)>& a1, const std::array<T, sizeof...(Is2)>& a2, std::index_sequence<Is1...>, std::index_sequence<Is2...>)
-{
-    return { a1[Is1]..., a2[Is2]... };
-}
+    const size_t total_size = (... + sizeof(args)); // Sum of sizes of all arguments
+    reserve(this->size_ + total_size);              // Reserve enough space once
+    // Perform each write
+    (void)std::initializer_list<int> { (writeSingle(args), 0)... };
 }
 
-template <typename T, std::size_t N1, std::size_t N2>
-constexpr std::array<T, N1 + N2> joinArraysConstexpr(const std::array<T, N1>& a1, const std::array<T, N2>& a2)
+template<typename T>
+void BinarySerializer::writeSingle(const T& value)
 {
-    return internal::joinArrays(a1, a2, std::make_index_sequence<N1>(), std::make_index_sequence<N2>());
+    static_assert(std::is_trivially_copyable<T>::value, "Non-trivially copyable types are not supported.");
+    reserve(this->size_ + sizeof(T));
+    std::lock_guard<std::mutex> lock(this->mtx_);
+    BinarySerializer::binarySerializeDeserialize(&value, sizeof(T), this->data_.get() + size_);
+    this->size_ += sizeof(T);
+}
+
+template<typename... Args>
+void BinarySerializer::readMultiple(Args&... args)
+{
+    (void)std::initializer_list<int>{ (readSingle(args), 0)... };
+}
+
+template<typename T>
+T BinarySerializer::readSingle()
+{
+    static_assert(std::is_trivially_copyable<T>::value, "Non-trivially copyable types are not supported");
+    std::lock_guard<std::mutex> lock(this->mtx_);
+    if (this->offset_ + sizeof(T) > this->size_)
+        throw std::out_of_range("BinarySerializer: Read beyond the data size");
+    T value;
+    BinarySerializer::binarySerializeDeserialize(this->data_.get() + this->offset_, sizeof(T), &value);
+    this->offset_ += sizeof(T);
+    return value;
+}
+
+template<typename T>
+void BinarySerializer::readSingle(T& value)
+{
+    static_assert(std::is_trivially_copyable<T>::value, "Non-trivially copyable types are not supported");
+    std::lock_guard<std::mutex> lock(mtx_);
+    if (this->offset_ + sizeof(T) > this->size_)
+        throw std::out_of_range("BinarySerializer: Read beyond the data size");
+    BinarySerializer::binarySerializeDeserialize(this->data_.get() + this->offset_, sizeof(T), &value);
+    this->offset_ += sizeof(T);
 }
 
 }} // END NAMESPACES.

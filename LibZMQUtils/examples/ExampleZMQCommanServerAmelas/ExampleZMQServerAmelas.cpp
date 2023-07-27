@@ -10,6 +10,7 @@
 #include <thread>
 #include <csignal>
 #include <limits>
+#include <any>
 
 // =====================================================================================================================
 
@@ -63,6 +64,7 @@ int main(int argc, char**argv)
 {
     // Using.
     using amelas::common::AmelasServerCommand;
+    using zmqutils::common::ServerCommand;
 
     // Set up the Windows Console Control Handler
     SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
@@ -101,6 +103,10 @@ int main(int argc, char**argv)
 
     // ---------------------------------------
     // Set the controller callbacks in the server.
+
+    amelas_server.setCallbackInternal(static_cast<ServerCommand>(AmelasServerCommand::REQ_SET_HOME_POSITION),
+                                      &amelas_controller,
+                                      &amelas::AmelasController::setHomePosition);
 
     amelas_server.setCallback(AmelasServerCommand::REQ_SET_HOME_POSITION,
                               &amelas_controller,

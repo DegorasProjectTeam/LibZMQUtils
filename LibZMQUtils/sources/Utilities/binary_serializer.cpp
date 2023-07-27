@@ -22,96 +22,143 @@
  *   along with this project. If not, see the license at < https://eupl.eu/ >.                                         *
  **********************************************************************************************************************/
 
+/** ********************************************************************************************************************
+ * @file binary_serializer.cpp
+ * @brief This file contains part of the implementation of the BinarySerializer class.
+ * @author Degoras Project Team
+ * @copyright EUPL License
+ * @version 2307.1
+***********************************************************************************************************************/
+
 // C++ INCLUDES
 // =====================================================================================================================
-#include <map>
-#include <string>
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <iomanip>
+#include <iostream>
+#include <memory>
+#include <cstring>
+#include <mutex>
+#include <atomic>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/CommandServer>
-#include <LibZMQUtils/Utils>
+#include "LibZMQUtils/Utilities/binary_serializer.h"
 // =====================================================================================================================
 
-// PROJECT INCLUDES
+// ZMQUTILS NAMESPACES
 // =====================================================================================================================
-#include "common.h"
-// =====================================================================================================================
-
-
-
-// AMELAS NAMESPACES
-// =====================================================================================================================
-namespace amelas{
+namespace zmqutils{
+namespace utils{
 // =====================================================================================================================
 
-using amelas::common::ControllerErrorStr;
-using amelas::common::ControllerError;
-using amelas::common::AltAzPos;
+BinarySerializer::BinarySerializer(size_t capacity) :
+        data_(new std::uint8_t[capacity]),
+        size_(0),
+        capacity_(capacity),
+        offset_(0){}
 
-class AmelasController
+BinarySerializer::BinarySerializer(std::uint8_t* data, size_t size)
+        : data_(nullptr), size_(0), capacity_(0), offset_(0)
 {
-public:
+    this->loadData(data, size);
+}
 
-
-    AmelasController() :
-        home_pos_({-1,-1})
-    {}
-
-    ControllerError setHomePosition(const AltAzPos& pos)
+void BinarySerializer::reserve(size_t size)
+{
+    if (size > this->capacity_)
     {
-        // Auxiliar result.
-        ControllerError error = ControllerError::SUCCESS;
-
-        // Check the provided values.
-        if (pos.az >= 360.0 ||  pos.az < 0.0 || pos.el >= 90. || pos.el < 0.)
-        {
-            error = ControllerError::INVALID_POSITION;
-        }
-        else
-        {
-            this->home_pos_ = pos;
-        }
-
-        // Log.
-        std::string cmd_str = ControllerErrorStr[static_cast<int>(error)];
-        std::cout << std::string(100, '-') << std::endl;
-        std::cout<<"<AMELAS CONTROLLER>"<<std::endl;
-        std::cout<<"-> SET_HOME_POSITION"<<std::endl;
-        std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
-        std::cout<<"Az: "<<pos.az<<std::endl;
-        std::cout<<"El: "<<pos.el<<std::endl;
-        std::cout<<"Error: "<<static_cast<int>(error)<<" ("<<cmd_str<<")"<<std::endl;
-        std::cout << std::string(100, '-') << std::endl;
-
-        return error;
+        std::lock_guard<std::mutex> lock(this->mtx_);
+        std::unique_ptr<std::uint8_t[]> new_data(new std::uint8_t[size]);
+        if (this->data_)
+            std::memcpy(new_data.get(), data_.get(), size_);
+        this->data_ = std::move(new_data);
+        this->capacity_ = size;
     }
+}
 
-    ControllerError getHomePosition(AltAzPos& pos)
+void BinarySerializer::loadData(std::uint8_t* data, size_t size)
+{
+    if(data != nullptr)
     {
-        pos = this->home_pos_;
-
-        std::cout << std::string(100, '-') << std::endl;
-        std::cout<<"<AMELAS CONTROLLER>"<<std::endl;
-        std::cout<<"-> GET_HOME_POSITION"<<std::endl;
-        std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
-        std::cout << std::string(100, '-') << std::endl;
-
-        return ControllerError::SUCCESS;
+        this->reserve(size);
+        std::lock_guard<std::mutex> lock(this->mtx_);
+        std::memcpy(this->data_.get(), data, size);
+        this->size_ = size;
+        this->offset_ = 0;
     }
+}
 
-    ControllerError getDatetime(std::string&)
-    {
-        return ControllerError::SUCCESS;
-    }
+void BinarySerializer::clearData()
+{
+    std::lock_guard<std::mutex> lock(this->mtx_);
+    this->data_.reset(nullptr);
+    this->size_ = 0;
+    this->capacity_ = 0;
+    this->offset_ = 0;
+}
 
-private:
+void BinarySerializer::resetReading()
+{
+    this->offset_ = 0;
+}
 
-    AltAzPos home_pos_;
+std::unique_ptr<std::uint8_t> BinarySerializer::moveData()
+{
+    std::lock_guard<std::mutex> lock(this->mtx_);
+    std::uint8_t* old_data = this->data_.release();
+    this->data_.reset(nullptr);
+    this->size_ = 0;
+    this->capacity_ = 0;
+    this->offset_ = 0;
+    return std::unique_ptr<std::uint8_t>(old_data);
+}
 
-};
+std::unique_ptr<std::uint8_t> BinarySerializer::moveData(size_t& size)
+{
+    std::lock_guard<std::mutex> lock(this->mtx_);
+    size = this->size_;
+    std::uint8_t* old_data = this->data_.release();
+    this->data_.reset(nullptr);
+    this->size_ = 0;
+    this->capacity_ = 0;
+    this->offset_ = 0;
+    return std::unique_ptr<std::uint8_t>(old_data);
+}
 
-} // END NAMESPACES.
+size_t BinarySerializer::getSize() const
+{
+    return this->size_;
+}
+
+std::string BinarySerializer::getDataHexString() const
+{
+    std::lock_guard<std::mutex> lock(this->mtx_);
+    std::stringstream ss;
+    for(size_t i = 0; i < size_; i++)
+        ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned int>(data_.get()[i]) << " ";
+    return ss.str();
+}
+
+std::string BinarySerializer::toString() const
+{
+    std::stringstream ss;
+    ss << "{size: " << size_
+       << ", capacity: " << capacity_
+       << ", offset: " << offset_
+       << ", hex_data: " << this->getDataHexString() << "}";
+    return ss.str();
+}
+
+void BinarySerializer::binarySerializeDeserialize(const void *data, size_t data_size_bytes, void *dest)
+{
+    const std::uint8_t* data_byes = reinterpret_cast<const std::uint8_t *>(data);
+    std::uint8_t* dest_byes = reinterpret_cast<std::uint8_t*>(dest);
+    std::reverse_copy(data_byes, data_byes + data_size_bytes, dest_byes);
+}
+
+
+}} // END NAMESPACES.
 // =====================================================================================================================
-

@@ -17,15 +17,7 @@ namespace amelas{
 namespace utils{
 // =====================================================================================================================
 
-template<typename ClassType, typename ReturnType, typename... Args>
-static std::function<ReturnType(Args...)> makeCallback(ClassType* object,
-                                                       ReturnType(ClassType::*memberFunction)(Args...))
-{
-    return [object, memberFunction](Args... args) -> ReturnType
-    {
-        return (object->*memberFunction)(std::forward<Args>(args)...);
-    };
-}
+
 
 }} // END NAMESPACES.
 // =====================================================================================================================

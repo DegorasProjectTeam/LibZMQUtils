@@ -49,7 +49,7 @@
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/libzmqutils_global.h"
-#include "LibZMQUtils/utils.h"
+#include "LibZMQUtils/Utilities/utils.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES

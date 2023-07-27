@@ -1,2 +1,3 @@
-#include <LibZMQUtils/utils.h>
+#include <LibZMQUtils/Utilities/utils.h>
+#include <LibZMQUtils/Utilities/binary_serializer.h>
 #include <LibZMQUtils/CommandServerClient/common.h>

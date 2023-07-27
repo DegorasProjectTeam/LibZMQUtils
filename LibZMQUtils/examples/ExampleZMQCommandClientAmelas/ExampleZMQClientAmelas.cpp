@@ -3,6 +3,8 @@
 #include <iostream>
 #include <cstring>
 
+#include <LibZMQUtils/Utils>
+
 #include "AmelasExampleController/common.h"
 #include "AmelasExampleServer/common.h"
 #include "AmelasExampleClient/amelas_client.h"
@@ -15,10 +17,11 @@ using namespace amelas;
 using amelas::common::AmelasServerCommand;
 using amelas::common::AmelasServerResult;
 using zmqutils::common::CommandType;
+using zmqutils::common::ServerCommand;
 
 void parseCommand(CommandClientBase &client, const std::string &command)
 {
-    zmqutils::common::ClientResult send_result = ClientResult::COMMAND_OK;
+    zmqutils::common::ClientResult client_result = ClientResult::COMMAND_OK;
 
     char *command_str = new char[command.size()];
     std::copy(command.begin(), command.end(), command_str);
@@ -113,6 +116,15 @@ void parseCommand(CommandClientBase &client, const std::string &command)
                 zmqutils::utils::binarySerializeDeserialize(&az, 8, command_msg.params.get());
                 zmqutils::utils::binarySerializeDeserialize(&el, 8, command_msg.params.get() + 8);
             }
+            else
+            {
+                std::cout<<"Sending invalid command: "<<std::endl;
+                double az = 0;
+                command_msg.params = std::unique_ptr<std::uint8_t>(new std::uint8_t[16]);
+                command_msg.params_size = 8;
+                zmqutils::utils::binarySerializeDeserialize(&az, 8, command_msg.params.get());
+                valid_params = true;
+            }
 
             valid = valid_params;
 
@@ -135,12 +147,12 @@ void parseCommand(CommandClientBase &client, const std::string &command)
             ClientResult result = ClientResult::COMMAND_OK;
             CommandReply reply;
 
-            send_result = client.sendCommand(command_msg, reply);
+            client_result = client.sendCommand(command_msg, reply);
 
+            std::cerr << "Client Result: " << static_cast<int>(client_result)<<std::endl;
 
-            if (send_result != ClientResult::COMMAND_OK)
+            if (client_result != ClientResult::COMMAND_OK)
             {
-                //std::cerr << "Command sending failed with code: " << send_result << std::endl;
             }
             else
             {
@@ -149,26 +161,39 @@ void parseCommand(CommandClientBase &client, const std::string &command)
 
                 std::cout<<"Server result: "<<static_cast<int>(reply.result)<<std::endl;
 
+                if(reply.result != ServerResult::COMMAND_OK)
+                {
+                    delete[] command_str;
+                    return;
+                }
+
                 // Get the controller result.
                 // TODO ERROR CONTROL
 
+                if(command_id > static_cast<CommandType>(ServerCommand::END_BASE_COMMANDS))
+                {
+                    amelas::common::ControllerError error;
 
+                    zmqutils::utils::BinarySerializer ser(reply.params.get(), reply.params_size);
+                    std::cout<<ser.toString()<<std::endl;
+
+                    ser.readSingle(error);
+
+                    std::cout<<"Controller error: "<<static_cast<int>(error)<<std::endl;
+                }
 
                 if (command_id == static_cast<CommandType>(AmelasServerCommand::REQ_GET_HOME_POSITION))
                 {
                     if (reply.params_size == (res_sz + 2*double_sz))
                     {
-                        amelas::common::ControllerError error;
                         double az;
                         double el;
 
                         // Deserialize the parameters.
-                        zmqutils::utils::binarySerializeDeserialize(reply.params.get(), res_sz, reply.params.get());
                         zmqutils::utils::binarySerializeDeserialize(reply.params.get() + res_sz, double_sz, &az);
                         zmqutils::utils::binarySerializeDeserialize(reply.params.get() + res_sz + double_sz, double_sz, &el);
 
                         // Generate the struct.
-                        std::cout<<"Controller error: "<<static_cast<int>(error)<<std::endl;
                         std::cout<<"Az: "<<az<<std::endl;
                         std::cout<<"El: "<<el<<std::endl;
                     }

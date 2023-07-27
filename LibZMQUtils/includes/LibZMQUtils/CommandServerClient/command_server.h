@@ -36,8 +36,10 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
+#include <any>
 #include <future>
 #include <map>
+#include <variant>
 #include <zmq/zmq.hpp>
 #include <zmq/zmq_addon.hpp>
 // =====================================================================================================================
@@ -46,7 +48,7 @@
 // =====================================================================================================================
 #include "LibZMQUtils/libzmqutils_global.h"
 #include "LibZMQUtils/CommandServerClient/common.h"
-#include "LibZMQUtils/utils.h"
+#include "LibZMQUtils/Utilities/utils.h"
 // =====================================================================================================================
 
 // ZMQ DECLARATIONS
@@ -107,7 +109,7 @@ using utils::NetworkAdapterInfo;
  * Then, create an instance of your subclass, and use the startServer and stopServer methods to control the server's
  * operation. You can query the server's state and information using the various getters (getServerPort,
  * getServerAddresses, getServerEndpoint, getServerWorkerFuture, getConnectedClients, and isWorking). You can also use
- * setClientStatusCheck(bool) to control the checking of clients' alive status.
+ * setClientStatusCheck to control the checking of clients' alive status.
  *
  * A similar usage pattern applies to the CommandClientBase class, which is meant to interact with a CommandServerBase
  * instance. CommandClientBase is also designed to be subclassed with callback methods to be overridden for specific
@@ -136,7 +138,7 @@ using utils::NetworkAdapterInfo;
  * reply. Therefore, it is necessary to override this function to add handling for the custom commands specific to
  * your server's application.
  *
- * @see CommandRequest, CommandReply, HostClient, CommandClientBase, onCustomCommandReceived
+ * @see ServerCommand, ServerResult, CommandRequest, CommandReply, CommandClientBase, onCustomCommandReceived
  */
 class LIBZMQUTILS_EXPORT CommandServerBase
 {
@@ -223,7 +225,7 @@ public:
      *
      * @return True if the server is working, false otherwise.
      */
-    bool isWorking() const{return this->server_working_;}
+    bool isWorking() const{return this->flag_server_working_;}
 
     /**
      * @brief Enables or disables the client's alive status checking.
@@ -238,6 +240,20 @@ public:
      *          unexpected behavior or system instability in case of sudden client disconnections or failures.
      */
     void setClientStatusCheck(bool);
+
+    /**
+     * @brief Enables or disables the server callbacks when an alive message is received.
+     *
+     * This function controls whether the server callbacks are called upon receipt of an alive message from the client.
+     * By default, the server callbacks are enabled and will be invoked when an alive message is received.
+     *
+     * This is especially useful for debugging purposes. When debugging server behavior, the constant invocation of callbacks
+     * upon receipt of alive messages can cause clutter in the debug output. Disabling these callbacks can help streamline the
+     * debugging process and focus on the critical server functionality.
+     *
+     * @param [in] enabled Boolean flag that determines whether callbacks are enabled (true) or disabled (false).
+     */
+    void setAliveCallbacksEnabled(bool);
 
     /**
      * @brief Starts the command server.
@@ -261,6 +277,19 @@ public:
      * This destructor is virtual to ensure proper cleanup when the derived class is destroyed.
      */
     virtual ~CommandServerBase();
+
+    template<typename ClassT = void, typename RetT = void, typename... Args>
+    void setCallbackInternal(common::ServerCommand id, ClassT* object, RetT(ClassT::*callback)(Args...))
+    {
+        callback_map_[id] = zmqutils::utils::makeCallback(object, callback);
+    }
+
+    template <typename CallbackType, typename RetT, typename... Args>
+    RetT invokeCallbackInternal(common::ServerCommand command, Args&&... args)
+    {
+        CallbackType callbck = std::any_cast<CallbackType>(callback_map_[command]);
+        return (callbck)(std::forward<Args>(args)...);
+    }
 
 protected:
 
@@ -475,8 +504,13 @@ private:
     std::map<std::string, HostClient> connected_clients_;   ///< Dictionary with the connected clients.
 
     // Usefull flags.
-    std::atomic_bool server_working_;       ///< Flag for check the server working status.
-    std::atomic_bool check_clients_alive_;  ///< Flag that enables and disables the client status checking.
+    std::atomic_bool flag_server_working_;       ///< Flag for check the server working status.
+    std::atomic_bool flag_check_clients_alive_;  ///< Flag that enables and disables the client status checking.
+    std::atomic_bool flag_alive_callbacks_;      ///< Flag that enables and disables the callbacks for alive messages.
+
+
+    std::map<common::ServerCommand, std::any> callback_map_;
+
 };
 
 } // END NAMESPACES.
