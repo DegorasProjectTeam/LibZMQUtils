@@ -62,9 +62,10 @@ BOOL WINAPI ConsoleCtrlHandler(DWORD dwCtrlType)
 //
 int main(int argc, char**argv)
 {
-    // Using.
-    using amelas::common::AmelasServerCommand;
-    using zmqutils::common::ServerCommand;
+    // Nampesaces.
+    using namespace amelas::controller;
+    using namespace amelas::cltsrv;
+    using namespace zmqutils;
 
     // Set up the Windows Console Control Handler
     SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
@@ -93,10 +94,10 @@ int main(int argc, char**argv)
     }
 
     // Instantiate the Amelas controller.
-    amelas::AmelasController amelas_controller;
+    AmelasController amelas_controller;
 
     // Instantiate the server.
-    amelas::AmelasServer amelas_server(port);
+    AmelasServer amelas_server(port);
 
     // Disable or enables the client status checking.
     amelas_server.setClientStatusCheck(client_status_check);
@@ -106,15 +107,15 @@ int main(int argc, char**argv)
 
     amelas_server.setCallbackInternal(static_cast<ServerCommand>(AmelasServerCommand::REQ_SET_HOME_POSITION),
                                       &amelas_controller,
-                                      &amelas::AmelasController::setHomePosition);
+                                      &AmelasController::setHomePosition);
 
     amelas_server.setCallback(AmelasServerCommand::REQ_SET_HOME_POSITION,
                               &amelas_controller,
-                              &amelas::AmelasController::setHomePosition);
+                              &AmelasController::setHomePosition);
 
     amelas_server.setCallback(AmelasServerCommand::REQ_GET_HOME_POSITION,
                               &amelas_controller,
-                              &amelas::AmelasController::getHomePosition);
+                              &AmelasController::getHomePosition);
 
     // ---------------------------------------
 

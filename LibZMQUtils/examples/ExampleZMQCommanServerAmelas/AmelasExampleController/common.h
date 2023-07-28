@@ -15,7 +15,7 @@
 // AMELAS NAMESPACES
 // =====================================================================================================================
 namespace amelas{
-namespace common{
+namespace controller{
 // =====================================================================================================================
 
 // CONSTANTS
@@ -26,8 +26,9 @@ namespace common{
 // CONVENIENT ALIAS, ENUMERATIONS AND CONSTEXPR
 // =====================================================================================================================
 
-enum class ControllerError : std::uint32_t
+enum class ControllerError : std::int32_t
 {
+    INVALID_ERROR = -1,
     SUCCESS = 0,
     INVALID_POSITION = 1,
     UNSAFE_POSITION = 2

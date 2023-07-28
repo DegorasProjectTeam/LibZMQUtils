@@ -3,11 +3,11 @@
 // AMELAS NAMESPACES
 // =====================================================================================================================
 namespace amelas{
+namespace cltsrv{
 // =====================================================================================================================
 
 using common::AmelasServerCommandStr;
 using common::AmelasServerResultStr;
-using common::ControllerError;
 using common::AmelasServerCommand;
 using common::AmelasServerResult;
 using zmqutils::common::ServerCommand;
@@ -36,6 +36,6 @@ void AmelasClient::onSendCommand(const RequestData &req, const zmq::multipart_t 
 
 
 
-} // END NAMESPACES.
+}} // END NAMESPACES.
 // =====================================================================================================================
 

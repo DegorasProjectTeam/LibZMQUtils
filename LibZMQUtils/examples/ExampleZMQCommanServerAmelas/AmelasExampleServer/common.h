@@ -11,6 +11,7 @@
 // AMELAS NAMESPACES
 // =====================================================================================================================
 namespace amelas{
+namespace cltsrv{
 namespace common{
 // =====================================================================================================================
 
@@ -57,5 +58,5 @@ static constexpr auto AmelasServerResultStr = zmqutils::utils::joinArraysConstex
 constexpr int kMinCmdId = static_cast<int>(zmqutils::common::ServerCommand::END_BASE_COMMANDS) + 1;
 constexpr int kMaxCmdId = static_cast<int>(AmelasServerCommand::END_AMELAS_COMMANDS) - 1;
 
-}} // END NAMESPACES.
+}}} // END NAMESPACES.
 // =====================================================================================================================

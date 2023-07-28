@@ -10,12 +10,14 @@
 #include "AmelasExampleClient/amelas_client.h"
 
 
-
+// TODO Remove
 using namespace zmqutils;
 using namespace amelas;
+using namespace amelas::cltsrv;
+using namespace amelas::cltsrv::common;
+using namespace amelas::controller;
 
-using amelas::common::AmelasServerCommand;
-using amelas::common::AmelasServerResult;
+
 using zmqutils::common::CommandType;
 using zmqutils::common::ServerCommand;
 
@@ -156,7 +158,7 @@ void parseCommand(CommandClientBase &client, const std::string &command)
             }
             else
             {
-                constexpr std::size_t res_sz = sizeof(amelas::common::ControllerError);
+                constexpr std::size_t res_sz = sizeof(amelas::controller::ControllerError);
                 constexpr std::size_t double_sz = sizeof(double);
 
                 std::cout<<"Server result: "<<static_cast<int>(reply.result)<<std::endl;
@@ -172,12 +174,12 @@ void parseCommand(CommandClientBase &client, const std::string &command)
 
                 if(command_id > static_cast<CommandType>(ServerCommand::END_BASE_COMMANDS))
                 {
-                    amelas::common::ControllerError error;
+                    ControllerError error;
 
                     zmqutils::utils::BinarySerializer ser(reply.params.get(), reply.params_size);
                     std::cout<<ser.toString()<<std::endl;
 
-                    ser.readSingle(error);
+                    ser.read(error);
 
                     std::cout<<"Controller error: "<<static_cast<int>(error)<<std::endl;
                 }

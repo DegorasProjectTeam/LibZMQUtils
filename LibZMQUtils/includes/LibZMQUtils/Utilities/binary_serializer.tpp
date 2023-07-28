@@ -59,12 +59,14 @@ namespace utils{
 // =====================================================================================================================
 
 template<typename... Args>
-void BinarySerializer::writeMultiple(const Args&... args)
+size_t BinarySerializer::write(const Args&... args)
 {
-    const size_t total_size = (... + sizeof(args)); // Sum of sizes of all arguments
-    reserve(this->size_ + total_size);              // Reserve enough space once
-    // Perform each write
-    (void)std::initializer_list<int> { (writeSingle(args), 0)... };
+    // Sum of sizes of all arguments and reserve.
+    const size_t total_size = (... + sizeof(args));
+    reserve(this->size_ + total_size);
+    // Perform each write.
+    (void)std::initializer_list<int> { (this->writeSingle(args), 0)... };
+    return total_size;
 }
 
 template<typename T>
@@ -78,7 +80,7 @@ void BinarySerializer::writeSingle(const T& value)
 }
 
 template<typename... Args>
-void BinarySerializer::readMultiple(Args&... args)
+void BinarySerializer::read(Args&... args)
 {
     (void)std::initializer_list<int>{ (readSingle(args), 0)... };
 }

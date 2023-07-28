@@ -49,6 +49,7 @@
 #include "LibZMQUtils/libzmqutils_global.h"
 #include "LibZMQUtils/CommandServerClient/common.h"
 #include "LibZMQUtils/Utilities/utils.h"
+#include "LibZMQUtils/Utilities/binary_serializer.h"
 // =====================================================================================================================
 
 // ZMQ DECLARATIONS
@@ -451,6 +452,15 @@ protected:
     virtual void onSendingResponse(const CommandReply&) = 0;
 
 private:
+
+    template<typename... Args>
+    static zmq::const_buffer prepareZmqBuffer(const Args&... args)
+    {
+        utils::BinarySerializer serializer;
+        size_t size = serializer.write(std::forward<const Args>(args)...);
+        zmq::const_buffer buffer_res(serializer.release(), size);
+        return buffer_res;
+    }
 
     // Helper for prepare the result message.
     static void prepareCommandResult(ServerResult, std::unique_ptr<uint8_t>& data_out);

@@ -75,23 +75,28 @@ class LIBZMQUTILS_EXPORT BinarySerializer
 {
 public:
 
+    enum class EndiannessType
+    {
+        LITTLE_ENDIAN,
+        BIG_ENDIAN
+    };
+
     BinarySerializer(size_t capacity = 1024);
 
-    BinarySerializer(std::uint8_t* data, size_t size);
+    BinarySerializer(void* data, size_t size);
 
     void reserve(size_t size);
 
-    void loadData(std::uint8_t* data, size_t size);
+    void loadData(void *data, size_t size);
 
     void clearData();
 
     void resetReading();
 
     template<typename... Args>
-    void writeMultiple(const Args&... args);
+    size_t write(const Args&...);
 
-    template<typename T>
-    void writeSingle(const T& value);
+
 
     /**
      * @brief Variadic template function to read multiple data types at once from the internal buffer.
@@ -105,7 +110,7 @@ public:
      * @warning If you read beyond the size of the stored data, this function will throw an out_of_range exception.
      */
     template<typename... Args>
-    void readMultiple(Args&... args);
+    void read(Args&... args);
 
     /**
      * @brief Read a value of a specific type from the internal buffer and return it.
@@ -119,20 +124,14 @@ public:
     template<typename T>
     T readSingle();
 
-    /**
-     * @brief Read a value of a specific type from the internal buffer and store it in the given variable.
-     *
-     * @tparam T Type of the value to be read.
-     * @param[out] value Reference to the variable where the read data should be stored.
-     *
-     * @warning If you read beyond the size of the stored data, this function will throw an out_of_range exception.
-     */
-    template<typename T>
-    void readSingle(T& value);
+    std::uint8_t* release();
 
-    std::unique_ptr<std::uint8_t> moveData();
+    std::uint8_t* release(size_t& size);
 
-    std::unique_ptr<std::uint8_t> moveData(size_t& size);
+    std::unique_ptr<std::uint8_t> moveUnique();
+
+    std::unique_ptr<std::uint8_t> moveUnique(size_t& size);
+
 
     //std::uint8_t* getData() const;
 
@@ -142,13 +141,26 @@ public:
 
     std::string getDataHexString() const;
 
+    template<typename... Args>
+    static size_t fastSerialization(std::unique_ptr<std::uint8_t>& out, const Args&... args)
+    {
+        BinarySerializer serializer;
+        size_t size = serializer.write(std::forward<const Args>(args)...);
+        out = serializer.moveUnique();
+        return size;
+    }
 
 private:
 
     static void binarySerializeDeserialize(const void *data, size_t data_size_bytes, void *dest);
 
+    template<typename T> void writeSingle(const T& value);
+
+    template<typename T> void readSingle(T& value);
+
     std::unique_ptr<std::uint8_t[]> data_;
-    std::atomic<size_t> size_;               ///< Current size of the data.
+    std::atomic<size_t> size_;              ///< Current size of the data.
+
     std::atomic<size_t> capacity_;           ///< Current capacity.
     std::atomic<size_t> offset_;             ///< Offset when reading.
     mutable std::mutex mtx_;                 ///< Mutex for thread safety

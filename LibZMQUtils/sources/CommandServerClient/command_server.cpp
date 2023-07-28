@@ -42,6 +42,7 @@
 // =====================================================================================================================
 #include "LibZMQUtils/CommandServerClient/command_server.h"
 #include "LibZMQUtils/Utilities/utils.h"
+#include "LibZMQUtils/Utilities/binary_serializer.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
@@ -239,9 +240,7 @@ void CommandServerBase::serverWorker()
             this->onInvalidMsgReceived(request);
 
             // Prepare the message.
-            std::uint8_t res_buff[sizeof(ServerResult)];
-            utils::binarySerializeDeserialize(&result, sizeof(ServerResult), res_buff);
-            zmq::message_t message_res(res_buff, sizeof(ServerResult));
+            zmq::const_buffer buffer_res = CommandServerBase::prepareZmqBuffer(result);
 
             // Send response callback.
             reply.result = result;
@@ -250,7 +249,7 @@ void CommandServerBase::serverWorker()
             // Send the response.
             try
             {
-                this->server_socket_->send(message_res, zmq::send_flags::none);
+                this->server_socket_->send(buffer_res, zmq::send_flags::none);
             }
             catch (const zmq::error_t &error)
             {
@@ -263,18 +262,20 @@ void CommandServerBase::serverWorker()
         else if (result == ServerResult::COMMAND_OK)
         {
             // Reply id buffer.
-            std::unique_ptr<std::uint8_t> rep_id_buff;
+            //std::unique_ptr<std::uint8_t> rep_id_buff;
 
             // Execute the command.
             this->processCommand(request, reply);
 
-            // Prepare the command result.
-            CommandServerBase::prepareCommandResult(reply.result, rep_id_buff);
-            zmq::message_t message_rep_id(rep_id_buff.get(), sizeof(ServerResult));
+            // Binary serializer.
+            utils::BinarySerializer serializer;
 
             // Prepare the multipart msg.
             zmq::multipart_t multipart_msg;
-            multipart_msg.add(std::move(message_rep_id));
+
+            // Prepare the command result.
+            size_t size = serializer.write(reply.result);
+            multipart_msg.addmem(serializer.release(), size);
 
             // Specific data.
             if(reply.result == ServerResult::COMMAND_OK && reply.params_size != 0)
@@ -395,8 +396,10 @@ ServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
         // Get the command.
         if (command_size_bytes == sizeof(ServerCommand))
         {
-            int raw_command;
-            utils::binarySerializeDeserialize(message_command.data(), sizeof(ServerCommand), &raw_command);
+            // Deserialize.
+            utils::BinarySerializer serializer(message_command.data(), sizeof(ServerCommand));
+            std::int32_t raw_command = serializer.readSingle<std::int32_t>();
+
             // Validate the command.
             if(CommandServerBase::validateCommand(raw_command))
                 request.command = static_cast<ServerCommand>(raw_command);
@@ -441,11 +444,12 @@ ServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
     return result;
 }
 
+/*
 void CommandServerBase::prepareCommandResult(ServerResult result, std::unique_ptr<std::uint8_t>& data_out)
 {
     data_out = std::unique_ptr<std::uint8_t>(new std::uint8_t[sizeof(ServerResult)]);
     utils::binarySerializeDeserialize(&result, sizeof(ServerResult), data_out.get());
-}
+}*/
 
 bool CommandServerBase::validateCommand(int raw_command)
 {

@@ -44,11 +44,8 @@
 // AMELAS NAMESPACES
 // =====================================================================================================================
 namespace amelas{
+namespace controller{
 // =====================================================================================================================
-
-using amelas::common::ControllerErrorStr;
-using amelas::common::ControllerError;
-using amelas::common::AltAzPos;
 
 class AmelasController
 {
@@ -112,6 +109,6 @@ private:
 
 };
 
-} // END NAMESPACES.
+}} // END NAMESPACES.
 // =====================================================================================================================
 

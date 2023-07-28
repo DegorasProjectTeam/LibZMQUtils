@@ -26,9 +26,13 @@
 // AMELAS NAMESPACES
 // =====================================================================================================================
 namespace amelas{
+namespace cltsrv{
 // =====================================================================================================================
 
+// =====================================================================================================================
 using namespace zmqutils;
+using namespace amelas::cltsrv::common;
+// =====================================================================================================================
 
 // Example of creating a command server from the base.
 class AmelasServer : public CommandServerBase
@@ -37,12 +41,12 @@ public:
 
     AmelasServer(unsigned port, const std::string& local_addr = "*");
 
-    const std::map<common::AmelasServerCommand, common::ControllerCallback>& getCallbackMap() const;
+    const std::map<AmelasServerCommand, controller::ControllerCallback>& getCallbackMap() const;
 
-    void setCallback(common::AmelasServerCommand command, common::ControllerCallback callback);
+    void setCallback(AmelasServerCommand command, controller::ControllerCallback callback);
 
     template<typename ClassT = void, typename RetT = void, typename... Args>
-    void setCallback(common::AmelasServerCommand command,
+    void setCallback(AmelasServerCommand command,
                      ClassT* object,
                      RetT(ClassT::*callback)(Args...))
     {
@@ -60,8 +64,73 @@ public:
 
 private:
 
+
     template <typename CallbackType, typename... Args>
-    common::ControllerError invokeCallback(common::AmelasServerCommand command, Args&&... args)
+    controller::ControllerError invokeCallback(const CommandRequest& request, CommandReply& reply, const Args&... args)
+    {
+        // Get the command.
+        AmelasServerCommand cmd = static_cast<AmelasServerCommand>(request.command);
+
+        // Check the callback.
+        if(!this->isCallbackSet(cmd))
+        {
+            reply.result = static_cast<ServerResult>(AmelasServerResult::EMPTY_CALLBACK);
+            return controller::ControllerError::INVALID_ERROR;
+        }
+
+        //Invoke the callback.
+        try
+        {
+            return this->invokeCallback<CallbackType>(cmd, std::forward<const Args>(args)...);
+
+            //controller_err = this->invokeCallbackInternal<common::SetHomePositionCallback, ControllerError>(cmd_aux, pos);
+        }
+        catch(...)
+        {
+            reply.result = static_cast<ServerResult>(AmelasServerResult::INVALID_CALLBACK);
+            return controller::ControllerError::INVALID_ERROR;
+        }
+    }
+
+    template <typename CallbackType, typename... Args>
+    controller::ControllerError invokeCallback(const CommandRequest& request, CommandReply& reply, Args&&... args)
+    {
+        // Get the command.
+        AmelasServerCommand cmd = static_cast<AmelasServerCommand>(request.command);
+
+        // Check the callback.
+        if(!this->isCallbackSet(cmd))
+        {
+            reply.result = static_cast<ServerResult>(AmelasServerResult::EMPTY_CALLBACK);
+            return controller::ControllerError::INVALID_ERROR;
+        }
+
+        //Invoke the callback.
+        try
+        {
+            return this->invokeCallback<CallbackType>(cmd, std::forward<Args>(args)...);
+
+            //controller_err = this->invokeCallbackInternal<common::SetHomePositionCallback, ControllerError>(cmd_aux, pos);
+        }
+        catch(...)
+        {
+            reply.result = static_cast<ServerResult>(AmelasServerResult::INVALID_CALLBACK);
+            return controller::ControllerError::INVALID_ERROR;
+        }
+    }
+
+    template <typename CallbackType, typename... Args>
+    controller::ControllerError invokeCallback(AmelasServerCommand command, const Args&... args)
+    {
+        if (auto callback = std::get_if<CallbackType>(&callback_map_[command]))
+        {
+            return (*callback)(std::forward<const Args>(args)...);
+        }
+        throw std::runtime_error("Invalid command or incorrect callback type");
+    }
+
+    template <typename CallbackType, typename... Args>
+    controller::ControllerError invokeCallback(AmelasServerCommand command, Args&&... args)
     {
         if (auto callback = std::get_if<CallbackType>(&callback_map_[command]))
         {
@@ -71,7 +140,7 @@ private:
     }
 
     // Helper to check if the custom command is valid.
-    static bool validateAmelasCommand(common::AmelasServerCommand command);
+    static bool validateAmelasCommand(AmelasServerCommand command);
 
     // Process the specific commands.
     void processAmelasCommand(const CommandRequest&, CommandReply&);
@@ -113,8 +182,8 @@ private:
     virtual void onServerError(const zmq::error_t&, const std::string& ext_info) final;
 
     // External callbacks map.
-    std::map<common::AmelasServerCommand, common::ControllerCallback> callback_map_;
+    std::map<common::AmelasServerCommand, controller::ControllerCallback> callback_map_;
 };
 
-} // END NAMESPACES.
+}} // END NAMESPACES.
 // =====================================================================================================================

@@ -6,13 +6,9 @@
 // AMELAS NAMESPACES
 // =====================================================================================================================
 namespace amelas{
+namespace cltsrv{
 // =====================================================================================================================
 
-using common::AmelasServerCommandStr;
-using common::AmelasServerResultStr;
-using common::ControllerError;
-using common::AmelasServerCommand;
-using common::AmelasServerResult;
 using zmqutils::common::ServerCommand;
 using zmqutils::common::ServerResult;
 using zmqutils::common::ResultType;
@@ -23,12 +19,12 @@ AmelasServer::AmelasServer(unsigned int port, const std::string &local_addr) :
     CommandServerBase(port, local_addr)
 {}
 
-const std::map<AmelasServerCommand, common::ControllerCallback> &AmelasServer::getCallbackMap() const
+const std::map<AmelasServerCommand, controller::ControllerCallback> &AmelasServer::getCallbackMap() const
 {
     return this->callback_map_;
 }
 
-void AmelasServer::setCallback(common::AmelasServerCommand command, common::ControllerCallback callback)
+void AmelasServer::setCallback(common::AmelasServerCommand command, controller::ControllerCallback callback)
 {
     callback_map_[command] = callback;
 }
@@ -51,10 +47,7 @@ void AmelasServer::clearCallbacks()
 void AmelasServer::processSetHomePosition(const CommandRequest& request, CommandReply& reply)
 {
     // Command and error.
-    AmelasServerCommand cmd = AmelasServerCommand::REQ_SET_HOME_POSITION;
-    ServerCommand cmd_aux = static_cast<ServerCommand>(AmelasServerCommand::REQ_SET_HOME_POSITION);
-
-    ControllerError controller_err;
+    controller::ControllerError controller_err;
 
     // Auxilar variables.
     double az, el;
@@ -73,7 +66,7 @@ void AmelasServer::processSetHomePosition(const CommandRequest& request, Command
     // Try to read the parameters data.
     try
     {
-        serializer.readMultiple(az, el);
+        serializer.read(az, el);
     }
     catch(...)
     {
@@ -82,68 +75,27 @@ void AmelasServer::processSetHomePosition(const CommandRequest& request, Command
     }
 
     // Generate the struct.
-    common::AltAzPos pos = {az, el};
+    controller::AltAzPos pos = {az, el};
 
     // Now we will process the command in the controller.
-
-    // Check the callback.
-    if(!this->isCallbackSet(cmd))
-    {
-        reply.result = static_cast<ServerResult>(AmelasServerResult::EMPTY_CALLBACK);
-        return;
-    }
-
-    // Process the command.
-    try
-    {
-        controller_err = this->invokeCallback<common::SetHomePositionCallback>(cmd, pos);
-
-        //controller_err = this->invokeCallbackInternal<common::SetHomePositionCallback, ControllerError>(cmd_aux, pos);
-    }
-    catch(...)
-    {
-        reply.result = static_cast<ServerResult>(AmelasServerResult::INVALID_CALLBACK);
-        return;
-    }
+    this->invokeCallback<controller::SetHomePositionCallback>(request, reply, pos);
 
     // Prepare and store the amelas controller error.
-    serializer.clearData();
-    serializer.writeSingle(controller_err);
-    std::cout<<serializer.getDataHexString()<<std::endl;
-    reply.params = serializer.moveData(reply.params_size);
-
+    reply.params_size = BinarySerializer::fastSerialization(reply.params, controller_err);
 }
 
-void AmelasServer::processGetHomePosition(const CommandRequest &, CommandReply &reply)
+void AmelasServer::processGetHomePosition(const CommandRequest& request, CommandReply &reply)
 {
-    // Command and error.
-    AmelasServerCommand cmd = AmelasServerCommand::REQ_GET_HOME_POSITION;
-    ControllerError controller_err;
+    // Auxiliar variables and containers.
+    controller::ControllerError ctrl_err;
+    controller::AltAzPos pos;
 
-    // Auxilar variables.
-    constexpr std::size_t res_sz = sizeof(ControllerError);
-    constexpr std::size_t double_sz = sizeof(double);
-    common::AltAzPos pos;
+    // Now we will process the command in the controller.
+    ctrl_err = this->invokeCallback<controller::GetHomePositionCallback>(request, reply, pos);
 
-    // Process the command.
-    try{controller_err = this->invokeCallback<common::GetHomePositionCallback>(cmd, pos);}
-    catch(...)
-    {
-        reply.result = static_cast<ServerResult>(AmelasServerResult::INVALID_CALLBACK);
-        return;
-    }
-
-
-
-    // Serialize parameters
-    reply.params = std::unique_ptr<std::uint8_t>(new std::uint8_t[res_sz + 2*double_sz]);
-    reply.params_size = res_sz + 2*double_sz;
-    zmqutils::utils::binarySerializeDeserialize(&controller_err, res_sz, reply.params.get());
-    zmqutils::utils::binarySerializeDeserialize(&pos.az, double_sz, reply.params.get() + res_sz);
-    zmqutils::utils::binarySerializeDeserialize(&pos.el, double_sz, reply.params.get() + res_sz + double_sz);
-
-    // Store the server result.
-    reply.result = ServerResult::COMMAND_OK;
+    // Serialize parameters if all ok.
+    if(reply.result == ServerResult::COMMAND_OK)
+        reply.params_size = BinarySerializer::fastSerialization(reply.params, ctrl_err, pos.az, pos.el);
 }
 
 void AmelasServer::processAmelasCommand(const CommandRequest& request, CommandReply& reply)
@@ -365,6 +317,6 @@ bool AmelasServer::validateAmelasCommand(AmelasServerCommand command)
     return result;
 }
 
-} // END NAMESPACES.
+}} // END NAMESPACES.
 // =====================================================================================================================
 

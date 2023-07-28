@@ -60,7 +60,7 @@ BinarySerializer::BinarySerializer(size_t capacity) :
         capacity_(capacity),
         offset_(0){}
 
-BinarySerializer::BinarySerializer(std::uint8_t* data, size_t size)
+BinarySerializer::BinarySerializer(void *data, size_t size)
         : data_(nullptr), size_(0), capacity_(0), offset_(0)
 {
     this->loadData(data, size);
@@ -79,7 +79,7 @@ void BinarySerializer::reserve(size_t size)
     }
 }
 
-void BinarySerializer::loadData(std::uint8_t* data, size_t size)
+void BinarySerializer::loadData(void* data, size_t size)
 {
     if(data != nullptr)
     {
@@ -105,27 +105,35 @@ void BinarySerializer::resetReading()
     this->offset_ = 0;
 }
 
-std::unique_ptr<std::uint8_t> BinarySerializer::moveData()
+std::unique_ptr<std::uint8_t> BinarySerializer::moveUnique()
 {
     std::lock_guard<std::mutex> lock(this->mtx_);
-    std::uint8_t* old_data = this->data_.release();
-    this->data_.reset(nullptr);
     this->size_ = 0;
     this->capacity_ = 0;
     this->offset_ = 0;
-    return std::unique_ptr<std::uint8_t>(old_data);
+    return std::unique_ptr<std::uint8_t>(this->data_.release());
 }
 
-std::unique_ptr<std::uint8_t> BinarySerializer::moveData(size_t& size)
+std::unique_ptr<std::uint8_t> BinarySerializer::moveUnique(size_t& size)
+{
+    size = this->size_;
+    return this->moveUnique();
+}
+
+
+std::uint8_t* BinarySerializer::release()
 {
     std::lock_guard<std::mutex> lock(this->mtx_);
-    size = this->size_;
-    std::uint8_t* old_data = this->data_.release();
-    this->data_.reset(nullptr);
     this->size_ = 0;
     this->capacity_ = 0;
     this->offset_ = 0;
-    return std::unique_ptr<std::uint8_t>(old_data);
+    return this->data_.release();
+}
+
+std::uint8_t* BinarySerializer::release(size_t& size)
+{
+    size = this->size_;
+    return this->release();
 }
 
 size_t BinarySerializer::getSize() const
