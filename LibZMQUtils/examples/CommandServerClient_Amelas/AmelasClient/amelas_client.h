@@ -16,8 +16,8 @@
 
 // AMELAS INCLUDES
 // =====================================================================================================================
-#include <AmelasExampleServer/amelas_server.h>
-#include <AmelasExampleServer/common.h>
+#include <AmelasServer/amelas_server.h>
+#include <AmelasServer/common.h>
 // =====================================================================================================================
 
 // PROJECT INCLUDES

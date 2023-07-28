@@ -137,6 +137,11 @@ public:
 
     size_t getSize() const;
 
+    bool allReaded() const
+    {
+        return this->offset_ == this->size_;
+    }
+
     std::string toString() const;
 
     std::string getDataHexString() const;
@@ -149,6 +154,16 @@ public:
         out = serializer.moveUnique();
         return size;
     }
+
+    template<typename... Args>
+    static void fastDeserialization(void* in, size_t size, Args&&... args)
+    {
+        BinarySerializer serializer(in, size);
+        serializer.read(std::forward<Args>(args)...);
+        if(!serializer.allReaded())
+            throw std::out_of_range("BinarySerializer: Not all data was deserialized.");
+    }
+
 
 private:
 

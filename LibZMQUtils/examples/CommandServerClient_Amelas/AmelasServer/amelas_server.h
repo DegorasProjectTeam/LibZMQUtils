@@ -18,9 +18,8 @@
 
 // PROJECT INCLUDES
 // =====================================================================================================================
-#include "AmelasExampleController/common.h"
-#include "AmelasExampleController/utils.h"
-#include "common.h"
+#include "AmelasController/common.h"
+#include "AmelasServer/common.h"
 // =====================================================================================================================
 
 // AMELAS NAMESPACES

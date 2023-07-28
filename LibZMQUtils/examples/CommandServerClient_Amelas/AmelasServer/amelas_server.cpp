@@ -46,12 +46,9 @@ void AmelasServer::clearCallbacks()
 
 void AmelasServer::processSetHomePosition(const CommandRequest& request, CommandReply& reply)
 {
-    // Command and error.
-    controller::ControllerError controller_err;
-
-    // Auxilar variables.
+    // Auxiliar variables and containers.
+    controller::ControllerError ctrl_err;
     double az, el;
-    bool result;
 
     // Check the request parameters size.
     if (request.params_size == 0 || !request.params)
@@ -60,13 +57,10 @@ void AmelasServer::processSetHomePosition(const CommandRequest& request, Command
         return;
     }
 
-    // Prepare the binary serializer.
-    BinarySerializer serializer(request.params.get(), request.params_size);
-
     // Try to read the parameters data.
     try
     {
-        serializer.read(az, el);
+        BinarySerializer::fastDeserialization(request.params.get(), request.params_size, az, el);
     }
     catch(...)
     {
@@ -74,14 +68,15 @@ void AmelasServer::processSetHomePosition(const CommandRequest& request, Command
         return;
     }
 
-    // Generate the struct.
+    // Position struct.
     controller::AltAzPos pos = {az, el};
 
     // Now we will process the command in the controller.
-    this->invokeCallback<controller::SetHomePositionCallback>(request, reply, pos);
+    ctrl_err = this->invokeCallback<controller::SetHomePositionCallback>(request, reply, pos);
 
-    // Prepare and store the amelas controller error.
-    reply.params_size = BinarySerializer::fastSerialization(reply.params, controller_err);
+    // Serialize parameters if all ok.
+    if(reply.result == ServerResult::COMMAND_OK)
+        reply.params_size = BinarySerializer::fastSerialization(reply.params, ctrl_err);
 }
 
 void AmelasServer::processGetHomePosition(const CommandRequest& request, CommandReply &reply)

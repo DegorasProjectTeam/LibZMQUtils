@@ -22,8 +22,8 @@
 
 // PROJECT INCLUDES
 // =====================================================================================================================
-#include "AmelasExampleServer/amelas_server.h"
-#include "AmelasExampleController/amelas_controller.h"
+#include "AmelasServer/amelas_server.h"
+#include "AmelasController/amelas_controller.h"
 // =====================================================================================================================
 
 // ---------------------------------------------------------------------------------------------------------------------

@@ -5,9 +5,9 @@
 
 #include <LibZMQUtils/Utils>
 
-#include "AmelasExampleController/common.h"
-#include "AmelasExampleServer/common.h"
-#include "AmelasExampleClient/amelas_client.h"
+#include "AmelasController/common.h"
+#include "AmelasServer/common.h"
+#include "AmelasClient/amelas_client.h"
 
 
 // TODO Remove
