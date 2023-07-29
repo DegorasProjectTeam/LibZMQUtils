@@ -27,6 +27,13 @@
 // =====================================================================================================================
 
 // =====================================================================================================================
+
+// Library Version
+#define LIBZMQUTILS_VERSION_MAJOR 1
+#define LIBZMQUTILS_VERSION_MINOR 1
+#define LIBZMQUTILS_VERSION_PATCH 1
+
+// Windows DLL export/import directives
 #if ((defined __WIN32__) || (defined _WIN32)) && (!defined LIBZMQUTILS_STATIC)
 #ifdef LIBZMQUTILS_LIBRARY
 #define LIBZMQUTILS_EXPORT	__declspec(dllexport)
@@ -37,4 +44,5 @@
 /* Static libraries or non-Windows needs no special declaration. */
 # define LIBZMQUTILS_EXPORT
 #endif
+
 // =====================================================================================================================
