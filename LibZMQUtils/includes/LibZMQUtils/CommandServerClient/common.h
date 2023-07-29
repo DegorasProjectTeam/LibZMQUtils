@@ -217,7 +217,7 @@ struct CommandRequest
 
     HostClient client;
     ServerCommand command;
-    std::unique_ptr<std::uint8_t> params;
+    std::unique_ptr<std::byte> params;
     zmq::multipart_t raw_msg;
     size_t params_size;
 };
@@ -230,7 +230,7 @@ struct CommandReply
         result(ServerResult::COMMAND_OK)
     {}
 
-    std::unique_ptr<std::uint8_t> params;
+    std::unique_ptr<std::byte> params;
     zmq::multipart_t raw_msg;
     size_t params_size;
     ServerResult result;
@@ -249,7 +249,7 @@ struct LIBZMQUTILS_EXPORT RequestData
         params_size(0){}
 
     CommandType command;
-    std::unique_ptr<std::uint8_t> params;
+    std::unique_ptr<std::byte> params;
     size_t params_size;
 };
 

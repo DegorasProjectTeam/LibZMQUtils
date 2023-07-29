@@ -273,21 +273,17 @@ ClientResult CommandClientBase::recvFromSocket(CommandReply& reply)
             zmq::message_t message_params = multipart_msg.pop();
             size_t params_size_bytes = message_params.size();
 
-
             std::cout<<params_size_bytes<<std::endl;
             std::cout<<"MULTIPART END"<<std::endl;
 
             // Check the parameters.
             if(params_size_bytes > 0)
             {
-                utils::BinarySerializer ser(static_cast<std::uint8_t*>(message_params.data()), params_size_bytes);
-                std::cout<<ser.toString()<<std::endl;
-
                 // Get and store the parameters data.
-                std::unique_ptr<std::uint8_t> params =
-                    std::unique_ptr<std::uint8_t>(new std::uint8_t[params_size_bytes]);
-                std::copy(static_cast<std::uint8_t*>(message_params.data()),
-                          static_cast<std::uint8_t*>(message_params.data()) + params_size_bytes,
+                std::unique_ptr<std::byte> params =
+                    std::unique_ptr<std::byte>(new std::byte[params_size_bytes]);
+                std::copy(static_cast<std::byte*>(message_params.data()),
+                          static_cast<std::byte*>(message_params.data()) + params_size_bytes,
                           params.get());
                 reply.params = std::move(params);
                 reply.params_size = params_size_bytes;

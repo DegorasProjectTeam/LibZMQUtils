@@ -124,13 +124,13 @@ public:
     template<typename T>
     T readSingle();
 
-    std::uint8_t* release();
+    std::byte *release();
 
-    std::uint8_t* release(size_t& size);
+    std::byte* release(size_t& size);
 
-    std::unique_ptr<std::uint8_t> moveUnique();
+    std::unique_ptr<std::byte> moveUnique();
 
-    std::unique_ptr<std::uint8_t> moveUnique(size_t& size);
+    std::unique_ptr<std::byte> moveUnique(size_t& size);
 
 
     //std::uint8_t* getData() const;
@@ -144,7 +144,7 @@ public:
     std::string getDataHexString() const;
 
     template<typename... Args>
-    static size_t fastSerialization(std::unique_ptr<std::uint8_t>& out, const Args&... args)
+    static size_t fastSerialization(std::unique_ptr<std::byte>& out, const Args&... args)
     {
         BinarySerializer serializer;
         size_t size = serializer.write(std::forward<const Args>(args)...);
@@ -170,7 +170,7 @@ private:
 
     template<typename T> void readSingle(T& value);
 
-    std::unique_ptr<std::uint8_t[]> data_;   ///< Internal data pointer.
+    std::unique_ptr<std::byte[]> data_;   ///< Internal data pointer.
     std::atomic<size_t> size_;               ///< Current size of the data.
     std::atomic<size_t> capacity_;           ///< Current capacity.
     std::atomic<size_t> offset_;             ///< Offset when reading.

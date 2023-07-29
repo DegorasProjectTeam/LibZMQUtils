@@ -239,12 +239,16 @@ void CommandServerBase::serverWorker()
             // Internal callback.
             this->onInvalidMsgReceived(request);
 
-            // Prepare the message.
-            zmq::const_buffer buffer_res = CommandServerBase::prepareZmqBuffer(result);
+            // Store the reply result..
+            reply.result = result;
 
             // Send response callback.
-            reply.result = result;
             this->onSendingResponse(reply);
+
+            // Prepare the message.
+            utils::BinarySerializer serializer;
+            size_t size_res = serializer.write(result);
+            zmq::const_buffer buffer_res(serializer.release(), size_res);
 
             // Send the response.
             try
@@ -396,9 +400,11 @@ ServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
         // Get the command.
         if (command_size_bytes == sizeof(ServerCommand))
         {
+            // Auxiliar command container.
+            std::int32_t raw_command;
+
             // Deserialize.
-            utils::BinarySerializer serializer(message_command.data(), sizeof(ServerCommand));
-            std::int32_t raw_command = serializer.readSingle<std::int32_t>();
+            utils::BinarySerializer::fastDeserialization(message_command.data(), sizeof(ServerCommand), raw_command);
 
             // Validate the command.
             if(CommandServerBase::validateCommand(raw_command))
@@ -420,18 +426,13 @@ ServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
         {
             // Get the message and the size.
             zmq::message_t message_params = multipart_msg.pop();
-            size_t params_size_bytes = message_params.size();
 
             // Check the parameters.
-            if(params_size_bytes > 0)
+            if(message_params.size() > 0)
             {
                 // Get and store the parameters data.
-                std::unique_ptr<std::uint8_t> params =
-                    std::unique_ptr<std::uint8_t>(new std::uint8_t[params_size_bytes]);
-                auto *params_pointer = static_cast<std::uint8_t*>(message_params.data());
-                std::copy(params_pointer, params_pointer + params_size_bytes, params.get());
-                request.params = std::move(params);
-                request.params_size = params_size_bytes;
+                utils::BinarySerializer serializer(message_params.data(), message_params.size());
+                request.params = serializer.moveUnique(request.params_size);
             }
             else
                 return ServerResult::EMPTY_PARAMS;
@@ -443,13 +444,6 @@ ServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
     // Return the result.
     return result;
 }
-
-/*
-void CommandServerBase::prepareCommandResult(ServerResult result, std::unique_ptr<std::uint8_t>& data_out)
-{
-    data_out = std::unique_ptr<std::uint8_t>(new std::uint8_t[sizeof(ServerResult)]);
-    utils::binarySerializeDeserialize(&result, sizeof(ServerResult), data_out.get());
-}*/
 
 bool CommandServerBase::validateCommand(int raw_command)
 {
@@ -542,8 +536,8 @@ void CommandServerBase::checkClientsAliveStatus()
         this->connected_clients_.erase(client);
     }
 
-    // Disable the timeout if no clients remains or set the socket timeout to the
-    // minimum remaining time to the timeout among all clients.
+    // Disable the timeout if no clients remains or set the socket timeout
+    // to the minimum remaining time to the timeout among all clients.
     if(this->connected_clients_.empty())
     {
         this->server_socket_->set(zmq::sockopt::rcvtimeo, -1);

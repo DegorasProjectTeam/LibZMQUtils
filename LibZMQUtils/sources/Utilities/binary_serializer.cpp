@@ -55,7 +55,7 @@ namespace utils{
 // =====================================================================================================================
 
 BinarySerializer::BinarySerializer(size_t capacity) :
-        data_(new std::uint8_t[capacity]),
+        data_(new std::byte[capacity]),
         size_(0),
         capacity_(capacity),
         offset_(0){}
@@ -71,7 +71,7 @@ void BinarySerializer::reserve(size_t size)
     if (size > this->capacity_)
     {
         std::lock_guard<std::mutex> lock(this->mtx_);
-        std::unique_ptr<std::uint8_t[]> new_data(new std::uint8_t[size]);
+        std::unique_ptr<std::byte[]> new_data(new std::byte[size]);
         if (this->data_)
             std::memcpy(new_data.get(), data_.get(), size_);
         this->data_ = std::move(new_data);
@@ -105,23 +105,23 @@ void BinarySerializer::resetReading()
     this->offset_ = 0;
 }
 
-std::unique_ptr<std::uint8_t> BinarySerializer::moveUnique()
+std::unique_ptr<std::byte> BinarySerializer::moveUnique()
 {
     std::lock_guard<std::mutex> lock(this->mtx_);
     this->size_ = 0;
     this->capacity_ = 0;
     this->offset_ = 0;
-    return std::unique_ptr<std::uint8_t>(this->data_.release());
+    return std::unique_ptr<std::byte>(this->data_.release());
 }
 
-std::unique_ptr<std::uint8_t> BinarySerializer::moveUnique(size_t& size)
+std::unique_ptr<std::byte> BinarySerializer::moveUnique(size_t& size)
 {
     size = this->size_;
     return this->moveUnique();
 }
 
 
-std::uint8_t* BinarySerializer::release()
+std::byte* BinarySerializer::release()
 {
     std::lock_guard<std::mutex> lock(this->mtx_);
     this->size_ = 0;
@@ -130,7 +130,7 @@ std::uint8_t* BinarySerializer::release()
     return this->data_.release();
 }
 
-std::uint8_t* BinarySerializer::release(size_t& size)
+std::byte *BinarySerializer::release(size_t& size)
 {
     size = this->size_;
     return this->release();

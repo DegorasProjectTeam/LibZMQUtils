@@ -112,19 +112,13 @@ void parseCommand(CommandClientBase &client, const std::string &command)
             {
                 std::cout<<"Sending: " << az <<" "<<el<<std::endl;
 
-                command_msg.params = std::unique_ptr<std::uint8_t>(new std::uint8_t[16]);
-                command_msg.params_size = 16;
-
-                zmqutils::utils::binarySerializeDeserialize(&az, 8, command_msg.params.get());
-                zmqutils::utils::binarySerializeDeserialize(&el, 8, command_msg.params.get() + 8);
+                command_msg.params_size = zmqutils::utils::BinarySerializer::fastSerialization(command_msg.params, az, el);
             }
             else
             {
                 std::cout<<"Sending invalid command: "<<std::endl;
-                double az = 0;
-                command_msg.params = std::unique_ptr<std::uint8_t>(new std::uint8_t[16]);
-                command_msg.params_size = 8;
-                zmqutils::utils::binarySerializeDeserialize(&az, 8, command_msg.params.get());
+                command_msg.params_size = zmqutils::utils::BinarySerializer::fastSerialization(command_msg.params, az);
+
                 valid_params = true;
             }
 
