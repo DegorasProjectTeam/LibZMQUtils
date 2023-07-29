@@ -1,8 +1,10 @@
 # Folders.
 ../build_debug/
 ../build_release/
+../LibZMQUtils-GeneratingDocs/
 build_debug/
 build_release/
+LibZMQUtils-GeneratingDocs/
 
 # User config
 CMakeLists.txt.user
