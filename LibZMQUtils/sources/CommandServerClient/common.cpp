@@ -35,3 +35,15 @@ zmqutils::common::HostClient::HostClient(const std::string &ip, const std::strin
     // Create the host client internal identification.
     this->id = ip + "//" + name + "//" + pid;
 }
+
+zmqutils::common::RequestData::RequestData(CommandType id) :
+    command(id),
+    params(nullptr),
+    params_size(0){}
+
+zmqutils::common::RequestData::RequestData() :
+    command(static_cast<CommandType>(ServerCommand::INVALID_COMMAND)),
+    params(nullptr),
+    params_size(0){}
+
+

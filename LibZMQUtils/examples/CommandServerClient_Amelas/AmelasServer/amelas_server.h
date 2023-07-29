@@ -72,6 +72,7 @@ using zmqutils::utils::CallbackHandler;
 
 // =====================================================================================================================
 
+
 // Example of creating a command server from the base.
 class AmelasServer : public CommandServerBase, public CallbackHandler
 {
@@ -164,9 +165,6 @@ private:
 
     // Internal overrided server error callback.
     virtual void onServerError(const zmq::error_t&, const std::string& ext_info) final;
-
-    // External callbacks map.
-    std::map<common::AmelasServerCommand, controller::ControllerCallback> callback_map_;
 };
 
 }} // END NAMESPACES.

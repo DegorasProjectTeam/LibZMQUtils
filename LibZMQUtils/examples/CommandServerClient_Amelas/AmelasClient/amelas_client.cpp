@@ -18,7 +18,7 @@ AmelasClient::AmelasClient(const std::string &server_endpoint) :
     zmqutils::CommandClientBase(server_endpoint)
 {}
 
-void AmelasClient::onSendCommand(const RequestData &req, const zmq::multipart_t &msg)
+void AmelasClient::onSendingCommand(const RequestData &req, const zmq::multipart_t &msg)
 {
     // Get the command string.
     std::string cmd_str;

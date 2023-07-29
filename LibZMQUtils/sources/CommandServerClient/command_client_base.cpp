@@ -10,7 +10,7 @@
 #include <cstdlib>
 #include <algorithm>
 
-#include "LibZMQUtils/CommandServerClient/command_client.h"
+#include "LibZMQUtils/CommandServerClient/command_client_base.h"
 #include "LibZMQUtils/Utilities/utils.h"
 #include "LibZMQUtils/Utilities/binary_serializer.h"
 
@@ -178,7 +178,7 @@ ClientResult CommandClientBase::sendCommand(const RequestData& msg, CommandReply
         zmq::multipart_t multipart_msg(this->prepareMessage(msg));
 
         // Internal send callback.
-        this->onSendCommand(msg, multipart_msg);
+        this->onSendingCommand(msg, multipart_msg);
 
         // Send the multiple messages.
         multipart_msg.send(*this->client_socket_);
@@ -221,10 +221,10 @@ ClientResult CommandClientBase::recvFromSocket(CommandReply& reply)
     try
     {
         // Call to the internal waiting command callback. TODO
-        //this->onWaitingCommand();
+        this->onWaitingReply();
 
-        // Wait the command.
-        recv_result = multipart_msg.recv(*(this->client_socket_));
+        // Wait the reply.
+        recv_result = multipart_msg.recv(*this->client_socket_);
 
         // Store the raw data.
         reply.raw_msg = multipart_msg.clone();
@@ -232,7 +232,7 @@ ClientResult CommandClientBase::recvFromSocket(CommandReply& reply)
     catch(zmq::error_t& error)
     {
         // Call to error callback. TODO
-        //this->onServerError(error, "Error while receiving a request.");
+        //this->onClientError(error, "Error while receiving a request.");
 
         std::cout<<"INTERNAL ERRROR "<<error.what()<<std::endl;
 
@@ -249,17 +249,15 @@ ClientResult CommandClientBase::recvFromSocket(CommandReply& reply)
     if (multipart_msg.size() == 1 || multipart_msg.size() == 2)
     {
         // Get the multipart data.
-        zmq::message_t message_result = multipart_msg.pop();
+        zmq::message_t msg_res = multipart_msg.pop();
 
         // Get the sizes.
-        size_t result_size_bytes = message_result.size();
+        size_t result_size_bytes = msg_res.size();
 
         // Get the command.
         if (result_size_bytes == sizeof(ServerCommand))
         {
-            int raw_result;
-            utils::binarySerializeDeserialize(message_result.data(), sizeof(ServerCommand), &raw_result);
-            reply.result = static_cast<common::ServerResult>(raw_result);
+            utils::BinarySerializer::fastDeserialization(msg_res.data(), msg_res.size(), reply.result);
         }
         else
             return ClientResult::INVALID_MSG;
@@ -267,26 +265,15 @@ ClientResult CommandClientBase::recvFromSocket(CommandReply& reply)
         // If there is still one more part, they are the parameters.
         if (multipart_msg.size() == 1)
         {
-            std::cout<<"MULTIPART "<<std::endl;
-
             // Get the message and the size.
-            zmq::message_t message_params = multipart_msg.pop();
-            size_t params_size_bytes = message_params.size();
-
-            std::cout<<params_size_bytes<<std::endl;
-            std::cout<<"MULTIPART END"<<std::endl;
+            zmq::message_t msg_params = multipart_msg.pop();
 
             // Check the parameters.
-            if(params_size_bytes > 0)
+            if(msg_params.size() > 0)
             {
                 // Get and store the parameters data.
-                std::unique_ptr<std::byte> params =
-                    std::unique_ptr<std::byte>(new std::byte[params_size_bytes]);
-                std::copy(static_cast<std::byte*>(message_params.data()),
-                          static_cast<std::byte*>(message_params.data()) + params_size_bytes,
-                          params.get());
-                reply.params = std::move(params);
-                reply.params_size = params_size_bytes;
+                utils::BinarySerializer serializer(msg_params.data(), msg_params.size());
+                reply.params = serializer.moveUnique(reply.params_size);
             }
             else
                 return ClientResult::EMPTY_PARAMS;

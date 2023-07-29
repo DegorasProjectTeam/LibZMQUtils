@@ -23,7 +23,7 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file command_server.h
+ * @file command_server_base.h
  * @brief This file contains the declaration of the CommandServerBase class and related.
  * @author Degoras Project Team
  * @copyright EUPL License
@@ -36,10 +36,9 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
-#include <any>
 #include <future>
+#include <string>
 #include <map>
-#include <variant>
 #include <zmq/zmq.hpp>
 #include <zmq/zmq_addon.hpp>
 // =====================================================================================================================
@@ -49,16 +48,6 @@
 #include "LibZMQUtils/libzmqutils_global.h"
 #include "LibZMQUtils/CommandServerClient/common.h"
 #include "LibZMQUtils/Utilities/utils.h"
-#include "LibZMQUtils/Utilities/binary_serializer.h"
-// =====================================================================================================================
-
-// ZMQ DECLARATIONS
-// =====================================================================================================================
-namespace zmq
-{
-    class context_t;
-    class socket_t;
-}
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
@@ -97,9 +86,19 @@ using utils::NetworkAdapterInfo;
  * @note This class is not directly useful on its own. Instead, it is intended to be subclassed and its callback methods
  *       overridden to implement the desired server behavior.
  *
+ *@warning Currently, this server implementation does not provide any built-in security measures, such as authentication
+ *         or encryption. This means that the server is potentially vulnerable to unauthorized access or eavesdropping.
+ *         Therefore, it is crucial to control the server's network connections by external means, such as a firewall or
+ *         VPN. Always ensure that the network environment in which this server operates is secured.
+ *
  * @warning When creating a subclass, make sure to avoid blocking or computationally intensive operations within the
  *          overridden callbacks. Blocking the server thread can affect the server's performance and responsiveness. If
  *          complex tasks are needed, consider performing them asynchronously or using separate threads.
+ *
+ * @todo Future versions of this server should include built-in security measures. Particularly, it is intended to
+ *       implement support for ZeroMQ's security mechanisms, such as CurveZMQ for public-key encryption and ZAP for
+ *       authentication. These enhancements will provide a robust layer of security and significantly reduce the risk
+ *       of unauthorized access.
  *
  * @section Usage
  *
@@ -279,20 +278,7 @@ public:
      */
     virtual ~CommandServerBase();
 
-
-
 protected:
-
-    /**
-     * @brief Base server stop callback. Subclasses must override this function.
-     *
-     * @warning The overrided callback must be non-blocking and have minimal computation time. Blocking or
-     *          computationally intensive operations within internal callbacks can significantly affect the
-     *          server's performance and responsiveness. If complex tasks are required, it is recommended to
-     *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
-     *          threads or asynchronous mechanisms to handle time-consuming tasks.
-     */
-    virtual void onServerStop() = 0;
 
     /**
      * @brief Base server start callback. Subclasses must override this function.
@@ -304,6 +290,17 @@ protected:
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
     virtual void onServerStart() = 0;
+
+    /**
+     * @brief Base server stop callback. Subclasses must override this function.
+     *
+     * @warning The overrided callback must be non-blocking and have minimal computation time. Blocking or
+     *          computationally intensive operations within internal callbacks can significantly affect the
+     *          server's performance and responsiveness. If complex tasks are required, it is recommended to
+     *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
+     *          threads or asynchronous mechanisms to handle time-consuming tasks.
+     */
+    virtual void onServerStop() = 0;
 
     /**
      * @brief Base waiting command callback. Subclasses must override this function.
@@ -476,16 +473,19 @@ private:
     zmq::context_t *context_;        ///< ZMQ context.
     zmq::socket_t* server_socket_;   ///< ZMQ server socket.
 
-    // Endpoint data.
+    // Endpoint data and server info.
     std::string server_endpoint_;                                     ///< Final server endpoint.
     std::vector<utils::NetworkAdapterInfo> server_listen_adapters_;   ///< Listen server adapters.
     unsigned server_port_;                                            ///< Server port.
+    std::string server_name_;    ///< Server name.
+    std::string server_info_;    ///< Detailed server information.
+    std::string server_vers_;    ///< Server version.
 
     // Mutex.
     mutable std::mutex mtx_;   ///< Safety mutex.
 
     // Future for the server worker.
-    std::future<void> server_worker_future_;
+    std::future<void> server_worker_future_;   ///< Future that stores the server worker status.
 
     // Clients container.
     std::map<std::string, HostClient> connected_clients_;   ///< Dictionary with the connected clients.
@@ -494,9 +494,6 @@ private:
     std::atomic_bool flag_server_working_;       ///< Flag for check the server working status.
     std::atomic_bool flag_check_clients_alive_;  ///< Flag that enables and disables the client status checking.
     std::atomic_bool flag_alive_callbacks_;      ///< Flag that enables and disables the callbacks for alive messages.
-
-
-
 };
 
 } // END NAMESPACES.

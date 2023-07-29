@@ -73,11 +73,16 @@ constexpr int kZmqEFSMError = 156384765;               ///< ZMQ EFSM error.
 using CommandType = std::uint32_t;   ///< Type used for the BaseServerCommand enumeration.
 using ResultType = std::uint32_t;    ///< Type used for the BaseServerResult enumeration.
 
+// TODO getServerInfo
+// TODO getServerTime
+// TODO Control the maximum number of clients.
+// TODO Dinamic configuration for the constants.
+
 /**
- * @enum BaseServerCommand
+ * @enum ServerCommand
  * @brief Enumerates the possible commands of a base command server. They can be extended in a subclass.
- * @warning Commands 0 to 10 ids must not be used for custom commands, they are special and reserved.
- * @warning Only positive commands will be acepted by the server.
+ * @warning Commands 0 to 30 ids must not be used for custom commands, they are special and reserved.
+ * @warning Only positive commands ids will be acepted by the server.
  * @warning Messages with the command 0, sentinel value or a reserved commands are considered invalid.
  */
 enum class ServerCommand : CommandType
@@ -87,13 +92,14 @@ enum class ServerCommand : CommandType
     REQ_DISCONNECT    = 2,  ///< Request to disconnect from the server.
     REQ_ALIVE         = 3,  ///< Request to check if the server is alive and for notify that the client is alive too.
     RESERVED_COMMANDS = 4,  ///< Sentinel value indicating the start of the reserved commands (not is as a valid msg).
-    END_BASE_COMMANDS = 10  ///< Sentinel value indicating the end of the base commands (not is as a valid msg).
+    END_BASE_COMMANDS = 30  ///< Sentinel value indicating the end of the base commands (not is as a valid msg).
 };
 
 /**
- * @enum BaseServerCommandResult
+ * @enum ServerResult
  * @brief Enumerates the possible results of a base command operation. They can be extended in a subclass.
- * @warning These results must not be used for custom results, they are special and reserved.
+ * @warning Results 0 to 30 ids must not be used for custom results, they are special and reserved.
+ * @warning Only positive results ids are allowed.
  */
 enum class ServerResult : ResultType
 {
@@ -114,7 +120,7 @@ enum class ServerResult : ResultType
     COMMAND_FAILED         = 14, ///< The command execution failed.
     NOT_IMPLEMENTED        = 15, ///< The command is not implemented.
     BAD_NO_PARAMETERS      = 16, ///< The provided number of parameters are invalid.
-    END_BASE_ERRORS        = 20  ///< Sentinel value indicating the end of the base errors (not is a valid error).
+    END_BASE_ERRORS        = 30  ///< Sentinel value indicating the end of the base errors (not is a valid error).
 };
 
 
@@ -138,7 +144,7 @@ enum class ClientResult : ResultType
 constexpr int kMinBaseCmdId = static_cast<int>(ServerCommand::INVALID_COMMAND) + 1;
 constexpr int kMaxBaseCmdId = static_cast<int>(ServerCommand::END_BASE_COMMANDS) - 1;
 
-static constexpr std::array<const char*, 11>  ServerCommandStr
+static constexpr std::array<const char*, 31>  ServerCommandStr
 {
     "INVALID_COMMAND",
     "REQ_CONNECT",
@@ -150,10 +156,30 @@ static constexpr std::array<const char*, 11>  ServerCommandStr
     "RESERVED_BASE_COMMAND",
     "RESERVED_BASE_COMMAND",
     "RESERVED_BASE_COMMAND",
+    "RESERVED_BASE_COMMAND",
+    "RESERVED_BASE_COMMAND",
+    "RESERVED_BASE_COMMAND",
+    "RESERVED_BASE_COMMAND",
+    "RESERVED_BASE_COMMAND",
+    "RESERVED_BASE_COMMAND",
+    "RESERVED_BASE_COMMAND",
+    "RESERVED_BASE_COMMAND",
+    "RESERVED_BASE_COMMAND",
+    "RESERVED_BASE_COMMAND",
+    "RESERVED_BASE_COMMAND",
+    "RESERVED_BASE_COMMAND",
+    "RESERVED_BASE_COMMAND",
+    "RESERVED_BASE_COMMAND",
+    "RESERVED_BASE_COMMAND",
+    "RESERVED_BASE_COMMAND",
+    "RESERVED_BASE_COMMAND",
+    "RESERVED_BASE_COMMAND",
+    "RESERVED_BASE_COMMAND",
+    "RESERVED_BASE_COMMAND",
     "END_BASE_COMMANDS"
 };
 
-static constexpr std::array<const char*, 21>  ServerResultStr
+static constexpr std::array<const char*, 31>  ServerResultStr
 {
     "COMMAND_OK - Command executed.",
     "INTERNAL_ZMQ_ERROR - Internal ZeroMQ error.",
@@ -171,6 +197,16 @@ static constexpr std::array<const char*, 21>  ServerResultStr
     "BAD_PARAMETERS - Provided parameters are invalid.",
     "COMMAND_FAILED - Command execution failed.",
     "NOT_IMPLEMENTED - Command is not implemented.",
+    "RESERVED_BASE_ERROR",
+    "RESERVED_BASE_ERROR",
+    "RESERVED_BASE_ERROR",
+    "RESERVED_BASE_ERROR",
+    "RESERVED_BASE_ERROR",
+    "RESERVED_BASE_ERROR",
+    "RESERVED_BASE_ERROR",
+    "RESERVED_BASE_ERROR",
+    "RESERVED_BASE_ERROR",
+    "RESERVED_BASE_ERROR",
     "RESERVED_BASE_ERROR",
     "RESERVED_BASE_ERROR",
     "RESERVED_BASE_ERROR",
@@ -238,15 +274,9 @@ struct CommandReply
 
 struct LIBZMQUTILS_EXPORT RequestData
 {
-    RequestData(CommandType id) :
-        command(id),
-        params(nullptr),
-        params_size(0){}
+    RequestData(CommandType id);
 
-    RequestData() :
-        command(static_cast<CommandType>(ServerCommand::INVALID_COMMAND)),
-        params(nullptr),
-        params_size(0){}
+    RequestData();
 
     CommandType command;
     std::unique_ptr<std::byte> params;

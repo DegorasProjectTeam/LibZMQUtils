@@ -23,7 +23,7 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file command_server.cpp
+ * @file command_server_base.cpp
  * @brief This file contains the implementation of the CommandServerBase class and related.
  * @author Degoras Project Team
  * @copyright EUPL License
@@ -40,7 +40,7 @@
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/CommandServerClient/command_server.h"
+#include "LibZMQUtils/CommandServerClient/command_server_base.h"
 #include "LibZMQUtils/Utilities/utils.h"
 #include "LibZMQUtils/Utilities/binary_serializer.h"
 // =====================================================================================================================

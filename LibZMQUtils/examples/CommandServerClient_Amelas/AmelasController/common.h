@@ -57,14 +57,6 @@ using SetHomePositionCallback = std::function<ControllerError(const AltAzPos&)>;
 using GetHomePositionCallback = std::function<ControllerError(AltAzPos&)>;
 using GetDatetimeCallback = std::function<ControllerError(std::string&)>;
 
-// Callback variant.
-using ControllerCallback = std::variant<SetHomePositionCallback,
-                                        GetHomePositionCallback,
-                                        GetDatetimeCallback>;
-
-
-
-
 
 // =====================================================================================================================
 

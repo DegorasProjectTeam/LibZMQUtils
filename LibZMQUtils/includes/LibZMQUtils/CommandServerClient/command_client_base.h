@@ -23,7 +23,7 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file command_client.h
+ * @file command_client_base.h
  * @brief This file contains the declaration of the CommandClientBase class and related.
  * @author Degoras Project Team
  * @copyright EUPL License
@@ -37,22 +37,15 @@
 // C++ INCLUDES
 // =====================================================================================================================
 #include <future>
-#include <map>
+#include <string>
+#include <zmq/zmq.hpp>
+#include <zmq/zmq_addon.hpp>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/libzmqutils_global.h"
 #include "LibZMQUtils/CommandServerClient/common.h"
-// =====================================================================================================================
-
-// ZMQ DECLARATIONS
-// =====================================================================================================================
-namespace zmq
-{
-    class context_t;
-    class socket_t;
-}
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
@@ -76,8 +69,6 @@ public:
     
     CommandClientBase(const std::string &server_endpoint);
     
-    virtual ~CommandClientBase();
-
     bool startClient(const std::string& interface_name);
     void stopClient();
     void resetClient();
@@ -91,9 +82,32 @@ public:
 
     ClientResult sendCommand(const RequestData&, CommandReply&);
 
+    /**
+     * @brief Virtual destructor.
+     *
+     * This destructor is virtual to ensure proper cleanup when the derived class is destroyed.
+     */
+    virtual ~CommandClientBase();
+
 protected:
 
-    virtual void onSendCommand(const RequestData&, const zmq::multipart_t&) = 0;
+    virtual void onClientStart() = 0;
+
+    virtual void onClientStop() = 0;
+
+    virtual void onWaitingReply() = 0;
+
+    virtual void onDeadServer() = 0;
+
+    virtual void onConnected() = 0;
+
+    virtual void onDisconnected() = 0;
+
+    virtual void onReplyReceived(const CommandReply&) = 0;
+
+    virtual void onSendingCommand(const RequestData&, const zmq::multipart_t&) = 0;
+
+    virtual void onClientError(const zmq::error_t&, const std::string& ext_info) = 0;
 
 private:
 

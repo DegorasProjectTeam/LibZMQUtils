@@ -15,22 +15,22 @@ namespace cltsrv{
 namespace common{
 // =====================================================================================================================
 
-// Specific subclass commands (0 to 4 are reserved for the base server).
+// Specific subclass commands (0 to 20 are reserved for the base server).
 // WARNING: In our approach, the server commands must be always in order.
 enum class AmelasServerCommand : zmqutils::common::CommandType
 {
-    REQ_SET_DATETIME      = 11,
-    REQ_GET_DATETIME      = 12,
-    REQ_SET_HOME_POSITION = 13,
-    REQ_GET_HOME_POSITION = 14,
+    REQ_SET_DATETIME      = 31,
+    REQ_GET_DATETIME      = 32,
+    REQ_SET_HOME_POSITION = 33,
+    REQ_GET_HOME_POSITION = 34,
     END_AMELAS_COMMANDS
 };
 
-// Specific subclass errors (0 to 20 are reserved for the base server).
+// Specific subclass errors (0 to 30 are reserved for the base server).
 enum class AmelasServerResult : zmqutils::common::ResultType
 {
-    EMPTY_CALLBACK = 21,
-    INVALID_CALLBACK = 22
+    EMPTY_CALLBACK = 31,
+    INVALID_CALLBACK = 32
 };
 
 // Extend the base command strings with those of the subclass.

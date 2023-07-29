@@ -43,9 +43,27 @@ public:
     // TODO
     //virtual void prepareRequest() = 0;
 
+    virtual ~AmelasClient(){}
+
 private:
 
-    void onSendCommand(const RequestData& req, const zmq::multipart_t& msg) override;
+    virtual void onClientStart() final{};
+
+    virtual void onClientStop() final{};
+
+    virtual void onWaitingReply() final{};
+
+    virtual void onDeadServer() final{};
+
+    virtual void onConnected() final{};
+
+    virtual void onDisconnected() final{};
+
+    virtual void onReplyReceived(const CommandReply&) final {};
+
+    virtual void onSendingCommand(const RequestData&, const zmq::multipart_t&) final;
+
+    virtual void onClientError(const zmq::error_t&, const std::string& ext_info) final{};
 
     /* TODO
     void onConnected(const HostClient& client) override

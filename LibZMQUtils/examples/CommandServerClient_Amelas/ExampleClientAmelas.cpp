@@ -19,6 +19,7 @@ using namespace amelas::controller;
 
 
 using zmqutils::common::CommandType;
+using zmqutils::common::CommandReply;
 using zmqutils::common::ServerCommand;
 
 void parseCommand(CommandClientBase &client, const std::string &command)
