@@ -111,15 +111,7 @@ LIBZMQUTILS_EXPORT std::string timePointToIso8601(const HRTimePointStd& tp, bool
 
 LIBZMQUTILS_EXPORT std::string currentISO8601Date(bool add_ms = true);
 
-template<typename ClassType, typename ReturnType, typename... Args>
-static std::function<ReturnType(Args...)> makeCallback(ClassType* object,
-                                                       ReturnType(ClassType::*memberFunction)(Args...))
-{
-    return [object, memberFunction](Args... args) -> ReturnType
-    {
-        return (object->*memberFunction)(std::forward<Args>(args)...);
-    };
-}
+
 
 namespace internal
 {

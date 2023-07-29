@@ -141,6 +141,11 @@ size_t BinarySerializer::getSize() const
     return this->size_;
 }
 
+bool BinarySerializer::allReaded() const
+{
+    return this->offset_ == this->size_;
+}
+
 std::string BinarySerializer::getDataHexString() const
 {
     std::lock_guard<std::mutex> lock(this->mtx_);

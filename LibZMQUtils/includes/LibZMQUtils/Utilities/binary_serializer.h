@@ -137,10 +137,7 @@ public:
 
     size_t getSize() const;
 
-    bool allReaded() const
-    {
-        return this->offset_ == this->size_;
-    }
+    bool allReaded() const;
 
     std::string toString() const;
 
@@ -173,9 +170,8 @@ private:
 
     template<typename T> void readSingle(T& value);
 
-    std::unique_ptr<std::uint8_t[]> data_;
-    std::atomic<size_t> size_;              ///< Current size of the data.
-
+    std::unique_ptr<std::uint8_t[]> data_;   ///< Internal data pointer.
+    std::atomic<size_t> size_;               ///< Current size of the data.
     std::atomic<size_t> capacity_;           ///< Current capacity.
     std::atomic<size_t> offset_;             ///< Offset when reading.
     mutable std::mutex mtx_;                 ///< Mutex for thread safety

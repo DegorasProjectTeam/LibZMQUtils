@@ -1,3 +1,35 @@
+/***********************************************************************************************************************
+ *   LibZMQUtils (ZMQ Utilitites Library): A libre library with ZMQ related useful utilities.                          *
+ *                                                                                                                     *
+ *   Copyright (C) 2023 Degoras Project Team                                                                           *
+ *                      < Ángel Vera Herrera, avera@roa.es - angeldelaveracruz@gmail.com >                             *
+ *                      < Jesús Relinque Madroñal >                                                                    *
+ *                                                                                                                     *
+ *   This file is part of LibZMQUtils.                                                                                 *
+ *                                                                                                                     *
+ *   Licensed under the European Union Public License (EUPL), Version 1.2 or subsequent versions of the EUPL license   *
+ *   as soon they will be approved by the European Commission (IDABC).                                                 *
+ *                                                                                                                     *
+ *   This project is free software: you can redistribute it and/or modify it under the terms of the EUPL license as    *
+ *   published by the IDABC, either Version 1.2 or, at your option, any later version.                                 *
+ *                                                                                                                     *
+ *   This project is distributed in the hope that it will be useful. Unless required by applicable law or agreed to in *
+ *   writing, it is distributed on an "AS IS" basis, WITHOUT ANY WARRANTY OR CONDITIONS OF ANY KIND; without even the  *
+ *   implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the EUPL license to check specific   *
+ *   language governing permissions and limitations and more details.                                                  *
+ *                                                                                                                     *
+ *   You should use this project in compliance with the EUPL license. You should have received a copy of the license   *
+ *   along with this project. If not, see the license at < https://eupl.eu/ >.                                         *
+ **********************************************************************************************************************/
+
+/** ********************************************************************************************************************
+ * @file amelas_server.h
+ * @brief EXAMPLE FILE - This file contains the declaration of the AmelasServer example class.
+ * @author Degoras Project Team
+ * @copyright EUPL License
+ * @version 2307.1
+***********************************************************************************************************************/
+
 // =====================================================================================================================
 #pragma once
 // =====================================================================================================================
@@ -18,6 +50,7 @@
 
 // PROJECT INCLUDES
 // =====================================================================================================================
+#include "AmelasController/amelas_controller.h"
 #include "AmelasController/common.h"
 #include "AmelasServer/common.h"
 // =====================================================================================================================
@@ -29,67 +62,40 @@ namespace cltsrv{
 // =====================================================================================================================
 
 // =====================================================================================================================
-using namespace zmqutils;
 using namespace amelas::cltsrv::common;
+using zmqutils::CommandServerBase;
+using zmqutils::common::CommandReply;
+using zmqutils::common::CommandRequest;
+using zmqutils::common::ServerResult;
+using zmqutils::common::HostClient;
+using zmqutils::utils::CallbackHandler;
+
 // =====================================================================================================================
 
 // Example of creating a command server from the base.
-class AmelasServer : public CommandServerBase
+class AmelasServer : public CommandServerBase, public CallbackHandler
 {
 public:
 
     AmelasServer(unsigned port, const std::string& local_addr = "*");
 
-    const std::map<AmelasServerCommand, controller::ControllerCallback>& getCallbackMap() const;
-
-    void setCallback(AmelasServerCommand command, controller::ControllerCallback callback);
-
-    template<typename ClassT = void, typename RetT = void, typename... Args>
-    void setCallback(AmelasServerCommand command,
-                     ClassT* object,
-                     RetT(ClassT::*callback)(Args...))
+    template<typename RetT = void, typename... Args>
+    void registerCallback(AmelasServerCommand command,
+                          controller::AmelasController* controller,
+                          controller::ControllerError(controller::AmelasController::*callback)(Args...))
     {
-        callback_map_[command] = zmqutils::utils::makeCallback(object, callback);
+        CallbackHandler::registerCallback(static_cast<CallbackHandler::CallbackId>(command), controller, callback);
     }
 
-    // Removes a callback for a command
-    void removeCallback(common::AmelasServerCommand);
-
-    // Clears all the callbacks
-    void clearCallbacks();
-
-    // Checks if a callback is set for a command
-    bool isCallbackSet(common::AmelasServerCommand) const;
+    bool hasCallback(AmelasServerCommand command)
+    {
+        return CallbackHandler::hasCallback(static_cast<CallbackHandler::CallbackId>(command));
+    }
 
 private:
 
-
-    template <typename CallbackType, typename... Args>
-    controller::ControllerError invokeCallback(const CommandRequest& request, CommandReply& reply, const Args&... args)
-    {
-        // Get the command.
-        AmelasServerCommand cmd = static_cast<AmelasServerCommand>(request.command);
-
-        // Check the callback.
-        if(!this->isCallbackSet(cmd))
-        {
-            reply.result = static_cast<ServerResult>(AmelasServerResult::EMPTY_CALLBACK);
-            return controller::ControllerError::INVALID_ERROR;
-        }
-
-        //Invoke the callback.
-        try
-        {
-            return this->invokeCallback<CallbackType>(cmd, std::forward<const Args>(args)...);
-
-            //controller_err = this->invokeCallbackInternal<common::SetHomePositionCallback, ControllerError>(cmd_aux, pos);
-        }
-        catch(...)
-        {
-            reply.result = static_cast<ServerResult>(AmelasServerResult::INVALID_CALLBACK);
-            return controller::ControllerError::INVALID_ERROR;
-        }
-    }
+    // Hide the invoke of the parent.
+    using CallbackHandler::invokeCallback;
 
     template <typename CallbackType, typename... Args>
     controller::ControllerError invokeCallback(const CommandRequest& request, CommandReply& reply, Args&&... args)
@@ -98,7 +104,7 @@ private:
         AmelasServerCommand cmd = static_cast<AmelasServerCommand>(request.command);
 
         // Check the callback.
-        if(!this->isCallbackSet(cmd))
+        if(!this->hasCallback(cmd))
         {
             reply.result = static_cast<ServerResult>(AmelasServerResult::EMPTY_CALLBACK);
             return controller::ControllerError::INVALID_ERROR;
@@ -107,35 +113,14 @@ private:
         //Invoke the callback.
         try
         {
-            return this->invokeCallback<CallbackType>(cmd, std::forward<Args>(args)...);
-
-            //controller_err = this->invokeCallbackInternal<common::SetHomePositionCallback, ControllerError>(cmd_aux, pos);
+            return CallbackHandler::invokeCallback<CallbackType, controller::ControllerError>(
+                static_cast<CallbackHandler::CallbackId>(cmd), std::forward<Args>(args)...);
         }
         catch(...)
         {
             reply.result = static_cast<ServerResult>(AmelasServerResult::INVALID_CALLBACK);
             return controller::ControllerError::INVALID_ERROR;
         }
-    }
-
-    template <typename CallbackType, typename... Args>
-    controller::ControllerError invokeCallback(AmelasServerCommand command, const Args&... args)
-    {
-        if (auto callback = std::get_if<CallbackType>(&callback_map_[command]))
-        {
-            return (*callback)(std::forward<const Args>(args)...);
-        }
-        throw std::runtime_error("Invalid command or incorrect callback type");
-    }
-
-    template <typename CallbackType, typename... Args>
-    controller::ControllerError invokeCallback(AmelasServerCommand command, Args&&... args)
-    {
-        if (auto callback = std::get_if<CallbackType>(&callback_map_[command]))
-        {
-            return (*callback)(std::forward<Args>(args)...);
-        }
-        throw std::runtime_error("Invalid command or incorrect callback type");
     }
 
     // Helper to check if the custom command is valid.

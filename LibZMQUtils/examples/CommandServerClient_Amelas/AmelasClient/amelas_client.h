@@ -30,8 +30,8 @@ namespace amelas{
 namespace cltsrv{
 // =====================================================================================================================
 
-using common::AmelasServerCommandStr;
-
+using namespace amelas::cltsrv::common;
+using zmqutils::common::RequestData;
 
 
 class AmelasClient : public zmqutils::CommandClientBase

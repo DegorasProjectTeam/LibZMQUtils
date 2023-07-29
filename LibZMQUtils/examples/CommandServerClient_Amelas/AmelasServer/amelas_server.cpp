@@ -16,33 +16,10 @@ using zmqutils::utils::BinarySerializer;
 
 
 AmelasServer::AmelasServer(unsigned int port, const std::string &local_addr) :
-    CommandServerBase(port, local_addr)
+    CommandServerBase(port, local_addr),
+    CallbackHandler()
 {}
 
-const std::map<AmelasServerCommand, controller::ControllerCallback> &AmelasServer::getCallbackMap() const
-{
-    return this->callback_map_;
-}
-
-void AmelasServer::setCallback(common::AmelasServerCommand command, controller::ControllerCallback callback)
-{
-    callback_map_[command] = callback;
-}
-
-void AmelasServer::removeCallback(common::AmelasServerCommand command)
-{
-    this->callback_map_.erase(command);
-}
-
-bool AmelasServer::isCallbackSet(common::AmelasServerCommand command) const
-{
-    return this->callback_map_.find(command) != this->callback_map_.end();
-}
-
-void AmelasServer::clearCallbacks()
-{
-    this->callback_map_.clear();
-}
 
 void AmelasServer::processSetHomePosition(const CommandRequest& request, CommandReply& reply)
 {
@@ -109,6 +86,17 @@ void AmelasServer::processAmelasCommand(const CommandRequest& request, CommandRe
     {
         reply.result = ServerResult::NOT_IMPLEMENTED;
     }
+}
+
+bool AmelasServer::validateAmelasCommand(AmelasServerCommand command)
+{
+    // Auxiliar variables.
+    bool result = false;
+    zmqutils::common::CommandType cmd = static_cast<zmqutils::common::CommandType>(command);
+    // Check if the command is within the range of implemented custom commands.
+    if (cmd >= common::kMinCmdId && cmd <= common::kMaxCmdId)
+        result = true;
+    return result;
 }
 
 void AmelasServer::onCustomCommandReceived(const CommandRequest& request, CommandReply& reply)
@@ -299,17 +287,6 @@ void AmelasServer::onSendingResponse(const CommandReply &reply)
     std::cout<<"Params Size: "<<reply.params_size<<std::endl;
     std::cout<<"Params Hex: "<<serializer.getDataHexString()<<std::endl;
     std::cout << std::string(100, '-') << std::endl;
-}
-
-bool AmelasServer::validateAmelasCommand(AmelasServerCommand command)
-{
-    // Auxiliar variables.
-    bool result = false;
-    zmqutils::common::CommandType cmd = static_cast<zmqutils::common::CommandType>(command);
-    // Check if the command is within the range of implemented custom commands.
-    if (cmd >= common::kMinCmdId && cmd <= common::kMaxCmdId)
-        result = true;
-    return result;
 }
 
 }} // END NAMESPACES.

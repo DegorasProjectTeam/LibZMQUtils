@@ -279,18 +279,7 @@ public:
      */
     virtual ~CommandServerBase();
 
-    template<typename ClassT = void, typename RetT = void, typename... Args>
-    void setCallbackInternal(common::ServerCommand id, ClassT* object, RetT(ClassT::*callback)(Args...))
-    {
-        callback_map_[id] = zmqutils::utils::makeCallback(object, callback);
-    }
 
-    template <typename CallbackType, typename RetT, typename... Args>
-    RetT invokeCallbackInternal(common::ServerCommand command, Args&&... args)
-    {
-        CallbackType callbck = std::any_cast<CallbackType>(callback_map_[command]);
-        return (callbck)(std::forward<Args>(args)...);
-    }
 
 protected:
 
@@ -453,6 +442,7 @@ protected:
 
 private:
 
+    // Helper for prepare the ZMQ buffer.
     template<typename... Args>
     static zmq::const_buffer prepareZmqBuffer(const Args&... args)
     {
@@ -496,8 +486,8 @@ private:
     void resetSocket();
 
     // ZMQ socket and context.
-    zmq::context_t *context_;
-    zmq::socket_t* server_socket_;
+    zmq::context_t *context_;        ///< ZMQ context.
+    zmq::socket_t* server_socket_;   ///< ZMQ server socket.
 
     // Endpoint data.
     std::string server_endpoint_;                                     ///< Final server endpoint.
@@ -505,7 +495,7 @@ private:
     unsigned server_port_;                                            ///< Server port.
 
     // Mutex.
-    std::mutex mtx_;
+    mutable std::mutex mtx_;   ///< Safety mutex.
 
     // Future for the server worker.
     std::future<void> server_worker_future_;
@@ -519,7 +509,6 @@ private:
     std::atomic_bool flag_alive_callbacks_;      ///< Flag that enables and disables the callbacks for alive messages.
 
 
-    std::map<common::ServerCommand, std::any> callback_map_;
 
 };
 

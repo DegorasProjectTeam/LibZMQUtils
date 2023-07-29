@@ -2,7 +2,7 @@
 #include <functional>
 #include <any>
 
-#include <LibZMQUtils/Utils>
+#include <LibZMQUtils/CommandServer>
 
 // =====================================================================================================================
 #pragma once
