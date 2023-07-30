@@ -116,7 +116,16 @@ int main(int argc, char**argv)
     // ---------------------------------------
 
     // Start the server.
-    amelas_server.startServer();
+    bool result = amelas_server.startServer();
+
+    // Check if the server starts ok.
+    if(!result)
+    {
+        // Log.
+        std::cout << "Server start failed!! Press Enter to exit!" << std::endl;
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
+        return 1;
+    }
 
     // Use the condition variable as an infinite loop until ctrl-c.
     std::unique_lock<std::mutex> lock(gMtx);

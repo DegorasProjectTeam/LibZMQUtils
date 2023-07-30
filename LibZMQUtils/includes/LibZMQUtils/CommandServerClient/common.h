@@ -120,14 +120,14 @@ enum class ServerResult : ResultType
     COMMAND_FAILED         = 14, ///< The command execution failed.
     NOT_IMPLEMENTED        = 15, ///< The command is not implemented.
     BAD_NO_PARAMETERS      = 16, ///< The provided number of parameters are invalid.
-    END_BASE_ERRORS        = 30  ///< Sentinel value indicating the end of the base errors (not is a valid error).
+    END_BASE_RESULTS       = 30  ///< Sentinel value indicating the end of the base server results (not is a valid result).
 };
 
 
 // TODO MORE CASES RELATED TO THE CLIENT
 enum class ClientResult : ResultType
 {
-    COMMAND_OK = 0,
+    COMMAND_OK = 0,               ///< The command was executed successfully.
     INTERNAL_ZMQ_ERROR     = 1,   ///< An internal ZeroMQ error occurred.
     EMPTY_MSG              = 2,   ///< The message is empty.
     EMPTY_PARAMS           = 6,   ///< The result parameters are missing or empty.
@@ -135,8 +135,7 @@ enum class ClientResult : ResultType
     INVALID_PARTS          = 8,   ///< The command has invalid parts.
     INVALID_MSG            = 10,  ///< The message is invalid.
     CLIENT_STOPPED         = 17,  ///< The client is stopped.
-
-    END_BASE_ERRORS        = 20  ///< Sentinel value indicating the end of the base errors (not is a valid error).
+    END_BASE_RESULTS       = 30   ///< Sentinel value indicating the end of the base client resutls (not is a valid result).
 
 };
 
@@ -191,28 +190,63 @@ static constexpr std::array<const char*, 31>  ServerResultStr
     "TIMEOUT_REACHED - Operation timed out.",
     "INVALID_PARTS - Command has invalid parts.",
     "UNKNOWN_COMMAND - Command is not recognized.",
-    "INVALID_COMMAND - Command is invalid.",
+    "INVALID_MSG - The message is invalid.",
     "NOT_CONNECTED - Not connected to the server.",
     "ALREADY_CONNECTED - Already connected to the server.",
     "BAD_PARAMETERS - Provided parameters are invalid.",
     "COMMAND_FAILED - Command execution failed.",
     "NOT_IMPLEMENTED - Command is not implemented.",
-    "RESERVED_BASE_ERROR",
-    "RESERVED_BASE_ERROR",
-    "RESERVED_BASE_ERROR",
-    "RESERVED_BASE_ERROR",
-    "RESERVED_BASE_ERROR",
-    "RESERVED_BASE_ERROR",
-    "RESERVED_BASE_ERROR",
-    "RESERVED_BASE_ERROR",
-    "RESERVED_BASE_ERROR",
-    "RESERVED_BASE_ERROR",
-    "RESERVED_BASE_ERROR",
-    "RESERVED_BASE_ERROR",
-    "RESERVED_BASE_ERROR",
-    "RESERVED_BASE_ERROR",
-    "RESERVED_BASE_ERROR"
+    "BAD_NO_PARAMETERS - The provided number of parameters are invalid.",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT"
 };
+
+static constexpr std::array<const char*, 31>  ClientResultStr
+    {
+        "COMMAND_OK - Command executed.",
+        "INTERNAL_ZMQ_ERROR - Internal ZeroMQ error.",
+        "EMPTY_MSG - Message is empty.",
+        "RESERVED_BASE_RESULT",
+        "RESERVED_BASE_RESULT",
+        "RESERVED_BASE_RESULT",
+        "RESERVED_BASE_RESULT",
+        "TIMEOUT_REACHED - Operation timed out.",
+        "INVALID_PARTS - Command has invalid parts.",
+        "RESERVED_BASE_RESULT",
+        "INVALID_MSG - The message is invalid.",
+        "RESERVED_BASE_RESULT",
+        "RESERVED_BASE_RESULT",
+        "RESERVED_BASE_RESULT",
+        "RESERVED_BASE_RESULT",
+        "RESERVED_BASE_RESULT",
+        "RESERVED_BASE_RESULT",
+        "CLIENT_STOPPED - The client is stopped.",
+        "RESERVED_BASE_RESULT",
+        "RESERVED_BASE_RESULT",
+        "RESERVED_BASE_RESULT",
+        "RESERVED_BASE_RESULT",
+        "RESERVED_BASE_RESULT",
+        "RESERVED_BASE_RESULT",
+        "RESERVED_BASE_RESULT",
+        "RESERVED_BASE_RESULT",
+        "RESERVED_BASE_RESULT",
+        "RESERVED_BASE_RESULT",
+        "RESERVED_BASE_RESULT",
+        "RESERVED_BASE_RESULT",
+        "RESERVED_BASE_RESULT"
+    };
 
 // =====================================================================================================================
 
@@ -253,7 +287,6 @@ struct CommandRequest
     HostClientInfo client;
     ServerCommand command;
     std::unique_ptr<std::byte> params;
-    zmq::multipart_t raw_msg;
     size_t params_size;
 };
 
@@ -266,7 +299,6 @@ struct CommandReply
     {}
 
     std::unique_ptr<std::byte> params;
-    zmq::multipart_t raw_msg;
     size_t params_size;
     ServerResult result;
 };

@@ -272,7 +272,6 @@ void AmelasServer::onInvalidMsgReceived(const CommandRequest &request)
     std::cout<<"<AMELAS SERVER>"<<std::endl;
     std::cout<<"-> ON BAD COMMAND RECEIVED: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
-    std::cout<<"Raw Str: "<<request.raw_msg.str()<<std::endl;
     std::cout<<"Client Id: "<<request.client.id<<std::endl;
     std::cout<<"Client Ip: "<<request.client.ip<<std::endl;
     std::cout<<"Client Host: "<<request.client.hostname<<std::endl;

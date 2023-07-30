@@ -260,8 +260,10 @@ public:
      *
      * If the server is already running, the function does nothing. Otherwise, it creates the ZMQ
      * context if it doesn't exist and launches the server worker in a separate thread.
+     *
+     * @return True if the server started, false otherwise.
      */
-    void startServer();
+    bool startServer();
 
     /**
      * @brief Stops the command server.
@@ -482,10 +484,12 @@ private:
     std::string server_vers_;                                  ///< Server version.
 
     // Mutex.
-    mutable std::mutex mtx_;   ///< Safety mutex.
+    mutable std::mutex mtx_;        ///< Safety mutex.
+    mutable std::mutex depl_mtx_;   ///< Server deploy mutex.
 
-    // Future for the server worker.
-    std::future<void> server_worker_future_;   ///< Future that stores the server worker status.
+    // Future and condition variable for the server worker.
+    std::future<void> fut_server_worker_;     ///< Future that stores the server worker status.
+    std::condition_variable cv_server_depl_;  ///< Condition variable to notify the deployment status of the server.
 
     // Clients container.
     std::map<std::string, HostClientInfo> connected_clients_;   ///< Dictionary with the connected clients.

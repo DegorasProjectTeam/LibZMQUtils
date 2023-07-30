@@ -74,7 +74,7 @@ CommandServerBase::CommandServerBase(unsigned int port, const std::string& local
     }
 }
 
-const std::future<void> &CommandServerBase::getServerWorkerFuture() const {return this->server_worker_future_;}
+const std::future<void> &CommandServerBase::getServerWorkerFuture() const {return this->fut_server_worker_;}
 
 const std::map<std::string, HostClientInfo> &CommandServerBase::getConnectedClients() const
 {return this->connected_clients_;}
@@ -98,21 +98,28 @@ const std::vector<utils::NetworkAdapterInfo>& CommandServerBase::getServerAddres
 
 const std::string& CommandServerBase::getServerEndpoint() const {return this->server_endpoint_;}
 
-void CommandServerBase::startServer()
+bool CommandServerBase::startServer()
 {
     // Safe mutex lock
     std::unique_lock<std::mutex> lock(this->mtx_);
 
     // If server is already started, do nothing
     if (this->flag_server_working_)
-        return;
+        return true;
 
     // Create the ZMQ context.
     if (!this->context_)
         this->context_ = new zmq::context_t(1);
 
     // Launch server worker in other thread.
-    this->server_worker_future_ = std::async(std::launch::async, &CommandServerBase::serverWorker, this);
+    this->fut_server_worker_ = std::async(std::launch::async, &CommandServerBase::serverWorker, this);
+
+    // Wait for the server deployment.
+    std::unique_lock<std::mutex> depl_lock(this->depl_mtx_);
+    this->cv_server_depl_.wait(depl_lock);
+
+    // Return the server status.
+    return this->flag_server_working_;
 }
 
 void CommandServerBase::stopServer()
@@ -131,8 +138,21 @@ void CommandServerBase::stopServer()
     if (this->context_)
     {
         delete this->context_;
-        context_ = nullptr;
+        this->context_ = nullptr;
     }
+
+    // Safe sleep.
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+    // Delete the socket.
+    if(!this->server_socket_)
+    {
+        delete this->server_socket_;
+        this->server_socket_ = nullptr;
+    }
+
+    // Safe sleep.
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     // Clean the clients.
     this->connected_clients_.clear();
@@ -196,9 +216,6 @@ void CommandServerBase::serverWorker()
     ServerResult result;
     CommandRequest request;
     CommandReply reply;
-
-    // Set the working flag to true.
-    this->flag_server_working_ = true;
 
     // Start server socket
     this->resetSocket();
@@ -330,9 +347,6 @@ ServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
     {
         // Wait the command.
         recv_result = multipart_msg.recv(*(this->server_socket_));
-
-        // Store the raw data.
-        request.raw_msg = multipart_msg.clone();
     }
     catch(zmq::error_t& error)
     {
@@ -586,7 +600,7 @@ void CommandServerBase::updateServerTimeout()
 void CommandServerBase::resetSocket()
 {
     // Auxiliar variables.
-    int res = 0;
+    int last_error_code = 0;
     const zmq::error_t* last_error;
     unsigned reconnect_count = common::kServerReconnTimes;
 
@@ -596,38 +610,45 @@ void CommandServerBase::resetSocket()
         delete this->server_socket_;
         this->server_socket_ = nullptr;
     }
+
     // Try creating a new socket.
     do
     {
         try
         {
             // Create the ZMQ rep socket.
-            std::this_thread::sleep_for(std::chrono::microseconds(500));
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
             this->server_socket_ = new zmq::socket_t(*this->context_, zmq::socket_type::rep);
             this->server_socket_->bind(this->server_endpoint_);
             this->server_socket_->set(zmq::sockopt::linger, 0);
+
+            // Update the working flag and calls to the callback.
+            this->onServerStart();
+            this->flag_server_working_ = true;
+            this->cv_server_depl_.notify_all();
         }
         catch (const zmq::error_t& error)
         {
             // Delete the socket and store the last error.
-            delete this->server_socket_;
-            this->server_socket_ = nullptr;
+            if (this->server_socket_)
+            {
+                delete this->server_socket_;
+                this->server_socket_ = nullptr;
+            }
             last_error = &error;
-        }
-        reconnect_count--;
-    } while (res == EADDRINUSE && reconnect_count > 0);
+            last_error_code = error.num();
+            reconnect_count--;
 
-    if (!this->server_socket_ )
-    {
-        // Update the working flag and calls to the callback.
-        this->flag_server_working_ = false;
-        this->onServerError(*last_error, "Error during socket creation.");
-    }
-    else
-    {
-        // Call to the internal callback.
-        this->onServerStart();
-    }
+            if (reconnect_count <= 0 || last_error_code != EADDRINUSE)
+            {
+                // Update the working flag and calls to the callback.
+                this->onServerError(*last_error, "Error during socket creation.");
+                this->flag_server_working_ = false;
+                this->cv_server_depl_.notify_all();
+                return;
+            }
+        }
+    } while (reconnect_count > 0 && !this->flag_server_working_);
 }
 
 void CommandServerBase::onCustomCommandReceived(const CommandRequest&, CommandReply& rep)
