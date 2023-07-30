@@ -59,7 +59,7 @@ private:
 
     virtual void onDisconnected() final;
 
-    virtual void onReplyReceived(const CommandReply&) final {};
+    virtual void onReplyReceived(const CommandReply& reply) final;;
 
     virtual void onSendingCommand(const RequestData&) final;
 

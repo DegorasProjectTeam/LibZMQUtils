@@ -26,19 +26,20 @@ CommandClientBase::CommandClientBase(const std::string &server_endpoint) :
     server_endpoint_(server_endpoint),
     context_(nullptr),
     client_socket_(nullptr),
-    auto_alive_working_(false)
+    flag_alive_woking_(true),
+    flag_alive_callbacks_(true)
 {
 
 }
 
 CommandClientBase::~CommandClientBase()
 {
-    if (this->auto_alive_working_)
-        this->stopAutoAlive();
-    this->stopClient();
-}
+    // TODO stop autoalive.
 
-void CommandClientBase::onClientStop(){}
+    // Force the stop client execution.
+    // Warning: In this case the onClientStop callback can't be executed.
+    this->internalStop();
+}
 
 bool CommandClientBase::startClient(const std::string& interface_name)
 {
@@ -48,12 +49,17 @@ bool CommandClientBase::startClient(const std::string& interface_name)
     // Auxiliar variables.
     std::string ip, name, pid;
 
-    // Get the client ip.
+    // Get the client interfaces.
     std::vector<utils::NetworkAdapterInfo> interfcs = utils::getHostIPsWithInterfaces();
-    auto it = std::find_if(interfcs.begin(), interfcs.end(), [&interface_name](const utils::NetworkAdapterInfo& info)
+
+    // Search the interface we need.
+    auto it = std::find_if(interfcs.begin(), interfcs.end(),
+                           [&interface_name](const utils::NetworkAdapterInfo& info)
                            {return info.name == interface_name;});
+    //
     if (it == interfcs.end())
         return false;
+
     ip = it->ip;
 
     // Get the host name.
@@ -104,23 +110,8 @@ void CommandClientBase::stopClient()
     // Safe mutex lock
     std::unique_lock<std::mutex> lock(this->mtx_);
 
-    // If server is already stopped, do nothing.
-    if (!this->client_socket_)
-        return;
-
-    // Destroy the  socket.
-    delete this->client_socket_;
-    this->client_socket_ = nullptr;
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
-
-    // Delete context
-
-    if (this->context_)
-    {
-        delete this->context_;
-        this->context_ = nullptr;
-    }
+    // Call to the internal stop.
+    this->internalStop();
 
     // Call to the internal callback.
     this->onClientStop();
@@ -154,30 +145,42 @@ void CommandClientBase::resetClient()
     }
 }
 
+void CommandClientBase::setAliveCallbacksEnabled(bool enable)
+{
+    this->flag_alive_callbacks_ = enable;
+}
+
+void CommandClientBase::setAutomaticAliveEnabled(bool enable)
+{
+    std::unique_lock<std::mutex> lock(this->mtx_);
+    enable ? this->startAutoAlive() : this->stopAutoAlive();
+}
+
 void CommandClientBase::startAutoAlive()
 {
-    this->auto_alive_working_ = true;
+    this->flag_alive_woking_ = true;
     this->auto_alive_future_ = std::async(std::launch::async, [this]{this->sendAliveCallback();});
 }
 
 void CommandClientBase::stopAutoAlive()
 {
-    if (this->auto_alive_working_)
+    if (this->flag_alive_woking_)
     {
-        this->auto_alive_working_ = false;
+        this->flag_alive_woking_ = false;
         this->auto_alive_cv_.notify_all();
         this->auto_alive_future_.wait();
     }
 }
 
-void CommandClientBase::setClientHostInterf(const std::string&){}
-
 void CommandClientBase::setClientName(const std::string& name){this->client_name_ = name;}
 
-ClientResult CommandClientBase::sendCommand(const RequestData& msg, CommandReply& reply)
+ClientResult CommandClientBase::sendCommand(const RequestData& request, CommandReply& reply)
 {
     // Result.
     ClientResult result;
+
+    // Clean the reply.
+    reply = CommandReply();
 
     // Check if we start the client.
     if (!this->client_socket_)
@@ -187,10 +190,10 @@ ClientResult CommandClientBase::sendCommand(const RequestData& msg, CommandReply
     try
     {
 
-        zmq::multipart_t multipart_msg(this->prepareMessage(msg));
+        zmq::multipart_t multipart_msg(this->prepareMessage(request));
 
         // Internal send callback.
-        this->onSendingCommand(msg);
+        this->onSendingCommand(request);
 
         // Send the multiple messages.
         multipart_msg.send(*this->client_socket_);
@@ -203,16 +206,20 @@ ClientResult CommandClientBase::sendCommand(const RequestData& msg, CommandReply
         return ClientResult::INTERNAL_ZMQ_ERROR;
     }
 
+    // Now we need to wait the server response.
 
+    // Call to the internal waiting command callback (check first the last request).
+    if (static_cast<ServerCommand>(request.command) != ServerCommand::REQ_ALIVE || this->flag_alive_callbacks_)
+        this->onWaitingReply();
 
-
+    // Receive the data.
     result = this->recvFromSocket(reply);
 
 
 
 
 
-    if (this->auto_alive_working_)
+    if (this->flag_alive_woking_)
         this->auto_alive_cv_.notify_one();
 
     return result;
@@ -231,14 +238,8 @@ ClientResult CommandClientBase::recvFromSocket(CommandReply& reply)
     // Try to receive data. If an execption is thrown, receiving fails and an error code is generated.
     try
     {
-        // Call to the internal waiting command callback.
-        this->onWaitingReply();
-
         // Wait the reply.
         recv_result = multipart_msg.recv(*this->client_socket_);
-
-        // Store the raw data.
-        reply.raw_msg = multipart_msg.clone();
     }
     catch(zmq::error_t& error)
     {
@@ -296,6 +297,36 @@ ClientResult CommandClientBase::recvFromSocket(CommandReply& reply)
 
     // Return the result.
     return result;
+}
+
+void CommandClientBase::internalStop()
+{
+    // If server is already stopped, do nothing.
+    if (!this->flag_client_working_)
+        return;
+
+    // Set the shared working flag to false (is atomic).
+    this->flag_client_working_ = false;
+
+    // Delete context.
+    if (this->context_)
+    {
+        delete this->context_;
+        this->context_ = nullptr;
+    }
+
+    // Safe sleep.
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+    // Delete the socket.
+    if(!this->client_socket_)
+    {
+        delete this->client_socket_;
+        this->client_socket_ = nullptr;
+    }
+
+    // Safe sleep.
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 }
 
 void CommandClientBase::sendAliveCallback()

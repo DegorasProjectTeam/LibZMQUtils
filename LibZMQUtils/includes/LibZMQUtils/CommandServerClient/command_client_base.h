@@ -67,7 +67,7 @@ class LIBZMQUTILS_EXPORT CommandClientBase
 
 public:
     
-    CommandClientBase(const std::string &server_endpoint);
+    CommandClientBase(const std::string& server_endpoint);
     
     bool startClient(const std::string& interface_name);
 
@@ -75,10 +75,9 @@ public:
 
     void resetClient();
 
-    void startAutoAlive();
-    void stopAutoAlive();
+    void setAliveCallbacksEnabled(bool);
 
-    void setClientHostInterf(const std::string& interf);
+    void setAutomaticAliveEnabled(bool);
 
     void setClientName(const std::string &name);
 
@@ -111,7 +110,7 @@ protected:
 
     virtual void onClientStart() = 0;
 
-    virtual void onClientStop();
+    virtual void onClientStop() = 0;
 
     virtual void onWaitingReply() = 0;
 
@@ -132,6 +131,12 @@ private:
 
     ClientResult recvFromSocket(CommandReply&);
 
+    void internalStop();
+
+    void startAutoAlive();
+
+    void stopAutoAlive();
+
     void sendAliveCallback();
     zmq::multipart_t prepareMessage(const RequestData &msg);
 
@@ -151,7 +156,12 @@ private:
 
     std::future<void> auto_alive_future_;
     std::condition_variable auto_alive_cv_;
-    std::atomic_bool auto_alive_working_;
+
+    // Usefull flags.
+    std::atomic_bool flag_client_working_;   ///< Flag for check the client working status.
+    std::atomic_bool flag_alive_woking_;     ///< Flag that enables and disables the automatic sending of alive messages.
+    std::atomic_bool flag_alive_callbacks_;  ///< Flag that enables and disables the callbacks for alive messages.
+
 
 };
 

@@ -86,6 +86,21 @@ void AmelasClient::onDisconnected()
     std::cout << std::string(100, '-') << std::endl;
 }
 
+void AmelasClient::onReplyReceived(const CommandReply &reply)
+{
+    // Log.
+    zmqutils::utils::BinarySerializer serializer(reply.params.get(), reply.params_size);
+    int result = static_cast<int>(reply.result);
+    std::cout << std::string(100, '-') << std::endl;
+    std::cout<<"<AMELAS CLIENT>"<<std::endl;
+    std::cout<<"-> ON REPLY RECEIVED: "<<std::endl;
+    std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
+    std::cout<<"Result: "<<result<<" ("<<AmelasServerResultStr[result]<<")"<<std::endl;
+    std::cout<<"Params Size: "<<reply.params_size<<std::endl;
+    std::cout<<"Params Hex: "<<serializer.getDataHexString()<<std::endl;
+    std::cout << std::string(100, '-') << std::endl;
+}
+
 void AmelasClient::onSendingCommand(const RequestData &req)
 {
     // Get the command string.
