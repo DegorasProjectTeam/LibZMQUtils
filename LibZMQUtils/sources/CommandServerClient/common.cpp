@@ -25,15 +25,13 @@
 #include "LibZMQUtils/CommandServerClient/common.h"
 
 
-zmqutils::common::HostClient::HostClient(const std::string &ip, const std::string &name,
-                                                 const std::string &pid, const std::string &info) :
+zmqutils::common::HostClientInfo::HostClientInfo(const std::string &ip, const std::string &hostname, const std::string &pid) :
     ip(ip),
-    hostname(name),
-    pid(pid),
-    info(info)
+    hostname(hostname),
+    pid(pid)
 {
     // Create the host client internal identification.
-    this->id = ip + "//" + name + "//" + pid;
+    this->id = ip + "//" + hostname + "//" + pid;
 }
 
 zmqutils::common::RequestData::RequestData(CommandType id) :

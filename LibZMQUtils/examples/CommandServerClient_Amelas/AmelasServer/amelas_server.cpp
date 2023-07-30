@@ -18,7 +18,17 @@ using zmqutils::utils::BinarySerializer;
 AmelasServer::AmelasServer(unsigned int port, const std::string &local_addr) :
     CommandServerBase(port, local_addr),
     CallbackHandler()
-{}
+{
+    // Register each process function.
+
+    this->registerProcessFunction(AmelasServerCommand::REQ_SET_HOME_POSITION,
+                                  &AmelasServer::processSetHomePosition);
+
+    this->registerProcessFunction(AmelasServerCommand::REQ_GET_HOME_POSITION,
+                                  &AmelasServer::processGetHomePosition);
+
+
+}
 
 
 void AmelasServer::processSetHomePosition(const CommandRequest& request, CommandReply& reply)
@@ -74,16 +84,15 @@ void AmelasServer::processAmelasCommand(const CommandRequest& request, CommandRe
 {
     AmelasServerCommand command = static_cast<AmelasServerCommand>(request.command);
 
-    if(command == AmelasServerCommand::REQ_SET_HOME_POSITION)
+    auto iter = process_fnc_map_.find(command);
+    if(iter != process_fnc_map_.end())
     {
-        this->processSetHomePosition(request, reply);
-    }
-    else if (command == AmelasServerCommand::REQ_GET_HOME_POSITION)
-    {
-        this->processGetHomePosition(request, reply);
+        // Invoke the function.
+        iter->second(request, reply);
     }
     else
     {
+        // Command not found in the map.
         reply.result = ServerResult::NOT_IMPLEMENTED;
     }
 }
@@ -178,7 +187,7 @@ void AmelasServer::onWaitingCommand()
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void AmelasServer::onDeadClient(const HostClient& client)
+void AmelasServer::onDeadClient(const HostClientInfo& client)
 {
     // Log.
     std::cout << std::string(100, '-') << std::endl;
@@ -193,7 +202,7 @@ void AmelasServer::onDeadClient(const HostClient& client)
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void AmelasServer::onConnected(const HostClient& client)
+void AmelasServer::onConnected(const HostClientInfo& client)
 {
     // Log.
     std::cout << std::string(100, '-') << std::endl;
@@ -208,7 +217,7 @@ void AmelasServer::onConnected(const HostClient& client)
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void AmelasServer::onDisconnected(const HostClient& client)
+void AmelasServer::onDisconnected(const HostClientInfo& client)
 {
     // Log.
     std::cout << std::string(100, '-') << std::endl;

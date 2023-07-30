@@ -70,15 +70,33 @@ public:
     CommandClientBase(const std::string &server_endpoint);
     
     bool startClient(const std::string& interface_name);
+
     void stopClient();
+
     void resetClient();
 
     void startAutoAlive();
     void stopAutoAlive();
 
-    void setClientHostIP(const std::string& interf);
+    void setClientHostInterf(const std::string& interf);
 
-    void setClientId(const std::string &id);
+    void setClientName(const std::string &name);
+
+    const std::string& getServerEndpoint()
+    {
+        return this->server_endpoint_;
+    }
+
+    const common::HostClientInfo& getClientInfo()
+    {
+        return this->client_info_;
+    }
+
+    const std::string& getClientName() const
+    {
+        return this->client_name_;
+    }
+
 
     ClientResult sendCommand(const RequestData&, CommandReply&);
 
@@ -93,7 +111,7 @@ protected:
 
     virtual void onClientStart() = 0;
 
-    virtual void onClientStop() = 0;
+    virtual void onClientStop();
 
     virtual void onWaitingReply() = 0;
 
@@ -105,7 +123,7 @@ protected:
 
     virtual void onReplyReceived(const CommandReply&) = 0;
 
-    virtual void onSendingCommand(const RequestData&, const zmq::multipart_t&) = 0;
+    virtual void onSendingCommand(const RequestData&) = 0;
 
     virtual void onClientError(const zmq::error_t&, const std::string& ext_info) = 0;
 
@@ -118,7 +136,8 @@ private:
     zmq::multipart_t prepareMessage(const RequestData &msg);
 
     // Internal client identification.
-    common::HostClient client_info_;
+    common::HostClientInfo client_info_;       ///< External client information for identification.
+    std::string client_name_;              ///< Internal client name. Will not be use as id.
 
     // Server endpoint.
     std::string server_endpoint_;

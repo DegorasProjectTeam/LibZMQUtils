@@ -40,6 +40,7 @@
 #include <string>
 #include <any>
 #include <variant>
+#include <unordered_map>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
@@ -67,7 +68,7 @@ using zmqutils::CommandServerBase;
 using zmqutils::common::CommandReply;
 using zmqutils::common::CommandRequest;
 using zmqutils::common::ServerResult;
-using zmqutils::common::HostClient;
+using zmqutils::common::HostClientInfo;
 using zmqutils::utils::CallbackHandler;
 
 // =====================================================================================================================
@@ -77,6 +78,8 @@ using zmqutils::utils::CallbackHandler;
 class AmelasServer : public CommandServerBase, public CallbackHandler
 {
 public:
+
+    using ProcessFunctionsMap = std::unordered_map<AmelasServerCommand, std::function<void(const CommandRequest&, CommandReply&)>>;
 
     AmelasServer(unsigned port, const std::string& local_addr = "*");
 
@@ -97,6 +100,9 @@ private:
 
     // Hide the invoke of the parent.
     using CallbackHandler::invokeCallback;
+
+    // Helper to check if the custom command is valid.
+    static bool validateAmelasCommand(AmelasServerCommand command);
 
     template <typename CallbackType, typename... Args>
     controller::ControllerError invokeCallback(const CommandRequest& request, CommandReply& reply, Args&&... args)
@@ -124,8 +130,15 @@ private:
         }
     }
 
-    // Helper to check if the custom command is valid.
-    static bool validateAmelasCommand(AmelasServerCommand command);
+    template <typename CommandType, typename... Args>
+    void registerProcessFunction(CommandType command,
+                                 void(AmelasServer::*f)(const CommandRequest&, CommandReply&, Args...))
+    {
+        this->process_fnc_map_[command] = [this, f](const CommandRequest& request, CommandReply& reply)
+        {
+            (this->*f)(request, reply);
+        };
+    }
 
     // Process the specific commands.
     void processAmelasCommand(const CommandRequest&, CommandReply&);
@@ -146,13 +159,13 @@ private:
     virtual void onWaitingCommand() final;
 
     // Internal dead client callback.
-    virtual void onDeadClient(const HostClient&) final;
+    virtual void onDeadClient(const HostClientInfo&) final;
 
     // Internal overrided connect callback.
-    virtual void onConnected(const HostClient&) final;
+    virtual void onConnected(const HostClientInfo&) final;
 
     // Internal overrided disconnect callback.
-    virtual void onDisconnected(const HostClient&) final;
+    virtual void onDisconnected(const HostClientInfo&) final;
 
     // Internal overrided command received callback.
     virtual void onCommandReceived(const CommandRequest&) final;
@@ -165,6 +178,8 @@ private:
 
     // Internal overrided server error callback.
     virtual void onServerError(const zmq::error_t&, const std::string& ext_info) final;
+
+    ProcessFunctionsMap process_fnc_map_;
 };
 
 }} // END NAMESPACES.

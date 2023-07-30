@@ -63,20 +63,20 @@ CommandServerBase::CommandServerBase(unsigned int port, const std::string& local
     std::vector<utils::NetworkAdapterInfo> interfcs = utils::getHostIPsWithInterfaces();
     // Store the adapters.
     if(local_addr == "*")
-        this->server_listen_adapters_ = interfcs;
+        this->server_adapters_ = interfcs;
     else
     {
         for(const auto& intrfc : interfcs)
         {
             if(intrfc.ip == local_addr)
-                this->server_listen_adapters_.push_back(intrfc);
+                this->server_adapters_.push_back(intrfc);
         }
     }
 }
 
 const std::future<void> &CommandServerBase::getServerWorkerFuture() const {return this->server_worker_future_;}
 
-const std::map<std::string, HostClient> &CommandServerBase::getConnectedClients() const
+const std::map<std::string, HostClientInfo> &CommandServerBase::getConnectedClients() const
 {return this->connected_clients_;}
 
 void CommandServerBase::setClientStatusCheck(bool)
@@ -94,7 +94,7 @@ void CommandServerBase::setAliveCallbacksEnabled(bool flag){this->flag_alive_cal
 const unsigned& CommandServerBase::getServerPort() const {return this->server_port_;}
 
 const std::vector<utils::NetworkAdapterInfo>& CommandServerBase::getServerAddresses() const
-{return this->server_listen_adapters_;}
+{return this->server_adapters_;}
 
 const std::string& CommandServerBase::getServerEndpoint() const {return this->server_endpoint_;}
 
@@ -391,7 +391,7 @@ ServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
             return ServerResult::EMPTY_CLIENT_PID;
 
         // Update the client info.
-        request.client = HostClient(ip, hostname, pid);
+        request.client = HostClientInfo(ip, hostname, pid);
         request.client.last_connection = std::chrono::steady_clock::now();
 
         // Update the last connection if the client is connected.

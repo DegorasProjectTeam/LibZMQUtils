@@ -38,8 +38,13 @@ CommandClientBase::~CommandClientBase()
     this->stopClient();
 }
 
+void CommandClientBase::onClientStop(){}
+
 bool CommandClientBase::startClient(const std::string& interface_name)
 {
+    // Safe mutex lock
+    std::unique_lock<std::mutex> lock(this->mtx_);
+
     // Auxiliar variables.
     std::string ip, name, pid;
 
@@ -58,9 +63,8 @@ bool CommandClientBase::startClient(const std::string& interface_name)
     pid = std::to_string(utils::getCurrentPID());
 
     // Store the info.
-    this->client_info_ = common::HostClient(ip, name, pid);
+    this->client_info_ = common::HostClientInfo(ip, name, pid);
 
-    std::cout<<client_info_.id<<std::endl;
 
     // If server is already started, do nothing
     if (this->client_socket_)
@@ -88,22 +92,27 @@ bool CommandClientBase::startClient(const std::string& interface_name)
         return false;
     }
 
+    // Call to the internal callback.
+    this->onClientStart();
+
     // All ok.
     return true;
 }
 
 void CommandClientBase::stopClient()
 {
+    // Safe mutex lock
+    std::unique_lock<std::mutex> lock(this->mtx_);
+
     // If server is already stopped, do nothing.
     if (!this->client_socket_)
         return;
-
 
     // Destroy the  socket.
     delete this->client_socket_;
     this->client_socket_ = nullptr;
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(1050));
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
     // Delete context
 
@@ -112,6 +121,9 @@ void CommandClientBase::stopClient()
         delete this->context_;
         this->context_ = nullptr;
     }
+
+    // Call to the internal callback.
+    this->onClientStop();
 }
 
 void CommandClientBase::resetClient()
@@ -121,7 +133,7 @@ void CommandClientBase::resetClient()
         // Destroy the socket and create again to flush.
         delete this->client_socket_;
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(1050));
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
         try
         {
@@ -158,9 +170,9 @@ void CommandClientBase::stopAutoAlive()
     }
 }
 
-void CommandClientBase::setClientHostIP(const std::string&){}
+void CommandClientBase::setClientHostInterf(const std::string&){}
 
-void CommandClientBase::setClientId(const std::string &){}
+void CommandClientBase::setClientName(const std::string& name){this->client_name_ = name;}
 
 ClientResult CommandClientBase::sendCommand(const RequestData& msg, CommandReply& reply)
 {
@@ -178,22 +190,21 @@ ClientResult CommandClientBase::sendCommand(const RequestData& msg, CommandReply
         zmq::multipart_t multipart_msg(this->prepareMessage(msg));
 
         // Internal send callback.
-        this->onSendingCommand(msg, multipart_msg);
+        this->onSendingCommand(msg);
 
         // Send the multiple messages.
         multipart_msg.send(*this->client_socket_);
 
-    }  catch (const zmq::error_t &error)
+    }
+    catch (const zmq::error_t &error)
     {
         // TODO: handle error
         std::cout<<error.what()<<std::endl;
         return ClientResult::INTERNAL_ZMQ_ERROR;
     }
 
-    std::cout<<"Waiting response"<<std::endl;
 
 
-    // TODO multipart.
 
     result = this->recvFromSocket(reply);
 
@@ -220,7 +231,7 @@ ClientResult CommandClientBase::recvFromSocket(CommandReply& reply)
     // Try to receive data. If an execption is thrown, receiving fails and an error code is generated.
     try
     {
-        // Call to the internal waiting command callback. TODO
+        // Call to the internal waiting command callback.
         this->onWaitingReply();
 
         // Wait the reply.
@@ -231,10 +242,11 @@ ClientResult CommandClientBase::recvFromSocket(CommandReply& reply)
     }
     catch(zmq::error_t& error)
     {
-        // Call to error callback. TODO
-        //this->onClientError(error, "Error while receiving a request.");
+        // TODO Check if we want too close the client.
 
-        std::cout<<"INTERNAL ERRROR "<<error.what()<<std::endl;
+        // Call to error callback.
+        this->onClientError(error, "Error while receiving a request.");
+
 
         return ClientResult::INTERNAL_ZMQ_ERROR;
     }

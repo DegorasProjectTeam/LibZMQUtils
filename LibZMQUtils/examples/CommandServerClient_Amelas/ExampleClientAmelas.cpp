@@ -251,8 +251,6 @@ int main(int argc, char**argv)
     std::string endpoint = "tcp://" + ip + ":" + std::to_string(port);
     AmelasClient client(endpoint);
     client.startClient("Ethernet");
-    //client.setClientHostIP("");
-    std::cout << "Connecting to endpoint: " <<  endpoint << std::endl;
     //client.startAutoAlive();
     std::string command;
 

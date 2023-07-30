@@ -61,7 +61,7 @@ using common::CommandReply;
 using common::CommandRequest;
 using common::ServerCommand;
 using common::ServerResult;
-using common::HostClient;
+using common::HostClientInfo;
 using utils::NetworkAdapterInfo;
 // =====================================================================================================================
 
@@ -214,7 +214,7 @@ public:
      *
      * @return A const reference to the map of connected clients.
      */
-    const std::map<std::string, HostClient>& getConnectedClients() const;
+    const std::map<std::string, HostClientInfo>& getConnectedClients() const;
 
     /**
      * @brief Check if the server is currently working.
@@ -328,7 +328,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onConnected(const HostClient&) = 0;
+    virtual void onConnected(const HostClientInfo&) = 0;
 
     /**
      * @brief Base disconnected callback. Subclasses must override this function.
@@ -341,7 +341,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onDisconnected(const HostClient&) = 0;
+    virtual void onDisconnected(const HostClientInfo&) = 0;
 
     /**
      * @brief Base dead client callback. Subclasses must override this function.
@@ -354,7 +354,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onDeadClient(const HostClient&) = 0;
+    virtual void onDeadClient(const HostClientInfo&) = 0;
 
     /**
      * @brief Base invalid message received callback. Subclasses must override this function.
@@ -474,12 +474,12 @@ private:
     zmq::socket_t* server_socket_;   ///< ZMQ server socket.
 
     // Endpoint data and server info.
-    std::string server_endpoint_;                                     ///< Final server endpoint.
-    std::vector<utils::NetworkAdapterInfo> server_listen_adapters_;   ///< Listen server adapters.
-    unsigned server_port_;                                            ///< Server port.
-    std::string server_name_;    ///< Server name.
-    std::string server_info_;    ///< Detailed server information.
-    std::string server_vers_;    ///< Server version.
+    std::string server_endpoint_;                              ///< Final server endpoint.
+    std::vector<utils::NetworkAdapterInfo> server_adapters_;   ///< Listen server adapters.
+    unsigned server_port_;                                     ///< Server port.
+    std::string server_name_;                                  ///< Server name. Will not be use as id.
+    std::string server_info_;                                  ///< Detailed server information.
+    std::string server_vers_;                                  ///< Server version.
 
     // Mutex.
     mutable std::mutex mtx_;   ///< Safety mutex.
@@ -488,7 +488,7 @@ private:
     std::future<void> server_worker_future_;   ///< Future that stores the server worker status.
 
     // Clients container.
-    std::map<std::string, HostClient> connected_clients_;   ///< Dictionary with the connected clients.
+    std::map<std::string, HostClientInfo> connected_clients_;   ///< Dictionary with the connected clients.
 
     // Usefull flags.
     std::atomic_bool flag_server_working_;       ///< Flag for check the server working status.

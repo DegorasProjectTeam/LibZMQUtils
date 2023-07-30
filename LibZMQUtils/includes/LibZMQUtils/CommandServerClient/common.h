@@ -219,27 +219,26 @@ static constexpr std::array<const char*, 31>  ServerResultStr
 // COMMON STRUCTS
 // =====================================================================================================================
 
-struct LIBZMQUTILS_EXPORT HostClient
+struct LIBZMQUTILS_EXPORT HostClientInfo
 {
-    HostClient() = default;
+    HostClientInfo() = default;
 
-    HostClient(const HostClient&) = default;
+    HostClientInfo(const HostClientInfo&) = default;
 
-    HostClient(HostClient&&) = default;
+    HostClientInfo(HostClientInfo&&) = default;
 
-    HostClient& operator=(const HostClient&) = default;
+    HostClientInfo& operator=(const HostClientInfo&) = default;
 
-    HostClient& operator=(HostClient&&) = default;
+    HostClientInfo& operator=(HostClientInfo&&) = default;
 
-    HostClient(const std::string& ip, const std::string& name,
-                   const std::string& pid, const std::string& info = "");
+    HostClientInfo(const std::string& ip, const std::string& hostname, const std::string& pid);
 
     // Struct members.
     std::string id;                          ///< Dinamic host client identification -> [ip//name//pid]
     std::string ip;                          ///< Host client ip.
     std::string hostname;                    ///< Host client name.
     std::string pid;                         ///< PID of the host client process.
-    std::string info;                        ///< Host client information.
+
     utils::SCTimePointStd last_connection;   ///< Host client last connection time.
 };
 
@@ -251,7 +250,7 @@ struct CommandRequest
         params_size(0)
     {}
 
-    HostClient client;
+    HostClientInfo client;
     ServerCommand command;
     std::unique_ptr<std::byte> params;
     zmq::multipart_t raw_msg;
