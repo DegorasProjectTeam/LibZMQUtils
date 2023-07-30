@@ -67,46 +67,56 @@ class LIBZMQUTILS_EXPORT CommandClientBase
 
 public:
     
-    CommandClientBase(const std::string& server_endpoint);
+    CommandClientBase(const std::string& server_endpoint,
+                      const std::string& client_name = "");
     
     bool startClient(const std::string& interface_name);
 
     void stopClient();
 
-    void resetClient();
+    bool resetClient();
 
     void setAliveCallbacksEnabled(bool);
 
     void setAutomaticAliveEnabled(bool);
 
-    void setClientName(const std::string &name);
+    const common::HostClientInfo& getClientInfo() const;
 
-    const std::string& getServerEndpoint()
-    {
-        return this->server_endpoint_;
-    }
+    const std::string& getServerEndpoint() const;
 
-    const common::HostClientInfo& getClientInfo()
-    {
-        return this->client_info_;
-    }
-
-    const std::string& getClientName() const
-    {
-        return this->client_name_;
-    }
-
+    const std::string& getClientName() const;
 
     ClientResult sendCommand(const RequestData&, CommandReply&);
 
     /**
      * @brief Virtual destructor.
-     *
      * This destructor is virtual to ensure proper cleanup when the derived class is destroyed.
      */
     virtual ~CommandClientBase();
 
 protected:
+
+    /**
+     * @brief Get the client's information.
+     * @note This is an internal protected function that does not lock the safety mutex.
+     * @return A constant reference to the client's HostClientInfo.
+     */
+    const common::HostClientInfo& internalGetClientInfo() const;
+
+    /**
+     * @brief Get the server's endpoint.
+     * @note This is an internal protected function that does not lock the safety mutex.
+     * @return A constant reference to the server's endpoint.
+     */
+    const std::string& internalGetServerEndpoint() const;
+
+    /**
+     * @brief Get the client's name.
+     * @note This is an internal protected function that does not lock the safety mutex.
+     * @return A constant reference to the client's name.
+     */
+    const std::string& internalGetClientName() const;
+
 
     virtual void onClientStart() = 0;
 
@@ -119,6 +129,8 @@ protected:
     virtual void onConnected() = 0;
 
     virtual void onDisconnected() = 0;
+
+    virtual void onInvalidMsgReceived(const CommandReply&) = 0;
 
     virtual void onReplyReceived(const CommandReply&) = 0;
 
@@ -152,7 +164,7 @@ private:
     zmq::socket_t *client_socket_;
 
     // Mutex.
-    std::mutex mtx_;
+    mutable std::mutex mtx_;
 
     std::future<void> auto_alive_future_;
     std::condition_variable auto_alive_cv_;

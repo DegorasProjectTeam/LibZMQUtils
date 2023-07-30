@@ -80,6 +80,17 @@ void AmelasServer::processGetHomePosition(const CommandRequest& request, Command
         reply.params_size = BinarySerializer::fastSerialization(reply.params, ctrl_err, pos.az, pos.el);
 }
 
+bool AmelasServer::validateCustomCommand(ServerCommand command)
+{
+    // Auxiliar variables.
+    bool result = false;
+    zmqutils::common::CommandType cmd = static_cast<zmqutils::common::CommandType>(command);
+    // Check if the command is within the range of implemented custom commands.
+    if (cmd >= common::kMinCmdId && cmd <= common::kMaxCmdId)
+        result = true;
+    return result;
+}
+
 void AmelasServer::processAmelasCommand(const CommandRequest& request, CommandReply& reply)
 {
     AmelasServerCommand command = static_cast<AmelasServerCommand>(request.command);
@@ -95,17 +106,6 @@ void AmelasServer::processAmelasCommand(const CommandRequest& request, CommandRe
         // Command not found in the map.
         reply.result = ServerResult::NOT_IMPLEMENTED;
     }
-}
-
-bool AmelasServer::validateAmelasCommand(AmelasServerCommand command)
-{
-    // Auxiliar variables.
-    bool result = false;
-    zmqutils::common::CommandType cmd = static_cast<zmqutils::common::CommandType>(command);
-    // Check if the command is within the range of implemented custom commands.
-    if (cmd >= common::kMinCmdId && cmd <= common::kMaxCmdId)
-        result = true;
-    return result;
 }
 
 void AmelasServer::onCustomCommandReceived(const CommandRequest& request, CommandReply& reply)
@@ -127,19 +127,15 @@ void AmelasServer::onCustomCommandReceived(const CommandRequest& request, Comman
     std::cout << std::string(100, '-') << std::endl;
 
     // Process the command if it is implemented.
-    if(command == AmelasServerCommand::END_AMELAS_COMMANDS)
-    {
-        // Update the result.
-        reply.result = ServerResult::INVALID_MSG;
-    }
-    else if(AmelasServer::validateAmelasCommand(command))
-    {
-        this->processAmelasCommand(request, reply);
-    }
-    else
+    if(command > AmelasServerCommand::END_IMPL_COMMANDS)
     {
         // Call to the base function.
         CommandServerBase::onCustomCommandReceived(request, reply);
+    }
+    else
+    {
+        // In this point, all the generic validations are done.
+        this->processAmelasCommand(request, reply);
     }
 }
 

@@ -282,9 +282,6 @@ void CommandServerBase::serverWorker()
         }
         else if (result == ServerResult::COMMAND_OK)
         {
-            // Reply id buffer.
-            //std::unique_ptr<std::uint8_t> rep_id_buff;
-
             // Execute the command.
             this->processCommand(request, reply);
 
@@ -420,9 +417,11 @@ ServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
             // Deserialize.
             utils::BinarySerializer::fastDeserialization(message_command.data(), sizeof(ServerCommand), raw_command);
 
-            // Validate the command.
+            // Validate the base command or the external command.
             if(CommandServerBase::validateCommand(raw_command))
+            {
                 request.command = static_cast<ServerCommand>(raw_command);
+            }
             else
             {
                 request.command = ServerCommand::INVALID_COMMAND;
@@ -501,6 +500,9 @@ void CommandServerBase::processCommand(const CommandRequest& request, CommandRep
     }
     else
     {
+        // Validate the custom command.
+        this->validateCustomCommand(request.command);
+
         // Custom command, so call the internal callback.
         this->onCustomCommandReceived(request, reply);
 

@@ -34,13 +34,13 @@ zmqutils::common::HostClientInfo::HostClientInfo(const std::string &ip, const st
     this->id = ip + "//" + hostname + "//" + pid;
 }
 
-zmqutils::common::RequestData::RequestData(CommandType id) :
+zmqutils::common::RequestData::RequestData(ServerCommand id) :
     command(id),
     params(nullptr),
     params_size(0){}
 
 zmqutils::common::RequestData::RequestData() :
-    command(static_cast<CommandType>(ServerCommand::INVALID_COMMAND)),
+    command(ServerCommand::INVALID_COMMAND),
     params(nullptr),
     params_size(0){}
 

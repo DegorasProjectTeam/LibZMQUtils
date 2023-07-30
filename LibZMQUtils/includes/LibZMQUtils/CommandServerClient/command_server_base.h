@@ -62,6 +62,7 @@ using common::CommandRequest;
 using common::ServerCommand;
 using common::ServerResult;
 using common::HostClientInfo;
+using common::CommandType;
 using utils::NetworkAdapterInfo;
 // =====================================================================================================================
 
@@ -283,6 +284,22 @@ public:
 protected:
 
     /**
+     * @brief Validates a custom command.
+     *
+     * This function checks if a custom command is valid. The validation is implementation-specific and
+     * must be provided by any class that derives from this one. If the custom command is found to be
+     * invalid by this function, the internal callback method onCustomCommandReceived will not be invoked.
+     *
+     * @note If you want handle in method onCustomCommandReceived commands that could be valid but the
+     *       process logic is not yet implemented, this function must return true for these commands.
+     *
+     * @param cmd The ServerCommand ID to be validated.
+     *
+     * @return Returns true if the command is valid; false otherwise.
+     */
+    virtual bool validateCustomCommand(ServerCommand) = 0;
+
+    /**
      * @brief Base server start callback. Subclasses must override this function.
      *
      * @warning The overrided callback must be non-blocking and have minimal computation time. Blocking or
@@ -395,7 +412,10 @@ protected:
      *
      * @note This function must process the CommandRequest (function parameter input) and update the CommandReply
      *       (function parameter output), especially the result code.
-
+     *
+     * @note This method is only called when the received command has been validated as a valid custom command
+     *       by the validateCustomCommand method.
+     *
      * @warning All internal callbacks, including this one, must be non-blocking and have minimal
      *          computation time. Blocking or computationally intensive operations within internal
      *          callbacks can significantly affect the server's performance and responsiveness.

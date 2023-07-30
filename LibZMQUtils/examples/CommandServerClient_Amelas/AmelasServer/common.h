@@ -23,7 +23,8 @@ enum class AmelasServerCommand : zmqutils::common::CommandType
     REQ_GET_DATETIME      = 32,
     REQ_SET_HOME_POSITION = 33,
     REQ_GET_HOME_POSITION = 34,
-    END_AMELAS_COMMANDS
+    END_IMPL_COMMANDS     = 35,
+    END_AMELAS_COMMANDS   = 50
 };
 
 // Specific subclass errors (0 to 30 are reserved for the base server).

@@ -70,8 +70,8 @@ constexpr int kZmqEFSMError = 156384765;               ///< ZMQ EFSM error.
 // CONVENIENT ALIAS, ENUMERATIONS AND CONSTEXPR
 // =====================================================================================================================
 
-using CommandType = std::uint32_t;   ///< Type used for the BaseServerCommand enumeration.
-using ResultType = std::uint32_t;    ///< Type used for the BaseServerResult enumeration.
+using CommandType = std::int32_t;   ///< Type used for the BaseServerCommand enumeration.
+using ResultType = std::int32_t;    ///< Type used for the BaseServerResult enumeration.
 
 // TODO getServerInfo
 // TODO getServerTime
@@ -81,17 +81,17 @@ using ResultType = std::uint32_t;    ///< Type used for the BaseServerResult enu
 /**
  * @enum ServerCommand
  * @brief Enumerates the possible commands of a base command server. They can be extended in a subclass.
- * @warning Commands 0 to 30 ids must not be used for custom commands, they are special and reserved.
+ * @warning Commands -1 to 30 ids must not be used for custom commands, they are special and reserved.
  * @warning Only positive commands ids will be acepted by the server.
  * @warning Messages with the command 0, sentinel value or a reserved commands are considered invalid.
  */
 enum class ServerCommand : CommandType
 {
-    INVALID_COMMAND   = 0,  ///< Invalid command.
-    REQ_CONNECT       = 1,  ///< Request to connect to the server.
-    REQ_DISCONNECT    = 2,  ///< Request to disconnect from the server.
-    REQ_ALIVE         = 3,  ///< Request to check if the server is alive and for notify that the client is alive too.
-    RESERVED_COMMANDS = 4,  ///< Sentinel value indicating the start of the reserved commands (not is as a valid msg).
+    INVALID_COMMAND   = -1, ///< Invalid command.
+    REQ_CONNECT       = 0,  ///< Request to connect to the server.
+    REQ_DISCONNECT    = 1,  ///< Request to disconnect from the server.
+    REQ_ALIVE         = 2,  ///< Request to check if the server is alive and for notify that the client is alive too.
+    RESERVED_COMMANDS = 3,  ///< Sentinel value indicating the start of the reserved commands (not is as a valid msg).
     END_BASE_COMMANDS = 30  ///< Sentinel value indicating the end of the base commands (not is as a valid msg).
 };
 
@@ -145,10 +145,10 @@ constexpr int kMaxBaseCmdId = static_cast<int>(ServerCommand::END_BASE_COMMANDS)
 
 static constexpr std::array<const char*, 31>  ServerCommandStr
 {
-    "INVALID_COMMAND",
     "REQ_CONNECT",
     "REQ_DISCONNECT",
     "REQ_ALIVE",
+    "RESERVED_BASE_COMMAND",
     "RESERVED_BASE_COMMAND",
     "RESERVED_BASE_COMMAND",
     "RESERVED_BASE_COMMAND",
@@ -305,11 +305,11 @@ struct CommandReply
 
 struct LIBZMQUTILS_EXPORT RequestData
 {
-    RequestData(CommandType id);
+    RequestData(ServerCommand id);
 
     RequestData();
 
-    CommandType command;
+    ServerCommand command;                   ///< Command to be sent.
     std::unique_ptr<std::byte> params;
     size_t params_size;
 };

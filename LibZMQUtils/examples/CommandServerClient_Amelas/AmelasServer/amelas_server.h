@@ -68,6 +68,7 @@ using zmqutils::CommandServerBase;
 using zmqutils::common::CommandReply;
 using zmqutils::common::CommandRequest;
 using zmqutils::common::ServerResult;
+using zmqutils::common::ServerCommand;
 using zmqutils::common::HostClientInfo;
 using zmqutils::utils::CallbackHandler;
 
@@ -100,9 +101,6 @@ private:
 
     // Hide the invoke of the parent.
     using CallbackHandler::invokeCallback;
-
-    // Helper to check if the custom command is valid.
-    static bool validateAmelasCommand(AmelasServerCommand command);
 
     template <typename CallbackType, typename... Args>
     controller::ControllerError invokeCallback(const CommandRequest& request, CommandReply& reply, Args&&... args)
@@ -145,8 +143,10 @@ private:
     void processSetHomePosition(const CommandRequest&, CommandReply&);
     void processGetHomePosition(const CommandRequest&, CommandReply&);
 
+    // Internal overrided command validation function.
+    virtual bool validateCustomCommand(ServerCommand command) final;
+
     // Internal overrided custom command received callback.
-    // WARNING The most important part.
     virtual void onCustomCommandReceived(const CommandRequest&, CommandReply&) final;
 
     // Internal overrided start callback.

@@ -22,8 +22,9 @@ namespace zmqutils{
 
 
 
-CommandClientBase::CommandClientBase(const std::string &server_endpoint) :
+CommandClientBase::CommandClientBase(const std::string &server_endpoint, const std::string &client_name) :
     server_endpoint_(server_endpoint),
+    client_name_(client_name),
     context_(nullptr),
     client_socket_(nullptr),
     flag_alive_woking_(true),
@@ -41,6 +42,17 @@ CommandClientBase::~CommandClientBase()
     this->internalStop();
 }
 
+const common::HostClientInfo &CommandClientBase::getClientInfo() const
+{
+    std::unique_lock<std::mutex> lock(this->mtx_);
+    return this->client_info_;
+}
+
+const common::HostClientInfo &CommandClientBase::internalGetClientInfo() const
+{
+    return this->client_info_;
+}
+
 bool CommandClientBase::startClient(const std::string& interface_name)
 {
     // Safe mutex lock
@@ -56,10 +68,10 @@ bool CommandClientBase::startClient(const std::string& interface_name)
     auto it = std::find_if(interfcs.begin(), interfcs.end(),
                            [&interface_name](const utils::NetworkAdapterInfo& info)
                            {return info.name == interface_name;});
-    //
+
+    // Check if the interface exists and store it.
     if (it == interfcs.end())
         return false;
-
     ip = it->ip;
 
     // Get the host name.
@@ -71,7 +83,6 @@ bool CommandClientBase::startClient(const std::string& interface_name)
     // Store the info.
     this->client_info_ = common::HostClientInfo(ip, name, pid);
 
-
     // If server is already started, do nothing
     if (this->client_socket_)
         return false;
@@ -80,6 +91,7 @@ bool CommandClientBase::startClient(const std::string& interface_name)
     if (!this->context_)
         this->context_ = new zmq::context_t(1);
 
+    // Create the ZMQ socket.
     try
     {
         this->client_socket_ = new zmq::socket_t(*this->context_, zmq::socket_type::req);
@@ -90,11 +102,14 @@ bool CommandClientBase::startClient(const std::string& interface_name)
     }
     catch (const zmq::error_t &error)
     {
-        delete this->client_socket_;
-        this->client_socket_ = nullptr;
+        if(this->client_socket_)
+        {
+            delete this->client_socket_;
+            this->client_socket_ = nullptr;
+        }
 
-        std::cerr << "Error at socket creation: " << error.num();
-        // TODO: handle error
+        // Call to the internal callback.
+        this->onClientError(error, "Error while creating the client.");
         return false;
     }
 
@@ -117,15 +132,21 @@ void CommandClientBase::stopClient()
     this->onClientStop();
 }
 
-void CommandClientBase::resetClient()
+bool CommandClientBase::resetClient()
 {
+    // Safe mutex lock
+    std::unique_lock<std::mutex> lock(this->mtx_);
+
+    // Check the client.
     if (this->client_socket_)
     {
+        // Close the client.
+        this->client_socket_->close();
+
         // Destroy the socket and create again to flush.
         delete this->client_socket_;
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
-
+        // Create the ZMQ socket.
         try
         {
             this->client_socket_ = new zmq::socket_t(*this->context_, zmq::socket_type::req);
@@ -136,13 +157,20 @@ void CommandClientBase::resetClient()
         }
         catch (const zmq::error_t &error)
         {
-            delete this->client_socket_;
-            this->client_socket_ = nullptr;
+            if(this->client_socket_)
+            {
+                delete this->client_socket_;
+                this->client_socket_ = nullptr;
+            }
 
-            std::cerr << "Error at socket creation: " << error.num();
-            // TODO: handle error
+            // Call to the internal callback.
+            this->onClientError(error, "Error while creating the client.");
+            return false;
         }
     }
+
+    // All ok
+    return true;
 }
 
 void CommandClientBase::setAliveCallbacksEnabled(bool enable)
@@ -154,6 +182,28 @@ void CommandClientBase::setAutomaticAliveEnabled(bool enable)
 {
     std::unique_lock<std::mutex> lock(this->mtx_);
     enable ? this->startAutoAlive() : this->stopAutoAlive();
+}
+
+const std::string &CommandClientBase::getServerEndpoint() const
+{
+    std::unique_lock<std::mutex> lock(this->mtx_);
+    return this->server_endpoint_;
+}
+
+const std::string &CommandClientBase::internalGetServerEndpoint() const
+{
+    return this->server_endpoint_;
+}
+
+const std::string &CommandClientBase::getClientName() const
+{
+    std::unique_lock<std::mutex> lock(this->mtx_);
+    return this->client_name_;
+}
+
+const std::string &CommandClientBase::internalGetClientName() const
+{
+    return this->client_name_;
 }
 
 void CommandClientBase::startAutoAlive()
@@ -172,8 +222,6 @@ void CommandClientBase::stopAutoAlive()
     }
 }
 
-void CommandClientBase::setClientName(const std::string& name){this->client_name_ = name;}
-
 ClientResult CommandClientBase::sendCommand(const RequestData& request, CommandReply& reply)
 {
     // Result.
@@ -189,7 +237,7 @@ ClientResult CommandClientBase::sendCommand(const RequestData& request, CommandR
     // Send the command.
     try
     {
-
+        // Prepare the multipart msg.
         zmq::multipart_t multipart_msg(this->prepareMessage(request));
 
         // Internal send callback.
@@ -201,8 +249,8 @@ ClientResult CommandClientBase::sendCommand(const RequestData& request, CommandR
     }
     catch (const zmq::error_t &error)
     {
-        // TODO: handle error
-        std::cout<<error.what()<<std::endl;
+        // Call to the error callback.
+        this->onClientError(error, "Error while sending a request.");
         return ClientResult::INTERNAL_ZMQ_ERROR;
     }
 
@@ -215,15 +263,26 @@ ClientResult CommandClientBase::sendCommand(const RequestData& request, CommandR
     // Receive the data.
     result = this->recvFromSocket(reply);
 
+    // Check for errors.
+    if (result == ClientResult::TIMEOUT_REACHED)
+    {
+        // Call to the internall callback and reset the socket.
+        // NOTE: The client reset is neccesary for flush the ZMQ internal
+        this->onDeadServer();
+        this->resetClient();
+    }
+    else if(result != ClientResult::COMMAND_OK && result != ClientResult::INTERNAL_ZMQ_ERROR)
+    {
+        // Internal callback.
+        this->onInvalidMsgReceived(reply);
+    }
 
-
-
-
+    // Use the cv for notify the auto alive worker.
     if (this->flag_alive_woking_)
         this->auto_alive_cv_.notify_one();
 
+    // Return the result.
     return result;
-
 }
 
 ClientResult CommandClientBase::recvFromSocket(CommandReply& reply)
@@ -243,18 +302,22 @@ ClientResult CommandClientBase::recvFromSocket(CommandReply& reply)
     }
     catch(zmq::error_t& error)
     {
-        // TODO Check if we want too close the client.
+        // Check if we want too close the client.
+        // The error code is for ZMQ EFSM error.
+        if(error.num() == common::kZmqEFSMError && !this->flag_client_working_)
+            return ClientResult::CLIENT_STOPPED;
 
-        // Call to error callback.
-        this->onClientError(error, "Error while receiving a request.");
-
-
+        // Else, call to error callback.
+        this->onClientError(error, "Error while receiving a reply.");
         return ClientResult::INTERNAL_ZMQ_ERROR;
     }
 
     // Check for empty msg or timeout reached.
     if (multipart_msg.empty() && !recv_result)
+    {
+        // Call to the timeout callback
         return ClientResult::TIMEOUT_REACHED;
+    }
     else if (multipart_msg.empty())
         return ClientResult::EMPTY_MSG;
 
@@ -264,11 +327,8 @@ ClientResult CommandClientBase::recvFromSocket(CommandReply& reply)
         // Get the multipart data.
         zmq::message_t msg_res = multipart_msg.pop();
 
-        // Get the sizes.
-        size_t result_size_bytes = msg_res.size();
-
         // Get the command.
-        if (result_size_bytes == sizeof(ServerCommand))
+        if (msg_res.size()== sizeof(ServerCommand))
         {
             utils::BinarySerializer::fastDeserialization(msg_res.data(), msg_res.size(), reply.result);
         }
@@ -315,18 +375,13 @@ void CommandClientBase::internalStop()
         this->context_ = nullptr;
     }
 
-    // Safe sleep.
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
     // Delete the socket.
-    if(!this->client_socket_)
+    if(this->client_socket_)
     {
+        this->client_socket_->close();
         delete this->client_socket_;
         this->client_socket_ = nullptr;
     }
-
-    // Safe sleep.
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 }
 
 void CommandClientBase::sendAliveCallback()

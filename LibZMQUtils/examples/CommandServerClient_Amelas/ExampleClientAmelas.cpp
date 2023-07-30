@@ -46,7 +46,7 @@ void parseCommand(CommandClientBase &client, const std::string &command)
             return;
         }
 
-        RequestData command_msg(command_id);
+        RequestData command_msg(static_cast<ServerCommand>(command_id));
 
         bool valid = true;
 
