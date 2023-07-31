@@ -73,7 +73,6 @@ using zmqutils::utils::CallbackHandler;
 
 // =====================================================================================================================
 
-
 // Example of creating a command server from the base.
 class AmelasServer : public ClbkCommandServerBase
 {
@@ -81,20 +80,42 @@ public:
 
     AmelasServer(unsigned port, const std::string& local_addr = "*");
 
+    // Subclass register callback function helper.
+    template<typename... Args>
+    void registerCallback(AmelasServerCommand command,
+                          controller::AmelasController* object,
+                          controller::ControllerError(controller::AmelasController::*callback)(Args...))
+    {
+        CallbackHandler::registerCallback(static_cast<CallbackHandler::CallbackId>(command), object, callback);
+    }
+
 private:
 
-    template <typename CallbackType, typename... Args>
+    using CommandServerBase::registerProcessFunction;
+    using CallbackHandler::registerCallback;
+
+    // Process functions for all the specific commands.
+    void processSetHomePosition(const CommandRequest&, CommandReply&);
+    void processGetHomePosition(const CommandRequest&, CommandReply&);
+
+    // Subclass register process function helper.
+    void registerProcessFunction(AmelasServerCommand command,
+                                 void(AmelasServer::*func)(const CommandRequest&, CommandReply&))
+    {
+        CommandServerBase::registerProcessFunction(static_cast<ServerCommand>(command),
+                                                   this, func);
+    }
+
+    // Subclass invoke callback helper.
+    template <typename ClbkT, typename... Args>
     controller::ControllerError invokeCallback(const CommandRequest& request,
                                                CommandReply& reply, Args&&... args)
     {
-        return ClbkCommandServerBase::invokeCallback<CallbackType>(request, reply,
-                                                                   controller::ControllerError::INVALID_ERROR,
-                                                                   std::forward<Args>(args)...);
+        return ClbkCommandServerBase::invokeCallback<ClbkT>(
+                                                    request, reply,
+                                                    controller::ControllerError::INVALID_ERROR,
+                                                    std::forward<Args>(args)...);
     }
-
-    // Process the specific commands.
-    void processSetHomePosition(const CommandRequest&, CommandReply&);
-    void processGetHomePosition(const CommandRequest&, CommandReply&);
 
     // Internal overrided command validation function.
     virtual bool validateCustomCommand(ServerCommand command) final;

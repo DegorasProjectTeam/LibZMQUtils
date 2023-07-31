@@ -21,15 +21,11 @@ AmelasServer::AmelasServer(unsigned int port, const std::string &local_addr) :
     // Register each internal specific process function in the base server.
 
     // REQ_SET_HOME_POSITION
-    CommandServerBase::registerProcessFunction(
-        static_cast<ServerCommand>(AmelasServerCommand::REQ_SET_HOME_POSITION),
-        this,
+    this->registerProcessFunction(AmelasServerCommand::REQ_SET_HOME_POSITION,
                                   &AmelasServer::processSetHomePosition);
 
     // REQ_GET_HOME_POSITION.
-    CommandServerBase::registerProcessFunction(
-        static_cast<ServerCommand>(AmelasServerCommand::REQ_GET_HOME_POSITION),
-        this,
+    this->registerProcessFunction(AmelasServerCommand::REQ_GET_HOME_POSITION,
                                   &AmelasServer::processGetHomePosition);
 }
 
@@ -82,6 +78,8 @@ void AmelasServer::processGetHomePosition(const CommandRequest& request, Command
     if(reply.result == ServerResult::COMMAND_OK)
         reply.params_size = BinarySerializer::fastSerialization(reply.params, ctrl_err, pos.az, pos.el);
 }
+
+
 
 bool AmelasServer::validateCustomCommand(ServerCommand command)
 {
