@@ -44,6 +44,7 @@
 #include <memory>
 #include <cstring>
 #include <mutex>
+#include <type_traits>
 #include <atomic>
 // =====================================================================================================================
 
@@ -61,6 +62,10 @@ namespace utils{
 template<typename... Args>
 size_t BinarySerializer::write(const Args&... args)
 {
+    // Check the types.
+    (BinarySerializer::checkTriviallyCopyable<Args>(), ...);
+    (BinarySerializer::checkTrivial<Args>(), ...);
+
     // Sum of sizes of all arguments and reserve.
     const size_t total_size = (... + sizeof(args));
     reserve(this->size_ + total_size);
@@ -72,7 +77,11 @@ size_t BinarySerializer::write(const Args&... args)
 template<typename T>
 void BinarySerializer::writeSingle(const T& value)
 {
-    static_assert(std::is_trivially_copyable<T>::value, "Non-trivially copyable types are not supported.");
+    // Check the types.
+    (BinarySerializer::checkTriviallyCopyable<T>());
+    (BinarySerializer::checkTrivial<T>());
+
+    // Write single.
     reserve(this->size_ + sizeof(T));
     std::lock_guard<std::mutex> lock(this->mtx_);
     BinarySerializer::binarySerializeDeserialize(&value, sizeof(T), this->data_.get() + size_);
@@ -82,13 +91,22 @@ void BinarySerializer::writeSingle(const T& value)
 template<typename... Args>
 void BinarySerializer::read(Args&... args)
 {
+    // Check the types.
+    (BinarySerializer::checkTriviallyCopyable<Args>(), ...);
+    (BinarySerializer::checkTrivial<Args>(), ...);
+
+    // Read the data.
     (void)std::initializer_list<int>{ (readSingle(args), 0)... };
 }
 
 template<typename T>
 T BinarySerializer::readSingle()
 {
-    static_assert(std::is_trivially_copyable<T>::value, "Non-trivially copyable types are not supported");
+    // Check the types.
+    (BinarySerializer::checkTriviallyCopyable<T>());
+    (BinarySerializer::checkTrivial<T>());
+
+    // Read single.
     std::lock_guard<std::mutex> lock(this->mtx_);
     if (this->offset_ + sizeof(T) > this->size_)
         throw std::out_of_range("BinarySerializer: Read beyond the data size");
@@ -101,7 +119,11 @@ T BinarySerializer::readSingle()
 template<typename T>
 void BinarySerializer::readSingle(T& value)
 {
-    static_assert(std::is_trivially_copyable<T>::value, "Non-trivially copyable types are not supported");
+    // Check the types.
+    (BinarySerializer::checkTriviallyCopyable<T>());
+    (BinarySerializer::checkTrivial<T>());
+
+    // Read single.
     std::lock_guard<std::mutex> lock(mtx_);
     if (this->offset_ + sizeof(T) > this->size_)
         throw std::out_of_range("BinarySerializer: Read beyond the data size");

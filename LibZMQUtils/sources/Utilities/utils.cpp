@@ -153,12 +153,6 @@ std::string getHostname()
     return name;
 }
 
-void binarySerializeDeserialize(const void *data, size_t data_size_bytes, void *dest)
-{
-    const std::uint8_t* data_byes = reinterpret_cast<const std::uint8_t *>(data);
-    std::uint8_t* dest_byes = reinterpret_cast<std::uint8_t*>(dest);
-    std::reverse_copy(data_byes, data_byes + data_size_bytes, dest_byes);
-}
 
 std::string timePointToString(const HRTimePointStd &tp, const std::string &format, bool add_ms, bool add_ns, bool utc)
 {

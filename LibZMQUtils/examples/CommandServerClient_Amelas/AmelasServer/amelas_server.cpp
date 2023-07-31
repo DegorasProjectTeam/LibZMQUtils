@@ -19,15 +19,15 @@ AmelasServer::AmelasServer(unsigned int port, const std::string &local_addr) :
     CommandServerBase(port, local_addr),
     CallbackHandler()
 {
-    // Register each process function.
+    // Register each internal specific process function in the base server.
 
+    // REQ_SET_HOME_POSITION
     this->registerProcessFunction(AmelasServerCommand::REQ_SET_HOME_POSITION,
                                   &AmelasServer::processSetHomePosition);
 
+    // REQ_GET_HOME_POSITION.
     this->registerProcessFunction(AmelasServerCommand::REQ_GET_HOME_POSITION,
                                   &AmelasServer::processGetHomePosition);
-
-
 }
 
 

@@ -61,25 +61,29 @@ namespace utils{
 /**
  * @class BinarySerializer
  *
- * @brief This class provides functionality for binary serialization and deserialization of data.
+ * @brief This class provides functionality for binary serialization and deserialization of simple data types.
  *
- * The class is thread safe.
+ * The BinarySerializer class supports serialization and deserialization of trivially copyable and trivial data types.
+ * This class provides static methods for fast serialization and deserialization using variadic templates, allowing for
+ * multiple data types to be serialized/deserialized at once. Additionally, the class provides methods for checking at
+ * compile time whether the types provided meet the requirements for being trivially copyable and trivial.
+ *
+ * @note The class is thread safe.
+ *
+ * @note It's strongly recommended that this class is only used with simple data types (like ints, floats, char*, etc.)
+ *       that fulfill the conditions of being both trivial and trivially copyable. It's not designed to handle complex
+ *       data structures like vectors, custom classes, etc. directly. Before using this class with more complex data
+ *       types, appropriate checks should be added to ensure they meet the necessary conditions for serialization
+ *       and deserialization.
  *
  * @warning This class assumes a certain byte order (either big endian or little endian) for the data being serialized
- *          or deserialized. The binarySerializeDeserialize function reverses the byte order of the data. This might
- *          not be correct if the code runs in a different context or on a machine with a different native byte order.
+ *          or deserialized. It's important to be aware of the byte order in the context the data will be used.
  *          Therefore, consider detecting the machine's byte order and adjust the reversal accordingly if using this
- *          class in such an other specific context.
+ *          class in a context with different native byte order.
  */
 class LIBZMQUTILS_EXPORT BinarySerializer
 {
 public:
-
-    enum class EndiannessType
-    {
-        LITTLE_ENDIAN,
-        BIG_ENDIAN
-    };
 
     BinarySerializer(size_t capacity = 1024);
 
@@ -146,20 +150,31 @@ public:
     template<typename... Args>
     static size_t fastSerialization(std::unique_ptr<std::byte>& out, const Args&... args)
     {
+        // Check the types.
+        (BinarySerializer::checkTriviallyCopyable<Args>(), ...);
+        (BinarySerializer::checkTrivial<Args>(), ...);
+
+        // Do the serialization
         BinarySerializer serializer;
-        size_t size = serializer.write(std::forward<const Args>(args)...);
+        size_t size = serializer.write(std::forward<const Args&>(args)...);
         out = serializer.moveUnique();
         return size;
     }
 
     template<typename... Args>
-    static void fastDeserialization(void* in, size_t size, Args&&... args)
+    static void fastDeserialization(void* in, size_t size, Args&... args)
     {
+        // Check the types.
+        (BinarySerializer::checkTriviallyCopyable<Args>(), ...);
+        (BinarySerializer::checkTrivial<Args>(), ...);
+
+        // Do the deserialization.
         BinarySerializer serializer(in, size);
-        serializer.read(std::forward<Args>(args)...);
+        serializer.read(std::forward<Args&>(args)...);
         if(!serializer.allReaded())
             throw std::out_of_range("BinarySerializer: Not all data was deserialized.");
     }
+
 
 
 private:
@@ -169,6 +184,18 @@ private:
     template<typename T> void writeSingle(const T& value);
 
     template<typename T> void readSingle(T& value);
+
+    template<typename T>
+    static void checkTriviallyCopyable()
+    {
+        static_assert(std::is_trivially_copyable_v<T>, "Non-trivially copyable types are not supported.");
+    }
+
+    template<typename T>
+    static void checkTrivial()
+    {
+        static_assert(std::is_trivial_v<T>, "Non-trivial types are not supported.");
+    }
 
     std::unique_ptr<std::byte[]> data_;   ///< Internal data pointer.
     std::atomic<size_t> size_;               ///< Current size of the data.

@@ -458,7 +458,7 @@ void CommandClientBase::sendAliveCallback()
     */
 }
 
-zmq::multipart_t CommandClientBase::prepareMessage(const RequestData &msg)
+zmq::multipart_t CommandClientBase::prepareMessage(const RequestData &request)
 {
     // Prepare the ip data.
     zmq::message_t message_ip(this->client_info_.ip.begin(), this->client_info_.ip.end());
@@ -466,10 +466,13 @@ zmq::multipart_t CommandClientBase::prepareMessage(const RequestData &msg)
     zmq::message_t message_host(this->client_info_.hostname.begin(), this->client_info_.hostname.end());
     // Prepare the pid data.
     zmq::message_t message_pid(this->client_info_.pid.begin(), this->client_info_.pid.end());
-    // Prepare the command data.
-    std::uint8_t command_buffer[sizeof(common::CommandType)];
-    zmqutils::utils::binarySerializeDeserialize(&msg.command, sizeof(common::CommandType), command_buffer);
-    zmq::message_t message_command(&command_buffer, sizeof(common::CommandType));
+
+    utils::BinarySerializer serializer(sizeof(common::ServerCommand));
+
+    serializer.write(request.command);
+
+
+    zmq::message_t message_command(serializer.release(), sizeof(common::CommandType));
 
 
     // Prepare the multipart msg.
@@ -480,10 +483,10 @@ zmq::multipart_t CommandClientBase::prepareMessage(const RequestData &msg)
     multipart_msg.add(std::move(message_command));
 
     // Add command parameters if they exist
-    if (msg.params_size > 0)
+    if (request.params_size > 0)
     {
         // Prepare the command parameters
-        zmq::message_t message_params(msg.params.get(), msg.params_size);
+        zmq::message_t message_params(request.params.get(), request.params_size);
         multipart_msg.add(std::move(message_params));
     }
 

@@ -21,6 +21,7 @@ using namespace amelas::controller;
 using zmqutils::common::CommandType;
 using zmqutils::common::CommandReply;
 using zmqutils::common::ServerCommand;
+using zmqutils::utils::BinarySerializer;
 
 void parseCommand(CommandClientBase &client, const std::string &command)
 {
@@ -113,12 +114,12 @@ void parseCommand(CommandClientBase &client, const std::string &command)
             {
                 std::cout<<"Sending: " << az <<" "<<el<<std::endl;
 
-                command_msg.params_size = zmqutils::utils::BinarySerializer::fastSerialization(command_msg.params, az, el);
+                command_msg.params_size = BinarySerializer::fastSerialization(command_msg.params, az, el);
             }
             else
             {
                 std::cout<<"Sending invalid command: "<<std::endl;
-                command_msg.params_size = zmqutils::utils::BinarySerializer::fastSerialization(command_msg.params, az);
+                command_msg.params_size = BinarySerializer::fastSerialization(command_msg.params, az);
 
                 valid_params = true;
             }
@@ -171,7 +172,7 @@ void parseCommand(CommandClientBase &client, const std::string &command)
                 {
                     ControllerError error;
 
-                    zmqutils::utils::BinarySerializer ser(reply.params.get(), reply.params_size);
+                    BinarySerializer ser(reply.params.get(), reply.params_size);
                     std::cout<<ser.toString()<<std::endl;
 
                     ser.read(error);
@@ -183,12 +184,12 @@ void parseCommand(CommandClientBase &client, const std::string &command)
                 {
                     if (reply.params_size == (res_sz + 2*double_sz))
                     {
+                        ControllerError error;   // Trash
                         double az;
                         double el;
 
                         // Deserialize the parameters.
-                        zmqutils::utils::binarySerializeDeserialize(reply.params.get() + res_sz, double_sz, &az);
-                        zmqutils::utils::binarySerializeDeserialize(reply.params.get() + res_sz + double_sz, double_sz, &el);
+                        BinarySerializer::fastDeserialization(reply.params.get(), reply.params_size, error, az, el);
 
                         // Generate the struct.
                         std::cout<<"Az: "<<az<<std::endl;
