@@ -61,20 +61,18 @@ namespace amelas{
 namespace cltsrv{
 // =====================================================================================================================
 
-// =====================================================================================================================
+// ---------------------------------------------------------------------------------------------------------------------
 using namespace amelas::cltsrv::common;
-using zmqutils::ClbkCommandServerBase;
 using zmqutils::common::CommandReply;
 using zmqutils::common::CommandRequest;
 using zmqutils::common::ServerResult;
 using zmqutils::common::ServerCommand;
 using zmqutils::common::HostClientInfo;
 using zmqutils::utils::CallbackHandler;
-
-// =====================================================================================================================
+// ---------------------------------------------------------------------------------------------------------------------
 
 // Example of creating a command server from the base.
-class AmelasServer : public ClbkCommandServerBase
+class AmelasServer : public zmqutils::ClbkCommandServerBase
 {
 public:
 
@@ -82,8 +80,9 @@ public:
 
     // Register callback function helper.
     template<typename... Args>
-    void registerControllerCallback(AmelasServerCommand command, controller::AmelasController* object,
-                                    controller::ControllerError(controller::AmelasController::*callback)(Args...))
+    void registerControllerCallback(AmelasServerCommand command,
+                                    controller::AmelasController* object,
+                                    controller::AmelasControllerCallback<Args...> callback)
     {
         CallbackHandler::registerCallback(static_cast<CallbackHandler::CallbackId>(command), object, callback);
     }
@@ -93,6 +92,7 @@ private:
     // -----------------------------------------------------------------------------------------------------------------
     using CommandServerBase::registerRequestProcFunc;
     using CallbackHandler::registerCallback;
+    using AmelasRequestProcFunc = void(AmelasServer::*)(const CommandRequest&, CommandReply&);
     // -----------------------------------------------------------------------------------------------------------------
 
     // Process functions for all the specific commands.
@@ -100,8 +100,7 @@ private:
     void processGetHomePosition(const CommandRequest&, CommandReply&);
 
     // Subclass register process function helper.
-    void registerRequestProcFunc(AmelasServerCommand command,
-                                void(AmelasServer::*func)(const CommandRequest&, CommandReply&));
+    void registerRequestProcFunc(AmelasServerCommand command, AmelasRequestProcFunc func);
 
     // Subclass invoke callback helper.
     template <typename ClbkT, typename... Args>
@@ -147,7 +146,6 @@ private:
 
     // Internal overrided server error callback.
     virtual void onServerError(const zmq::error_t&, const std::string& ext_info) final;
-
 };
 
 }} // END NAMESPACES.

@@ -1,4 +1,40 @@
+/***********************************************************************************************************************
+ *   LibZMQUtils (ZMQ Utilitites Library): A libre library with ZMQ related useful utilities.                          *
+ *                                                                                                                     *
+ *   Copyright (C) 2023 Degoras Project Team                                                                           *
+ *                      < Ángel Vera Herrera, avera@roa.es - angeldelaveracruz@gmail.com >                             *
+ *                      < Jesús Relinque Madroñal >                                                                    *
+ *                                                                                                                     *
+ *   This file is part of LibZMQUtils.                                                                                 *
+ *                                                                                                                     *
+ *   Licensed under the European Union Public License (EUPL), Version 1.2 or subsequent versions of the EUPL license   *
+ *   as soon they will be approved by the European Commission (IDABC).                                                 *
+ *                                                                                                                     *
+ *   This project is free software: you can redistribute it and/or modify it under the terms of the EUPL license as    *
+ *   published by the IDABC, either Version 1.2 or, at your option, any later version.                                 *
+ *                                                                                                                     *
+ *   This project is distributed in the hope that it will be useful. Unless required by applicable law or agreed to in *
+ *   writing, it is distributed on an "AS IS" basis, WITHOUT ANY WARRANTY OR CONDITIONS OF ANY KIND; without even the  *
+ *   implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the EUPL license to check specific   *
+ *   language governing permissions and limitations and more details.                                                  *
+ *                                                                                                                     *
+ *   You should use this project in compliance with the EUPL license. You should have received a copy of the license   *
+ *   along with this project. If not, see the license at < https://eupl.eu/ >.                                         *
+ **********************************************************************************************************************/
 
+/** ********************************************************************************************************************
+ * @file ExampleServerAmelas.cpp
+ *
+ * @brief This file serves as a program example of how to use the AmelasServer and AmelasController classes.
+ *
+ * This program initializes an instance of the AmelasServer class and sets it up to interact with an instance of
+ * the AmelasController class. The server is set up to respond to client requests by invoking callback methods on the
+ * controller. The program will run indefinitely until the user hits ctrl-c.
+ *
+ * @author Degoras Project Team
+ * @copyright EUPL License
+ * @version 2307.1
+***********************************************************************************************************************/
 
 // C++ INCLUDES
 // =====================================================================================================================
@@ -11,13 +47,6 @@
 #include <csignal>
 #include <limits>
 #include <any>
-
-// =====================================================================================================================
-
-// ZMQUTILS INCLUDES
-// =====================================================================================================================
-#include <LibZMQUtils/CommandServer>
-#include <LibZMQUtils/Utils>
 // =====================================================================================================================
 
 // PROJECT INCLUDES
@@ -82,11 +111,12 @@ void configConsole()
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-// Main function.
-//
-// In the main we will create an AmelasController and an AmelasServer that will
-// work together thanks to the callbacks. For safe finish, press ctrl-c.
-//
+/**
+ * @brief Main entry point of the program.
+ *
+ * Initializes an AmelasController and AmelasServer, then enters an infinite loop where it listens for client requests
+ * and processes them using the server. If the user hits ctrl-c, the server is shut down and the program exits.
+ */
 int main(int argc, char**argv)
 {
     // Nampesaces.
@@ -101,25 +131,6 @@ int main(int argc, char**argv)
     unsigned port = 9999;
     bool client_status_check = false;
 
-    // Get the port.
-    if (argc == 2)
-    {
-        try
-        {
-           port = std::stoul(argv[1]);
-        }  catch (...)
-        {
-            std::cerr << "Not recognized port in input: " << argv[1] << std::endl;
-            return -1;
-        }
-
-    }
-    else if (argc > 2)
-    {
-        std::cout << "Usage: ZMQServer [port]" << std::endl;
-        return 0;
-    }
-
     // Instantiate the Amelas controller.
     AmelasController amelas_controller;
 
@@ -130,6 +141,7 @@ int main(int argc, char**argv)
     amelas_server.setClientStatusCheck(client_status_check);
 
     // ---------------------------------------
+
     // Set the controller callbacks in the server.
 
     amelas_server.registerControllerCallback(AmelasServerCommand::REQ_SET_HOME_POSITION,
@@ -143,10 +155,10 @@ int main(int argc, char**argv)
     // ---------------------------------------
 
     // Start the server.
-    bool result = amelas_server.startServer();
+    bool started = amelas_server.startServer();
 
     // Check if the server starts ok.
-    if(!result)
+    if(!started)
     {
         // Log.
         std::cout << "Server start failed!! Press Enter to exit!" << std::endl;
