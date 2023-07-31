@@ -291,12 +291,31 @@ public:
 
 protected:
 
-    using ProcessFunction = std::function<void(const CommandRequest&, CommandReply&)>;
-    using ProcessFunctionsMap = std::unordered_map<ServerCommand, ProcessFunction>;
+    // -----------------------------------------------------------------------------------------------------------------
+    using ProcessFunction = std::function<void(const CommandRequest&, CommandReply&)>; ///< Process function alias.
+    using ProcessFunctionsMap = std::unordered_map<ServerCommand, ProcessFunction>;    ///< Process function map alias.
+    // -----------------------------------------------------------------------------------------------------------------
 
+    /**
+     * @brief Register a function to process CommandRequest request from a custom server command.
+     *
+     * This function allows you to register a function that will process the CommandRequest requests from a custom
+     * server command. The process function must take two parameters: a constant reference to a CommandRequest object
+     * and a reference to a CommandReply object.
+     *
+     * The registered function will be called automatically when a request with a custom command arrives at the server.
+     *
+     * @tparam ClassT The class type of the object that contains the member function to be called.
+     *
+     * @param command The custom server command that the function will process replies for.
+     * @param obj A pointer to the instance of the object that contains the member function to be called.
+     * @param func The member function to call when the server command receives a request.
+     *
+     * @warning The @a func function must be a member function of the class pointed to by @a obj and take a constant
+     *          reference to a CommandRequest object and a reference to a CommandReply object as parameters.
+     */
     template <typename ClassT>
-    void registerProcessFunction(ServerCommand command,
-                                 ClassT* obj,
+    void registerRequestProcFunc(ServerCommand command, ClassT* obj,
                                  void(ClassT::*func)(const CommandRequest&, CommandReply&))
     {
         this->process_fnc_map_[command] = [obj, func](const CommandRequest& request, CommandReply& reply)
@@ -315,7 +334,7 @@ protected:
      * @note If you want handle in method onCustomCommandReceived commands that could be valid but the
      *       process logic is not yet implemented, this function must return true for these commands.
      *
-     * @param cmd The ServerCommand ID to be validated.
+     * @param cmd The ServerCommand identifier to be validated.
      *
      * @return Returns true if the command is valid; false otherwise.
      */
@@ -483,36 +502,17 @@ protected:
 
 private:
 
-
-
     // Helper for check if the base command is valid.
     static bool validateCommand(int raw_command);
 
-    // Server worker. Will be execute asynchronously.
+    // Server worker (will be execute asynchronously).
     void serverWorker();
 
-    // Process command class.
+    // Process base command.
     void processCommand(const CommandRequest&, CommandReply&);
 
-
-
-
-    void processCustomCommand(const CommandRequest& request, CommandReply& reply)
-    {
-        auto iter = process_fnc_map_.find(request.command);
-        if(iter != process_fnc_map_.end())
-        {
-            // Invoke the function.
-            iter->second(request, reply);
-        }
-        else
-        {
-            // Command not found in the map.
-            reply.result = ServerResult::NOT_IMPLEMENTED;
-        }
-    }
-
-
+    // Process custom command.
+    void processCustomCommand(const CommandRequest& request, CommandReply& reply);
 
     // Client status checker.
     void checkClientsAliveStatus();

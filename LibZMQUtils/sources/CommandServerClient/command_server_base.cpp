@@ -517,6 +517,21 @@ void CommandServerBase::processCommand(const CommandRequest& request, CommandRep
     }
 }
 
+void CommandServerBase::processCustomCommand(const CommandRequest &request, CommandReply &reply)
+{
+    auto iter = process_fnc_map_.find(request.command);
+    if(iter != process_fnc_map_.end())
+    {
+        // Invoke the function.
+        iter->second(request, reply);
+    }
+    else
+    {
+        // Command not found in the map.
+        reply.result = ServerResult::NOT_IMPLEMENTED;
+    }
+}
+
 void CommandServerBase::checkClientsAliveStatus()
 {
     // Safe mutex lock

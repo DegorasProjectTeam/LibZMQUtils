@@ -132,13 +132,13 @@ int main(int argc, char**argv)
     // ---------------------------------------
     // Set the controller callbacks in the server.
 
-    amelas_server.registerCallback(AmelasServerCommand::REQ_SET_HOME_POSITION,
-                                   &amelas_controller,
-                                   &AmelasController::setHomePosition);
+    amelas_server.registerControllerCallback(AmelasServerCommand::REQ_SET_HOME_POSITION,
+                                             &amelas_controller,
+                                             &AmelasController::setHomePosition);
 
-    amelas_server.registerCallback(AmelasServerCommand::REQ_GET_HOME_POSITION,
-                                   &amelas_controller,
-                                   &AmelasController::getHomePosition);
+    amelas_server.registerControllerCallback(AmelasServerCommand::REQ_GET_HOME_POSITION,
+                                             &amelas_controller,
+                                             &AmelasController::getHomePosition);
 
     // ---------------------------------------
 
