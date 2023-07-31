@@ -120,9 +120,9 @@ void configConsole()
 int main(int argc, char**argv)
 {
     // Nampesaces.
-    using namespace amelas::controller;
-    using namespace amelas::cltsrv;
-    using namespace zmqutils;
+    using amelas::communication::AmelasServer;
+    using amelas::communication::AmelasServerCommand;
+    using amelas::controller::AmelasController;
 
     // Configure the console.
     configConsole();

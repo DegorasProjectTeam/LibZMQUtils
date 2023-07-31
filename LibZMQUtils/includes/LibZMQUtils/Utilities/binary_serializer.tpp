@@ -131,5 +131,48 @@ void BinarySerializer::readSingle(T& value)
     this->offset_ += sizeof(T);
 }
 
+template<typename T>
+void BinarySerializer::checkTrivial()
+{
+    static_assert(std::is_trivial_v<T>, "Non-trivial types are not supported.");
+}
+
+template<typename T>
+void BinarySerializer::checkTriviallyCopyable()
+{
+    static_assert(std::is_trivially_copyable_v<T>, "Non-trivially copyable types are not supported.");
+}
+
+template<typename... Args>
+size_t BinarySerializer::fastSerialization(std::unique_ptr<std::byte>& out, const Args&... args)
+{
+    // Check the types.
+    (BinarySerializer::checkTriviallyCopyable<Args>(), ...);
+    (BinarySerializer::checkTrivial<Args>(), ...);
+
+    // Do the serialization
+    BinarySerializer serializer;
+    size_t size = serializer.write(std::forward<const Args&>(args)...);
+    out = serializer.moveUnique();
+    return size;
+}
+
+template<typename... Args>
+void BinarySerializer::fastDeserialization(void* in, size_t size, Args&... args)
+{
+    // Check the types.
+    (BinarySerializer::checkTriviallyCopyable<Args>(), ...);
+    (BinarySerializer::checkTrivial<Args>(), ...);
+
+    // Do the deserialization.
+    BinarySerializer serializer(in, size);
+    serializer.read(std::forward<Args&>(args)...);
+    if(!serializer.allReaded())
+        throw std::out_of_range("BinarySerializer: Not all data was deserialized.");
+}
+
+/// For ignore the not use warning.
+namespace binaryserializer_ignorewarnings{class IgnoreNotUse{};}
+
 }} // END NAMESPACES.
 // =====================================================================================================================

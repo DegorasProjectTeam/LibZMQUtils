@@ -13,8 +13,8 @@
 // TODO Remove
 using namespace zmqutils;
 using namespace amelas;
-using namespace amelas::cltsrv;
-using namespace amelas::cltsrv::common;
+using namespace amelas::communication;
+using namespace amelas::communication::common;
 using namespace amelas::controller;
 
 
@@ -173,7 +173,7 @@ void parseCommand(CommandClientBase &client, const std::string &command)
                     ControllerError error;
 
                     BinarySerializer ser(reply.params.get(), reply.params_size);
-                    std::cout<<ser.toString()<<std::endl;
+                    std::cout<<ser.toJsonString()<<std::endl;
 
                     ser.read(error);
 

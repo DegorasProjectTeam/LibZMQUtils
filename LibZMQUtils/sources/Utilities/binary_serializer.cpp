@@ -155,13 +155,15 @@ std::string BinarySerializer::getDataHexString() const
     return ss.str();
 }
 
-std::string BinarySerializer::toString() const
+std::string BinarySerializer::toJsonString() const
 {
     std::stringstream ss;
-    ss << "{size: " << size_
-       << ", capacity: " << capacity_
-       << ", offset: " << offset_
-       << ", hex_data: " << this->getDataHexString() << "}";
+    ss << "{"
+       << "\"size\": " << size_ << ", "
+       << "\"capacity\": " << capacity_ << ", "
+       << "\"offset\": " << offset_ << ", "
+       << "\"hex_data\": \"" << this->getDataHexString() << "\""
+       << "}";
     return ss.str();
 }
 

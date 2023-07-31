@@ -101,6 +101,8 @@ using utils::NetworkAdapterInfo;
  *       authentication. These enhancements will provide a robust layer of security and significantly reduce the risk
  *       of unauthorized access.
  *
+ * @todo Add a method to easily send largue data divided in chunks with progress communication.
+ *
  * @section Usage
  *
  * To use this class, create a subclass and override the callback functions according to your needs. Also you can define

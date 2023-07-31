@@ -85,22 +85,50 @@ class LIBZMQUTILS_EXPORT BinarySerializer
 {
 public:
 
+    /**
+     * @brief Construct a new Binary Serializer object with a given capacity.
+     * @param capacity The initial capacity of the serializer. Default is 1024.
+     */
     BinarySerializer(size_t capacity = 1024);
 
+    /**
+     * @brief Construct a new Binary Serializer object and load the given data.
+     * @param data Pointer to the data to load.
+     * @param size Size of the data to load.
+     * @warning The @a data parameter is a void pointer, so be careful.
+     */
     BinarySerializer(void* data, size_t size);
 
+    /**
+     * @brief Reserve memory for the serializer.
+     * @param size The size of memory to reserve.
+     */
     void reserve(size_t size);
 
+    /**
+     * @brief Load data into the serializer.
+     * @param data Pointer to the data to load.
+     * @param size Size of the data to load.
+     * @warning The @a data parameter is a void pointer, so be careful.
+     */
     void loadData(void *data, size_t size);
 
+    /**
+     * @brief Clear the data held by the serializer.
+     */
     void clearData();
 
+    /**
+     * @brief Reset the internal read offset.
+     */
     void resetReading();
 
-    template<typename... Args>
-    size_t write(const Args&...);
-
-
+    /**
+     * @brief Write data into the serializer.
+     * @tparam Args Variadic template argument for types.
+     * @param args Arguments to write into the serializer.
+     */
+    template<typename... Args> size_t write(const Args&...);
 
     /**
      * @brief Variadic template function to read multiple data types at once from the internal buffer.
@@ -113,8 +141,7 @@ public:
      *
      * @warning If you read beyond the size of the stored data, this function will throw an out_of_range exception.
      */
-    template<typename... Args>
-    void read(Args&... args);
+    template<typename... Args> void read(Args&... args);
 
     /**
      * @brief Read a value of a specific type from the internal buffer and return it.
@@ -123,89 +150,135 @@ public:
      *
      * @return The read value.
      *
+     * @warning Make sure to read the values in the exact order and type they were written, otherwise undefined
+     *          behavior will occur. Also, this function should not be used with rvalue references.
+     *
      * @warning If you read beyond the size of the stored data, this function will throw an out_of_range exception.
      */
-    template<typename T>
-    T readSingle();
+    template<typename T> T readSingle();
 
+    /**
+     * @brief Release the data held by the serializer and return a raw pointer to it.
+     * @return Raw pointer to the data.
+     */
     std::byte *release();
 
+    /**
+     * @brief Release the data held by the serializer, return a raw pointer to it, and set the size variable.
+     * @param[out] size The size of the data.
+     * @return Raw pointer to the data.
+     */
     std::byte* release(size_t& size);
 
+    /**
+     * @brief Move the unique pointer to the data held by the serializer and return it.
+     * @return Unique pointer to the data.
+     */
     std::unique_ptr<std::byte> moveUnique();
 
+    /**
+     * @brief Move the unique pointer to the data held by the serializer, return it, and set the size variable.
+     * @param[out] size The size of the data.
+     * @return Unique pointer to the data.
+     */
     std::unique_ptr<std::byte> moveUnique(size_t& size);
 
-
-    //std::uint8_t* getData() const;
-
+    /**
+     * @brief Get the current size of the data held by the serializer.
+     * @return The current size of the data.
+     */
     size_t getSize() const;
 
+    /**
+     * @brief Check whether all data has been read.
+     * @return True if all data has been read, false otherwise.
+     */
     bool allReaded() const;
 
-    std::string toString() const;
+    /**
+     * @brief Convert the internal state of the BinarySerializer to a JSON-formatted string.
+     *
+     * This function generates a JSON string that represents the current state of the BinarySerializer object. The JSON
+     * string includes the following properties: size, capacity, offset, and hex_data (which represents the serialized
+     * data in hexadecimal format).
+     *
+     * @return A string representing the BinarySerializer object in JSON format.
+     *
+     * Example output:
+     * @code
+     * {
+     *     "size": 128,
+     *     "capacity": 256,
+     *     "offset": 64,
+     *     "hex_data": "01 23 45 67 89 ab cd ef"
+     * }
+     * @endcode
+     */
+    std::string toJsonString() const;
 
+    /**
+     * @brief Get a hex string representation of the data held by the serializer.
+     * @return Hex string representation of the data.
+     */
     std::string getDataHexString() const;
 
+    /**
+     * @brief A static function that serializes multiple input data items.
+     *
+     * @tparam Args Variadic template argument for types.
+     * @param[out] out The unique pointer where the serialized data will be stored.
+     * @param[in] args The input data items to be serialized.
+     * @return The size of the serialized data.
+     *
+     * @throw std::invalid_argument If any of the input data types are not trivially copyable and trivial.
+     *
+     * @note This function first checks that all input data types are both trivially copyable and trivial, then it
+     *       serializes each data item in order, storing the resulting binary data in the unique pointer.
+     */
     template<typename... Args>
-    static size_t fastSerialization(std::unique_ptr<std::byte>& out, const Args&... args)
-    {
-        // Check the types.
-        (BinarySerializer::checkTriviallyCopyable<Args>(), ...);
-        (BinarySerializer::checkTrivial<Args>(), ...);
+    static size_t fastSerialization(std::unique_ptr<std::byte>& out, const Args&... args);
 
-        // Do the serialization
-        BinarySerializer serializer;
-        size_t size = serializer.write(std::forward<const Args&>(args)...);
-        out = serializer.moveUnique();
-        return size;
-    }
-
+    /**
+     * @brief A static function that deserializes binary data into its original data items.
+     *
+     * @tparam Args Variadic template argument for types.
+     * @param[in] in The binary data to be deserialized.
+     * @param[in] size The size of the binary data.
+     * @param[out] args The variables where the deserialized data items are stored.
+     *
+     * @throw std::invalid_argument If any of the output data types are not trivially copyable and trivial.
+     * @throw std::out_of_range If not all data was deserialized.
+     *
+     * @warning The @in parameter is a void pointer, so be careful.
+     *
+     * @note This function first checks that all output data types are both trivially copyable and trivial, then it
+     *       deserializes the binary data in order, storing each resulting data item in its respective variable. If not
+     *       all data was deserialized (e.g., if the size of the binary data does not match the total size of the
+     *       output data items), the function throws an exception.
+     */
     template<typename... Args>
-    static void fastDeserialization(void* in, size_t size, Args&... args)
-    {
-        // Check the types.
-        (BinarySerializer::checkTriviallyCopyable<Args>(), ...);
-        (BinarySerializer::checkTrivial<Args>(), ...);
-
-        // Do the deserialization.
-        BinarySerializer serializer(in, size);
-        serializer.read(std::forward<Args&>(args)...);
-        if(!serializer.allReaded())
-            throw std::out_of_range("BinarySerializer: Not all data was deserialized.");
-    }
-
-
+    static void fastDeserialization(void* in, size_t size, Args&... args);
 
 private:
 
+    // Internal binary serialization/deserialization function.
     static void binarySerializeDeserialize(const void *data, size_t data_size_bytes, void *dest);
+
+    template<typename T> static void checkTriviallyCopyable();
+
+    template<typename T> static void checkTrivial();
 
     template<typename T> void writeSingle(const T& value);
 
     template<typename T> void readSingle(T& value);
 
-    template<typename T>
-    static void checkTriviallyCopyable()
-    {
-        static_assert(std::is_trivially_copyable_v<T>, "Non-trivially copyable types are not supported.");
-    }
-
-    template<typename T>
-    static void checkTrivial()
-    {
-        static_assert(std::is_trivial_v<T>, "Non-trivial types are not supported.");
-    }
-
-    std::unique_ptr<std::byte[]> data_;   ///< Internal data pointer.
+    // Internal containers and variables.
+    std::unique_ptr<std::byte[]> data_;      ///< Internal data pointer.
     std::atomic<size_t> size_;               ///< Current size of the data.
     std::atomic<size_t> capacity_;           ///< Current capacity.
     std::atomic<size_t> offset_;             ///< Offset when reading.
     mutable std::mutex mtx_;                 ///< Mutex for thread safety
-
 };
-
-using SerializedData = BinarySerializer;
 
 }} // END NAMESPACES.
 // =====================================================================================================================
@@ -213,4 +286,5 @@ using SerializedData = BinarySerializer;
 // TEMPLATES INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/Utilities/binary_serializer.tpp"
+using zmqutils::utils::binaryserializer_ignorewarnings::IgnoreNotUse;
 // =====================================================================================================================

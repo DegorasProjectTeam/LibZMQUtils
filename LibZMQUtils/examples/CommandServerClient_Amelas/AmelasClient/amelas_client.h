@@ -27,10 +27,10 @@
 // AMELAS NAMESPACES
 // =====================================================================================================================
 namespace amelas{
-namespace cltsrv{
+namespace communication{
 // =====================================================================================================================
 
-using namespace amelas::cltsrv::common;
+using namespace amelas::communication::common;
 using zmqutils::common::RequestData;
 
 
