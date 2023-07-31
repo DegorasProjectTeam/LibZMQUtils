@@ -23,8 +23,8 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file command_client_base.h
- * @brief This file contains the declaration of the CommandClientBase class and related.
+ * @file clbk_command_server_base.h
+ * @brief This file contains the declaration of the ClbkCommandServerBase class and related.
  * @author Degoras Project Team
  * @copyright EUPL License
  * @version 2307.1
@@ -36,16 +36,18 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
-#include <future>
+#include <unordered_map>
 #include <string>
-#include <zmq/zmq.hpp>
-#include <zmq/zmq_addon.hpp>
+#include <any>
+#include <variant>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/libzmqutils_global.h"
 #include "LibZMQUtils/CommandServerClient/common.h"
+#include "LibZMQUtils/CommandServerClient/command_server_base.h"
+#include "LibZMQUtils/Utilities/callback_handler.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
@@ -55,110 +57,69 @@ namespace zmqutils{
 
 // =====================================================================================================================
 using common::ServerCommand;
-using common::ServerResult;
-using common::ClientResult;
-using common::CommandReply;
-using common::CommandType;
-using common::RequestData;
+using utils::CallbackHandler;
 // =====================================================================================================================
 
-class LIBZMQUTILS_EXPORT CommandClientBase
+class LIBZMQUTILS_EXPORT ClbkCommandServerBase : public CommandServerBase,
+                                                 public CallbackHandler
 {
-
 public:
-    
-    CommandClientBase(const std::string& server_endpoint, const std::string& client_name = "");
-    
-    bool startClient(const std::string& interface_name);
 
-    void stopClient();
+    ClbkCommandServerBase(unsigned port, const std::string& local_addr = "*") :
+        CommandServerBase(port, local_addr),
+        CallbackHandler()
+    {}
 
-    bool resetClient();
+    template<typename ClassT, typename RetT = void, typename... Args>
+    void registerCallback(ServerCommand command, ClassT* object, RetT(ClassT::*callback)(Args...))
+    {
+        CallbackHandler::registerCallback(static_cast<CallbackHandler::CallbackId>(command), object, callback);
+    }
 
-    void setAliveCallbacksEnabled(bool);
+    void removeCallback(ServerCommand command)
+    {
+        CallbackHandler::removeCallback(static_cast<CallbackHandler::CallbackId>(command));
+    }
 
-    void setAutomaticAliveEnabled(bool);
-
-    const common::HostClientInfo& getClientInfo() const;
-
-    const std::string& getServerEndpoint() const;
-
-    const std::string& getClientName() const;
-
-    ClientResult sendCommand(const RequestData&, CommandReply&);
-
-    /**
-     * @brief Virtual destructor.
-     * This destructor is virtual to ensure proper cleanup when the derived class is destroyed.
-     */
-    virtual ~CommandClientBase();
+    bool hasCallback(ServerCommand command)
+    {
+        return CallbackHandler::hasCallback(static_cast<CallbackHandler::CallbackId>(command));
+    }
 
 protected:
 
-    /**
-     * @brief Get the client's information.
-     * @note This is an internal protected function that does not lock the safety mutex.
-     * @return A constant reference to the client's HostClientInfo.
-     */
-    const common::HostClientInfo& internalGetClientInfo() const;
+    template <typename CallbackType, typename RetT = void,  typename... Args>
+    RetT invokeCallback(const CommandRequest& request, CommandReply& reply, const RetT& err_ret, Args&&... args)
+    {
+        // Get the command.
+        ServerCommand cmd = static_cast<ServerCommand>(request.command);
 
-    virtual void onClientStart() = 0;
+        // Check the callback.
+        if(!this->hasCallback(cmd))
+        {
+            reply.result = ServerResult::EMPTY_EXT_CALLBACK;
+            return err_ret;
+        }
 
-    virtual void onClientStop() = 0;
-
-    virtual void onWaitingReply() = 0;
-
-    virtual void onDeadServer() = 0;
-
-    virtual void onConnected() = 0;
-
-    virtual void onDisconnected() = 0;
-
-    virtual void onInvalidMsgReceived(const CommandReply&) = 0;
-
-    virtual void onReplyReceived(const CommandReply&) = 0;
-
-    virtual void onSendingCommand(const RequestData&) = 0;
-
-    virtual void onClientError(const zmq::error_t&, const std::string& ext_info) = 0;
+        //Invoke the callback.
+        try
+        {
+            return CallbackHandler::invokeCallback<CallbackType, RetT>(
+                static_cast<CallbackHandler::CallbackId>(cmd), std::forward<Args>(args)...);
+        }
+        catch(...)
+        {
+            reply.result = ServerResult::INVALID_EXT_CALLBACK;
+            return err_ret;
+        }
+    }
 
 private:
 
-
-    ClientResult recvFromSocket(CommandReply&);
-
-    void internalStop();
-
-    void startAutoAlive();
-
-    void stopAutoAlive();
-
-    void sendAliveCallback();
-    zmq::multipart_t prepareMessage(const RequestData &msg);
-
-    // Internal client identification.
-    common::HostClientInfo client_info_;       ///< External client information for identification.
-    std::string client_name_;              ///< Internal client name. Will not be use as id.
-
-    // Server endpoint.
-    std::string server_endpoint_;
-
-    // ZMQ context and socket.
-    zmq::context_t *context_;
-    zmq::socket_t *client_socket_;
-
-    // Mutex.
-    mutable std::mutex mtx_;
-
-    std::future<void> auto_alive_future_;
-    std::condition_variable auto_alive_cv_;
-
-    // Usefull flags.
-    std::atomic_bool flag_client_working_;   ///< Flag for check the client working status.
-    std::atomic_bool flag_alive_woking_;     ///< Flag that enables and disables the automatic sending of alive messages.
-    std::atomic_bool flag_alive_callbacks_;  ///< Flag that enables and disables the callbacks for alive messages.
-
-
+    // Hide the base functions.
+    using CallbackHandler::invokeCallback;
+    using CallbackHandler::removeCallback;
+    using CallbackHandler::hasCallback;
 };
 
 } // END NAMESPACES.

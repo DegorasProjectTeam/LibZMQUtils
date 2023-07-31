@@ -50,11 +50,14 @@
 namespace zmqutils{
 // =====================================================================================================================
 
-CommandServerBase::CommandServerBase(unsigned int port, const std::string& local_addr) :
+CommandServerBase::CommandServerBase(unsigned int port,
+                                     const std::string& local_addr,
+                                     const std::string &server_name) :
     context_(nullptr),
     server_socket_(nullptr),
     server_endpoint_("tcp://" + local_addr + ":" + std::to_string(port)),
     server_port_(port),
+    server_name_(server_name),
     flag_server_working_(false),
     flag_check_clients_alive_(true),
     flag_alive_callbacks_(true)
@@ -92,6 +95,8 @@ void CommandServerBase::setClientStatusCheck(bool)
 void CommandServerBase::setAliveCallbacksEnabled(bool flag){this->flag_alive_callbacks_ = flag;}
 
 const unsigned& CommandServerBase::getServerPort() const {return this->server_port_;}
+
+const std::string &CommandServerBase::getServerName() const{return this->server_name_;}
 
 const std::vector<utils::NetworkAdapterInfo>& CommandServerBase::getServerAddresses() const
 {return this->server_adapters_;}
@@ -403,7 +408,7 @@ ServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
 
         // Update the client info.
         request.client = HostClientInfo(ip, hostname, pid);
-        request.client.last_connection = std::chrono::steady_clock::now();
+        request.client.last_conn = std::chrono::steady_clock::now();
 
         // Update the last connection if the client is connected.
         this->updateClientLastConnection(request.client.id);
@@ -529,7 +534,7 @@ void CommandServerBase::checkClientsAliveStatus()
     for(auto& client : this->connected_clients_)
     {
         // Get the last connection time.
-        const auto& last_conn = client.second.last_connection;
+        const auto& last_conn = client.second.last_conn;
         // Check if the client reaches the timeout checking the last connection time.
         auto since_last_conn = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_conn);
         if(since_last_conn >= timeout)
@@ -571,7 +576,7 @@ void CommandServerBase::updateClientLastConnection(const std::string &id)
     // Update the client last connection.
     auto client_itr = this->connected_clients_.find(id);
     if(client_itr != this->connected_clients_.end())
-        client_itr->second.last_connection = std::chrono::steady_clock::now();
+        client_itr->second.last_conn = std::chrono::steady_clock::now();
 }
 
 void CommandServerBase::updateServerTimeout()
@@ -581,16 +586,16 @@ void CommandServerBase::updateServerTimeout()
         [](const auto& a, const auto& b)
         {
         auto diff_a = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - a.second.last_connection);
+            std::chrono::steady_clock::now() - a.second.last_conn);
         auto diff_b = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - b.second.last_connection);
+            std::chrono::steady_clock::now() - b.second.last_conn);
         return diff_a.count() < diff_b.count();
         });
 
     if (min_timeout != this->connected_clients_.end())
     {
         auto remain_time = common::kDefaultClientAliveTimeoutMsec - std::chrono::duration_cast<std::chrono::milliseconds>(
-                                   std::chrono::steady_clock::now() - min_timeout->second.last_connection).count();
+                                                                        std::chrono::steady_clock::now() - min_timeout->second.last_conn).count();
         this->server_socket_->set(zmq::sockopt::rcvtimeo, std::max(0, static_cast<int>(remain_time)));
     }
     else
@@ -653,9 +658,9 @@ void CommandServerBase::resetSocket()
     } while (reconnect_count > 0 && !this->flag_server_working_);
 }
 
-void CommandServerBase::onCustomCommandReceived(const CommandRequest&, CommandReply& rep)
+void CommandServerBase::onCustomCommandReceived(const CommandRequest& req, CommandReply& rep)
 {
-    rep.result = ServerResult::NOT_IMPLEMENTED;
+    CommandServerBase::processCustomCommand(req, rep);
 }
 
 } // END NAMESPACES.

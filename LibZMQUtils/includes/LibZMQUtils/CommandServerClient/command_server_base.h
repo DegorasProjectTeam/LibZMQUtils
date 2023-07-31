@@ -159,6 +159,8 @@ public:
      *                   connections. By default, it is set to "*", which means the server will accept
      *                   connections on all available local addresses.
      *
+     * @param server_name Optional parameter to specify the server name. By default is empty.
+     *
      * @note The server created with this constructor will be a base server and it doesn't have the complete
      *       implementation of specific request-response logic. It is intended to be subclassed to provide
      *       custom request handling. You can implement the "onCustomCommandReceived" function as an internal
@@ -167,13 +169,19 @@ public:
      * @warning When specifying the `local_addr`, ensure it is a valid IP address present on the system.
      *          Incorrect or unavailable addresses may result in connection failures.
      */
-    CommandServerBase(unsigned port, const std::string &local_addr = "*");
+    CommandServerBase(unsigned port, const std::string& local_addr = "*", const std::string& server_name = "");
 
     /**
      * @brief Get the port number used by the server for incoming connections.
      * @return A const reference to the port number of the server.
      */
     const unsigned& getServerPort() const;
+
+    /**
+     * @brief Get the server name.
+     * @return A const reference to the name of the server.
+     */
+    const std::string& getServerName() const;
 
     /**
      * @brief Get the network adapter addresses used by the server.
@@ -282,6 +290,20 @@ public:
     virtual ~CommandServerBase();
 
 protected:
+
+    using ProcessFunction = std::function<void(const CommandRequest&, CommandReply&)>;
+    using ProcessFunctionsMap = std::unordered_map<ServerCommand, ProcessFunction>;
+
+    template <typename ClassT>
+    void registerProcessFunction(ServerCommand command,
+                                 ClassT* obj,
+                                 void(ClassT::*func)(const CommandRequest&, CommandReply&))
+    {
+        this->process_fnc_map_[command] = [obj, func](const CommandRequest& request, CommandReply& reply)
+        {
+            (obj->*func)(request, reply);
+        };
+    }
 
     /**
      * @brief Validates a custom command.
@@ -461,6 +483,8 @@ protected:
 
 private:
 
+
+
     // Helper for check if the base command is valid.
     static bool validateCommand(int raw_command);
 
@@ -469,6 +493,26 @@ private:
 
     // Process command class.
     void processCommand(const CommandRequest&, CommandReply&);
+
+
+
+
+    void processCustomCommand(const CommandRequest& request, CommandReply& reply)
+    {
+        auto iter = process_fnc_map_.find(request.command);
+        if(iter != process_fnc_map_.end())
+        {
+            // Invoke the function.
+            iter->second(request, reply);
+        }
+        else
+        {
+            // Command not found in the map.
+            reply.result = ServerResult::NOT_IMPLEMENTED;
+        }
+    }
+
+
 
     // Client status checker.
     void checkClientsAliveStatus();
@@ -513,6 +557,9 @@ private:
 
     // Clients container.
     std::map<std::string, HostClientInfo> connected_clients_;   ///< Dictionary with the connected clients.
+
+    // Process functions container.
+    ProcessFunctionsMap process_fnc_map_;        ///< Container with the internal factory process function.
 
     // Usefull flags.
     std::atomic_bool flag_server_working_;       ///< Flag for check the server working status.

@@ -27,7 +27,7 @@ void AmelasClient::onClientStart()
     std::cout<<"-> ON CLIENT START: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
     std::cout<<"Client Id: "<<this->internalGetClientInfo().id<<std::endl;
-    std::cout<<"Endpoint: "<<this->internalGetServerEndpoint()<<std::endl;
+    std::cout<<"Endpoint: "<<this->getServerEndpoint()<<std::endl;
     std::cout << std::string(100, '-') << std::endl;
 }
 
@@ -69,7 +69,7 @@ void AmelasClient::onConnected()
     std::cout<<"<AMELAS CLIENT>"<<std::endl;
     std::cout<<"-> ON CONNECTED: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
-    std::cout<<"Endpoint: "<<this->internalGetServerEndpoint()<<std::endl;
+    std::cout<<"Endpoint: "<<this->getServerEndpoint()<<std::endl;
     std::cout<<"Server Name: "<<std::endl;
     std::cout<<"Server Version: "<<std::endl;
     std::cout<<"Server Info: "<<std::endl;

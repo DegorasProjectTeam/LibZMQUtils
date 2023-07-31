@@ -60,11 +60,11 @@ namespace common{
 
 // CONSTANTS
 // =====================================================================================================================
-constexpr int kDefaultClientAliveTimeoutMsec = 8000;   ///< Default timeout for consider a client dead.
-constexpr int kDefaultServerAliveTimeoutMsec = 3000;   ///< Default timeout for consider a server dead.
-constexpr unsigned kServerReconnTimes = 10;            ///< Server reconnection default number of attempts.
+constexpr int kDefaultClientAliveTimeoutMsec = 8000;    ///< Default timeout for consider a client dead.
+constexpr int kDefaultServerAliveTimeoutMsec = 3000;    ///< Default timeout for consider a server dead.
+constexpr unsigned kServerReconnTimes = 10;             ///< Server reconnection default number of attempts.
 constexpr unsigned kClientAlivePeriodMsec = 1000;       ///< Default period for sending alive commands.
-constexpr int kZmqEFSMError = 156384765;               ///< ZMQ EFSM error.
+constexpr int kZmqEFSMError = 156384765;                ///< ZMQ EFSM error.
 // =====================================================================================================================
 
 // CONVENIENT ALIAS, ENUMERATIONS AND CONSTEXPR
@@ -120,6 +120,8 @@ enum class ServerResult : ResultType
     COMMAND_FAILED         = 14, ///< The command execution failed.
     NOT_IMPLEMENTED        = 15, ///< The command is not implemented.
     BAD_NO_PARAMETERS      = 16, ///< The provided number of parameters are invalid.
+    EMPTY_EXT_CALLBACK     = 17, ///< The associated external callback is empty. Used in ClbkCommandServerBase.
+    INVALID_EXT_CALLBACK   = 18, ///< The associated external callback is invalid. Used in ClbkCommandServerBase.
     END_BASE_RESULTS       = 30  ///< Sentinel value indicating the end of the base server results (not is a valid result).
 };
 
@@ -197,8 +199,8 @@ static constexpr std::array<const char*, 31>  ServerResultStr
     "COMMAND_FAILED - Command execution failed.",
     "NOT_IMPLEMENTED - Command is not implemented.",
     "BAD_NO_PARAMETERS - The provided number of parameters are invalid.",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
+    "EMPTY_EXT_CALLBACK - The associated external callback for the command is empty.",
+    "INVALID_EXT_CALLBACK - The associated external callback for the command is invalid.",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
@@ -214,39 +216,39 @@ static constexpr std::array<const char*, 31>  ServerResultStr
 };
 
 static constexpr std::array<const char*, 31>  ClientResultStr
-    {
-        "COMMAND_OK - Command executed.",
-        "INTERNAL_ZMQ_ERROR - Internal ZeroMQ error.",
-        "EMPTY_MSG - Message is empty.",
-        "RESERVED_BASE_RESULT",
-        "RESERVED_BASE_RESULT",
-        "RESERVED_BASE_RESULT",
-        "RESERVED_BASE_RESULT",
-        "TIMEOUT_REACHED - Operation timed out.",
-        "INVALID_PARTS - Command has invalid parts.",
-        "RESERVED_BASE_RESULT",
-        "INVALID_MSG - The message is invalid.",
-        "RESERVED_BASE_RESULT",
-        "RESERVED_BASE_RESULT",
-        "RESERVED_BASE_RESULT",
-        "RESERVED_BASE_RESULT",
-        "RESERVED_BASE_RESULT",
-        "RESERVED_BASE_RESULT",
-        "CLIENT_STOPPED - The client is stopped.",
-        "RESERVED_BASE_RESULT",
-        "RESERVED_BASE_RESULT",
-        "RESERVED_BASE_RESULT",
-        "RESERVED_BASE_RESULT",
-        "RESERVED_BASE_RESULT",
-        "RESERVED_BASE_RESULT",
-        "RESERVED_BASE_RESULT",
-        "RESERVED_BASE_RESULT",
-        "RESERVED_BASE_RESULT",
-        "RESERVED_BASE_RESULT",
-        "RESERVED_BASE_RESULT",
-        "RESERVED_BASE_RESULT",
-        "RESERVED_BASE_RESULT"
-    };
+{
+    "COMMAND_OK - Command executed.",
+    "INTERNAL_ZMQ_ERROR - Internal ZeroMQ error.",
+    "EMPTY_MSG - Message is empty.",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "TIMEOUT_REACHED - Operation timed out.",
+    "INVALID_PARTS - Command has invalid parts.",
+    "RESERVED_BASE_RESULT",
+    "INVALID_MSG - The message is invalid.",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "CLIENT_STOPPED - The client is stopped.",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT"
+};
 
 // =====================================================================================================================
 
@@ -268,12 +270,11 @@ struct LIBZMQUTILS_EXPORT HostClientInfo
     HostClientInfo(const std::string& ip, const std::string& hostname, const std::string& pid);
 
     // Struct members.
-    std::string id;                          ///< Dinamic host client identification -> [ip//name//pid]
-    std::string ip;                          ///< Host client ip.
-    std::string hostname;                    ///< Host client name.
-    std::string pid;                         ///< PID of the host client process.
-
-    utils::SCTimePointStd last_connection;   ///< Host client last connection time.
+    std::string id;                    ///< Dinamic host client identification -> [ip//name//pid]
+    std::string ip;                    ///< Host client ip.
+    std::string hostname;              ///< Host client name.
+    std::string pid;                   ///< PID of the host client process.
+    utils::SCTimePointStd last_conn;   ///< Host client last connection time. Used by servers.
 };
 
 struct CommandRequest

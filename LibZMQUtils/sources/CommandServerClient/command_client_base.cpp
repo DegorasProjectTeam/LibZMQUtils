@@ -186,23 +186,13 @@ void CommandClientBase::setAutomaticAliveEnabled(bool enable)
 
 const std::string &CommandClientBase::getServerEndpoint() const
 {
-    std::unique_lock<std::mutex> lock(this->mtx_);
-    return this->server_endpoint_;
-}
-
-const std::string &CommandClientBase::internalGetServerEndpoint() const
-{
+    // NOTE: Mutex is not neccesary here.
     return this->server_endpoint_;
 }
 
 const std::string &CommandClientBase::getClientName() const
 {
-    std::unique_lock<std::mutex> lock(this->mtx_);
-    return this->client_name_;
-}
-
-const std::string &CommandClientBase::internalGetClientName() const
-{
+    // NOTE: Mutex is not neccesary here.
     return this->client_name_;
 }
 

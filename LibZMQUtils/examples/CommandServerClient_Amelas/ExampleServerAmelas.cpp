@@ -53,6 +53,33 @@ BOOL WINAPI ConsoleCtrlHandler(DWORD dwCtrlType)
 // TODO
 #endif
 
+// Console configuration.
+#ifdef _WIN32
+void configConsole()
+{
+    // Set up the Windows Console Control Handler
+    SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
+    // Disable input proc.
+    HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
+    DWORD mode;
+    GetConsoleMode(hStdin, &mode);
+    mode &= ~ENABLE_LINE_INPUT;
+    SetConsoleMode(hStdin, mode);
+    // Hide the cursor.
+    HANDLE myconsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_CURSOR_INFO CURSOR;
+    CURSOR.dwSize = 1;
+    CURSOR.bVisible = false;
+    SetConsoleCursorInfo(myconsole, &CURSOR);
+}
+#else
+// TODO
+void configConsole()
+{
+
+}
+#endif
+
 // ---------------------------------------------------------------------------------------------------------------------
 
 // Main function.
@@ -67,8 +94,8 @@ int main(int argc, char**argv)
     using namespace amelas::cltsrv;
     using namespace zmqutils;
 
-    // Set up the Windows Console Control Handler
-    SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
+    // Configure the console.
+    configConsole();
 
     // Configuration variables.
     unsigned port = 9999;
@@ -105,11 +132,12 @@ int main(int argc, char**argv)
     // ---------------------------------------
     // Set the controller callbacks in the server.
 
-    amelas_server.registerCallback(AmelasServerCommand::REQ_SET_HOME_POSITION,
+    amelas_server.registerCallback(static_cast<ServerCommand>(AmelasServerCommand::REQ_SET_HOME_POSITION),
                                    &amelas_controller,
                                    &AmelasController::setHomePosition);
 
-    amelas_server.registerCallback(AmelasServerCommand::REQ_GET_HOME_POSITION,
+    amelas_server.registerCallback(
+        static_cast<ServerCommand>(AmelasServerCommand::REQ_GET_HOME_POSITION),
                                    &amelas_controller,
                                    &AmelasController::getHomePosition);
 

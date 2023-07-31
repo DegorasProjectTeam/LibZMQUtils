@@ -40,12 +40,11 @@
 #include <string>
 #include <any>
 #include <variant>
-#include <unordered_map>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/CommandServer>
+#include <LibZMQUtils/CallbackCommandServer>
 #include <LibZMQUtils/Utils>
 // =====================================================================================================================
 
@@ -64,7 +63,7 @@ namespace cltsrv{
 
 // =====================================================================================================================
 using namespace amelas::cltsrv::common;
-using zmqutils::CommandServerBase;
+using zmqutils::ClbkCommandServerBase;
 using zmqutils::common::CommandReply;
 using zmqutils::common::CommandRequest;
 using zmqutils::common::ServerResult;
@@ -76,70 +75,24 @@ using zmqutils::utils::CallbackHandler;
 
 
 // Example of creating a command server from the base.
-class AmelasServer : public CommandServerBase, public CallbackHandler
+class AmelasServer : public ClbkCommandServerBase
 {
 public:
 
-    using ProcessFunctionsMap = std::unordered_map<AmelasServerCommand, std::function<void(const CommandRequest&, CommandReply&)>>;
-
     AmelasServer(unsigned port, const std::string& local_addr = "*");
-
-    template<typename RetT = void, typename... Args>
-    void registerCallback(AmelasServerCommand command,
-                          controller::AmelasController* controller,
-                          controller::ControllerError(controller::AmelasController::*callback)(Args...))
-    {
-        CallbackHandler::registerCallback(static_cast<CallbackHandler::CallbackId>(command), controller, callback);
-    }
-
-    bool hasCallback(AmelasServerCommand command)
-    {
-        return CallbackHandler::hasCallback(static_cast<CallbackHandler::CallbackId>(command));
-    }
 
 private:
 
-    // Hide the invoke of the parent.
-    using CallbackHandler::invokeCallback;
-
     template <typename CallbackType, typename... Args>
-    controller::ControllerError invokeCallback(const CommandRequest& request, CommandReply& reply, Args&&... args)
+    controller::ControllerError invokeCallback(const CommandRequest& request,
+                                               CommandReply& reply, Args&&... args)
     {
-        // Get the command.
-        AmelasServerCommand cmd = static_cast<AmelasServerCommand>(request.command);
-
-        // Check the callback.
-        if(!this->hasCallback(cmd))
-        {
-            reply.result = static_cast<ServerResult>(AmelasServerResult::EMPTY_CALLBACK);
-            return controller::ControllerError::INVALID_ERROR;
-        }
-
-        //Invoke the callback.
-        try
-        {
-            return CallbackHandler::invokeCallback<CallbackType, controller::ControllerError>(
-                static_cast<CallbackHandler::CallbackId>(cmd), std::forward<Args>(args)...);
-        }
-        catch(...)
-        {
-            reply.result = static_cast<ServerResult>(AmelasServerResult::INVALID_CALLBACK);
-            return controller::ControllerError::INVALID_ERROR;
-        }
-    }
-
-    template <typename CommandType, typename... Args>
-    void registerProcessFunction(CommandType command,
-                                 void(AmelasServer::*f)(const CommandRequest&, CommandReply&, Args...))
-    {
-        this->process_fnc_map_[command] = [this, f](const CommandRequest& request, CommandReply& reply)
-        {
-            (this->*f)(request, reply);
-        };
+        return ClbkCommandServerBase::invokeCallback<CallbackType>(request, reply,
+                                                                   controller::ControllerError::INVALID_ERROR,
+                                                                   std::forward<Args>(args)...);
     }
 
     // Process the specific commands.
-    void processAmelasCommand(const CommandRequest&, CommandReply&);
     void processSetHomePosition(const CommandRequest&, CommandReply&);
     void processGetHomePosition(const CommandRequest&, CommandReply&);
 
@@ -179,7 +132,6 @@ private:
     // Internal overrided server error callback.
     virtual void onServerError(const zmq::error_t&, const std::string& ext_info) final;
 
-    ProcessFunctionsMap process_fnc_map_;
 };
 
 }} // END NAMESPACES.

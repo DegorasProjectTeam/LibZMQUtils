@@ -16,17 +16,20 @@ using zmqutils::utils::BinarySerializer;
 
 
 AmelasServer::AmelasServer(unsigned int port, const std::string &local_addr) :
-    CommandServerBase(port, local_addr),
-    CallbackHandler()
+    ClbkCommandServerBase(port, local_addr)
 {
     // Register each internal specific process function in the base server.
 
     // REQ_SET_HOME_POSITION
-    this->registerProcessFunction(AmelasServerCommand::REQ_SET_HOME_POSITION,
+    CommandServerBase::registerProcessFunction(
+        static_cast<ServerCommand>(AmelasServerCommand::REQ_SET_HOME_POSITION),
+        this,
                                   &AmelasServer::processSetHomePosition);
 
     // REQ_GET_HOME_POSITION.
-    this->registerProcessFunction(AmelasServerCommand::REQ_GET_HOME_POSITION,
+    CommandServerBase::registerProcessFunction(
+        static_cast<ServerCommand>(AmelasServerCommand::REQ_GET_HOME_POSITION),
+        this,
                                   &AmelasServer::processGetHomePosition);
 }
 
@@ -91,22 +94,22 @@ bool AmelasServer::validateCustomCommand(ServerCommand command)
     return result;
 }
 
-void AmelasServer::processAmelasCommand(const CommandRequest& request, CommandReply& reply)
-{
-    AmelasServerCommand command = static_cast<AmelasServerCommand>(request.command);
+//void AmelasServer::processAmelasCommand(const CommandRequest& request, CommandReply& reply)
+//{
+//    AmelasServerCommand command = static_cast<AmelasServerCommand>(request.command);
 
-    auto iter = process_fnc_map_.find(command);
-    if(iter != process_fnc_map_.end())
-    {
-        // Invoke the function.
-        iter->second(request, reply);
-    }
-    else
-    {
-        // Command not found in the map.
-        reply.result = ServerResult::NOT_IMPLEMENTED;
-    }
-}
+//    auto iter = process_fnc_map_.find(command);
+//    if(iter != process_fnc_map_.end())
+//    {
+//        // Invoke the function.
+//        iter->second(request, reply);
+//    }
+//    else
+//    {
+//        // Command not found in the map.
+//        reply.result = ServerResult::NOT_IMPLEMENTED;
+//    }
+//}
 
 void AmelasServer::onCustomCommandReceived(const CommandRequest& request, CommandReply& reply)
 {
@@ -126,17 +129,8 @@ void AmelasServer::onCustomCommandReceived(const CommandRequest& request, Comman
     std::cout<<"Command: "<<cmd_uint<<" ("<<cmd_str<<")"<<std::endl;
     std::cout << std::string(100, '-') << std::endl;
 
-    // Process the command if it is implemented.
-    if(command > AmelasServerCommand::END_IMPL_COMMANDS)
-    {
-        // Call to the base function.
-        CommandServerBase::onCustomCommandReceived(request, reply);
-    }
-    else
-    {
-        // In this point, all the generic validations are done.
-        this->processAmelasCommand(request, reply);
-    }
+    // Call to the base function for process the custom command with the registered process functions.
+    CommandServerBase::onCustomCommandReceived(request, reply);
 }
 
 void AmelasServer::onServerStart()
