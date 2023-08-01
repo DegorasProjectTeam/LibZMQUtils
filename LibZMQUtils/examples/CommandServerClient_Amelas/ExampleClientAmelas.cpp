@@ -115,6 +115,17 @@ void parseCommand(CommandClientBase &client, const std::string &command)
                 std::cout<<"Sending: " << az <<" "<<el<<std::endl;
 
                 command_msg.params_size = BinarySerializer::fastSerialization(command_msg.params, az, el);
+
+                std::cout<<"Sending size: " << command_msg.params_size <<std::endl;
+
+
+                std::cout<<std::endl;
+                std::cout<<std::endl;
+                std::cout<<std::endl;
+                std::cout<<std::endl;
+                std::cout<<std::endl;
+
+
             }
             else
             {

@@ -450,14 +450,21 @@ void CommandClientBase::sendAliveCallback()
 
 zmq::multipart_t CommandClientBase::prepareMessage(const RequestData &request)
 {
+    // Serialize the ip.
+    utils::BinarySerializer serializer;
+
+    size_t size = serializer.write(this->client_info_.ip);
+
+
+    zmq::message_t message_ip(serializer.release(), size);
+
     // Prepare the ip data.
-    zmq::message_t message_ip(this->client_info_.ip.begin(), this->client_info_.ip.end());
     // Prepare the hostname data.
     zmq::message_t message_host(this->client_info_.hostname.begin(), this->client_info_.hostname.end());
     // Prepare the pid data.
     zmq::message_t message_pid(this->client_info_.pid.begin(), this->client_info_.pid.end());
 
-    utils::BinarySerializer serializer(sizeof(common::ServerCommand));
+    serializer.clearData();
 
     serializer.write(request.command);
 

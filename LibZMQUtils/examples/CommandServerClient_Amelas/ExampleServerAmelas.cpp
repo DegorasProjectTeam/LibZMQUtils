@@ -58,21 +58,26 @@
 // ---------------------------------------------------------------------------------------------------------------------
 
 // Global variables for safety ending.
-volatile sig_atomic_t gSignInterrupt = 0;
-std::condition_variable gExitCv;
-std::mutex gMtx;
+static volatile sig_atomic_t gSignInterrupt = 0;
+
+struct ExitHelper
+{
+    static inline std::condition_variable gExitCv;
+    static inline std::mutex gMtx;
+};
+
 
 // Signal handler for safety ending.
 #ifdef _WIN32
 BOOL WINAPI ConsoleCtrlHandler(DWORD dwCtrlType)
 {
-    std::lock_guard<std::mutex> lock(gMtx);
+    std::lock_guard<std::mutex> lock(ExitHelper::gMtx);
     if (dwCtrlType == CTRL_C_EVENT || dwCtrlType == CTRL_BREAK_EVENT)
     {
         if (!gSignInterrupt)
         {
             gSignInterrupt = 1;
-            gExitCv.notify_all();
+            ExitHelper::gExitCv.notify_all();
         }
         return TRUE;
     }
@@ -92,7 +97,7 @@ void configConsole()
     HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
     DWORD mode;
     GetConsoleMode(hStdin, &mode);
-    mode &= ~ENABLE_LINE_INPUT;
+    mode &= ~static_cast<DWORD>(ENABLE_LINE_INPUT);
     SetConsoleMode(hStdin, mode);
     // Hide the cursor.
     HANDLE myconsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -117,7 +122,7 @@ void configConsole()
  * Initializes an AmelasController and AmelasServer, then enters an infinite loop where it listens for client requests
  * and processes them using the server. If the user hits ctrl-c, the server is shut down and the program exits.
  */
-int main(int argc, char**argv)
+int main(int, char**)
 {
     // Nampesaces.
     using amelas::communication::AmelasServer;
@@ -167,8 +172,8 @@ int main(int argc, char**argv)
     }
 
     // Use the condition variable as an infinite loop until ctrl-c.
-    std::unique_lock<std::mutex> lock(gMtx);
-    gExitCv.wait(lock, [] { return gSignInterrupt == 1; });
+    std::unique_lock<std::mutex> lock(ExitHelper::gMtx);
+    ExitHelper::gExitCv.wait(lock, [] { return gSignInterrupt == 1; });
 
     // Stop the server and wait the future.
     amelas_server.stopServer();

@@ -79,7 +79,8 @@ namespace utils{
  * @warning This class assumes a certain byte order (either big endian or little endian) for the data being serialized
  *          or deserialized. It's important to be aware of the byte order in the context the data will be used.
  *          Therefore, consider detecting the machine's byte order and adjust the reversal accordingly if using this
- *          class in a context with different native byte order.
+ *          class in a context with different native byte order. However, this is usually not a problem with modern
+ *          platforms, which typically use the same byte order (little-endian).
  */
 class LIBZMQUTILS_EXPORT BinarySerializer
 {
@@ -128,7 +129,11 @@ public:
      * @tparam Args Variadic template argument for types.
      * @param args Arguments to write into the serializer.
      */
-    template<typename... Args> size_t write(const Args&...);
+    template<typename... Args>
+    size_t write(const Args&...);
+
+    template<typename T, typename... Args>
+    size_t write(const T& value, const Args&... args);
 
     /**
      * @brief Variadic template function to read multiple data types at once from the internal buffer.
@@ -268,7 +273,13 @@ private:
 
     template<typename T> static void checkTrivial();
 
-    template<typename T> void writeSingle(const T& value);
+
+    template<typename T, typename... Args> size_t writeRecursive(const T& value, const Args&... args);
+
+
+    template<typename T> size_t writeSingle(const T& value);
+
+    size_t writeSingle(const std::string& str);
 
     template<typename T> void readSingle(T& value);
 
@@ -286,5 +297,4 @@ private:
 // TEMPLATES INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/Utilities/binary_serializer.tpp"
-using zmqutils::utils::binaryserializer_ignorewarnings::IgnoreNotUse;
 // =====================================================================================================================

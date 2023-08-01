@@ -169,11 +169,38 @@ std::string BinarySerializer::toJsonString() const
 
 void BinarySerializer::binarySerializeDeserialize(const void *data, size_t data_size_bytes, void *dest)
 {
-    const std::uint8_t* data_byes = reinterpret_cast<const std::uint8_t *>(data);
-    std::uint8_t* dest_byes = reinterpret_cast<std::uint8_t*>(dest);
-    std::reverse_copy(data_byes, data_byes + data_size_bytes, dest_byes);
+    const std::byte* data_bytes = reinterpret_cast<const std::byte*>(data);
+    std::byte* dest_byes = reinterpret_cast<std::byte*>(dest);
+    std::reverse_copy(data_bytes, data_bytes + data_size_bytes, dest_byes);
 }
 
+size_t BinarySerializer::writeSingle(const std::string& str)
+{
+    std::cout<<"Writing String" <<std::endl;
+
+    // String size.
+    size_t str_size = str.size();
+
+    // Get the total size.
+    size_t total_size = sizeof(size_t) + str_size;
+
+    // Reserve space.
+    this->reserve(this->size_ + total_size);
+
+    // Lock guard.
+    std::lock_guard<std::mutex> lock(this->mtx_);
+
+    // Serialize size.
+    BinarySerializer::binarySerializeDeserialize(&str_size, sizeof(size_t), this->data_.get() + size_);
+    this->size_ += sizeof(size_t);
+
+    // Serialize string.
+    BinarySerializer::binarySerializeDeserialize(str.data(), str_size, this->data_.get() + size_);
+    this->size_ += str_size;
+
+    // Return the writed size.
+    return total_size;
+}
 
 }} // END NAMESPACES.
 // =====================================================================================================================

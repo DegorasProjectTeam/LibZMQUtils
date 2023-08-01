@@ -46,6 +46,7 @@
 #include <mutex>
 #include <type_traits>
 #include <atomic>
+#include <iostream>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
@@ -59,6 +60,24 @@ namespace zmqutils{
 namespace utils{
 // =====================================================================================================================
 
+template<typename T>
+size_t BinarySerializer::calcSize(const T& value)
+{
+    if constexpr(std::is_same_v<std::decay_t<T>, std::string>)
+        return sizeof(size_t) + value.size();
+    else
+        return sizeof(value);
+}
+
+template<typename T, typename... Args>
+size_t BinarySerializer::writeRecursive(const T& value, const Args&... args)
+{
+    if constexpr (sizeof...(args) == 0)
+        return this->writeSingle(value);
+    else
+        return this->writeSingle(value) + this->writeRecursive(std::forward<const Args&>(args)...);
+}
+
 template<typename... Args>
 size_t BinarySerializer::write(const Args&... args)
 {
@@ -67,15 +86,34 @@ size_t BinarySerializer::write(const Args&... args)
     (BinarySerializer::checkTrivial<Args>(), ...);
 
     // Sum of sizes of all arguments and reserve.
-    const size_t total_size = (... + sizeof(args));
+    const size_t total_size = (sizeof(args) + ... + 0);
     reserve(this->size_ + total_size);
+
     // Perform each write.
     (void)std::initializer_list<int> { (this->writeSingle(args), 0)... };
+
+    // Return the total size.
+    return total_size;
+}
+
+template<typename T, typename... Args>
+size_t BinarySerializer::write(const T& value, const Args&... args)
+{
+    // Calculate total size of all arguments.
+    size_t total_size = (BinarySerializer::calcSize(value) + ... + BinarySerializer::calcSize(args));
+
+    // Reserve space in one go.
+    reserve(this->size_ + total_size);
+
+    // Forward to recursive write function
+    this->writeRecursive(value, args...);
+
+    // Return the writed size.
     return total_size;
 }
 
 template<typename T>
-void BinarySerializer::writeSingle(const T& value)
+size_t BinarySerializer::writeSingle(const T& value)
 {
     // Check the types.
     (BinarySerializer::checkTriviallyCopyable<T>());
@@ -86,6 +124,9 @@ void BinarySerializer::writeSingle(const T& value)
     std::lock_guard<std::mutex> lock(this->mtx_);
     BinarySerializer::binarySerializeDeserialize(&value, sizeof(T), this->data_.get() + size_);
     this->size_ += sizeof(T);
+
+    // Return the size.
+    return sizeof(T);
 }
 
 template<typename... Args>
@@ -170,9 +211,6 @@ void BinarySerializer::fastDeserialization(void* in, size_t size, Args&... args)
     if(!serializer.allReaded())
         throw std::out_of_range("BinarySerializer: Not all data was deserialized.");
 }
-
-/// For ignore the not use warning.
-namespace binaryserializer_ignorewarnings{class IgnoreNotUse{};}
 
 }} // END NAMESPACES.
 // =====================================================================================================================
