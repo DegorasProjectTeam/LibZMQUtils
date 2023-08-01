@@ -269,6 +269,8 @@ private:
     // Internal binary serialization/deserialization function.
     static void binarySerializeDeserialize(const void *data, size_t data_size_bytes, void *dest);
 
+    template<typename T> static size_t calcSize(const T& value);
+
     template<typename T> static void checkTriviallyCopyable();
 
     template<typename T> static void checkTrivial();
