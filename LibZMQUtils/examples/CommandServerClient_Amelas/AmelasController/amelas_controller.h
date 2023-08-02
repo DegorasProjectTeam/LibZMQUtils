@@ -80,6 +80,9 @@ public:
             this->home_pos_ = pos;
         }
 
+        // Do things in the hardware.
+        // Changues in PLC.
+
         // Log.
         std::string cmd_str = ControllerErrorStr[static_cast<int>(error)];
         std::cout << std::string(100, '-') << std::endl;

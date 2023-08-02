@@ -167,12 +167,12 @@ std::string BinarySerializer::toJsonString() const
     return ss.str();
 }
 
-void BinarySerializer::binarySerializeDeserialize(const void *data, size_t data_size_bytes, void *dest)
-{
-    const std::byte* data_bytes = reinterpret_cast<const std::byte*>(data);
-    std::byte* dest_byes = reinterpret_cast<std::byte*>(dest);
-    std::reverse_copy(data_bytes, data_bytes + data_size_bytes, dest_byes);
-}
+//void BinarySerializer::binarySerializeDeserialize(const void *data, size_t data_size_bytes, void *dest)
+//{
+//    const std::byte* data_bytes = reinterpret_cast<const std::byte*>(data);
+//    std::byte* dest_byes = reinterpret_cast<std::byte*>(dest);
+//    std::reverse_copy(data_bytes, data_bytes + data_size_bytes, dest_byes);
+//}
 
 size_t BinarySerializer::writeSingle(const std::string& str)
 {

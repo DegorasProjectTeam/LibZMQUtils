@@ -84,24 +84,46 @@ using utils::NetworkAdapterInfo;
  * It is capable of managing multiple client connections, processing command requests, and sending responses. The server
  * also provides optional functionalities such as checking the alive status of connected clients.
  *
- * @note This class is not directly useful on its own. Instead, it is intended to be subclassed and its callback methods
- *       overridden to implement the desired server behavior.
+ * @section Pattern
  *
- *@warning Currently, this server implementation does not provide any built-in security measures, such as authentication
- *         or encryption. This means that the server is potentially vulnerable to unauthorized access or eavesdropping.
- *         Therefore, it is crucial to control the server's network connections by external means, such as a firewall or
- *         VPN. Always ensure that the network environment in which this server operates is secured.
+ * This class extends the ZeroMQ's standard REQ-REP pattern, also known as the Request-Reply pattern, to allow the client
+ * to send commands to the server, which then processes these commands using appropriate callbacks for execution. In a
+ * typical REQ-REP pattern, there is a strict send-and-receive order between the client and server. The client (REQ) sends
+ * a request to the server and then waits for the reply. Similarly, the server (REP) waits for a request, and once it
+ * receives one, it sends a reply. This cycle then repeats in a strict alternating order, ensuring that each request
+ * receives a corresponding reply.
  *
- * @warning When creating a subclass, make sure to avoid blocking or computationally intensive operations within the
- *          overridden callbacks. Blocking the server thread can affect the server's performance and responsiveness. If
- *          complex tasks are needed, consider performing them asynchronously or using separate threads.
+ * This strict request-reply cycle is essential when controlling hardware devices or low-level software modules, where the
+ * order of commands and their corresponding responses is critical. By ensuring a strict request-reply order, we can
+ * maintain consistent control over the devices and modules and reduce the risk of command conflicts or overlaps.
  *
- * @todo Future versions of this server should include built-in security measures. Particularly, it is intended to
- *       implement support for ZeroMQ's security mechanisms, such as CurveZMQ for public-key encryption and ZAP for
- *       authentication. These enhancements will provide a robust layer of security and significantly reduce the risk
- *       of unauthorized access.
+ * In the extended pattern provided by this class, each request from the client is essentially a command that the server
+ * must execute. To handle this, we define a set of commands that the client can send, and we provide corresponding callback
+ * functions on the server to execute when it receives these commands. The result of the command execution is then sent back
+ * to the client as the reply.
  *
- * @todo Add a method to easily send largue data divided in chunks with progress communication.
+ * By extending the pattern in this way, we create a flexible and robust framework for controlling a wide range of devices
+ * and software modules, while maintaining the strict request-reply order that ensures reliable and consistent operation.
+ *
+ * @section Case Of Use
+ *
+ * This communication pattern is particularly beneficial when controlling hardware devices like generic robots, SLR Range
+ * Gate Generators, telescope mounts, and other low-level software modules, where concatenation between replies and
+ * responses is crucial.
+ *
+ * The server is designed to send information about the client (IP, hostname, PID) in order to maintain awareness of
+ * the client intending to control the devices, enhancing security.
+ *
+ * @section Design
+ *
+ * This base class is designed to be inherited by subclasses that provide specific implementations for various callback
+ * functions to handle server events such as start/stop of the server, client connections/disconnections, receiving invalid
+ * or custom commands, and server errors. This design allows for creating specialized servers for different use cases while
+ * keeping the core logic generic and reusable.
+ *
+ * The server operates asynchronously, with main server tasks running in a separate thread. It is capable of managing
+ * multiple client connections, processing command requests, and sending responses. The server also provides optional
+ * functionalities such as checking the alive status of connected clients.
  *
  * @section Usage
  *
@@ -119,20 +141,24 @@ using utils::NetworkAdapterInfo;
  * client behaviors. Therefore, a typical usage scenario involves creating subclassed instances of both classes
  * CommandServerBase and CommandClientBase, where the server handles commands sent by the client.
  *
- * @section Callbacks
+ * @section Hierarchy
+ *
+ * The following functions need to be overriden in your subclass::
+ *
+ * - validateCustomCommand(ServerCommand)
  *
  * The following callbacks need to be overridden in your subclass:
  *
- * - onServerStop
- * - onServerStart
- * - onWaitingCommand
+ * - onServerStop()
+ * - onServerStart()
+ * - onWaitingCommand()
  * - onConnected(const HostClient&)
  * - onDisconnected(const HostClient&)
  * - onDeadClient(const HostClient&)
  * - onInvalidMsgReceived(const CommandRequest&)
  * - onCommandReceived(const CommandRequest&)
  * - onCustomCommandReceived(const CommandRequest&, CommandReply&)
- * - onServerError(const zmq::error_t &error, const std::string& ext_info = "")
+ * - onServerError(const zmq::error_t &error, const std::string& ext_info)
  * - onSendingResponse(const CommandReply&)
  *
  * Among these callbacks, onCustomCommandReceived is crucial because it handles all custom commands. This function
@@ -140,6 +166,27 @@ using utils::NetworkAdapterInfo;
  * from the command request, execute the custom command, and then serialize the output parameters into the command
  * reply. Therefore, it is necessary to override this function to add handling for the custom commands specific to
  * your server's application.
+ *
+ * Finally, also remember add the virtual destructor to the subclass.
+ *
+ * @note This class is not directly useful on its own. Instead, it is intended to be subclassed and its callback methods
+ *       overridden to implement the desired server behavior.
+ *
+ * @warning Currently, this server implementation does not provide any built-in security measures, such as authentication
+ *          or encryption. This means that the server is potentially vulnerable to unauthorized access or eavesdropping.
+ *          Therefore, it is crucial to control the server's network connections by external means, such as a firewall or
+ *          VPN. Always ensure that the network environment in which this server operates is secured.
+ *
+ * @warning When creating a subclass, make sure to avoid blocking or computationally intensive operations within the
+ *          overridden callbacks. Blocking the server thread can affect the server's performance and responsiveness. If
+ *          complex tasks are needed, consider performing them asynchronously or using separate threads.
+ *
+ * @todo Future versions of this server should include built-in security measures. Particularly, it is intended to
+ *       implement support for ZeroMQ's security mechanisms, such as CurveZMQ for public-key encryption and ZAP for
+ *       authentication. These enhancements will provide a robust layer of security and significantly reduce the risk
+ *       of unauthorized access.
+ *
+ * @todo Add a method to easily send large data divided in chunks with progress communication.
  *
  * @see ServerCommand, ServerResult, CommandRequest, CommandReply, CommandClientBase, onCustomCommandReceived
  */

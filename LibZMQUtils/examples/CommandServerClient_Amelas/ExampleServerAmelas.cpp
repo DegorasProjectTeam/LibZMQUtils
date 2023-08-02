@@ -53,6 +53,8 @@
 // =====================================================================================================================
 #include "AmelasServer/amelas_server.h"
 #include "AmelasController/amelas_controller.h"
+
+#include "LibZMQUtils/Utilities/uuid_generator.h"
 // =====================================================================================================================
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -129,12 +131,20 @@ int main(int, char**)
     using amelas::communication::AmelasServerCommand;
     using amelas::controller::AmelasController;
 
+
+    zmqutils::utils::UUIDGenerator generator;
+
+    zmqutils::utils::UUID id = generator.generateUUIDv4();
+
+    std::cout<<id.toRFC4122String()<<std::endl;
+
+
     // Configure the console.
     configConsole();
 
     // Configuration variables.
     unsigned port = 9999;
-    bool client_status_check = false;
+    bool client_status_check = true;
 
     // Instantiate the Amelas controller.
     AmelasController amelas_controller;

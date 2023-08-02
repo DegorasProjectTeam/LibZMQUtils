@@ -45,6 +45,7 @@
 #include <cstring>
 #include <mutex>
 #include <atomic>
+#include <vector>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
@@ -148,6 +149,14 @@ public:
      */
     template<typename... Args> void read(Args&... args);
 
+    template<typename T, typename... Args>
+    void read(T& value, Args&... args)
+    {
+
+        // Read the data.
+        this->readRecursive(value, args...);
+    }
+
     /**
      * @brief Read a value of a specific type from the internal buffer and return it.
      *
@@ -161,6 +170,15 @@ public:
      * @warning If you read beyond the size of the stored data, this function will throw an out_of_range exception.
      */
     template<typename T> T readSingle();
+
+    std::string readSingle()
+    {
+        std::string aux;
+
+        this->readSingle(aux);
+
+        return aux;
+    }
 
     /**
      * @brief Release the data held by the serializer and return a raw pointer to it.
@@ -264,26 +282,101 @@ public:
     template<typename... Args>
     static void fastDeserialization(void* in, size_t size, Args&... args);
 
+    template<typename T>
+    size_t writeSingle(const std::vector<T>& v)
+    {
+        // Check the types.
+        BinarySerializer::checkTriviallyCopyable<T>();
+        BinarySerializer::checkTrivial<T>();
+
+        std::cout<<"Writing Vector" <<std::endl;
+
+
+        size_t total_size = sizeof(T)*v.size();
+
+        this->reserve(total_size);
+
+
+        for(const auto& val : v)
+        {
+            this->writeSingle(val);
+        }
+
+        // Return the writed size.
+        return total_size;
+    }
+
 private:
 
-    // Internal binary serialization/deserialization function.
-    static void binarySerializeDeserialize(const void *data, size_t data_size_bytes, void *dest);
+    // Internal binary serialization/deserialization helper function.
+    template<typename T, typename C>
+    static void binarySerializeDeserialize(const T* data, size_t data_size_bytes, C* dest);
 
-    template<typename T> static size_t calcSize(const T& value);
+    // Internal size calculator function.
+    template<typename T>
+    static size_t calcSize(const T& value);
 
-    template<typename T> static void checkTriviallyCopyable();
+    // Internal function to check if the type is trivially copiable.
+    template<typename T>
+    static void checkTriviallyCopyable();
 
-    template<typename T> static void checkTrivial();
+    // Internal function to check if the type is trivial.
+    template<typename T>
+    static void checkTrivial();
+
+    // ------------------------------------------------------------------------------------------
+
+    // Helper write methods.
+
+    template<typename T>
+    size_t writeSingle(const T& value);
+
+    template<typename T, typename... Args>
+    size_t writeRecursive(const T& value, const Args&... args);
+
+    // ------------------------------------------------------------------------------------------
+
+    // ------------------------------------------------------------------------------------------
+
+    // Helper read methods.
+
+    template<typename T>
+    void readSingle(T& value);
+
+    template<typename T, typename... Args>
+    void readRecursive(T& value, Args&... args)
+    {
+        this->readSingle(value);
+        if constexpr (sizeof...(args) > 0)
+            this->readRecursive(std::forward<Args&>(args)...);
+    }
+
+    // ------------------------------------------------------------------------------------------
 
 
-    template<typename T, typename... Args> size_t writeRecursive(const T& value, const Args&... args);
-
-
-    template<typename T> size_t writeSingle(const T& value);
+    // Non trivial data functions.
 
     size_t writeSingle(const std::string& str);
 
-    template<typename T> void readSingle(T& value);
+    void readSingle(std::string& value)
+    {
+        // Mutex.
+        std::lock_guard<std::mutex> lock(this->mtx_);
+
+        // Read the size of the string.
+        size_t size;
+        BinarySerializer::binarySerializeDeserialize(this->data_.get() + this->offset_, sizeof(size_t), &size);
+        this->offset_ += sizeof(size_t);
+
+        // Check if we have enough data left to read the string.
+        if (this->offset_ + size > this->size_)
+            throw std::out_of_range("BinarySerializer: Read beyond the data size");
+
+        // Read the string.
+        value.resize(size);
+        BinarySerializer::binarySerializeDeserialize(this->data_.get() + this->offset_, size, value.data());
+        this->offset_ += size;
+    }
 
     // Internal containers and variables.
     std::unique_ptr<std::byte[]> data_;      ///< Internal data pointer.

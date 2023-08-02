@@ -80,8 +80,21 @@ bool CommandClientBase::startClient(const std::string& interface_name)
     // Get the current pid.
     pid = std::to_string(utils::getCurrentPID());
 
+
+    unsigned client_num = this->active_clients_pool_.size();
+
+
+
     // Store the info.
-    this->client_info_ = common::HostClientInfo(ip, name, pid);
+    this->client_info_ = common::HostClientInfo(ip, pid, client_num, name);
+
+
+    // Store the client.
+
+    this->active_clients_pool_.emplace(this->client_info_.id, std::ref(*this));
+
+    std::cout<<this->client_info_.toJsonString()<<std::endl;
+
 
     // If server is already started, do nothing
     if (this->client_socket_)
@@ -112,6 +125,9 @@ bool CommandClientBase::startClient(const std::string& interface_name)
         this->onClientError(error, "Error while creating the client.");
         return false;
     }
+
+    // Update the working flag.
+    this->flag_client_working_ = true;
 
     // Call to the internal callback.
     this->onClientStart();
@@ -351,6 +367,8 @@ ClientResult CommandClientBase::recvFromSocket(CommandReply& reply)
 
 void CommandClientBase::internalStop()
 {
+    std::cout<<"Here Internal 1"<<std::endl;
+
     // If server is already stopped, do nothing.
     if (!this->flag_client_working_)
         return;
@@ -359,11 +377,12 @@ void CommandClientBase::internalStop()
     this->flag_client_working_ = false;
 
     // Delete context.
-    if (this->context_)
-    {
-        delete this->context_;
-        this->context_ = nullptr;
-    }
+    // TODO WARNING HANDLE WELL THE CONTEXT
+//    if (this->context_)
+//    {
+//        delete this->context_;
+//        this->context_ = nullptr;
+//    }
 
     // Delete the socket.
     if(this->client_socket_)
@@ -372,6 +391,11 @@ void CommandClientBase::internalStop()
         delete this->client_socket_;
         this->client_socket_ = nullptr;
     }
+
+    std::cout<<"Here Internal 2"<<std::endl;
+
+    // Delete from the active clients.
+    this->active_clients_pool_.erase(this->client_info_.id);
 }
 
 void CommandClientBase::sendAliveCallback()
@@ -458,13 +482,14 @@ zmq::multipart_t CommandClientBase::prepareMessage(const RequestData &request)
 
     zmq::message_t message_ip(serializer.release(), size);
 
-    // Prepare the ip data.
-    // Prepare the hostname data.
-    zmq::message_t message_host(this->client_info_.hostname.begin(), this->client_info_.hostname.end());
+
+
     // Prepare the pid data.
     zmq::message_t message_pid(this->client_info_.pid.begin(), this->client_info_.pid.end());
 
     serializer.clearData();
+    size = serializer.write(this->client_info_.client_num);
+    zmq::message_t message_c_num(serializer.release(), size);
 
     serializer.write(request.command);
 
@@ -475,8 +500,8 @@ zmq::multipart_t CommandClientBase::prepareMessage(const RequestData &request)
     // Prepare the multipart msg.
     zmq::multipart_t multipart_msg;
     multipart_msg.add(std::move(message_ip));
-    multipart_msg.add(std::move(message_host));
     multipart_msg.add(std::move(message_pid));
+    multipart_msg.add(std::move(message_c_num));
     multipart_msg.add(std::move(message_command));
 
     // Add command parameters if they exist

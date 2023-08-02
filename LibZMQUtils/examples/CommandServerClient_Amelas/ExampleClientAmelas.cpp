@@ -262,7 +262,40 @@ int main(int argc, char**argv)
 
     std::string endpoint = "tcp://" + ip + ":" + std::to_string(port);
     AmelasClient client(endpoint);
+
+    AmelasClient client2(endpoint);
+
+    AmelasClient client3(endpoint);
+
+    AmelasClient client4(endpoint);
+
     client.startClient("Ethernet");
+    parseCommand(client, "0");
+
+    std::cout << "Here1" << std::endl;
+
+    client2.startClient("Ethernet");
+    parseCommand(client2, "0");
+
+    std::cout << "Here2" << std::endl;
+
+    client3.startClient("Ethernet");
+    parseCommand(client3, "0");
+
+    std::cout << "Here3" << std::endl;
+
+    client2.stopClient();
+
+    std::cout << "Here4" << std::endl;
+
+    client4.startClient("Ethernet");
+
+    std::cout << "Here5" << std::endl;
+
+
+
+    parseCommand(client2, "0");
+
     //client.startAutoAlive();
     std::string command;
 

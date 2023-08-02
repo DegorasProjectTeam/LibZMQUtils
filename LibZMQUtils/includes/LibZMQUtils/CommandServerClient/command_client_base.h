@@ -158,7 +158,7 @@ private:
     std::atomic_bool flag_alive_woking_;     ///< Flag that enables and disables the automatic sending of alive messages.
     std::atomic_bool flag_alive_callbacks_;  ///< Flag that enables and disables the callbacks for alive messages.
 
-
+    inline static std::unordered_map<std::string, std::reference_wrapper<CommandClientBase>> active_clients_pool_;
 };
 
 } // END NAMESPACES.

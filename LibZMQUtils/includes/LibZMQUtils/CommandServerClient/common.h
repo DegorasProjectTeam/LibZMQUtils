@@ -267,13 +267,36 @@ struct LIBZMQUTILS_EXPORT HostClientInfo
 
     HostClientInfo& operator=(HostClientInfo&&) = default;
 
-    HostClientInfo(const std::string& ip, const std::string& hostname, const std::string& pid);
+    HostClientInfo(const std::string& ip, const std::string& pid, unsigned client_num, const std::string& hostname);
+
+    std::string toJsonString() const
+    {
+        std::stringstream ss;
+        ss << "{\n"
+           << "\t\"id\": \"" << id << "\",\n"
+           << "\t\"ip\": \"" << ip << "\",\n"
+           << "\t\"pid\": \"" << pid << "\",\n"
+           << "\t\"client_num\": " << client_num << ",\n"
+           << "\t\"hostname\": \"" << hostname << "\"\n"
+           << "}";
+        return ss.str();
+    }
 
     // Struct members.
-    std::string id;                    ///< Dinamic host client identification -> [ip//name//pid]
+    // TODO REVISAR
+
+    // Identifier.
+    std::string id;                    ///< Dinamic host client identification -> [ip//pid//client_num]
+
+    // Basic information
     std::string ip;                    ///< Host client ip.
-    std::string hostname;              ///< Host client name.
     std::string pid;                   ///< PID of the host client process.
+    unsigned client_num;               ///< Number of the client created in the same process.
+
+    // Aditional information.
+    std::string hostname;              ///< Host client name.
+
+    // TODO Quitar, esto debe ser cosa del server.
     utils::SCTimePointStd last_conn;   ///< Host client last connection time. Used by servers.
 };
 

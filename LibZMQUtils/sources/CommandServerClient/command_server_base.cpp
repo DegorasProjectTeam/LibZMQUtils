@@ -82,14 +82,19 @@ const std::future<void> &CommandServerBase::getServerWorkerFuture() const {retur
 const std::map<std::string, HostClientInfo> &CommandServerBase::getConnectedClients() const
 {return this->connected_clients_;}
 
-void CommandServerBase::setClientStatusCheck(bool)
+void CommandServerBase::setClientStatusCheck(bool enable)
 {
     // Safe mutex lock
     std::unique_lock<std::mutex> lock(this->mtx_);
     // Disable the client alive checking.
-    this->flag_check_clients_alive_ = false;
+    this->flag_check_clients_alive_ = enable;
     if(this->server_socket_)
-        this->server_socket_->set(zmq::sockopt::rcvtimeo, -1);
+    {
+        if(!enable)
+            this->server_socket_->set(zmq::sockopt::rcvtimeo, -1);
+        else
+            this->server_socket_->set(zmq::sockopt::rcvtimeo, static_cast<int>(common::kDefaultClientAliveTimeoutMsec));
+    }
 }
 
 void CommandServerBase::setAliveCallbacksEnabled(bool flag){this->flag_alive_callbacks_ = flag;}
@@ -373,41 +378,44 @@ ServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
     {
         // Auxiliar containers.
         std::string ip;
-        std::string hostname;
+        unsigned c_num;
         std::string pid;
 
         // Get the multipart data.
         zmq::message_t message_ip = multipart_msg.pop();
-        zmq::message_t message_hostname = multipart_msg.pop();
         zmq::message_t message_pid = multipart_msg.pop();
+        zmq::message_t message_c_num = multipart_msg.pop();
         zmq::message_t message_command = multipart_msg.pop();
 
         // Get the sizes.
         size_t ip_size_bytes = message_ip.size();
-        size_t host_size_bytes = message_hostname.size();
+
         size_t pid_size_bytes = message_pid.size();
         size_t command_size_bytes = message_command.size();
 
         // First get the ip data.
         if (ip_size_bytes > 0)
-            ip = std::string(static_cast<char*>(message_ip.data()), ip_size_bytes);
+        {
+            utils::BinarySerializer::fastDeserialization(message_ip.data(), message_ip.size(), ip);
+        }
         else
             return ServerResult::EMPTY_CLIENT_IP;
 
         // Get the hostname data.
-        if (host_size_bytes > 0)
-            hostname = std::string(static_cast<char*>(message_hostname.data()), host_size_bytes);
+        if (  message_c_num.size() > 0)
+            utils::BinarySerializer::fastDeserialization(message_c_num.data(), message_c_num.size(), c_num);
         else
             return ServerResult::EMPTY_CLIENT_NAME;
 
         // Get the pid data.
-        if (host_size_bytes > 0)
+        if (pid_size_bytes > 0)
             pid = std::string(static_cast<char*>(message_pid.data()), pid_size_bytes);
         else
             return ServerResult::EMPTY_CLIENT_PID;
 
         // Update the client info.
-        request.client = HostClientInfo(ip, hostname, pid);
+        // WARNING UPDATE
+        request.client = HostClientInfo(ip, pid, c_num, "caca");
         request.client.last_conn = std::chrono::steady_clock::now();
 
         // Update the last connection if the client is connected.

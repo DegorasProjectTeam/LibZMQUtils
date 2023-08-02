@@ -60,6 +60,19 @@ namespace zmqutils{
 namespace utils{
 // =====================================================================================================================
 
+template<typename T, typename C>
+void BinarySerializer::binarySerializeDeserialize(const T* data, size_t data_size_bytes, C* dest)
+{
+    // Check the types.
+    (BinarySerializer::checkTriviallyCopyable<T>());
+    (BinarySerializer::checkTrivial<T>());
+
+    // Serialize the data.
+    const std::byte* data_bytes = reinterpret_cast<const std::byte*>(data);
+    std::byte* dest_byes = reinterpret_cast<std::byte*>(dest);
+    std::reverse_copy(data_bytes, data_bytes + data_size_bytes, dest_byes);
+}
+
 template<typename T>
 size_t BinarySerializer::calcSize(const T& value)
 {
@@ -187,10 +200,6 @@ void BinarySerializer::checkTriviallyCopyable()
 template<typename... Args>
 size_t BinarySerializer::fastSerialization(std::unique_ptr<std::byte>& out, const Args&... args)
 {
-    // Check the types.
-    (BinarySerializer::checkTriviallyCopyable<Args>(), ...);
-    (BinarySerializer::checkTrivial<Args>(), ...);
-
     // Do the serialization
     BinarySerializer serializer;
     size_t size = serializer.write(std::forward<const Args&>(args)...);
@@ -201,10 +210,6 @@ size_t BinarySerializer::fastSerialization(std::unique_ptr<std::byte>& out, cons
 template<typename... Args>
 void BinarySerializer::fastDeserialization(void* in, size_t size, Args&... args)
 {
-    // Check the types.
-    (BinarySerializer::checkTriviallyCopyable<Args>(), ...);
-    (BinarySerializer::checkTrivial<Args>(), ...);
-
     // Do the deserialization.
     BinarySerializer serializer(in, size);
     serializer.read(std::forward<Args&>(args)...);
