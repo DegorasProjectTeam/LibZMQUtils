@@ -109,10 +109,8 @@ using utils::NetworkAdapterInfo;
  *
  * This communication pattern is particularly beneficial when controlling hardware devices like generic robots, SLR Range
  * Gate Generators, telescope mounts, and other low-level software modules, where concatenation between replies and
- * responses is crucial.
- *
- * The server is designed to send information about the client (IP, hostname, PID) in order to maintain awareness of
- * the client intending to control the devices, enhancing security.
+ * responses is crucial. For example, this base server is use in the ROA SLR Station in San Fernando, Spain, for control
+ * FPGA devices, the telescope mount and other software modules.
  *
  * @section Design
  *
@@ -171,6 +169,17 @@ using utils::NetworkAdapterInfo;
  *
  * @note This class is not directly useful on its own. Instead, it is intended to be subclassed and its callback methods
  *       overridden to implement the desired server behavior.
+ *
+ * @warning This server is designed to include client-specific information (such as IP address, hostname, Process ID (PID),
+ *          and the client name) in its communications. This approach enables the server to maintain a clear understanding
+ *          of which client is issuing commands, improving operational visibility and control. Such client-specific data
+ *          can be particularly valuable for generating detailed logs which, upon subsequent analysis, can yield insights
+ *          into system behavior, user activity, and potential issues.
+ *
+ *          While in certain contexts and under different communication patterns, it may not be advisable or necessary to
+ *          include such client information, in the case of this server class, we recommend preserving this feature. By
+ *          doing so, it enhances the robustness and traceability of server-client interactions, especially in environments
+ *          where precise command control and operational accountability are essential.
  *
  * @warning Currently, this server implementation does not provide any built-in security measures, such as authentication
  *          or encryption. This means that the server is potentially vulnerable to unauthorized access or eavesdropping.
