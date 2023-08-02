@@ -23,142 +23,137 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file command_client_base.h
- * @brief This file contains the declaration of the CommandClientBase class and related.
+ * @file uuid_generator.cpp
+ * @brief This file contains the implementation of the UUIDGenerator class.
  * @author Degoras Project Team
  * @copyright EUPL License
  * @version 2307.1
 ***********************************************************************************************************************/
 
-// =====================================================================================================================
-#pragma once
-// =====================================================================================================================
-
 // C++ INCLUDES
 // =====================================================================================================================
-#include <future>
-#include <string>
-#include <zmq/zmq.hpp>
-#include <zmq/zmq_addon.hpp>
+#include <cstddef>
+#include <iostream>
+#include <mutex>
+#include <random>
+#include <sstream>
+#include <iomanip>
+#include <array>
+#include <memory>
+#include <set>
+#include <chrono>
+#include <thread>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/libzmqutils_global.h"
-#include "LibZMQUtils/zmq_context_handler.h"
-#include "LibZMQUtils/CommandServerClient/common.h"
+#include "LibZMQUtils/Utilities/uuid_generator.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
+namespace utils{
 // =====================================================================================================================
 
-// =====================================================================================================================
-using common::ServerCommand;
-using common::ServerResult;
-using common::ClientResult;
-using common::CommandReply;
-using common::CommandType;
-using common::RequestData;
-// =====================================================================================================================
+std::mt19937_64 UUIDGenerator::gen_ = std::mt19937_64{std::random_device{}()};
+std::random_device UUIDGenerator::rd_ = std::random_device();           ///< Random device.
 
-class LIBZMQUTILS_EXPORT CommandClientBase : public ZMQContextHandler
+UUIDGenerator::UUIDGenerator()
 {
+    // Safe mutex lock.
+    std::unique_lock<std::mutex> lock(this->mtx_);
 
-public:
-    
-    CommandClientBase(const std::string& server_endpoint, const std::string& client_name = "");
-    
-    bool startClient(const std::string& interface_name);
+    // Check the entropy.
+    if(static_cast<int>(this->rd_.entropy()) == 0)
+    {
+        auto now = std::chrono::high_resolution_clock::now();
+        auto now_int = std::chrono::time_point_cast<std::chrono::nanoseconds>(now).time_since_epoch().count();
+        std::uint_fast64_t seed = std::hash<decltype(now_int)>{}(now_int);
+        this->gen_ = std::mt19937_64(seed);
+    }
+    else
+        this->gen_ = std::mt19937_64(rd_());
+}
 
-    void stopClient();
+UUID UUIDGenerator::generateUUIDv4()
+{
+    // Auxiliar containers.
+    std::array<std::byte, 16> bytes;
+    std::uniform_int_distribution<> distrib(0, 255);
+    UUID uuid;
 
-    bool resetClient();
+    // Generate the uuid.
+    do
+    {
+        // Random generation.
+        for(auto& byte : bytes)
+            byte = static_cast<std::byte>(distrib(this->gen_));
 
-    void setAliveCallbacksEnabled(bool);
+        // Set the version to 4 (random)
+        bytes[6] = static_cast<std::byte>((static_cast<std::uint8_t>(bytes[6]) & 0x0F) | 0x40);
 
-    void setAutomaticAliveEnabled(bool);
+        // Set the variant to 1 (RFC4122)
+        bytes[8] = static_cast<std::byte>((static_cast<std::uint8_t>(bytes[8]) & 0x3F) | 0x80);
 
-    const common::HostClientInfo& getClientInfo() const;
+        // Generate the UUID.
+        uuid = UUID(bytes);
 
-    const std::string& getServerEndpoint() const;
+    } while(generated_uuids_.find(uuid) != generated_uuids_.end());
 
-    const std::string& getClientName() const;
+    // Safe mutex lock.
+    std::unique_lock<std::mutex> lock(this->mtx_);
 
-    ClientResult sendCommand(const RequestData&, CommandReply&);
+    // Insert the generated uuid.
+    generated_uuids_.insert(uuid);
 
-    /**
-     * @brief Virtual destructor.
-     * This destructor is virtual to ensure proper cleanup when the derived class is destroyed.
-     */
-    virtual ~CommandClientBase();
+    // Return the generated uuid.
+    return uuid;
+}
 
-protected:
+UUID::UUID(const std::array<std::byte, 16> &bytes):
+    bytes_(bytes)
+{}
 
-    /**
-     * @brief Get the client's information.
-     * @note This is an internal protected function that does not lock the safety mutex.
-     * @return A constant reference to the client's HostClientInfo.
-     */
-    const common::HostClientInfo& internalGetClientInfo() const;
+std::string UUID::toRFC4122String() const
+{
+    std::stringstream ss;
+    ss << std::hex << std::setfill('0');
 
-    virtual void onClientStart() = 0;
+    // time-low
+    for (size_t i = 0; i < 4; i++)
+        ss << std::setw(2) << static_cast<int>(this->bytes_[i]);
+    ss << '-';
 
-    virtual void onClientStop() = 0;
+    // time-mid
+    for (size_t i = 4; i < 6; i++)
+        ss << std::setw(2) << static_cast<int>(this->bytes_[i]);
+    ss << '-';
 
-    virtual void onWaitingReply() = 0;
+    // time-high-and-version
+    for (size_t i = 6; i < 8; i++)
+        ss << std::setw(2) << static_cast<int>(this->bytes_[i]);
+    ss << '-';
 
-    virtual void onDeadServer() = 0;
+    // clock-seq-and-reserved and clock-seq-low
+    for (size_t i = 8; i < 10; i++)
+        ss << std::setw(2) << static_cast<int>(this->bytes_[i]);
+    ss << '-';
 
-    virtual void onConnected() = 0;
+    // node
+    for (size_t i = 10; i < 16; i++)
+        ss << std::setw(2) << static_cast<int>(this->bytes_[i]);
 
-    virtual void onDisconnected() = 0;
+    return ss.str();
+}
 
-    virtual void onInvalidMsgReceived(const CommandReply&) = 0;
+const std::array<std::byte, 16> &UUID::getBytes() const {return this->bytes_;}
 
-    virtual void onReplyReceived(const CommandReply&) = 0;
-
-    virtual void onSendingCommand(const RequestData&) = 0;
-
-    virtual void onClientError(const zmq::error_t&, const std::string& ext_info) = 0;
-
-private:
+bool UUID::operator<(const UUID &rhs) const
+{
+    return this->bytes_ < rhs.bytes_;
+}
 
 
-    ClientResult recvFromSocket(CommandReply&);
-
-    void internalStop();
-
-    void startAutoAlive();
-
-    void stopAutoAlive();
-
-    void sendAliveCallback();
-    zmq::multipart_t prepareMessage(const RequestData &msg);
-
-    // Internal client identification.
-    common::HostClientInfo client_info_;       ///< External client information for identification.
-    std::string client_name_;                  ///< Internal client name. Will not be use as id.
-
-    // Server endpoint.
-    std::string server_endpoint_;              ///< Server endpoint.
-
-    // ZMQ socket.
-    zmq::socket_t *client_socket_;              ///< ZMQ client socket.
-
-    // Mutex.
-    mutable std::mutex mtx_;                    ///< Safety mutex.
-
-    // Auto alive functionality.
-    std::future<void> auto_alive_future_;
-    std::condition_variable auto_alive_cv_;
-
-    // Usefull flags.
-    std::atomic_bool flag_client_working_;  ///< Flag for check the client working status.
-    std::atomic_bool flag_alive_woking_;    ///< Flag for enables or disables the automatic sending of alive messages.
-    std::atomic_bool flag_alive_callbacks_; ///< Flag for enables or disables the callbacks for alive messages.
-};
-
-} // END NAMESPACES.
+}} // END NAMESPACES.
 // =====================================================================================================================

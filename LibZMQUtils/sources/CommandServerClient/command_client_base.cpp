@@ -23,9 +23,9 @@ namespace zmqutils{
 
 
 CommandClientBase::CommandClientBase(const std::string &server_endpoint, const std::string &client_name) :
-    server_endpoint_(server_endpoint),
+    ZMQContextHandler(),
     client_name_(client_name),
-    context_(nullptr),
+    server_endpoint_(server_endpoint),
     client_socket_(nullptr),
     flag_alive_woking_(true),
     flag_alive_callbacks_(true)
@@ -81,17 +81,14 @@ bool CommandClientBase::startClient(const std::string& interface_name)
     pid = std::to_string(utils::getCurrentPID());
 
 
-    unsigned client_num = this->active_clients_pool_.size();
-
 
 
     // Store the info.
-    this->client_info_ = common::HostClientInfo(ip, pid, client_num, name);
+    this->client_info_ = common::HostClientInfo(ip, pid, 0, name);
 
 
     // Store the client.
 
-    this->active_clients_pool_.emplace(this->client_info_.id, std::ref(*this));
 
     std::cout<<this->client_info_.toJsonString()<<std::endl;
 
@@ -100,14 +97,12 @@ bool CommandClientBase::startClient(const std::string& interface_name)
     if (this->client_socket_)
         return false;
 
-    // Create the ZMQ context.
-    if (!this->context_)
-        this->context_ = new zmq::context_t(1);
 
     // Create the ZMQ socket.
     try
     {
-        this->client_socket_ = new zmq::socket_t(*this->context_, zmq::socket_type::req);
+        // Zmq socket and connection.
+        this->client_socket_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::req);
         this->client_socket_->connect(this->server_endpoint_);
         // Set timeout so socket will not wait for answer more than client alive timeout.
         this->client_socket_->set(zmq::sockopt::rcvtimeo, common::kDefaultServerAliveTimeoutMsec);
@@ -165,7 +160,8 @@ bool CommandClientBase::resetClient()
         // Create the ZMQ socket.
         try
         {
-            this->client_socket_ = new zmq::socket_t(*this->context_, zmq::socket_type::req);
+            // Creates the ZMQ socket and do the connection.
+            this->client_socket_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::req);
             this->client_socket_->connect(this->server_endpoint_);
             // Set timeout so socket will not wait for answer more than server alive timeout.
             this->client_socket_->set(zmq::sockopt::rcvtimeo, common::kDefaultServerAliveTimeoutMsec);
@@ -376,14 +372,6 @@ void CommandClientBase::internalStop()
     // Set the shared working flag to false (is atomic).
     this->flag_client_working_ = false;
 
-    // Delete context.
-    // TODO WARNING HANDLE WELL THE CONTEXT
-//    if (this->context_)
-//    {
-//        delete this->context_;
-//        this->context_ = nullptr;
-//    }
-
     // Delete the socket.
     if(this->client_socket_)
     {
@@ -393,9 +381,6 @@ void CommandClientBase::internalStop()
     }
 
     std::cout<<"Here Internal 2"<<std::endl;
-
-    // Delete from the active clients.
-    this->active_clients_pool_.erase(this->client_info_.id);
 }
 
 void CommandClientBase::sendAliveCallback()

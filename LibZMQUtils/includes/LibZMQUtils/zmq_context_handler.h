@@ -23,11 +23,11 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file uuid_generator.h
- * @brief This file contains the declaration of the UUIDGenerator class.
+ * @file zmq_context_handler.h
+ * @brief This file contains the declaration of the global ZMQContextHandler class.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2307.1
+ * @version 2308.1
 ***********************************************************************************************************************/
 
 // =====================================================================================================================
@@ -36,10 +36,12 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
-#include <cstddef>
+#include <iostream>
+#include <vector>
+#include <functional>
 #include <mutex>
-#include <random>
-#include <set>
+#include <zmq/zmq.hpp>
+#include <zmq/zmq_addon.hpp>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
@@ -50,110 +52,61 @@
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
-namespace utils{
 // =====================================================================================================================
 
-/**
- * @brief Class to encapsulate the UUID bytes and provide string representation
- */
-class LIBZMQUTILS_EXPORT UUID
+class LIBZMQUTILS_EXPORT ZMQContextHandler
 {
 
 public:
 
-    /**
-     * @brief Construct a new UUID object from an array of 16 bytes.
-     * @param bytes An array of 16 bytes representing the UUID.
-     */
-    UUID(const std::array<std::byte, 16>& bytes);
+    ZMQContextHandler()
+    {
+        // Safety mutex.
+        std::lock_guard<std::mutex> lock(ZMQContextHandler::mtx_);
 
-    /**
-     * @brief Default constructor.
-     */
-    UUID() = default;
+        // For the first instance, create the context.
+        if (ZMQContextHandler::instances_.empty())
+            ZMQContextHandler::context_ = std::make_unique<zmq::context_t>(1);
 
-    /**
-     * @brief Returns string representation of the UUID
-     *
-     * This function converts the UUID into a string following the standard representation of a UUID, which consists of
-     * 32 hexadecimal digits displayed in five groups separated by hyphens, in the form 8-4-4-4-12 for a total of 36
-     * characters (including the hyphens).
-     *
-     * The string representation is divided as follows:
-     * 1. time-low: The first 8 hex digits (4 bytes).
-     * 2. time-mid: The next 4 hex digits (2 bytes).
-     * 3. time-high-and-version: The next 4 hex digits (2 bytes).
-     * 4. clock-seq-and-reserved and clock-seq-low: The next 4 hex digits (2 bytes).
-     * 5. node: The last 12 hex digits (6 bytes).
-     *
-     * An example of a UUID string: 550e8400-e29b-41d4-a716-446655440000
-     *
-     * The function std::stringstream, std::hex, std::setfill, std::setw, and std::hex are used to convert each part of
-     * the UUID into a hex string and concatenate them together with '-' as separator. The std::setw(2) ensures that
-     * each byte is represented by exactly two hex characters, padding with a zero if necessary.
-     *
-     * This method's implementation is in alignment with RFC 4122: A Universally Unique IDentifier (UUID) URN Namespace,
-     * available at: https://www.ietf.org/rfc/rfc4122.txt
-     *
-     * @return String representation of the UUID
-     */
-    std::string toRFC4122String() const;
+        // Register this instance.
+        ZMQContextHandler::instances_.push_back(std::ref(*this));
+    }
 
-    const std::array<std::byte, 16>& getBytes() const;
+    ~ZMQContextHandler()
+    {
+        // Safety mutex.
+        std::lock_guard<std::mutex> lock(ZMQContextHandler::mtx_);
 
-    bool operator<(const UUID& rhs) const;
+        // Unregister this instance.
+        ZMQContextHandler::instances_.erase(
+            std::remove_if(ZMQContextHandler::instances_.begin(), ZMQContextHandler::instances_.end(),
+                           [this](const auto& wr)
+                           { return &wr.get() == this; }),
+            ZMQContextHandler::instances_.end());
+
+        // Destroy the context if no instances left.
+
+        if (ZMQContextHandler::instances_.empty())
+            ZMQContextHandler::context_.reset();
+    }
+
+protected:
+
+    const std::unique_ptr<zmq::context_t>& getContext()
+    {
+        return ZMQContextHandler::context_;
+    }
 
 private:
 
-    // Members.
-    std::array<std::byte, 16> bytes_;  /// Bytes of the UUID.
+    // Aliases.
+    using ContextHandlerReference = std::reference_wrapper<ZMQContextHandler>;
+
+    // Internal variables and containers.
+    inline static std::mutex mtx_;                                   ///< Safety mutex.
+    inline static std::unique_ptr<zmq::context_t> context_;          ///< ZMQ global context.
+    inline static std::vector<ContextHandlerReference> instances_;   ///< Instances of the ContextHandler.
 };
 
-/**
- * @class UUIDGenerator
- *
- * @brief This class provides functionality for generating UUID (Universally Unique Identifier).
- *
- * The UUIDGenerator class supports generation of Version 4 UUIDs as per RFC 4122. A Version 4 UUID is randomly generated.
- *
- * The UUID generated by this class is a 128-bit value. The string representation is a series of lowercase hexadecimal digits
- * in groups, separated by hyphens, in the form 8-4-4-4-12 for a total of 36 characters (32 alphanumeric characters and four hyphens).
- *
- * @note The class is thread safe.
- *
- * @note The UUIDs generated are pseudo-random numbers. While the randomness of the generated UUIDs is sufficient for most
- *       purposes, it is not suitable for functions that need truly random numbers.
- *
- * @warning This class relies on std::random_device for random number generation. On some platforms, std::random_device
- *          does not actually provide a non-deterministic random number generator. In such cases, the randomness of the
- *          generated UUIDs may be weaker and a random seed will be generated using a timestamp.
- */
-class LIBZMQUTILS_EXPORT UUIDGenerator
-{
-public:
-
-    UUIDGenerator();
-
-    /**
-     * @brief Generates a version 4 UUID
-     * @return A unique UUID
-     *
-     * The algorithm used for generation is as follows:
-     * 1. Generate 16 random bytes
-     * 2. Adjust certain bits according to RFC 4122 section 4.4 as follows:
-     *    a. Set the four most significant bits of the 7th byte to 0100'B, so the high nibble is "4".
-     *    b. Set the two most significant bits of the 9th byte to 10'B, so the high nibble will be one of "8", "9", "A", or "B".
-     * 3. Convert the byte array to a string in the form of 8-4-4-4-12
-     */
-    UUID generateUUIDv4();
-
-private:
-
-    inline static std::mutex mtx_;                  ///< Safety mutex.
-    static std::random_device rd_;           ///< Random device.
-    static std::mt19937_64 gen_;             ///< Generator.
-    inline static std::set<UUID> generated_uuids_;  ///< Set of all generated UUIDs to ensure uniqueness.
-};
-
-}} // END NAMESPACES.
+} // END NAMESPACES.
 // =====================================================================================================================

@@ -53,8 +53,6 @@
 // =====================================================================================================================
 #include "AmelasServer/amelas_server.h"
 #include "AmelasController/amelas_controller.h"
-
-#include "LibZMQUtils/Utilities/uuid_generator.h"
 // =====================================================================================================================
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -73,8 +71,11 @@ struct ExitHelper
 #ifdef _WIN32
 BOOL WINAPI ConsoleCtrlHandler(DWORD dwCtrlType)
 {
+    WSADATA wsaData;
+    WSAStartup(MAKEWORD(2,2), &wsaData);
+
     std::lock_guard<std::mutex> lock(ExitHelper::gMtx);
-    if (dwCtrlType == CTRL_C_EVENT || dwCtrlType == CTRL_BREAK_EVENT)
+    if (dwCtrlType == CTRL_C_EVENT || dwCtrlType == CTRL_BREAK_EVENT || dwCtrlType == CTRL_CLOSE_EVENT)
     {
         if (!gSignInterrupt)
         {
@@ -131,14 +132,6 @@ int main(int, char**)
     using amelas::communication::AmelasServerCommand;
     using amelas::controller::AmelasController;
 
-
-    zmqutils::utils::UUIDGenerator generator;
-
-    zmqutils::utils::UUID id = generator.generateUUIDv4();
-
-    std::cout<<id.toRFC4122String()<<std::endl;
-
-
     // Configure the console.
     configConsole();
 
@@ -185,12 +178,14 @@ int main(int, char**)
     std::unique_lock<std::mutex> lock(ExitHelper::gMtx);
     ExitHelper::gExitCv.wait(lock, [] { return gSignInterrupt == 1; });
 
+    // Log.
+    std::cout << "Stopping the server..." << std::endl;
+
     // Stop the server and wait the future.
     amelas_server.stopServer();
 
     // Final log.
-    std::cout << "Server stoped. Press Enter to exit!" << std::endl;
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
+    std::cout << "Server stoped. All ok!!" << std::endl;
 
     // Return.
 	return 0;

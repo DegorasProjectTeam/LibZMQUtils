@@ -61,7 +61,7 @@ namespace common{
 // CONSTANTS
 // =====================================================================================================================
 constexpr int kDefaultClientAliveTimeoutMsec = 8000;    ///< Default timeout for consider a client dead.
-constexpr int kDefaultServerAliveTimeoutMsec = 3000;    ///< Default timeout for consider a server dead.
+constexpr int kDefaultServerAliveTimeoutMsec = 1000;    ///< Default timeout for consider a server dead.
 constexpr unsigned kServerReconnTimes = 10;             ///< Server reconnection default number of attempts.
 constexpr unsigned kClientAlivePeriodMsec = 1000;       ///< Default period for sending alive commands.
 constexpr int kZmqEFSMError = 156384765;                ///< ZMQ EFSM error.

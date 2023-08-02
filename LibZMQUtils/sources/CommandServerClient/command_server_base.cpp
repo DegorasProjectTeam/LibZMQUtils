@@ -50,10 +50,10 @@
 namespace zmqutils{
 // =====================================================================================================================
 
-CommandServerBase::CommandServerBase(unsigned int port,
+CommandServerBase::CommandServerBase(unsigned port,
                                      const std::string& local_addr,
                                      const std::string &server_name) :
-    context_(nullptr),
+    ZMQContextHandler(),
     server_socket_(nullptr),
     server_endpoint_("tcp://" + local_addr + ":" + std::to_string(port)),
     server_port_(port),
@@ -75,6 +75,8 @@ CommandServerBase::CommandServerBase(unsigned int port,
                 this->server_adapters_.push_back(intrfc);
         }
     }
+
+    // TODO control a valid configuration.
 }
 
 const std::future<void> &CommandServerBase::getServerWorkerFuture() const {return this->fut_server_worker_;}
@@ -117,10 +119,6 @@ bool CommandServerBase::startServer()
     if (this->flag_server_working_)
         return true;
 
-    // Create the ZMQ context.
-    if (!this->context_)
-        this->context_ = new zmq::context_t(1);
-
     // Launch server worker in other thread.
     this->fut_server_worker_ = std::async(std::launch::async, &CommandServerBase::serverWorker, this);
 
@@ -137,6 +135,12 @@ void CommandServerBase::stopServer()
     // Safe mutex lock
     std::unique_lock<std::mutex> lock(this->mtx_);
 
+    // Call to the internal stop.
+    this->internalStopServer();
+}
+
+void CommandServerBase::internalStopServer()
+{
     // If server is already stopped, do nothing.
     if (!this->flag_server_working_)
         return;
@@ -144,18 +148,33 @@ void CommandServerBase::stopServer()
     // Set the shared working flag to false (is atomic).
     this->flag_server_working_ = false;
 
-    // Delete the context.
-    if (this->context_)
+    // If the server is working.
+    if(this->fut_server_worker_.wait_for(std::chrono::seconds(0)) == std::future_status::timeout)
     {
-        delete this->context_;
-        this->context_ = nullptr;
+        // Auxiliar endpoint.
+        std::string endpoint = this->server_endpoint_;
+        std::size_t found = endpoint.find("*");
+        if (found != std::string::npos)
+            endpoint.replace(found, 1, "127.0.0.1");
+
+        // Auxiliar socket for closing.
+        zmq::socket_t* sock = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::req);
+        sock->connect(endpoint);
+        sock->set(zmq::sockopt::linger, 0);
+
+        // Message for closing.
+        zmq::message_t close_msg;
+        sock->send(close_msg, zmq::send_flags::none);
+
+        // Wait the future.
+        this->fut_server_worker_.wait();
+
+        // Delete the auxiliar socket.
+        delete sock;
     }
 
-    // Safe sleep.
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
     // Delete the socket.
-    if(!this->server_socket_)
+    if(this->server_socket_)
     {
         delete this->server_socket_;
         this->server_socket_ = nullptr;
@@ -168,10 +187,13 @@ void CommandServerBase::stopServer()
     this->connected_clients_.clear();
 }
 
+
+
+
 CommandServerBase::~CommandServerBase()
 {
     // Stop the server (this function also deletes the pointers).
-    this->stopServer();
+    this->internalStopServer();
 }
 
 ServerResult CommandServerBase::execReqConnect(const CommandRequest& cmd_req)
@@ -248,7 +270,7 @@ void CommandServerBase::serverWorker()
         result = this->recvFromSocket(request);
 
         // Check all the clients status.
-        if(this->flag_check_clients_alive_)
+        if(result == ServerResult::COMMAND_OK && this->flag_server_working_ && this->flag_check_clients_alive_ )
             this->checkClientsAliveStatus();
 
         // Process the data.
@@ -257,9 +279,9 @@ void CommandServerBase::serverWorker()
             // In this case, we will close the server. Call to the internal callback.
             this->onServerStop();
         }
-        else if(result == ServerResult::TIMEOUT_REACHED)
+        else if(result == ServerResult::TIMEOUT_REACHED && this->flag_check_clients_alive_)
         {
-            // DO NOTHING.
+            this->checkClientsAliveStatus();
         }
         else if (result != ServerResult::COMMAND_OK)
         {
@@ -331,13 +353,7 @@ void CommandServerBase::serverWorker()
             }
         }
     }
-
-    // Delete pointers for clean finish the worker.
-    if (this->server_socket_)
-    {
-        delete this->server_socket_;
-        this->server_socket_ = nullptr;
-    }
+    // Finish the worker.
 }
 
 ServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
@@ -367,9 +383,19 @@ ServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
         return ServerResult::INTERNAL_ZMQ_ERROR;
     }
 
+    // Check if we want to close the server.
+    if(recv_result && multipart_msg.size() == 1 && multipart_msg.begin()->empty() && !this->flag_server_working_)
+    {
+        std::cout<<"We want to close"<<std::endl;
+        return ServerResult::COMMAND_OK;
+    }
+
     // Check for empty msg or timeout reached.
     if (multipart_msg.empty() && !recv_result)
+    {
+        std::cout<<"Timeout"<<std::endl;
         return ServerResult::TIMEOUT_REACHED;
+    }
     else if (multipart_msg.empty())
         return ServerResult::EMPTY_MSG;
 
@@ -542,6 +568,8 @@ void CommandServerBase::processCustomCommand(const CommandRequest &request, Comm
 
 void CommandServerBase::checkClientsAliveStatus()
 {
+    std::cout<<"Checking clients alive"<<std::endl;
+
     // Safe mutex lock
     std::unique_lock<std::mutex> lock(this->mtx_);
 
@@ -634,12 +662,8 @@ void CommandServerBase::resetSocket()
     const zmq::error_t* last_error;
     unsigned reconnect_count = common::kServerReconnTimes;
 
-    // Delete the previous socket.
-    if (this->server_socket_)
-    {
-        delete this->server_socket_;
-        this->server_socket_ = nullptr;
-    }
+    // Stop the socket.
+    this->internalStopServer();
 
     // Try creating a new socket.
     do
@@ -648,7 +672,7 @@ void CommandServerBase::resetSocket()
         {
             // Create the ZMQ rep socket.
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
-            this->server_socket_ = new zmq::socket_t(*this->context_, zmq::socket_type::rep);
+            this->server_socket_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::rep);
             this->server_socket_->bind(this->server_endpoint_);
             this->server_socket_->set(zmq::sockopt::linger, 0);
 

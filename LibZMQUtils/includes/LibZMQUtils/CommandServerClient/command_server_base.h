@@ -46,6 +46,7 @@
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/libzmqutils_global.h"
+#include "LibZMQUtils/zmq_context_handler.h"
 #include "LibZMQUtils/CommandServerClient/common.h"
 #include "LibZMQUtils/Utilities/utils.h"
 // =====================================================================================================================
@@ -199,7 +200,7 @@ using utils::NetworkAdapterInfo;
  *
  * @see ServerCommand, ServerResult, CommandRequest, CommandReply, CommandClientBase, onCustomCommandReceived
  */
-class LIBZMQUTILS_EXPORT CommandServerBase
+class LIBZMQUTILS_EXPORT CommandServerBase : public ZMQContextHandler
 {
 
 public:
@@ -563,6 +564,9 @@ private:
     // Helper for check if the base command is valid.
     static bool validateCommand(int raw_command);
 
+    // Internal helper for stop the server.
+    void internalStopServer();
+
     // Server worker (will be execute asynchronously).
     void serverWorker();
 
@@ -593,9 +597,8 @@ private:
     // Function for reset the socket.
     void resetSocket();
 
-    // ZMQ socket and context.
-    zmq::context_t *context_;        ///< ZMQ context.
-    zmq::socket_t* server_socket_;   ///< ZMQ server socket.
+    // ZMQ socket.
+    zmq::socket_t* server_socket_;    ///< ZMQ server socket.
 
     // Endpoint data and server info.
     std::string server_endpoint_;                              ///< Final server endpoint.

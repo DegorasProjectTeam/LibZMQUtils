@@ -1,3 +1,4 @@
 #include <LibZMQUtils/Utilities/utils.h>
 #include <LibZMQUtils/Utilities/binary_serializer.h>
 #include <LibZMQUtils/Utilities/callback_handler.h>
+#include <LibZMQUtils/Utilities/uuid_generator.h>
