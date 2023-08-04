@@ -25,17 +25,30 @@
 #include "LibZMQUtils/CommandServerClient/common.h"
 
 
-zmqutils::common::HostClientInfo::HostClientInfo(const std::string &ip,
-                                                 const std::string &pid,
-                                                 unsigned client_num,
-                                                 const std::string &hostname) :
+zmqutils::common::HostClientInfo::HostClientInfo(
+                                const utils::UUID& uuid,
+                                const std::string& ip,
+                                const std::string& pid,
+                                const std::string& hostname,
+                                const std::string& name ):
+    uuid(uuid),
     ip(ip),
-    hostname(hostname),
     pid(pid),
-    client_num(client_num)
+    hostname(hostname),
+    name(name)
+{}
+
+std::string zmqutils::common::HostClientInfo::toJsonString() const
 {
-    // Create the host client internal identification.
-    this->id = ip + "//" + pid + "//" + std::to_string(client_num);
+    std::stringstream ss;
+    ss << "{\n"
+       << "\t\"uuid\": \"" << this->uuid.toRFC4122String() << "\",\n"
+       << "\t\"ip\": \"" << this->ip << "\",\n"
+       << "\t\"pid\": \"" << this->pid << "\",\n"
+       << "\t\"hostname\": " << this->hostname << ",\n"
+       << "\t\"name\": \"" << this->name << "\"\n"
+       << "}";
+    return ss.str();
 }
 
 zmqutils::common::RequestData::RequestData(ServerCommand id) :
@@ -49,3 +62,15 @@ zmqutils::common::RequestData::RequestData() :
     params_size(0){}
 
 
+
+zmqutils::common::CommandRequest::CommandRequest():
+    command(ServerCommand::INVALID_COMMAND),
+    params(nullptr),
+    params_size(0)
+{}
+
+zmqutils::common::CommandReply::CommandReply():
+    params(nullptr),
+    params_size(0),
+    result(ServerResult::COMMAND_OK)
+{}

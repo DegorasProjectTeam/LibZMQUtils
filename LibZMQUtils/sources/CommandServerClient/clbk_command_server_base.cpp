@@ -23,14 +23,8 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file ExampleServerAmelas.cpp
- *
- * @brief This file serves as a program example of how to use the AmelasServer and AmelasController classes.
- *
- * This program initializes an instance of the AmelasServer class and sets it up to interact with an instance of
- * the AmelasController class. The server is set up to respond to client requests by invoking callback methods on the
- * controller. The program will run indefinitely until the user hits ctrl-c.
- *
+ * @file clbk_command_server_base.cpp
+ * @brief This file contains the implementation of the ClbkCommandServerBase class and related.
  * @author Degoras Project Team
  * @copyright EUPL License
  * @version 2307.1
@@ -38,105 +32,39 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
-#ifdef _WIN32
-#include <Windows.h>
-#endif
-#include <iostream>
-#include <chrono>
-#include <thread>
-#include <csignal>
-#include <limits>
+#include <unordered_map>
+#include <string>
 #include <any>
+#include <variant>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/Helpers>
+#include "LibZMQUtils/CommandServerClient/clbk_command_server_base.h"
 // =====================================================================================================================
 
-// PROJECT INCLUDES
+// ZMQUTILS NAMESPACES
 // =====================================================================================================================
-#include "AmelasServer/amelas_server.h"
-#include "AmelasController/amelas_controller.h"
-// =====================================================================================================================
+namespace zmqutils{
 
-// ---------------------------------------------------------------------------------------------------------------------
+ClbkCommandServerBase::ClbkCommandServerBase(unsigned int port, const std::string &local_addr) :
+    CommandServerBase(port, local_addr),
+    CallbackHandler()
+{}
 
-
-// ---------------------------------------------------------------------------------------------------------------------
-
-/**
- * @brief Main entry point of the program.
- *
- * Initializes an AmelasController and AmelasServer, then enters an infinite loop where it listens for client requests
- * and processes them using the server. If the user hits ctrl-c, the server is shut down and the program exits.
- */
-int main(int, char**)
+void ClbkCommandServerBase::removeCallback(ServerCommand command)
 {
-    // Nampesaces.
-    using amelas::communication::AmelasServer;
-    using amelas::communication::AmelasServerCommand;
-    using amelas::controller::AmelasController;
-
-    // Configure the console.
-    zmqutils::internal_helpers::ConsoleConfig cmd_config(true, true, true);
-
-    // Configuration variables.
-    unsigned port = 9999;
-    bool client_status_check = true;
-
-    // Instantiate the Amelas controller.
-    AmelasController amelas_controller;
-
-    // Instantiate the server.
-    AmelasServer amelas_server(port);
-
-    // Disable or enables the client status checking.
-    amelas_server.setClientStatusCheck(client_status_check);
-
-    // ---------------------------------------
-
-    // Set the controller callbacks in the server.
-
-    amelas_server.registerControllerCallback(AmelasServerCommand::REQ_SET_HOME_POSITION,
-                                             &amelas_controller,
-                                             &AmelasController::setHomePosition);
-
-    amelas_server.registerControllerCallback(AmelasServerCommand::REQ_GET_HOME_POSITION,
-                                             &amelas_controller,
-                                             &AmelasController::getHomePosition);
-
-    // ---------------------------------------
-
-    // Start the server.
-    bool started = amelas_server.startServer();
-
-    // Check if the server starts ok.
-    if(!started)
-    {
-        // Log.
-        std::cout << "Server start failed!! Press Enter to exit!" << std::endl;
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
-        return 1;
-    }
-
-    // Wait for closing as an infinite loop until ctrl-c.
-    zmqutils::internal_helpers::ConsoleConfig::waitForClose();
-
-    // Log.
-    std::cout << "Stopping the server..." << std::endl;
-
-    // Stop the server and wait the future.
-    amelas_server.stopServer();
-
-    // Final log.
-    std::cout << "Server stoped. All ok!!" << std::endl;
-
-    // Restore the console.
-    cmd_config.restoreConsole();
-
-    // Return.
-	return 0;
+    CallbackHandler::removeCallback(static_cast<CallbackHandler::CallbackId>(command));
 }
 
-// ---------------------------------------------------------------------------------------------------------------------
+bool ClbkCommandServerBase::hasCallback(ServerCommand command)
+{
+    return CallbackHandler::hasCallback(static_cast<CallbackHandler::CallbackId>(command));
+}
+
+ClbkCommandServerBase::~ClbkCommandServerBase() { }
+
+// =====================================================================================================================
+
+} // END NAMESPACES.
+// =====================================================================================================================

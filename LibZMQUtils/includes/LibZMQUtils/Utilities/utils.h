@@ -98,6 +98,20 @@ LIBZMQUTILS_EXPORT std::string timePointToIso8601(const HRTimePointStd& tp, bool
 
 LIBZMQUTILS_EXPORT std::string currentISO8601Date(bool add_ms = true);
 
+template<typename Enum, std::size_t N>
+std::string getEnumString(Enum value, const std::array<const char*, N>& str_array)
+{
+    static_assert(std::is_enum<Enum>::value, "getEnumString - Template argument must be an enum type.");
+
+    using underlying = typename std::underlying_type<Enum>::type;
+    underlying index = static_cast<underlying>(value);
+
+    if (index < str_array.size())
+        return str_array[index];
+
+    return "Unknown value.";
+}
+
 
 
 namespace internal

@@ -57,7 +57,7 @@ namespace utils{
 // =====================================================================================================================
 
 std::mt19937_64 UUIDGenerator::gen_ = std::mt19937_64{std::random_device{}()};
-std::random_device UUIDGenerator::rd_ = std::random_device();           ///< Random device.
+std::random_device UUIDGenerator::rd_ = std::random_device();
 
 UUIDGenerator::UUIDGenerator()
 {
@@ -65,7 +65,7 @@ UUIDGenerator::UUIDGenerator()
     std::unique_lock<std::mutex> lock(this->mtx_);
 
     // Check the entropy.
-    if(static_cast<int>(this->rd_.entropy()) == 0)
+    if(this->rd_.entropy() == 0.0)
     {
         auto now = std::chrono::high_resolution_clock::now();
         auto now_int = std::chrono::time_point_cast<std::chrono::nanoseconds>(now).time_since_epoch().count();
@@ -88,7 +88,7 @@ UUID UUIDGenerator::generateUUIDv4()
     {
         // Random generation.
         for(auto& byte : bytes)
-            byte = static_cast<std::byte>(distrib(this->gen_));
+            byte = static_cast<std::byte>(distrib(UUIDGenerator::gen_));
 
         // Set the version to 4 (random)
         bytes[6] = static_cast<std::byte>((static_cast<std::uint8_t>(bytes[6]) & 0x0F) | 0x40);
@@ -102,7 +102,7 @@ UUID UUIDGenerator::generateUUIDv4()
     } while(generated_uuids_.find(uuid) != generated_uuids_.end());
 
     // Safe mutex lock.
-    std::unique_lock<std::mutex> lock(this->mtx_);
+    std::unique_lock<std::mutex> lock(UUIDGenerator::mtx_);
 
     // Insert the generated uuid.
     generated_uuids_.insert(uuid);

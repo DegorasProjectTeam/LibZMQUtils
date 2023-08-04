@@ -76,12 +76,14 @@ CommandServerBase::CommandServerBase(unsigned port,
         }
     }
 
-    // TODO control a valid configuration.
+    // Check for valid configuration.
+    if(this->server_adapters_.empty())
+        throw std::invalid_argument("CommandServerBase: No interfaces found for address <" + local_addr + ">.");
 }
 
 const std::future<void> &CommandServerBase::getServerWorkerFuture() const {return this->fut_server_worker_;}
 
-const std::map<std::string, HostClientInfo> &CommandServerBase::getConnectedClients() const
+const std::map<UUID, HostClientInfo> &CommandServerBase::getConnectedClients() const
 {return this->connected_clients_;}
 
 void CommandServerBase::setClientStatusCheck(bool enable)
@@ -198,23 +200,47 @@ CommandServerBase::~CommandServerBase()
 
 ServerResult CommandServerBase::execReqConnect(const CommandRequest& cmd_req)
 {
-    // Safe mutex lock.
-    std::unique_lock<std::mutex> lock(this->mtx_);
+    // Auxiliar containers.
+    std::string ip;
+    std::string pid;
+    std::string hostname;
+    std::string name;
+
+    // Prepare the serializer.
+    utils::BinarySerializer serializer(cmd_req.params.get(), cmd_req.params_size);
+
+    // Check the parameters.
+    if(cmd_req.params_size == 0)
+        return ServerResult::EMPTY_PARAMS;
+
+    // Get the parameters.
+    try
+    {
+        serializer.read(ip, pid, hostname, name);
+    }
+    catch (...)
+    {
+        return ServerResult::BAD_PARAMETERS;
+    }
 
     // Check if the client is already connected.
-    auto it = this->connected_clients_.find(cmd_req.client.id);
+    auto it = this->connected_clients_.find(cmd_req.client_uuid);
     if(it != this->connected_clients_.end())
         return ServerResult::ALREADY_CONNECTED;
 
+    // Store the client.
+    HostClientInfo client_info(cmd_req.client_uuid, ip, pid, hostname, name);
+    client_info.last_seen = std::chrono::steady_clock::now();
+
     // Add the new client.
-    this->connected_clients_[cmd_req.client.id] = cmd_req.client;
+    this->connected_clients_[cmd_req.client_uuid] = client_info;
 
     // Update the timeout of the main socket.
     if(this->flag_check_clients_alive_)
         this->updateServerTimeout();
 
     // Call to the internal callback.
-    this->onConnected(cmd_req.client);
+    this->onConnected(client_info);
 
     // All ok.
     return ServerResult::COMMAND_OK;
@@ -222,17 +248,14 @@ ServerResult CommandServerBase::execReqConnect(const CommandRequest& cmd_req)
 
 ServerResult CommandServerBase::execReqDisconnect(const CommandRequest& cmd_req)
 {
-    // Safe mutex lock.
-    std::unique_lock<std::mutex> lock(this->mtx_);
-
     // Get the client.
-    auto it = this->connected_clients_.find(cmd_req.client.id);
+    auto it = this->connected_clients_.find(cmd_req.client_uuid);
+
+    // Call to the internal callback.
+    this->onDisconnected(it->second);
 
     // Remove the client from the map of connected clients.
     this->connected_clients_.erase(it);
-
-    // Call to the internal callback.
-    this->onDisconnected(cmd_req.client);
 
     // Update the timeout of the main socket.
     if(this->flag_check_clients_alive_)
@@ -244,6 +267,9 @@ ServerResult CommandServerBase::execReqDisconnect(const CommandRequest& cmd_req)
 
 void CommandServerBase::serverWorker()
 {
+
+    // TODO Stop the server if a ZMQ error occurrs.
+
     // Containers.
     ServerResult result;
     CommandRequest request;
@@ -309,7 +335,7 @@ void CommandServerBase::serverWorker()
                 // Check if we want to close the server.
                 // The error code is for ZMQ EFSM error.
                 if(!(error.num() == common::kZmqEFSMError && !this->flag_server_working_))
-                    this->onServerError(error, "Error while sending a response.");
+                    this->onServerError(error, "CommandServerBase: Error while sending a response.");
             }
         }
         else if (result == ServerResult::COMMAND_OK)
@@ -349,7 +375,7 @@ void CommandServerBase::serverWorker()
                 // Check if we want to close the server.
                 // The error code is for ZMQ EFSM error.
                 if(!(error.num() == common::kZmqEFSMError && !this->flag_server_working_))
-                    this->onServerError(error, "Error while sending a response.");
+                    this->onServerError(error, "CommandServerBase: Error while sending a response.");
             }
         }
     }
@@ -379,82 +405,48 @@ ServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
             return ServerResult::COMMAND_OK;
 
         // Else, call to error callback.
-        this->onServerError(error, "Error while receiving a request.");
+        this->onServerError(error, "CommandServerBase: Error while receiving a request.");
         return ServerResult::INTERNAL_ZMQ_ERROR;
     }
 
     // Check if we want to close the server.
     if(recv_result && multipart_msg.size() == 1 && multipart_msg.begin()->empty() && !this->flag_server_working_)
-    {
-        std::cout<<"We want to close"<<std::endl;
         return ServerResult::COMMAND_OK;
-    }
 
     // Check for empty msg or timeout reached.
     if (multipart_msg.empty() && !recv_result)
-    {
-        std::cout<<"Timeout"<<std::endl;
         return ServerResult::TIMEOUT_REACHED;
-    }
     else if (multipart_msg.empty())
         return ServerResult::EMPTY_MSG;
 
     // Check the multipart msg size.
-    if (multipart_msg.size() == 4 || multipart_msg.size() == 5)
+    if (multipart_msg.size() == 2 || multipart_msg.size() == 3)
     {
-        // Auxiliar containers.
-        std::string ip;
-        unsigned c_num;
-        std::string pid;
-
         // Get the multipart data.
-        zmq::message_t message_ip = multipart_msg.pop();
-        zmq::message_t message_pid = multipart_msg.pop();
-        zmq::message_t message_c_num = multipart_msg.pop();
-        zmq::message_t message_command = multipart_msg.pop();
+        zmq::message_t msg_uuid = multipart_msg.pop();
+        zmq::message_t msg_command = multipart_msg.pop();
 
-        // Get the sizes.
-        size_t ip_size_bytes = message_ip.size();
-
-        size_t pid_size_bytes = message_pid.size();
-        size_t command_size_bytes = message_command.size();
-
-        // First get the ip data.
-        if (ip_size_bytes > 0)
+        // First get the uuid data.
+        if (msg_uuid.size() == UUID::kUUIDSize)
         {
-            utils::BinarySerializer::fastDeserialization(message_ip.data(), message_ip.size(), ip);
+            std::array<std::byte, 16> uuid_bytes;
+            utils::BinarySerializer::fastDeserialization(msg_uuid.data(), msg_uuid.size(), uuid_bytes);
+            request.client_uuid = UUID(uuid_bytes);
         }
         else
-            return ServerResult::EMPTY_CLIENT_IP;
-
-        // Get the hostname data.
-        if (  message_c_num.size() > 0)
-            utils::BinarySerializer::fastDeserialization(message_c_num.data(), message_c_num.size(), c_num);
-        else
-            return ServerResult::EMPTY_CLIENT_NAME;
-
-        // Get the pid data.
-        if (pid_size_bytes > 0)
-            pid = std::string(static_cast<char*>(message_pid.data()), pid_size_bytes);
-        else
-            return ServerResult::EMPTY_CLIENT_PID;
-
-        // Update the client info.
-        // WARNING UPDATE
-        request.client = HostClientInfo(ip, pid, c_num, "caca");
-        request.client.last_conn = std::chrono::steady_clock::now();
+            return ServerResult::INVALID_CLIENT_UUID;
 
         // Update the last connection if the client is connected.
-        this->updateClientLastConnection(request.client.id);
+        this->updateClientLastConnection(request.client_uuid);
 
         // Get the command.
-        if (command_size_bytes == sizeof(ServerCommand))
+        if (msg_command.size() == sizeof(ServerCommand))
         {
             // Auxiliar command container.
             std::int32_t raw_command;
 
             // Deserialize.
-            utils::BinarySerializer::fastDeserialization(message_command.data(), sizeof(ServerCommand), raw_command);
+            utils::BinarySerializer::fastDeserialization(msg_command.data(), sizeof(ServerCommand), raw_command);
 
             // Validate the base command or the external command.
             if(CommandServerBase::validateCommand(raw_command))
@@ -525,7 +517,7 @@ void CommandServerBase::processCommand(const CommandRequest& request, CommandRep
     {
         reply.result = this->execReqConnect(request);
     }
-    else if(this->connected_clients_.find(request.client.id) == this->connected_clients_.end())
+    else if(this->connected_clients_.find(request.client_uuid) == this->connected_clients_.end())
     {
         reply.result = ServerResult::CLIENT_NOT_CONNECTED;
     }
@@ -568,13 +560,11 @@ void CommandServerBase::processCustomCommand(const CommandRequest &request, Comm
 
 void CommandServerBase::checkClientsAliveStatus()
 {
-    std::cout<<"Checking clients alive"<<std::endl;
-
     // Safe mutex lock
     std::unique_lock<std::mutex> lock(this->mtx_);
 
     // Auxiliar containers.
-    std::vector<std::string> dead_clients;
+    std::vector<UUID> dead_clients;
     std::chrono::milliseconds timeout(common::kDefaultClientAliveTimeoutMsec);
     std::chrono::milliseconds min_remaining_time = timeout;
 
@@ -585,7 +575,7 @@ void CommandServerBase::checkClientsAliveStatus()
     for(auto& client : this->connected_clients_)
     {
         // Get the last connection time.
-        const auto& last_conn = client.second.last_conn;
+        const auto& last_conn = client.second.last_seen;
         // Check if the client reaches the timeout checking the last connection time.
         auto since_last_conn = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_conn);
         if(since_last_conn >= timeout)
@@ -599,6 +589,7 @@ void CommandServerBase::checkClientsAliveStatus()
             // If the client is not dead, check the minor timeout of the client to set
             // with the remain time to reach the timeout.
             min_remaining_time = std::min(min_remaining_time, timeout - since_last_conn);
+            std::cout<<"Minimum remainin: "<<min_remaining_time.count()<<std::endl;
         }
     }
 
@@ -620,14 +611,15 @@ void CommandServerBase::checkClientsAliveStatus()
     }
 }
 
-void CommandServerBase::updateClientLastConnection(const std::string &id)
+void CommandServerBase::updateClientLastConnection(const UUID& uuid)
 {
-    // Safe mutex lock.
-    std::unique_lock<std::mutex> lock(this->mtx_);
     // Update the client last connection.
-    auto client_itr = this->connected_clients_.find(id);
+    auto client_itr = this->connected_clients_.find(uuid);
     if(client_itr != this->connected_clients_.end())
-        client_itr->second.last_conn = std::chrono::steady_clock::now();
+    {
+        std::cout<<"Updating client connection"<<std::endl;
+        client_itr->second.last_seen = std::chrono::steady_clock::now();
+    }
 }
 
 void CommandServerBase::updateServerTimeout()
@@ -637,16 +629,17 @@ void CommandServerBase::updateServerTimeout()
         [](const auto& a, const auto& b)
         {
         auto diff_a = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - a.second.last_conn);
+            std::chrono::steady_clock::now() - a.second.last_seen);
         auto diff_b = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - b.second.last_conn);
+            std::chrono::steady_clock::now() - b.second.last_seen);
         return diff_a.count() < diff_b.count();
         });
 
     if (min_timeout != this->connected_clients_.end())
     {
-        auto remain_time = common::kDefaultClientAliveTimeoutMsec - std::chrono::duration_cast<std::chrono::milliseconds>(
-                                                                        std::chrono::steady_clock::now() - min_timeout->second.last_conn).count();
+        auto remain_time = common::kDefaultClientAliveTimeoutMsec -
+                           std::chrono::duration_cast<std::chrono::milliseconds>(
+                                       std::chrono::steady_clock::now() - min_timeout->second.last_seen).count();
         this->server_socket_->set(zmq::sockopt::rcvtimeo, std::max(0, static_cast<int>(remain_time)));
     }
     else

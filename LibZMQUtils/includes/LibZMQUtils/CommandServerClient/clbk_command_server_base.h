@@ -65,10 +65,7 @@ class LIBZMQUTILS_EXPORT ClbkCommandServerBase : public CommandServerBase,
 {
 public:
 
-    ClbkCommandServerBase(unsigned port, const std::string& local_addr = "*") :
-        CommandServerBase(port, local_addr),
-        CallbackHandler()
-    {}
+    ClbkCommandServerBase(unsigned port, const std::string& local_addr = "*");
 
     template<typename ClassT, typename RetT = void, typename... Args>
     void registerCallback(ServerCommand command, ClassT* object, RetT(ClassT::*callback)(Args...))
@@ -76,15 +73,11 @@ public:
         CallbackHandler::registerCallback(static_cast<CallbackHandler::CallbackId>(command), object, callback);
     }
 
-    void removeCallback(ServerCommand command)
-    {
-        CallbackHandler::removeCallback(static_cast<CallbackHandler::CallbackId>(command));
-    }
+    void removeCallback(ServerCommand command);
 
-    bool hasCallback(ServerCommand command)
-    {
-        return CallbackHandler::hasCallback(static_cast<CallbackHandler::CallbackId>(command));
-    }
+    bool hasCallback(ServerCommand command);
+
+    virtual ~ClbkCommandServerBase() override;
 
 protected:
 

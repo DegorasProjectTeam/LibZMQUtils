@@ -3,11 +3,19 @@
 #include <iostream>
 #include <cstring>
 
-#include <LibZMQUtils/Utils>
 
+// ZMQUTILS INCLUDES
+// =====================================================================================================================
+#include <LibZMQUtils/Helpers>
+#include <LibZMQUtils/Utils>
+// =====================================================================================================================
+
+// PROJECT INCLUDES
+// =====================================================================================================================
 #include "AmelasController/common.h"
 #include "AmelasServer/common.h"
 #include "AmelasClient/amelas_client.h"
+// =====================================================================================================================
 
 
 // TODO Remove
@@ -156,7 +164,17 @@ void parseCommand(CommandClientBase &client, const std::string &command)
             ClientResult result = ClientResult::COMMAND_OK;
             CommandReply reply;
 
-            client_result = client.sendCommand(command_msg, reply);
+            if(command_msg.command == ServerCommand::REQ_CONNECT)
+            {
+                client_result = client.doConnect();
+
+                if (client_result == ClientResult::CLIENT_STOPPED)
+                    return;
+
+
+            }
+            else
+                client_result = client.sendCommand(command_msg, reply);
 
             std::cerr << "Client Result: " << static_cast<int>(client_result)<<std::endl;
 
@@ -231,89 +249,65 @@ void parseCommand(CommandClientBase &client, const std::string &command)
 }
 
 
-int main(int argc, char**argv)
+int main(int, char**)
 {
+    // Configure the console.
+    zmqutils::internal_helpers::ConsoleConfig cmd_config(true, false, false);
 
+    // Configuration variables.
     int port = 9999;
     std::string ip = "127.0.0.1";
 
-    if (argc == 2)
-    {
-        ip = argv[1];
-    }
-    if (argc == 3)
-    {
-        ip = argv[1];
-        try
-        {
-            port = std::stoi(argv[2]);
-        }  catch (...)
-        {
-            std::cerr << "Not recognized port in input: " << argv[2] << std::endl;
-            return -1;
-        }
-
-    }
-    else if (argc > 3)
-    {
-        std::cout << "Usage: ZMQClient [ip] [port]" << std::endl;
-        return 0;
-    }
-
     std::string endpoint = "tcp://" + ip + ":" + std::to_string(port);
-    AmelasClient client(endpoint);
 
-    AmelasClient client2(endpoint);
+    AmelasClient client(endpoint, "AMELAS EXAMPLE CLIENT");
 
-    AmelasClient client3(endpoint);
+    // Set the exit callback to the console handler for safety.
+    zmqutils::internal_helpers::ConsoleConfig::setExitCallback(
+        [&client](){client.stopClient();});
 
-    AmelasClient client4(endpoint);
-
-    client.startClient("Ethernet");
-    parseCommand(client, "0");
-
-    std::cout << "Here1" << std::endl;
-
-    client2.startClient("Ethernet");
-    parseCommand(client2, "0");
-
-    std::cout << "Here2" << std::endl;
-
-    client3.startClient("Ethernet");
-    parseCommand(client3, "0");
-
-    std::cout << "Here3" << std::endl;
-
-    client2.stopClient();
-
-    std::cout << "Here4" << std::endl;
-
-    client4.startClient("Ethernet");
-
-    std::cout << "Here5" << std::endl;
-
-
-
-    parseCommand(client2, "0");
+    client.startClient();
 
     //client.startAutoAlive();
     std::string command;
 
-    while(true)
+    // Infinite loop for test.
+    while(!zmqutils::internal_helpers::ConsoleConfig::gCloseFlag)
     {
+        // Get the command and parameters.
+        std::cout<<"--------------------------------------------"<<std::endl;
+        std::cout<<"-- Commands --"<<std::endl;
+        std::cout<<"- REQ_CONNECT:    0"<<std::endl;
+        std::cout<<"- REQ_DISCONNECT: 1"<<std::endl;
+        std::cout<<"- REQ_ALIVE:      2"<<std::endl;
+        std::cout<<"- CUSTOM:         cmd param1 param2 ..."<<std::endl;
+        std::cout<<"--------------------------------------------"<<std::endl;
         std::cout<<"Write a command: ";
         std::getline(std::cin, command);
 
-        if (command == "exit")
+        // Break if we want to close the example program.
+        if(zmqutils::internal_helpers::ConsoleConfig::gCloseFlag || std::cin.eof())
             break;
 
+        //
         parseCommand(client, command);
     }
 
+    std::cout << "We will close, waiting for closing." << std::endl;
+
+    zmqutils::internal_helpers::ConsoleConfig::waitForClose();
+
     std::cout << "Requested client to stop. Bye." << std::endl;
 
-    client.stopClient();
+    //client.stopClient();
 
-	
+    std::cout << "End final" << std::endl;
+
+    // Final log.
+    std::cout << "Server stoped. All ok!!" << std::endl;
+
+    // Restore the console.
+    cmd_config.restoreConsole();
+
 	return 0;
 }

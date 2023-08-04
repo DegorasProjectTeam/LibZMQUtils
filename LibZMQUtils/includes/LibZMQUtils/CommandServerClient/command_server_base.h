@@ -49,6 +49,7 @@
 #include "LibZMQUtils/zmq_context_handler.h"
 #include "LibZMQUtils/CommandServerClient/common.h"
 #include "LibZMQUtils/Utilities/utils.h"
+#include "LibZMQUtils/Utilities/uuid_generator.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
@@ -65,6 +66,7 @@ using common::ServerResult;
 using common::HostClientInfo;
 using common::CommandType;
 using utils::NetworkAdapterInfo;
+using utils::UUID;
 // =====================================================================================================================
 
 /**
@@ -82,43 +84,47 @@ using utils::NetworkAdapterInfo;
  * use cases while keeping the core logic generic and reusable.
  *
  * The server created with this class operates asynchronously, with the main server tasks running in a separate thread.
- * It is capable of managing multiple client connections, processing command requests, and sending responses. The server
- * also provides optional functionalities such as checking the alive status of connected clients.
+ * It is capable of managing multiple client connections, processing command requests, and sending responses. The
+ * server also provides optional functionalities such as checking the alive status of connected clients.
  *
  * @section Pattern
  *
- * This class extends the ZeroMQ's standard REQ-REP pattern, also known as the Request-Reply pattern, to allow the client
- * to send commands to the server, which then processes these commands using appropriate callbacks for execution. In a
- * typical REQ-REP pattern, there is a strict send-and-receive order between the client and server. The client (REQ) sends
- * a request to the server and then waits for the reply. Similarly, the server (REP) waits for a request, and once it
- * receives one, it sends a reply. This cycle then repeats in a strict alternating order, ensuring that each request
- * receives a corresponding reply.
+ * This class extends the ZeroMQ's standard REQ-REP pattern, also known as the Request-Reply pattern, to allow the
+ * client to send commands to the server, which then processes these commands using appropriate callbacks for
+ * execution. In a typical REQ-REP pattern, there is a strict send-and-receive order between the client and server. The
+ * client (REQ) sends a request to the server and then waits for the reply. Similarly, the server (REP) waits for a
+ * request, and once it  receives one, it sends a reply. This cycle then repeats in a strict alternating order,
+ * ensuring that each request receives a corresponding reply.
  *
- * This strict request-reply cycle is essential when controlling hardware devices or low-level software modules, where the
- * order of commands and their corresponding responses is critical. By ensuring a strict request-reply order, we can
- * maintain consistent control over the devices and modules and reduce the risk of command conflicts or overlaps.
+ * This strict request-reply cycle is essential when controlling hardware devices or low-level software modules, where
+ * the order of commands and their corresponding responses is critical. By ensuring a strict request-reply order, we
+ * can maintain consistent control over the devices and modules and reduce the risk of command conflicts or overlaps.
  *
- * In the extended pattern provided by this class, each request from the client is essentially a command that the server
- * must execute. To handle this, we define a set of commands that the client can send, and we provide corresponding callback
- * functions on the server to execute when it receives these commands. The result of the command execution is then sent back
- * to the client as the reply.
+ * In the extended pattern provided by this class, each request from the client is essentially a command that the
+ * server must execute. To handle this, we define a set of commands that the client can send, and we provide
+ * corresponding callback functions on the server to execute when it receives these commands. The result of the
+ * command execution is then sent back to the client as the reply.
  *
- * By extending the pattern in this way, we create a flexible and robust framework for controlling a wide range of devices
- * and software modules, while maintaining the strict request-reply order that ensures reliable and consistent operation.
+ * By extending the pattern in this way, we create a flexible and robust framework for controlling a wide range of
+ * devices and software modules, while maintaining the strict request-reply order that ensures reliable and consistent
+ * operation.
  *
  * @section Case Of Use
  *
- * This communication pattern is particularly beneficial when controlling hardware devices like generic robots, SLR Range
- * Gate Generators, telescope mounts, and other low-level software modules, where concatenation between replies and
- * responses is crucial. For example, this base server is use in the ROA SLR Station in San Fernando, Spain, for control
- * FPGA devices, the telescope mount and other software modules.
+ * This communication pattern is particularly beneficial when controlling generic hardware devices like PLC or
+ * microcontroller based devices, FPGA devices, generic robots etc. Also can be used in specialized devices, like
+ * telescope mounts, domes, SLR Range Gate Generators (RGG), etc.
+ *
+ * In all these examples, the concatenation between replies and responses is crucial. For example, this base server is
+ * used in the ROA SLR Station in San Fernando, Spain, for control the RGG, the telescope mount, dome, and other
+ * specialized software modules.
  *
  * @section Design
  *
  * This base class is designed to be inherited by subclasses that provide specific implementations for various callback
- * functions to handle server events such as start/stop of the server, client connections/disconnections, receiving invalid
- * or custom commands, and server errors. This design allows for creating specialized servers for different use cases while
- * keeping the core logic generic and reusable.
+ * functions to handle server events such as start/stop of the server, client connections/disconnections, receiving
+ * invalid or custom commands, and server errors. This design allows for creating specialized servers for different use
+ * cases while keeping the core logic generic and reusable.
  *
  * The server operates asynchronously, with main server tasks running in a separate thread. It is capable of managing
  * multiple client connections, processing command requests, and sending responses. The server also provides optional
@@ -168,35 +174,42 @@ using utils::NetworkAdapterInfo;
  *
  * Finally, also remember add the virtual destructor to the subclass.
  *
- * @note This class is not directly useful on its own. Instead, it is intended to be subclassed and its callback methods
- *       overridden to implement the desired server behavior.
+ * @note
  *
- * @warning This server is designed to include client-specific information (such as IP address, hostname, Process ID (PID),
- *          and the client name) in its communications. This approach enables the server to maintain a clear understanding
- *          of which client is issuing commands, improving operational visibility and control. Such client-specific data
- *          can be particularly valuable for generating detailed logs which, upon subsequent analysis, can yield insights
- *          into system behavior, user activity, and potential issues.
+ * This class is not directly useful on its own. Instead, it is intended to be subclassed and its callback
+ * methods overridden to implement the desired server behavior.
  *
- *          While in certain contexts and under different communication patterns, it may not be advisable or necessary to
- *          include such client information, in the case of this server class, we recommend preserving this feature. By
- *          doing so, it enhances the robustness and traceability of server-client interactions, especially in environments
- *          where precise command control and operational accountability are essential.
+ * @warning Client-Specific Data:
  *
- * @warning Currently, this server implementation does not provide any built-in security measures, such as authentication
- *          or encryption. This means that the server is potentially vulnerable to unauthorized access or eavesdropping.
- *          Therefore, it is crucial to control the server's network connections by external means, such as a firewall or
- *          VPN. Always ensure that the network environment in which this server operates is secured.
+ * This server includes client-specific information, including IP address, hostname, Process ID (PID), and
+ * client name, in its communications. This approach aids the server in identifying which client issues commands,
+ * thereby improving operational visibility and control. Client-specific data can be useful in generating
+ * detailed logs which can be analyzed to gain insights into system behavior, user activity, and potential issues.
  *
- * @warning When creating a subclass, make sure to avoid blocking or computationally intensive operations within the
- *          overridden callbacks. Blocking the server thread can affect the server's performance and responsiveness. If
- *          complex tasks are needed, consider performing them asynchronously or using separate threads.
+ * Although in certain contexts it may not be advisable or necessary to include such client information, we recommend
+ * retaining this feature for this server class. This enhances the robustness and traceability of server-client
+ * interactions, particularly in environments where precise command control and operational accountability are crucial.
  *
- * @todo Future versions of this server should include built-in security measures. Particularly, it is intended to
- *       implement support for ZeroMQ's security mechanisms, such as CurveZMQ for public-key encryption and ZAP for
- *       authentication. These enhancements will provide a robust layer of security and significantly reduce the risk
- *       of unauthorized access.
+ * @warning Security Measures:
  *
- * @todo Add a method to easily send large data divided in chunks with progress communication.
+ * This server implementation does not provide any built-in security measures, such as authentication or encryption.
+ * As a result, the server is potentially vulnerable to unauthorized access or eavesdropping. It is critical to control
+ * the server's network connections using external means, like a firewall or VPN. Always ensure that the network
+ * environment in which the server operates is secure.
+ *
+ * @warning Overridden Callbacks:
+ *
+ * When creating a subclass, ensure that blocking or computationally intensive operations are not present within the
+ * overridden callbacks. Blocking the server thread can affect the server's performance and responsiveness. If
+ * complex tasks are necessary, consider performing them asynchronously or using separate threads.
+ *
+ * @todo Future Enhancements:
+ *
+ * Future versions of this server should include built-in security measures. Specifically, we plan to implement
+ * support for ZeroMQ's security mechanisms, such as CurveZMQ for public-key encryption and ZAP for authentication.
+ * These enhancements will provide a robust layer of security and significantly reduce the risk of unauthorized access.
+ *
+ * Add a method to easily send large data divided in chunks with progress communication.
  *
  * @see ServerCommand, ServerResult, CommandRequest, CommandReply, CommandClientBase, onCustomCommandReceived
  */
@@ -282,7 +295,7 @@ public:
      *
      * @return A const reference to the map of connected clients.
      */
-    const std::map<std::string, HostClientInfo>& getConnectedClients() const;
+    const std::map<UUID, HostClientInfo> &getConnectedClients() const;
 
     /**
      * @brief Check if the server is currently working.
@@ -580,7 +593,7 @@ private:
     void checkClientsAliveStatus();
 
     // Update client last connection.
-    void updateClientLastConnection(const std::string& id);
+    void updateClientLastConnection(const UUID &id);
 
     // Update the server timeout.
     void updateServerTimeout();
@@ -617,7 +630,7 @@ private:
     std::condition_variable cv_server_depl_;  ///< Condition variable to notify the deployment status of the server.
 
     // Clients container.
-    std::map<std::string, HostClientInfo> connected_clients_;   ///< Dictionary with the connected clients.
+    std::map<UUID, HostClientInfo> connected_clients_;   ///< Dictionary with the connected clients.
 
     // Process functions container.
     ProcessFunctionsMap process_fnc_map_;        ///< Container with the internal factory process function.

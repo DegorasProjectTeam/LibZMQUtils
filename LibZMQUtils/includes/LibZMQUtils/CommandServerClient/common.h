@@ -50,6 +50,7 @@
 // =====================================================================================================================
 #include "LibZMQUtils/libzmqutils_global.h"
 #include "LibZMQUtils/Utilities/utils.h"
+#include "LibZMQUtils/Utilities/uuid_generator.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
@@ -61,7 +62,7 @@ namespace common{
 // CONSTANTS
 // =====================================================================================================================
 constexpr int kDefaultClientAliveTimeoutMsec = 8000;    ///< Default timeout for consider a client dead.
-constexpr int kDefaultServerAliveTimeoutMsec = 1000;    ///< Default timeout for consider a server dead.
+constexpr int kDefaultServerAliveTimeoutMsec = 5000;    ///< Default timeout for consider a server dead.
 constexpr unsigned kServerReconnTimes = 10;             ///< Server reconnection default number of attempts.
 constexpr unsigned kClientAlivePeriodMsec = 1000;       ///< Default period for sending alive commands.
 constexpr int kZmqEFSMError = 156384765;                ///< ZMQ EFSM error.
@@ -106,9 +107,7 @@ enum class ServerResult : ResultType
     COMMAND_OK             = 0,  ///< The command was executed successfully.
     INTERNAL_ZMQ_ERROR     = 1,  ///< An internal ZeroMQ error occurred.
     EMPTY_MSG              = 2,  ///< The message is empty.
-    EMPTY_CLIENT_IP        = 3,  ///< The client IP is missing or empty.
-    EMPTY_CLIENT_NAME      = 4,  ///< The client name is missing or empty.
-    EMPTY_CLIENT_PID       = 5,  ///< The client pid is missing or empty.
+    INVALID_CLIENT_IP      = 3,  ///< The client IP is invalid. TODO
     EMPTY_PARAMS           = 6,  ///< The command parameters are missing or empty.
     TIMEOUT_REACHED        = 7,  ///< The operation timed out, the client could be dead.
     INVALID_PARTS          = 8,  ///< The message has invalid parts.
@@ -122,7 +121,8 @@ enum class ServerResult : ResultType
     BAD_NO_PARAMETERS      = 16, ///< The provided number of parameters are invalid.
     EMPTY_EXT_CALLBACK     = 17, ///< The associated external callback is empty. Used in ClbkCommandServerBase.
     INVALID_EXT_CALLBACK   = 18, ///< The associated external callback is invalid. Used in ClbkCommandServerBase.
-    END_BASE_RESULTS       = 30  ///< Sentinel value indicating the end of the base server results (not is a valid result).
+    INVALID_CLIENT_UUID    = 19, ///< The client UUID is invalid (could be invalid, missing or empty).
+    END_BASE_RESULTS       = 30  ///< Sentinel value indicating the end of the base server results.
 };
 
 
@@ -185,9 +185,9 @@ static constexpr std::array<const char*, 31>  ServerResultStr
     "COMMAND_OK - Command executed.",
     "INTERNAL_ZMQ_ERROR - Internal ZeroMQ error.",
     "EMPTY_MSG - Message is empty.",
-    "EMPTY_CLIENT_IP - Client IP missing or empty.",
-    "EMPTY_CLIENT_NAME - Client name missing or empty.",
-    "EMPTY_CLIENT_PID - Client pid missing or empty.",
+    "INVALID_CLIENT_IP - Client IP missing or empty.",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
     "EMPTY_PARAMS - Command parameters missing or empty.",
     "TIMEOUT_REACHED - Operation timed out.",
     "INVALID_PARTS - Command has invalid parts.",
@@ -201,7 +201,7 @@ static constexpr std::array<const char*, 31>  ServerResultStr
     "BAD_NO_PARAMETERS - The provided number of parameters are invalid.",
     "EMPTY_EXT_CALLBACK - The associated external callback for the command is empty.",
     "INVALID_EXT_CALLBACK - The associated external callback for the command is invalid.",
-    "RESERVED_BASE_RESULT",
+    "INVALID_CLIENT_UUID - The client UUID is invalid (could be invalid, missing or empty).",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
@@ -259,68 +259,35 @@ struct LIBZMQUTILS_EXPORT HostClientInfo
 {
     HostClientInfo() = default;
 
-    HostClientInfo(const HostClientInfo&) = default;
+    HostClientInfo(const utils::UUID& uuid, const std::string& ip, const std::string& pid,
+                   const std::string& hostname, const std::string& name = "");
 
-    HostClientInfo(HostClientInfo&&) = default;
-
-    HostClientInfo& operator=(const HostClientInfo&) = default;
-
-    HostClientInfo& operator=(HostClientInfo&&) = default;
-
-    HostClientInfo(const std::string& ip, const std::string& pid, unsigned client_num, const std::string& hostname);
-
-    std::string toJsonString() const
-    {
-        std::stringstream ss;
-        ss << "{\n"
-           << "\t\"id\": \"" << id << "\",\n"
-           << "\t\"ip\": \"" << ip << "\",\n"
-           << "\t\"pid\": \"" << pid << "\",\n"
-           << "\t\"client_num\": " << client_num << ",\n"
-           << "\t\"hostname\": \"" << hostname << "\"\n"
-           << "}";
-        return ss.str();
-    }
-
-    // Struct members.
-    // TODO REVISAR
+    std::string toJsonString() const;
 
     // Identifier.
-    std::string id;                    ///< Dinamic host client identification -> [ip//pid//client_num]
-
+    utils::UUID uuid;                  ///< Unique client host UUID.
     // Basic information
     std::string ip;                    ///< Host client ip.
     std::string pid;                   ///< PID of the host client process.
-    unsigned client_num;               ///< Number of the client created in the same process.
-
-    // Aditional information.
     std::string hostname;              ///< Host client name.
-
-    // TODO Quitar, esto debe ser cosa del server.
-    utils::SCTimePointStd last_conn;   ///< Host client last connection time. Used by servers.
+    std::string name;                  ///< Client name, optional.
+    // Others.
+    utils::SCTimePointStd last_seen;   ///< Host client last connection time. Used by servers.
 };
 
-struct CommandRequest
+struct LIBZMQUTILS_EXPORT CommandRequest
 {
-    CommandRequest():
-        command(ServerCommand::INVALID_COMMAND),
-        params(nullptr),
-        params_size(0)
-    {}
+    CommandRequest();
 
-    HostClientInfo client;
+    utils::UUID client_uuid;
     ServerCommand command;
     std::unique_ptr<std::byte> params;
     size_t params_size;
 };
 
-struct CommandReply
+struct LIBZMQUTILS_EXPORT CommandReply
 {
-    CommandReply():
-        params(nullptr),
-        params_size(0),
-        result(ServerResult::COMMAND_OK)
-    {}
+    CommandReply();
 
     std::unique_ptr<std::byte> params;
     size_t params_size;

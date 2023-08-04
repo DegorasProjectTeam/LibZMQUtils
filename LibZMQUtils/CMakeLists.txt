@@ -13,7 +13,7 @@ endif()
 
 # Configure the version.
 set(MAJOR_VERSION 1)
-set(MINOR_VERSION 1)
+set(MINOR_VERSION 2)
 set(PATCH_VERSION 1)
 set(VERSION ${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION})
 

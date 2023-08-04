@@ -61,6 +61,8 @@ class LIBZMQUTILS_EXPORT UUID
 
 public:
 
+    static inline constexpr unsigned kUUIDSize = 16;  ///< UUID bytes size.
+
     /**
      * @brief Construct a new UUID object from an array of 16 bytes.
      * @param bytes An array of 16 bytes representing the UUID.
@@ -103,6 +105,8 @@ public:
 
     bool operator<(const UUID& rhs) const;
 
+
+
 private:
 
     // Members.
@@ -134,6 +138,20 @@ public:
 
     UUIDGenerator();
 
+    // Disable copy constructor and assignment operator.
+    UUIDGenerator(const UUIDGenerator &) = delete;
+    UUIDGenerator& operator=(const UUIDGenerator &) = delete;
+
+    /**
+     * @brief Access to the singleton instance
+     */
+    static UUIDGenerator& getInstance()
+    {
+        // Guaranteed to be destroyed, instantiated on first use.
+        static UUIDGenerator instance;
+        return instance;
+    }
+
     /**
      * @brief Generates a version 4 UUID
      * @return A unique UUID
@@ -145,13 +163,13 @@ public:
      *    b. Set the two most significant bits of the 9th byte to 10'B, so the high nibble will be one of "8", "9", "A", or "B".
      * 3. Convert the byte array to a string in the form of 8-4-4-4-12
      */
-    UUID generateUUIDv4();
+    static UUID generateUUIDv4();
 
 private:
 
     inline static std::mutex mtx_;                  ///< Safety mutex.
-    static std::random_device rd_;           ///< Random device.
-    static std::mt19937_64 gen_;             ///< Generator.
+    static std::random_device rd_;                  ///< Random device.
+    static std::mt19937_64 gen_;                    ///< Generator.
     inline static std::set<UUID> generated_uuids_;  ///< Set of all generated UUIDs to ensure uniqueness.
 };
 

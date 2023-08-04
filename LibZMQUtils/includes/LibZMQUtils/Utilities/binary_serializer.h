@@ -363,20 +363,56 @@ private:
         // Mutex.
         std::lock_guard<std::mutex> lock(this->mtx_);
 
+        // Ensure that there's enough data left to read the size of the string.
+        if (this->offset_ + sizeof(size_t) > this->size_)
+            throw std::out_of_range("BinarySerializer: Not enough data left to read the size of the string");
+
         // Read the size of the string.
         size_t size;
         BinarySerializer::binarySerializeDeserialize(this->data_.get() + this->offset_, sizeof(size_t), &size);
+
+        // Check if the string is empty.
+        if(size == 0)
+            return;
+
+        // Update the offset.
         this->offset_ += sizeof(size_t);
 
         // Check if we have enough data left to read the string.
         if (this->offset_ + size > this->size_)
-            throw std::out_of_range("BinarySerializer: Read beyond the data size");
+            throw std::out_of_range("BinarySerializer: Read string beyond the data size.");
 
         // Read the string.
         value.resize(size);
         BinarySerializer::binarySerializeDeserialize(this->data_.get() + this->offset_, size, value.data());
         this->offset_ += size;
     }
+
+
+    template<std::size_t N>
+    void readSingle(std::array<std::byte, N>& value)
+    {
+        // Mutex.
+        std::lock_guard<std::mutex> lock(this->mtx_);
+
+        // Check if we have enough data.
+        if (this->offset_ + N > this->size_)
+            throw std::out_of_range("BinarySerializer: Read beyond the data size");
+
+        // Read the size of the array.
+        std::copy(this->data_.get() + this->offset_, this->data_.get() + this->offset_ + N, value.begin());
+
+        // Update the offset.
+        this->offset_ += N;
+    }
+
+
+
+
+
+
+
+
 
     // Internal containers and variables.
     std::unique_ptr<std::byte[]> data_;      ///< Internal data pointer.

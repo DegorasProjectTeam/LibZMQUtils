@@ -138,7 +138,7 @@ void AmelasServer::onCustomCommandReceived(const CommandRequest& request, Comman
     std::cout << std::string(100, '-') << std::endl;
     std::cout<<"ON CUSTOM COMMAND RECEIVED: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
-    std::cout<<"Client Id: "<<request.client.id<<std::endl;
+    std::cout<<"Client UUID: "<<request.client_uuid.toRFC4122String()<<std::endl;
     std::cout<<"Command: "<<cmd_uint<<" ("<<cmd_str<<")"<<std::endl;
     std::cout << std::string(100, '-') << std::endl;
 
@@ -198,7 +198,7 @@ void AmelasServer::onDeadClient(const HostClientInfo& client)
     std::cout<<"-> ON DEAD CLIENT: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
     std::cout<<"Current Clients: "<<this->getConnectedClients().size()<<std::endl;
-    std::cout<<"Client Id: "<<client.id<<std::endl;
+    std::cout<<"Client UUID: "<<client.uuid.toRFC4122String()<<std::endl;
     std::cout<<"Client Ip: "<<client.ip<<std::endl;
     std::cout<<"Client Host: "<<client.hostname<<std::endl;
     std::cout<<"Client Process: "<<client.pid<<std::endl;
@@ -213,7 +213,8 @@ void AmelasServer::onConnected(const HostClientInfo& client)
     std::cout<<"-> ON CONNECTED: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
     std::cout<<"Current Clients: "<<this->getConnectedClients().size()<<std::endl;
-    std::cout<<"Client Id: "<<client.id<<std::endl;
+    std::cout<<"Client UUID: "<<client.uuid.toRFC4122String()<<std::endl;
+    std::cout<<"Client Name: "<<client.name<<std::endl;
     std::cout<<"Client Ip: "<<client.ip<<std::endl;
     std::cout<<"Client Host: "<<client.hostname<<std::endl;
     std::cout<<"Client Process: "<<client.pid<<std::endl;
@@ -228,7 +229,8 @@ void AmelasServer::onDisconnected(const HostClientInfo& client)
     std::cout<<"-> ON DISCONNECTED: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
     std::cout<<"Current Clients: "<<this->getConnectedClients().size()<<std::endl;
-    std::cout<<"Client Id: "<<client.id<<std::endl;
+    std::cout<<"Client UUID: "<<client.uuid.toRFC4122String()<<std::endl;
+    std::cout<<"Client Name: "<<client.name<<std::endl;
     std::cout<<"Client Ip: "<<client.ip<<std::endl;
     std::cout<<"Client Host: "<<client.hostname<<std::endl;
     std::cout<<"Client Process: "<<client.pid<<std::endl;
@@ -260,7 +262,7 @@ void AmelasServer::onCommandReceived(const CommandRequest &request)
     std::cout<<"<AMELAS SERVER>"<<std::endl;
     std::cout<<"-> ON COMMAND RECEIVED: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
-    std::cout<<"Client Id: "<<request.client.id<<std::endl;
+    std::cout<<"Client UUID: "<<request.client_uuid.toRFC4122String()<<std::endl;
     std::cout<<"Command: "<<command<<" ("<<cmd_str<<")"<<std::endl;
     std::cout<<"Params Size: "<<request.params_size<<std::endl;
     std::cout<<"Params Hex: "<<serializer.getDataHexString()<<std::endl;
@@ -275,10 +277,7 @@ void AmelasServer::onInvalidMsgReceived(const CommandRequest &request)
     std::cout<<"<AMELAS SERVER>"<<std::endl;
     std::cout<<"-> ON BAD COMMAND RECEIVED: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
-    std::cout<<"Client Id: "<<request.client.id<<std::endl;
-    std::cout<<"Client Ip: "<<request.client.ip<<std::endl;
-    std::cout<<"Client Host: "<<request.client.hostname<<std::endl;
-    std::cout<<"Client Process: "<<request.client.pid<<std::endl;
+    std::cout<<"Client UUID: "<<request.client_uuid.toRFC4122String()<<std::endl;
     std::cout<<"Command: "<<static_cast<int>(request.command)<<std::endl;
     std::cout<<"Params Size: "<<request.params_size<<std::endl;
     std::cout<<"Params Hex: "<<serializer.getDataHexString()<<std::endl;

@@ -23,146 +23,161 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file command_client_base.h
- * @brief This file contains the declaration of the CommandClientBase class and related.
+ * @file custom_console.h
+ * @brief This file contains utility functions and classes for console interactions.
+ *
+ * The utilities of this module are used for creating examples demonstrating the use of the library. They provide
+ * convenient ways to interact with the console. Please note that these utilities are specifically designed for
+ * illustrative purposes and are not intended for real-world, production use. They may not have the robustness,
+ * security, or optimizations necessary for production environments.
+ *
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2307.1
+ * @version 2308.1
 ***********************************************************************************************************************/
 
 // =====================================================================================================================
 #pragma once
 // =====================================================================================================================
 
-// C++ INCLUDES
-// =====================================================================================================================
-#include <future>
-#include <string>
-#include <zmq/zmq.hpp>
-#include <zmq/zmq_addon.hpp>
-// =====================================================================================================================
-
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/libzmqutils_global.h"
-#include "LibZMQUtils/zmq_context_handler.h"
-#include "LibZMQUtils/CommandServerClient/common.h"
+// =====================================================================================================================
+
+// C++ INCLUDES
+// =====================================================================================================================
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+#include <iostream>
+#include <chrono>
+#include <csignal>
+#include <atomic>
+#include <functional>
+#include <condition_variable>
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
+namespace internal_helpers{
 // =====================================================================================================================
 
-// =====================================================================================================================
-using common::ServerCommand;
-using common::ServerResult;
-using common::ClientResult;
-using common::CommandReply;
-using common::CommandType;
-using common::RequestData;
-// =====================================================================================================================
+#ifdef _WIN32
 
-class LIBZMQUTILS_EXPORT CommandClientBase : public ZMQContextHandler
+class LIBZMQUTILS_EXPORT ConsoleConfig
 {
-
 public:
-    
-    CommandClientBase(const std::string& server_endpoint,
-                      const std::string& client_name = "",
-                      const std::string& interf_name = "");
-    
-    bool startClient();
 
-    void stopClient();
+    using ExitConsoleCallback = std::function<void()>;
 
-    bool resetClient();
 
-    void setAliveCallbacksEnabled(bool);
+    ConsoleConfig(bool apply_ctrl_handler = false, bool hide_cursor = false, bool input_proc = false)
+    {
+        // Set the global close flag to false.
+        ConsoleConfig::gCloseFlag = false;
 
-    void setAutomaticAliveEnabled(bool);
+        GetConsoleCursorInfo(hStdout_, &originalCursorInfo_);
+        GetConsoleMode(hStdin_, &originalInputMode_);
 
-    const common::HostClientInfo& getClientInfo() const;
+        // Add the console control handler.
+        // Note: The handler will work async.
+        if(apply_ctrl_handler)
+            SetConsoleCtrlHandler(consoleCtrlHandler, TRUE);
 
-    const std::string& getServerEndpoint() const;
+        // Disable the input proccesing.
+        if(input_proc)
+        {
+            DWORD mode = originalInputMode_ & ~static_cast<DWORD>(ENABLE_LINE_INPUT);
+            SetConsoleMode(hStdin_, mode);
+        }
 
-    const std::string& getClientName() const;
+        // Hide the console cursor.
+        if(hide_cursor)
+        {
+            CONSOLE_CURSOR_INFO cursorInfo = originalCursorInfo_;
+            cursorInfo.bVisible = false;
+            SetConsoleCursorInfo(hStdout_, &cursorInfo);
+        }
+    }
 
-    ClientResult doConnect();
+    // Setter function for exit callback
+    static void setExitCallback(const ExitConsoleCallback& exit_callback)
+    {
+        ConsoleConfig::exit_callback_ = exit_callback;
+    }
 
-    ClientResult doDisconnect();
+    ~ConsoleConfig()
+    {
+        restoreConsole();
+    }
 
-    ClientResult doAlive();
+    void restoreConsole()
+    {
+        // Restore original input and output modes
+        SetConsoleMode(hStdin_, originalInputMode_);
+        SetConsoleCursorInfo(hStdout_, &originalCursorInfo_);
+    }
 
-    ClientResult sendCommand(const RequestData&, CommandReply&);
+    // Signal handler for safety ending.
+    static BOOL WINAPI consoleCtrlHandler(DWORD dw_ctrl_t)
+    {
+        WSADATA wsa_data;
+        WSAStartup(MAKEWORD(2,2), &wsa_data);
 
-    /**
-     * @brief Virtual destructor.
-     * This destructor is virtual to ensure proper cleanup when the derived class is destroyed.
-     */
-    virtual ~CommandClientBase();
+        std::lock_guard<std::mutex> lock(ConsoleConfig::gMtx);
+        if (dw_ctrl_t == CTRL_C_EVENT || dw_ctrl_t == CTRL_BREAK_EVENT || dw_ctrl_t == CTRL_CLOSE_EVENT)
+        {
+            std::cout<<"CMD STOP"<<std::endl;
 
-protected:
+            // Update the closing flag.
+            ConsoleConfig::gCloseFlag = true;
 
-    virtual void onClientStart() = 0;
+            // Call the exit callback
+            if(ConsoleConfig::exit_callback_)
+                ConsoleConfig::exit_callback_();
 
-    virtual void onClientStop() = 0;
+            // Notify with the cv and return.
+            ConsoleConfig::gCloseCv.notify_all();
 
-    virtual void onWaitingReply() = 0;
+            std::cout<<"CMD STOP FINISH"<<std::endl;
 
-    virtual void onDeadServer() = 0;
+            return TRUE;
+        }
+        return FALSE;
+    }
 
-    virtual void onConnected() = 0;
+    static void waitForClose()
+    {
+        std::unique_lock<std::mutex> lock(ConsoleConfig::gMtx);
+        ConsoleConfig::gCloseCv.wait(lock, []{ return ConsoleConfig::gCloseFlag.load(); });
+    }
 
-    virtual void onDisconnected() = 0;
+    static inline std::condition_variable gCloseCv;
+    static inline std::atomic_bool gCloseFlag;
+    static inline std::mutex gMtx;
 
-    virtual void onInvalidMsgReceived(const CommandReply&) = 0;
-
-    virtual void onReplyReceived(const CommandReply&) = 0;
-
-    virtual void onSendingCommand(const RequestData&) = 0;
-
-    virtual void onClientError(const zmq::error_t&, const std::string& ext_info) = 0;
 
 private:
 
+    // External exit callback.
+    static inline ExitConsoleCallback exit_callback_;
 
-    ClientResult recvFromSocket(CommandReply&);
-
-    void internalStopClient();
-
-    bool internalResetClient();
-
-    void startAutoAlive();
-
-    void stopAutoAlive();
-
-    void aliveWorker();
-
-    zmq::multipart_t prepareMessage(const RequestData &msg);
-
-    // Internal client identification.
-    common::HostClientInfo client_info_;       ///< External client information for identification.
-    std::string client_name_;                  ///< Internal client name. Will not be use as id.
-
-    // Server endpoint.
-    std::string server_endpoint_;              ///< Server endpoint.
-
-    // ZMQ socket.
-    zmq::socket_t *client_socket_;              ///< ZMQ client socket.
-
-    // Mutex.
-    mutable std::mutex mtx_;                    ///< Safety mutex.
-
-    // Auto alive functionality.
-    std::future<void> auto_alive_future_;
-    std::condition_variable auto_alive_cv_;
-
-    // Usefull flags.
-    std::atomic_bool flag_client_working_;  ///< Flag for check the client working status.
-    std::atomic_bool flag_autoalive_enabled_;    ///< Flag for enables or disables the automatic sending of alive messages.
-    std::atomic_bool flag_alive_callbacks_; ///< Flag for enables or disables the callbacks for alive messages.
+    HANDLE hStdin_ = GetStdHandle(STD_INPUT_HANDLE);
+    HANDLE hStdout_ = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD originalInputMode_;
+    CONSOLE_CURSOR_INFO originalCursorInfo_;
 };
 
-} // END NAMESPACES.
+#else
+
+class LIBZMQUTILS_EXPORT ConsoleConfig
+{
+    // TODO
+};
+
+#endif
+
+}} // END NAMESPACES.
 // =====================================================================================================================

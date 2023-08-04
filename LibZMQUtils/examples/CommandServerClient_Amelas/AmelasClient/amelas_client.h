@@ -38,12 +38,15 @@ class AmelasClient : public zmqutils::CommandClientBase
 {
 public:
 
-    AmelasClient(const std::string &server_endpoint);
+    AmelasClient(const std::string& server_endpoint,
+                 const std::string& client_name = "",
+                 const std::string interf_name = "");
 
     // TODO
     //virtual void prepareRequest() = 0;
 
-    virtual ~AmelasClient(){}
+    virtual ~AmelasClient() override
+    {}
 
 private:
 
@@ -59,7 +62,7 @@ private:
 
     virtual void onDisconnected() final;
 
-    virtual void onInvalidMsgReceived(const CommandReply&) final {};
+    virtual void onInvalidMsgReceived(const CommandReply&) final {}
 
     virtual void onReplyReceived(const CommandReply& reply) final;
 
