@@ -23,16 +23,12 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file zmq_context_handler.h
- * @brief This file contains the declaration of the global ZMQContextHandler class.
+ * @file zmq_context_handler.cpp
+ * @brief This file contains the implementation of the global ZMQContextHandler class.
  * @author Degoras Project Team
  * @copyright EUPL License
  * @version 2308.1
 ***********************************************************************************************************************/
-
-// =====================================================================================================================
-#pragma once
-// =====================================================================================================================
 
 // C++ INCLUDES
 // =====================================================================================================================
@@ -46,37 +42,59 @@
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/libzmqutils_global.h"
+#include "LibZMQUtils/zmq_context_handler.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
+
+ZMQContextHandler::ZMQContextHandler()
+{
+    // Safety mutex.
+    std::lock_guard<std::mutex> lock(ZMQContextHandler::mtx_);
+
+    // For the first instance, create the context.
+    if (ZMQContextHandler::instances_.empty())
+        ZMQContextHandler::context_ = std::make_unique<zmq::context_t>(1);
+
+    // Register this instance.
+    ZMQContextHandler::instances_.push_back(std::ref(*this));
+}
+
+ZMQContextHandler::~ZMQContextHandler()
+{
+    std::cout<<"Into context handler destructor 1..."<<std::endl;
+    // Safety mutex.
+    std::lock_guard<std::mutex> lock(ZMQContextHandler::mtx_);
+    std::cout<<"Into context handler destructor 2..."<<std::endl;
+
+    // Unregister this instance.
+    ZMQContextHandler::instances_.erase(
+        std::remove_if(ZMQContextHandler::instances_.begin(), ZMQContextHandler::instances_.end(),
+                       [this](const ContextHandlerReference& ref)
+                       { return &ref.get() == this; }),
+        ZMQContextHandler::instances_.end());
+
+    std::cout<<"Into context handler destructor 3..."<<std::endl;
+
+    // Destroy the context if no instances left.
+
+    if (ZMQContextHandler::instances_.empty())
+        ZMQContextHandler::context_.reset();
+
+    std::cout<<"Into context handler destructor 4..."<<std::endl;
+
+}
+
+const std::unique_ptr<zmq::context_t> &ZMQContextHandler::getContext()
+{
+    return ZMQContextHandler::context_;
+}
+
 // =====================================================================================================================
 
-class LIBZMQUTILS_EXPORT ZMQContextHandler
-{
 
-public:
-
-    ZMQContextHandler();
-
-    ~ZMQContextHandler();
-
-protected:
-
-    const std::unique_ptr<zmq::context_t>& getContext();
-
-private:
-
-    // Aliases.
-    using ContextHandlerReference = std::reference_wrapper<ZMQContextHandler>;
-
-    // Internal variables and containers.
-    inline static std::mutex mtx_;                                   ///< Safety mutex.
-    inline static std::unique_ptr<zmq::context_t> context_;          ///< ZMQ global context.
-    inline static std::vector<ContextHandlerReference> instances_;   ///< Instances of the ContextHandler.
-};
 
 } // END NAMESPACES.
 // =====================================================================================================================

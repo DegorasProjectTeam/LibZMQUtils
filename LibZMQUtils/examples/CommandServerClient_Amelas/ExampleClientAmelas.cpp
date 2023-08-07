@@ -285,6 +285,9 @@ int main(int, char**)
         std::cout<<"Write a command: ";
         std::getline(std::cin, command);
 
+        if(command == "exit")
+            break;
+
         // Break if we want to close the example program.
         if(zmqutils::internal_helpers::ConsoleConfig::gCloseFlag || std::cin.eof())
             break;
@@ -295,7 +298,9 @@ int main(int, char**)
 
     std::cout << "We will close, waiting for closing." << std::endl;
 
-    zmqutils::internal_helpers::ConsoleConfig::waitForClose();
+    client.stopClient();
+
+    //zmqutils::internal_helpers::ConsoleConfig::waitForClose();
 
     std::cout << "Requested client to stop. Bye." << std::endl;
 

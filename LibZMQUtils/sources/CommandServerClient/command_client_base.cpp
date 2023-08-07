@@ -78,11 +78,15 @@ CommandClientBase::CommandClientBase(const std::string& server_endpoint,
 
 CommandClientBase::~CommandClientBase()
 {
+    std::cout<<"Here destructor 1"<<std::endl;
+
     // TODO stop autoalive.
 
     // Force the stop client execution.
     // Warning: In this case the onClientStop callback can't be executed.
     this->internalStopClient();
+
+    std::cout<<"Here destructor 2"<<std::endl;
 }
 
 const common::HostClientInfo &CommandClientBase::getClientInfo() const
