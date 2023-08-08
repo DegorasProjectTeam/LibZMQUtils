@@ -61,25 +61,31 @@ namespace utils{
 // =====================================================================================================================
 
 template<typename T, typename C>
-void BinarySerializer::binarySerializeDeserialize(const T* data, size_t data_size_bytes, C* dest)
+void BinarySerializer::binarySerializeDeserialize(const T* src, size_t data_size_bytes, C* dst)
 {
     // Check the types.
     (BinarySerializer::checkTriviallyCopyable<T>());
     (BinarySerializer::checkTrivial<T>());
 
     // Serialize the data.
-    const std::byte* data_bytes = reinterpret_cast<const std::byte*>(data);
-    std::byte* dest_byes = reinterpret_cast<std::byte*>(dest);
-    std::reverse_copy(data_bytes, data_bytes + data_size_bytes, dest_byes);
+    const std::byte* data_bytes = reinterpret_cast<const std::byte*>(src);
+    std::byte* dest_bytes = reinterpret_cast<std::byte*>(dst);
+    std::reverse_copy(data_bytes, data_bytes + data_size_bytes, dest_bytes);
 }
+
+
 
 template<typename T>
 size_t BinarySerializer::calcSize(const T& value)
 {
-    if constexpr(std::is_same_v<std::decay_t<T>, std::string>)
+    if constexpr(std::is_base_of_v<Serializable, std::decay_t<T>>)
+        return value.serializedSize();
+    else if constexpr(std::is_same_v<std::decay_t<T>, std::string>)
         return sizeof(size_t) + value.size();
-    else
+    else if constexpr(std::is_trivially_copyable_v<std::decay_t<T>> && std::is_trivial_v<std::decay_t<T>>)
         return sizeof(value);
+    else
+        static_assert(sizeof(T) == 0, "Unsupported type.");
 }
 
 template<typename T, typename... Args>
@@ -91,29 +97,31 @@ size_t BinarySerializer::writeRecursive(const T& value, const Args&... args)
         return this->writeSingle(value) + this->writeRecursive(std::forward<const Args&>(args)...);
 }
 
-template<typename... Args>
-size_t BinarySerializer::write(const Args&... args)
-{
-    // Check the types.
-    (BinarySerializer::checkTriviallyCopyable<Args>(), ...);
-    (BinarySerializer::checkTrivial<Args>(), ...);
+//template<typename... Args>
+//size_t BinarySerializer::write(const Args&... args)
+//{
+//    // Check the types.
+//    (BinarySerializer::checkTriviallyCopyable<Args>(), ...);
+//    (BinarySerializer::checkTrivial<Args>(), ...);
 
-    // Sum of sizes of all arguments and reserve.
-    const size_t total_size = (sizeof(args) + ... + 0);
-    reserve(this->size_ + total_size);
+//    // Sum of sizes of all arguments and reserve.
+//    const size_t total_size = (sizeof(args) + ... + 0);
+//    reserve(this->size_ + total_size);
 
-    // Perform each write.
-    (void)std::initializer_list<int> { (this->writeSingle(args), 0)... };
+//    // Perform each write.
+//    (void)std::initializer_list<int> { (this->writeSingle(args), 0)... };
 
-    // Return the total size.
-    return total_size;
-}
+//    // Return the total size.
+//    return total_size;
+//}
 
 template<typename T, typename... Args>
 size_t BinarySerializer::write(const T& value, const Args&... args)
 {
     // Calculate total size of all arguments.
+    std::cout<<"Total size internal"<<std::endl;
     size_t total_size = (BinarySerializer::calcSize(value) + ... + BinarySerializer::calcSize(args));
+    std::cout<<total_size<<std::endl;
 
     // Reserve space in one go.
     reserve(this->size_ + total_size);
@@ -126,7 +134,8 @@ size_t BinarySerializer::write(const T& value, const Args&... args)
 }
 
 template<typename T>
-size_t BinarySerializer::writeSingle(const T& value)
+typename std::enable_if<!std::is_base_of<Serializable, T>::value, size_t>::type
+BinarySerializer::writeSingle(const T& value)
 {
     // Check the types.
     (BinarySerializer::checkTriviallyCopyable<T>());
@@ -141,6 +150,7 @@ size_t BinarySerializer::writeSingle(const T& value)
     // Return the size.
     return sizeof(T);
 }
+
 
 template<typename... Args>
 void BinarySerializer::read(Args&... args)
@@ -204,6 +214,11 @@ size_t BinarySerializer::fastSerialization(std::unique_ptr<std::byte>& out, cons
     BinarySerializer serializer;
     size_t size = serializer.write(std::forward<const Args&>(args)...);
     out = serializer.moveUnique();
+
+    std::cout<<"Writing internal"<<std::endl;
+    std::cout<<size<<std::endl;
+
+
     return size;
 }
 

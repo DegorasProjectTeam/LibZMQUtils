@@ -59,29 +59,72 @@ namespace zmqutils{
 namespace utils{
 // =====================================================================================================================
 
+class BinarySerializer;
+
+class Serializable
+{
+public:
+
+    virtual ~Serializable() = default;
+
+    // Method to serialize the object to a binary format.
+    virtual size_t serialize(BinarySerializer& serializer) const = 0;
+
+    // Method to deserialize the object from a binary format.
+    virtual void deserialize(BinarySerializer& serializer) = 0;
+
+    virtual size_t serializedSize() const = 0;
+};
+
+
+
 /**
  * @class BinarySerializer
  *
- * @brief This class provides functionality for binary serialization and deserialization of simple data types.
+ * @brief This class provides functionality for binary serialization and deserialization of simple data types, as well
+ * as classes that implement the Serializable interface.
  *
  * The BinarySerializer class supports serialization and deserialization of trivially copyable and trivial data types.
  * This class provides static methods for fast serialization and deserialization using variadic templates, allowing for
  * multiple data types to be serialized/deserialized at once. Additionally, the class provides methods for checking at
  * compile time whether the types provided meet the requirements for being trivially copyable and trivial.
  *
+ * The class also includes support for custom serialization and deserialization of more complex data structures
+ * by means of the Serializable interface. Classes that need to be serialized/deserialized with BinarySerializer should
+ * inherit from the Serializable interface and implement the `serialize`, `deserialize` and `serializedSize` methods.
+ * This allows for handling complex data, enabling fine-grained control over the serialization process.
+ *
+ * @section Supported Data Types
+ *
+ * The BinarySerializer class is capable of serializing and deserializing the following types of data:
+ *
+ * 1. **Trivially Copyable and Trivial Types:** Basic data types that are both trivially copyable and trivial, such as
+ *    integers, floating-point numbers, etc.
+ * 2. **Strings:** Standard C++ strings are supported, and their size information is stored to facilitate
+ *    deserialization.
+ * 3. **Vectors of Trivially Copyable and Trivial Types:** Vectors containing trivially copyable and trivial types can
+ *    be serialized/deserialized directly.
+ * 4. **Subclasses of the Serializable Class (properly implemented):** Classes that inherit from the Serializable
+ *    interface and provide proper implementations of the `serialize`, `deserialize`, and `serializedSize` methods.
+ *
+ * Usage with other complex data structures or types that do not fit into these categories is not supported directly
+ * and may require additional consideration or custom handling.
+ *
  * @note The class is thread safe.
  *
- * @note It's strongly recommended that this class is only used with simple data types (like ints, floats, char*, etc.)
- *       that fulfill the conditions of being both trivial and trivially copyable. It's not designed to handle complex
- *       data structures like vectors, custom classes, etc. directly. Before using this class with more complex data
- *       types, appropriate checks should be added to ensure they meet the necessary conditions for serialization
- *       and deserialization.
+ * @note It's strongly recommended that this class is only used with simple data types (like ints, floats, double,
+ * char*, etc.) that fulfill the conditions of being both trivial and trivially copyable, or with classes implementing
+ * the Serializable interface. It's not designed to handle other complex data structures like custom classes directly.
+ * Before using this class with unsupported data types, appropriate checks should be added to ensure they meet the
+ * necessary conditions for serialization and deserialization.
  *
  * @warning This class assumes a certain byte order (either big endian or little endian) for the data being serialized
- *          or deserialized. It's important to be aware of the byte order in the context the data will be used.
- *          Therefore, consider detecting the machine's byte order and adjust the reversal accordingly if using this
- *          class in a context with different native byte order. However, this is usually not a problem with modern
- *          platforms, which typically use the same byte order (little-endian).
+ * or deserialized. It's important to be aware of the byte order in the context the data will be used. Therefore,
+ * consider detecting the machine's byte order and adjust the reversal accordingly if using this class in a context
+ * with different native byte order. However, this is usually not a problem with modern platforms, which typically use
+ * the same byte order (little-endian).
+ *
+ * @see Serializable
  */
 class LIBZMQUTILS_EXPORT BinarySerializer
 {
@@ -124,61 +167,6 @@ public:
      * @brief Reset the internal read offset.
      */
     void resetReading();
-
-    /**
-     * @brief Write data into the serializer.
-     * @tparam Args Variadic template argument for types.
-     * @param args Arguments to write into the serializer.
-     */
-    template<typename... Args>
-    size_t write(const Args&...);
-
-    template<typename T, typename... Args>
-    size_t write(const T& value, const Args&... args);
-
-    /**
-     * @brief Variadic template function to read multiple data types at once from the internal buffer.
-     *
-     * @tparam Args Variadic template argument for types.
-     * @param[out] args Lvalue references to the variables where the read data should be stored.
-     *
-     * @warning Make sure to read the values in the exact order and type they were written, otherwise undefined
-     *          behavior will occur. Also, this function should not be used with rvalue references.
-     *
-     * @warning If you read beyond the size of the stored data, this function will throw an out_of_range exception.
-     */
-    template<typename... Args> void read(Args&... args);
-
-    template<typename T, typename... Args>
-    void read(T& value, Args&... args)
-    {
-
-        // Read the data.
-        this->readRecursive(value, args...);
-    }
-
-    /**
-     * @brief Read a value of a specific type from the internal buffer and return it.
-     *
-     * @tparam T Type of the value to be read.
-     *
-     * @return The read value.
-     *
-     * @warning Make sure to read the values in the exact order and type they were written, otherwise undefined
-     *          behavior will occur. Also, this function should not be used with rvalue references.
-     *
-     * @warning If you read beyond the size of the stored data, this function will throw an out_of_range exception.
-     */
-    template<typename T> T readSingle();
-
-    std::string readSingle()
-    {
-        std::string aux;
-
-        this->readSingle(aux);
-
-        return aux;
-    }
 
     /**
      * @brief Release the data held by the serializer and return a raw pointer to it.
@@ -245,6 +233,63 @@ public:
      */
     std::string getDataHexString() const;
 
+    // -- GENERIC WRITE
+
+    /**
+     * @brief Write data into the serializer.
+     * @tparam Args Variadic template argument for types.
+     * @param args Arguments to write into the serializer.
+     */
+
+
+    template<typename T, typename... Args>
+    size_t write(const T& value, const Args&... args);
+
+
+    /**
+     * @brief Variadic template function to read multiple data types at once from the internal buffer.
+     *
+     * @tparam Args Variadic template argument for types.
+     * @param[out] args Lvalue references to the variables where the read data should be stored.
+     *
+     * @warning Make sure to read the values in the exact order and type they were written, otherwise undefined
+     *          behavior will occur. Also, this function should not be used with rvalue references.
+     *
+     * @warning If you read beyond the size of the stored data, this function will throw an out_of_range exception.
+     */
+    template<typename... Args> void read(Args&... args);
+
+    template<typename T, typename... Args>
+    void read(T& value, Args&... args)
+    {
+
+        // Read the data.
+        this->readRecursive(value, args...);
+    }
+
+    /**
+     * @brief Read a value of a specific type from the internal buffer and return it.
+     *
+     * @tparam T Type of the value to be read.
+     *
+     * @return The read value.
+     *
+     * @warning Make sure to read the values in the exact order and type they were written, otherwise undefined
+     *          behavior will occur. Also, this function should not be used with rvalue references.
+     *
+     * @warning If you read beyond the size of the stored data, this function will throw an out_of_range exception.
+     */
+    template<typename T> T readSingle();
+
+    std::string readSingle()
+    {
+        std::string aux;
+        this->readSingle(aux);
+        return aux;
+    }
+
+
+
     /**
      * @brief A static function that serializes multiple input data items.
      *
@@ -289,24 +334,34 @@ public:
         BinarySerializer::checkTriviallyCopyable<T>();
         BinarySerializer::checkTrivial<T>();
 
-        std::cout<<"Writing Vector" <<std::endl;
-
-
+        // Get the total size and reserve.
         size_t total_size = sizeof(T)*v.size();
-
         this->reserve(total_size);
 
-
+        // Write each value of the vector.
         for(const auto& val : v)
-        {
             this->writeSingle(val);
-        }
 
         // Return the writed size.
         return total_size;
     }
 
+
+
+    size_t writeSingle(const Serializable& obj)
+    {
+        std::cout<<"Writing ser obj"<<std::endl;
+        return obj.serialize(*this);
+    }
+
+
+
+
+
+
 private:
+
+
 
     // Internal binary serialization/deserialization helper function.
     template<typename T, typename C>
@@ -329,7 +384,8 @@ private:
     // Helper write methods.
 
     template<typename T>
-    size_t writeSingle(const T& value);
+    typename std::enable_if<!std::is_base_of<Serializable, T>::value, size_t>::type
+    writeSingle(const T& obj);
 
     template<typename T, typename... Args>
     size_t writeRecursive(const T& value, const Args&... args);
@@ -355,6 +411,8 @@ private:
 
 
     // Non trivial data functions.
+
+
 
     size_t writeSingle(const std::string& str);
 

@@ -43,6 +43,8 @@
 #include <functional>
 // =====================================================================================================================
 
+#include <LibZMQUtils/Utils>
+
 // AMELAS NAMESPACES
 // =====================================================================================================================
 namespace amelas{
@@ -73,15 +75,28 @@ static constexpr std::array<const char*, 21>  ControllerErrorStr
     "UNSAFE_POSITION - The provided position (az/alt) is unsafe."
 };
 
-struct AltAzPos
+struct AltAzPos : public zmqutils::utils::Serializable
 {
-    AltAzPos(double az, double el):
+    inline AltAzPos(double az, double el):
         az(az), el(el){}
 
-    AltAzPos(): az(-1), el(-1){}
+    inline AltAzPos(): az(-1), el(-1){}
 
     double az;
     double el;
+
+    inline size_t serialize(zmqutils::utils::BinarySerializer& serializer) const override {
+        return serializer.write(az, el);
+    }
+
+    inline void deserialize(zmqutils::utils::BinarySerializer& serializer) override {
+        serializer.read(az, el);
+    }
+
+    inline size_t serializedSize() const override
+    {
+        return (sizeof(double) + sizeof(double));
+    }
 };
 
 // Generic callback.

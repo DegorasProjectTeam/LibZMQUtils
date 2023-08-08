@@ -587,7 +587,6 @@ void CommandServerBase::checkClientsAliveStatus()
             // If the client is not dead, check the minor timeout of the client to set
             // with the remain time to reach the timeout.
             min_remaining_time = std::min(min_remaining_time, timeout - since_last_conn);
-            std::cout<<"Minimum remainin: "<<min_remaining_time.count()<<std::endl;
         }
     }
 
@@ -614,10 +613,7 @@ void CommandServerBase::updateClientLastConnection(const UUID& uuid)
     // Update the client last connection.
     auto client_itr = this->connected_clients_.find(uuid);
     if(client_itr != this->connected_clients_.end())
-    {
-        std::cout<<"Updating client connection"<<std::endl;
         client_itr->second.last_seen = std::chrono::steady_clock::now();
-    }
 }
 
 void CommandServerBase::updateServerTimeout()
