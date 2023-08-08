@@ -129,8 +129,6 @@ public:
         std::lock_guard<std::mutex> lock(ConsoleConfig::gMtx);
         if (dw_ctrl_t == CTRL_C_EVENT || dw_ctrl_t == CTRL_BREAK_EVENT || dw_ctrl_t == CTRL_CLOSE_EVENT)
         {
-            std::cout<<"CMD STOP"<<std::endl;
-
             // Update the closing flag.
             ConsoleConfig::gCloseFlag = true;
 
@@ -140,8 +138,6 @@ public:
 
             // Notify with the cv and return.
             ConsoleConfig::gCloseCv.notify_all();
-
-            std::cout<<"CMD STOP FINISH"<<std::endl;
 
             return TRUE;
         }

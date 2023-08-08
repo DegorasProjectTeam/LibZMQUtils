@@ -51,9 +51,6 @@ namespace zmqutils{
 
 ZMQContextHandler::ZMQContextHandler()
 {
-    // Safety mutex.
-    std::lock_guard<std::mutex> lock(ZMQContextHandler::mtx_);
-
     // For the first instance, create the context.
     if (ZMQContextHandler::instances_.empty())
         ZMQContextHandler::context_ = std::make_unique<zmq::context_t>(1);
@@ -62,12 +59,17 @@ ZMQContextHandler::ZMQContextHandler()
     ZMQContextHandler::instances_.push_back(std::ref(*this));
 }
 
+ZMQContextHandler &ZMQContextHandler::getInstance()
+{
+    static ZMQContextHandler instance;
+    return instance;
+}
+
 ZMQContextHandler::~ZMQContextHandler()
 {
-    std::cout<<"Into context handler destructor 1..."<<std::endl;
+
     // Safety mutex.
     std::lock_guard<std::mutex> lock(ZMQContextHandler::mtx_);
-    std::cout<<"Into context handler destructor 2..."<<std::endl;
 
     // Unregister this instance.
     ZMQContextHandler::instances_.erase(
@@ -76,25 +78,17 @@ ZMQContextHandler::~ZMQContextHandler()
                        { return &ref.get() == this; }),
         ZMQContextHandler::instances_.end());
 
-    std::cout<<"Into context handler destructor 3..."<<std::endl;
-
     // Destroy the context if no instances left.
-
     if (ZMQContextHandler::instances_.empty())
         ZMQContextHandler::context_.reset();
-
-    std::cout<<"Into context handler destructor 4..."<<std::endl;
-
 }
 
-const std::unique_ptr<zmq::context_t> &ZMQContextHandler::getContext()
+const std::unique_ptr<zmq::context_t>& ZMQContextHandler::getContext()
 {
     return ZMQContextHandler::context_;
 }
 
 // =====================================================================================================================
-
-
 
 } // END NAMESPACES.
 // =====================================================================================================================

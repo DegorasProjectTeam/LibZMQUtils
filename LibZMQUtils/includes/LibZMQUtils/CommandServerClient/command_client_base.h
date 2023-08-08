@@ -96,11 +96,22 @@ public:
 
     ClientResult sendCommand(const RequestData&, CommandReply&);
 
+    bool waitForClose(std::chrono::milliseconds timeout = std::chrono::milliseconds::zero())
+    {
+        std::unique_lock<std::mutex> lock(client_close_mtx_);
+        if (timeout == std::chrono::milliseconds::zero()) {
+            client_close_cv_.wait(lock, [this]{ return this->flag_client_closed_.load(); });
+            return true;
+        } else {
+            return client_close_cv_.wait_for(lock, timeout, [this]{ return this->flag_client_closed_.load(); });
+        }
+    }
+
     /**
      * @brief Virtual destructor.
      * This destructor is virtual to ensure proper cleanup when the derived class is destroyed.
      */
-    virtual ~CommandClientBase();
+    virtual ~CommandClientBase() override;
 
 protected:
 
@@ -124,10 +135,30 @@ protected:
 
     virtual void onClientError(const zmq::error_t&, const std::string& ext_info) = 0;
 
+
 private:
 
-
     ClientResult recvFromSocket(CommandReply&);
+
+    void deleteSockets()
+    {
+        // Delete the pointers.
+        if(this->client_socket_)
+        {
+            delete this->client_socket_;
+            this->client_socket_ = nullptr;
+        }
+        if(this->req_close_socket_)
+        {
+            delete this->req_close_socket_;
+            this->req_close_socket_ = nullptr;
+        }
+        if(this->rep_close_socket_)
+        {
+            delete this->rep_close_socket_;
+            this->rep_close_socket_ = nullptr;
+        }
+    }
 
     void internalStopClient();
 
@@ -148,13 +179,22 @@ private:
     // Server endpoint.
     std::string server_endpoint_;              ///< Server endpoint.
 
-    // ZMQ socket.
-    zmq::socket_t *client_socket_;              ///< ZMQ client socket.
+    // ZMQ sockets.
+    zmq::socket_t *client_socket_;      ///< ZMQ client socket.
+    zmq::socket_t *rep_close_socket_;   ///< ZMQ auxiliar REP close socket.
+    zmq::socket_t *req_close_socket_;   ///< ZMQ auxiliar REQ close socket.
+
+    // Condition variables with associated flags.
+    std::condition_variable client_close_cv_;
+    std::atomic_bool flag_client_closed_;
 
     // Mutex.
     mutable std::mutex mtx_;                    ///< Safety mutex.
+    mutable std::mutex client_close_mtx_;
 
     // Auto alive functionality.
+    std::future<common::ClientResult> fut_recv_;     ///< Future that stores the client recv status.
+
     std::future<void> auto_alive_future_;
     std::condition_variable auto_alive_cv_;
 

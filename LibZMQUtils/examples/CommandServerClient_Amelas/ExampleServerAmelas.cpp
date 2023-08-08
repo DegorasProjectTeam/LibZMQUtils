@@ -126,7 +126,7 @@ int main(int, char**)
     // Log.
     std::cout << "Stopping the server..." << std::endl;
 
-    // Stop the server and wait the future.
+    // Stop the server.
     amelas_server.stopServer();
 
     // Final log.

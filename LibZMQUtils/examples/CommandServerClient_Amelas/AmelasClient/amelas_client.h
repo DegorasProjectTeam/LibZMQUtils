@@ -45,9 +45,6 @@ public:
     // TODO
     //virtual void prepareRequest() = 0;
 
-    virtual ~AmelasClient() override
-    {}
-
 private:
 
     virtual void onClientStart() final;

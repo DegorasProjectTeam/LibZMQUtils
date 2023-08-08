@@ -359,7 +359,7 @@ public:
      *
      * This destructor is virtual to ensure proper cleanup when the derived class is destroyed.
      */
-    virtual ~CommandServerBase();
+    virtual ~CommandServerBase() override;
 
 protected:
 

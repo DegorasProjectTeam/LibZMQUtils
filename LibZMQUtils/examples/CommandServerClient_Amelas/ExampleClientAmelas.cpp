@@ -161,7 +161,6 @@ void parseCommand(CommandClientBase &client, const std::string &command)
         if (valid)
         {
             // TODO MOVE ALL
-            ClientResult result = ClientResult::COMMAND_OK;
             CommandReply reply;
 
             if(command_msg.command == ServerCommand::REQ_CONNECT)
@@ -285,31 +284,33 @@ int main(int, char**)
         std::cout<<"Write a command: ";
         std::getline(std::cin, command);
 
+        // Check for exit.
         if(command == "exit")
+        {
+            // Manual stop.
+            std::cout << "Stopping the client..." << std::endl;
+            client.stopClient();
             break;
+        }
 
         // Break if we want to close the example program.
         if(zmqutils::internal_helpers::ConsoleConfig::gCloseFlag || std::cin.eof())
+        {
+            std::cout << std::endl;
+            std::cout << "Stopping the client..." << std::endl;
             break;
+        }
 
-        //
+        // Parse the command.
         parseCommand(client, command);
     }
 
-    std::cout << "We will close, waiting for closing." << std::endl;
-
-    client.stopClient();
-
-    //zmqutils::internal_helpers::ConsoleConfig::waitForClose();
-
-    std::cout << "Requested client to stop. Bye." << std::endl;
-
-    //client.stopClient();
-
-    std::cout << "End final" << std::endl;
+    // Wait for closing.
+    // Neccesary due to the command handler for this example works in other thread.
+    client.waitForClose();
 
     // Final log.
-    std::cout << "Server stoped. All ok!!" << std::endl;
+    std::cout << "Client stoped. All ok!!" << std::endl;
 
     // Restore the console.
     cmd_config.restoreConsole();

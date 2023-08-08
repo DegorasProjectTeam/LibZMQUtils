@@ -59,15 +59,17 @@ class LIBZMQUTILS_EXPORT ZMQContextHandler
 
 public:
 
-    ZMQContextHandler();
+    static ZMQContextHandler& getInstance();
 
-    ~ZMQContextHandler();
+    virtual ~ZMQContextHandler();
 
 protected:
 
-    const std::unique_ptr<zmq::context_t>& getContext();
+    ZMQContextHandler();
+    ZMQContextHandler(const ZMQContextHandler&) = delete;
+    ZMQContextHandler& operator=(const ZMQContextHandler&) = delete;
 
-private:
+    const std::unique_ptr<zmq::context_t>& getContext();
 
     // Aliases.
     using ContextHandlerReference = std::reference_wrapper<ZMQContextHandler>;

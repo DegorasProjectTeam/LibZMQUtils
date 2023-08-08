@@ -53,7 +53,6 @@ namespace zmqutils{
 CommandServerBase::CommandServerBase(unsigned port,
                                      const std::string& local_addr,
                                      const std::string &server_name) :
-    ZMQContextHandler(),
     server_socket_(nullptr),
     server_endpoint_("tcp://" + local_addr + ":" + std::to_string(port)),
     server_port_(port),
@@ -151,7 +150,8 @@ void CommandServerBase::internalStopServer()
     this->flag_server_working_ = false;
 
     // If the server is working.
-    if(this->fut_server_worker_.wait_for(std::chrono::seconds(0)) == std::future_status::timeout)
+    if(this->fut_server_worker_.valid() &&
+        this->fut_server_worker_.wait_for(std::chrono::seconds(0)) == std::future_status::timeout)
     {
         // Auxiliar endpoint.
         std::string endpoint = this->server_endpoint_;
@@ -165,8 +165,7 @@ void CommandServerBase::internalStopServer()
         sock->set(zmq::sockopt::linger, 0);
 
         // Message for closing.
-        zmq::message_t close_msg;
-        sock->send(close_msg, zmq::send_flags::none);
+        sock->send(zmq::message_t(), zmq::send_flags::none);
 
         // Wait the future.
         this->fut_server_worker_.wait();
@@ -191,10 +190,9 @@ void CommandServerBase::internalStopServer()
 
 
 
-
 CommandServerBase::~CommandServerBase()
 {
-    // Stop the server (this function also deletes the pointers).
+    // Stop the server.
     this->internalStopServer();
 }
 
