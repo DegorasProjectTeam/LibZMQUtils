@@ -127,7 +127,12 @@ void parseCommand(CommandClientBase &client, const std::string &command)
                 BinarySerializer serializer;
 
 
-                serializer.writeSingle(pos);
+                serializer.write(pos);
+
+                AltAzPos* posi;
+
+
+
                 std::cout<<serializer.toJsonString();
 
                 command_msg.params_size = BinarySerializer::fastSerialization(command_msg.params, pos);

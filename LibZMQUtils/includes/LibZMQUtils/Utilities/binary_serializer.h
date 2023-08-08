@@ -59,6 +59,9 @@ namespace zmqutils{
 namespace utils{
 // =====================================================================================================================
 
+template<typename... Ts>
+struct has_nullptr_t : std::disjunction<std::is_same<std::nullptr_t, Ts>...> {};
+
 class BinarySerializer;
 
 class Serializable
@@ -242,7 +245,9 @@ public:
      */
 
 
-    template<typename T, typename... Args>
+
+    template<typename T, typename... Args,
+             typename = std::enable_if_t<!has_nullptr_t<T, Args...>::value>>
     size_t write(const T& value, const Args&... args);
 
 
@@ -348,11 +353,7 @@ public:
 
 
 
-    size_t writeSingle(const Serializable& obj)
-    {
-        std::cout<<"Writing ser obj"<<std::endl;
-        return obj.serialize(*this);
-    }
+
 
 
 
@@ -384,7 +385,10 @@ private:
     // Helper write methods.
 
     template<typename T>
-    typename std::enable_if<!std::is_base_of<Serializable, T>::value, size_t>::type
+    typename std::enable_if<
+            !std::is_base_of<Serializable, T>::value &&
+            !std::is_same<std::nullptr_t &&, T>::value &&
+            !std::is_pointer<T>::value, size_t>::type
     writeSingle(const T& obj);
 
     template<typename T, typename... Args>
@@ -412,7 +416,10 @@ private:
 
     // Non trivial data functions.
 
-
+    size_t writeSingle(const Serializable& obj)
+    {
+        return obj.serialize(*this);
+    }
 
     size_t writeSingle(const std::string& str);
 

@@ -115,7 +115,9 @@ size_t BinarySerializer::writeRecursive(const T& value, const Args&... args)
 //    return total_size;
 //}
 
-template<typename T, typename... Args>
+
+
+template<typename T, typename... Args, typename>
 size_t BinarySerializer::write(const T& value, const Args&... args)
 {
     // Calculate total size of all arguments.
@@ -134,8 +136,11 @@ size_t BinarySerializer::write(const T& value, const Args&... args)
 }
 
 template<typename T>
-typename std::enable_if<!std::is_base_of<Serializable, T>::value, size_t>::type
-BinarySerializer::writeSingle(const T& value)
+typename std::enable_if<
+        !std::is_base_of<Serializable, T>::value &&
+        !std::is_same<std::nullptr_t &&, T>::value &&
+        !std::is_pointer<T>::value, size_t>::type
+BinarySerializer::writeSingle(const T& obj)
 {
     // Check the types.
     (BinarySerializer::checkTriviallyCopyable<T>());
@@ -144,7 +149,7 @@ BinarySerializer::writeSingle(const T& value)
     // Write single.
     reserve(this->size_ + sizeof(T));
     std::lock_guard<std::mutex> lock(this->mtx_);
-    BinarySerializer::binarySerializeDeserialize(&value, sizeof(T), this->data_.get() + size_);
+    BinarySerializer::binarySerializeDeserialize(&obj, sizeof(T), this->data_.get() + size_);
     this->size_ += sizeof(T);
 
     // Return the size.
