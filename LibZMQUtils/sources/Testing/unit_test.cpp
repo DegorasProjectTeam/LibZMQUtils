@@ -123,11 +123,11 @@ void UnitTest::runTests()
                            [test, &result]()
                            {
                                // Start time.
-                               auto start = std::chrono::high_resolution_clock::now();
+                               auto start = std::chrono::steady_clock::now();
                                // Run the test.
                                test->runTest();
                                // End time.
-                               auto stop = std::chrono::high_resolution_clock::now();
+                               auto stop = std::chrono::steady_clock::now();
                                // Get the elapsed time.
                                auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
                                // Store the result.

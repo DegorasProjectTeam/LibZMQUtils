@@ -12,6 +12,9 @@ M_DECLARE_UNIT_TEST(BinarySerializer, Trivial)
 M_DECLARE_UNIT_TEST(BinarySerializer, String)
 M_DECLARE_UNIT_TEST(BinarySerializer, VectorTrivial)
 
+// Other tests.
+M_DECLARE_UNIT_TEST(BinarySerializer, TrivialIntensive)
+
 M_DEFINE_UNIT_TEST(BinarySerializer, Trivial)
 {
     BinarySerializer serializer;
@@ -89,6 +92,47 @@ M_DEFINE_UNIT_TEST(BinarySerializer, VectorTrivial)
     M_EXPECTED_EQ(v1, r1)
 }
 
+M_DEFINE_UNIT_TEST(BinarySerializer, TrivialIntensive)
+{
+    // WARNING: This test is not efficient on purpose.
+
+    BinarySerializer serializer;
+
+    const size_t count = 1000;
+    std::vector<double> original_numbers(count);
+    std::vector<double> deserialized_numbers(count);
+
+    auto start_serialize = std::chrono::steady_clock::now();
+
+    // Fill the original numbers with random values
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<> dis(-1000000.0, 1000000.0);
+    for (double &num : original_numbers) {
+        num = dis(gen);
+    }
+
+    // Serialize all the numbers
+    for (double num : original_numbers) {
+        serializer.write(num);
+    }
+
+    // Deserialize the numbers
+    for (double &num : deserialized_numbers) {
+        serializer.read(num);
+    }
+
+    // Check that the deserialized numbers match the original
+    for (size_t i = 0; i < count; i++) {
+        M_EXPECTED_EQ(deserialized_numbers[i], original_numbers[i])
+    }
+
+    auto end_serialize = std::chrono::steady_clock::now();
+    auto elapsed_serialize = std::chrono::duration_cast<std::chrono::microseconds>(end_serialize - start_serialize);
+    std::cout << "Serialization took: " << elapsed_serialize.count() << " microseconds\n";
+
+}
+
 int main()
 {
     // Start of the session.
@@ -97,6 +141,9 @@ int main()
     // Register the tests.
     M_REGISTER_UNIT_TEST(BinarySerializer, Trivial)
     M_REGISTER_UNIT_TEST(BinarySerializer, String)
+
+    M_REGISTER_UNIT_TEST(BinarySerializer, TrivialIntensive)
+
 
     // Run the unit tests.
     M_RUN_UNIT_TESTS()
