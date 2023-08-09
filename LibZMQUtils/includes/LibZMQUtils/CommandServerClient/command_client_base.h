@@ -27,7 +27,7 @@
  * @brief This file contains the declaration of the CommandClientBase class and related.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2307.1
+ * @version 2308.2
 ***********************************************************************************************************************/
 
 // =====================================================================================================================
@@ -44,8 +44,8 @@
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/libzmqutils_global.h"
-#include "LibZMQUtils/zmq_context_handler.h"
+#include "LibZMQUtils/Global/libzmqutils_global.h"
+#include "LibZMQUtils/Global/zmq_context_handler.h"
 #include "LibZMQUtils/CommandServerClient/common.h"
 // =====================================================================================================================
 

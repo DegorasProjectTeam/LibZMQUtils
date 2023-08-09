@@ -23,120 +23,66 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @example ExampleServerAmelas.cpp
- *
- * @brief This file serves as a program example of how to use the AmelasServer and AmelasController classes.
- *
- * This program initializes an instance of the AmelasServer class and sets it up to interact with an instance of
- * the AmelasController class. The server is set up to respond to client requests by invoking callback methods on the
- * controller. The program will run indefinitely until the user hits ctrl-c.
- *
+ * @file zmq_context_handler.h
+ * @brief This file contains the declaration of the global ZMQContextHandler class.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2308.2
+ * @version 2308.1
 ***********************************************************************************************************************/
+
+// =====================================================================================================================
+#pragma once
+// =====================================================================================================================
 
 // C++ INCLUDES
 // =====================================================================================================================
-#ifdef _WIN32
-#include <Windows.h>
-#endif
 #include <iostream>
-#include <chrono>
-#include <thread>
-#include <csignal>
-#include <limits>
-#include <any>
+#include <vector>
+#include <functional>
+#include <mutex>
+#include <zmq/zmq.hpp>
+#include <zmq/zmq_addon.hpp>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/Helpers>
+#include "LibZMQUtils/Global/libzmqutils_global.h"
 // =====================================================================================================================
 
-// PROJECT INCLUDES
+// ZMQUTILS NAMESPACES
 // =====================================================================================================================
-#include "AmelasServer/amelas_server.h"
-#include "AmelasController/amelas_controller.h"
+namespace zmqutils{
 // =====================================================================================================================
 
-// ---------------------------------------------------------------------------------------------------------------------
-
-
-// ---------------------------------------------------------------------------------------------------------------------
-
-/**
- * @brief Main entry point of the program.
- *
- * Initializes an AmelasController and AmelasServer, then enters an infinite loop where it listens for client requests
- * and processes them using the server. If the user hits ctrl-c, the server is shut down and the program exits.
- */
-int main(int, char**)
+class LIBZMQUTILS_EXPORT ZMQContextHandler
 {
-    // Nampesaces.
-    using amelas::communication::AmelasServer;
-    using amelas::communication::AmelasServerCommand;
-    using amelas::controller::AmelasController;
 
-    // Configure the console.
-    zmqutils::internal_helpers::ConsoleConfig cmd_config(true, true, true);
+public:
 
-    // Configuration variables.
-    unsigned port = 9999;
-    bool client_status_check = true;
+    // Aliases.
+    using ContextHandlerReference = std::reference_wrapper<ZMQContextHandler>;
 
-    // Instantiate the Amelas controller.
-    AmelasController amelas_controller;
+    static ZMQContextHandler& getInstance();
 
-    // Instantiate the server.
-    AmelasServer amelas_server(port);
+    virtual ~ZMQContextHandler();
 
-    // Disable or enables the client status checking.
-    amelas_server.setClientStatusCheck(client_status_check);
+protected:
 
-    // ---------------------------------------
+    ZMQContextHandler();
 
-    // Set the controller callbacks in the server.
+    ZMQContextHandler(const ZMQContextHandler&) = delete;
 
-    amelas_server.registerControllerCallback(AmelasServerCommand::REQ_SET_HOME_POSITION,
-                                             &amelas_controller,
-                                             &AmelasController::setHomePosition);
+    ZMQContextHandler& operator=(const ZMQContextHandler&) = delete;
 
-    amelas_server.registerControllerCallback(AmelasServerCommand::REQ_GET_HOME_POSITION,
-                                             &amelas_controller,
-                                             &AmelasController::getHomePosition);
+    const std::unique_ptr<zmq::context_t>& getContext();
 
-    // ---------------------------------------
+private:
 
-    // Start the server.
-    bool started = amelas_server.startServer();
+    // Internal variables and containers.
+    inline static std::mutex mtx_;                                   ///< Safety mutex.
+    inline static std::unique_ptr<zmq::context_t> context_;          ///< ZMQ global context.
+    inline static std::vector<ContextHandlerReference> instances_;   ///< Instances of the ContextHandler.
+};
 
-    // Check if the server starts ok.
-    if(!started)
-    {
-        // Log.
-        std::cout << "Server start failed!! Press Enter to exit!" << std::endl;
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
-        return 1;
-    }
-
-    // Wait for closing as an infinite loop until ctrl-c.
-    zmqutils::internal_helpers::ConsoleConfig::waitForClose();
-
-    // Log.
-    std::cout << "Stopping the server..." << std::endl;
-
-    // Stop the server.
-    amelas_server.stopServer();
-
-    // Final log.
-    std::cout << "Server stoped. All ok!!" << std::endl;
-
-    // Restore the console.
-    cmd_config.restoreConsole();
-
-    // Return.
-	return 0;
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
+} // END NAMESPACES.
+// =====================================================================================================================

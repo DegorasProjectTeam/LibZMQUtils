@@ -27,7 +27,7 @@
  * @brief This file contains the declaration of the ClbkCommandServerBase class and related.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2307.1
+ * @version 2308.2
 ***********************************************************************************************************************/
 
 // =====================================================================================================================
@@ -44,7 +44,7 @@
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/libzmqutils_global.h"
+#include "LibZMQUtils/Global/libzmqutils_global.h"
 #include "LibZMQUtils/CommandServerClient/common.h"
 #include "LibZMQUtils/CommandServerClient/command_server_base.h"
 #include "LibZMQUtils/Utilities/callback_handler.h"

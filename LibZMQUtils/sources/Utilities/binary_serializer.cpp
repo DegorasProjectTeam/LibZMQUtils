@@ -27,7 +27,7 @@
  * @brief This file contains part of the implementation of the BinarySerializer class.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2307.1
+ * @version 2308.2
 ***********************************************************************************************************************/
 
 // C++ INCLUDES
@@ -60,10 +60,10 @@ BinarySerializer::BinarySerializer(size_t capacity) :
         capacity_(capacity),
         offset_(0){}
 
-BinarySerializer::BinarySerializer(void *data, size_t size)
+BinarySerializer::BinarySerializer(void *src, size_t size)
         : data_(nullptr), size_(0), capacity_(0), offset_(0)
 {
-    this->loadData(data, size);
+    this->loadData(src, size);
 }
 
 void BinarySerializer::reserve(size_t size)
@@ -79,13 +79,13 @@ void BinarySerializer::reserve(size_t size)
     }
 }
 
-void BinarySerializer::loadData(void* data, size_t size)
+void BinarySerializer::loadData(void* src, size_t size)
 {
-    if(data != nullptr)
+    if(src != nullptr)
     {
         this->reserve(size);
         std::lock_guard<std::mutex> lock(this->mtx_);
-        std::memcpy(this->data_.get(), data, size);
+        std::memcpy(this->data_.get(), src, size);
         this->size_ = size;
         this->offset_ = 0;
     }
@@ -120,7 +120,6 @@ std::unique_ptr<std::byte> BinarySerializer::moveUnique(size_t& size)
     return this->moveUnique();
 }
 
-
 std::byte* BinarySerializer::release()
 {
     std::lock_guard<std::mutex> lock(this->mtx_);
@@ -150,34 +149,30 @@ std::string BinarySerializer::getDataHexString() const
 {
     std::lock_guard<std::mutex> lock(this->mtx_);
     std::stringstream ss;
-    for(size_t i = 0; i < size_; i++)
-        ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned int>(data_.get()[i]) << " ";
+    for(size_t i = 0; i < this->size_; i++)
+        ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned int>(this->data_.get()[i]) << " ";
     return ss.str();
+}
+
+size_t BinarySerializer::writeSingle(const Serializable &obj)
+{
+    return obj.serialize(*this);
 }
 
 std::string BinarySerializer::toJsonString() const
 {
     std::stringstream ss;
     ss << "{"
-       << "\"size\": " << size_ << ", "
-       << "\"capacity\": " << capacity_ << ", "
-       << "\"offset\": " << offset_ << ", "
-       << "\"hex_data\": \"" << this->getDataHexString() << "\""
+       << "\"size\": " << this->size_ << ", "
+       << "\"capacity\": " << this->capacity_ << ", "
+       << "\"offset\": " << this->offset_ << ", "
+       << "\"hexadecimal\": \"" << this->getDataHexString() << "\""
        << "}";
     return ss.str();
 }
 
-//void BinarySerializer::binarySerializeDeserialize(const void *data, size_t data_size_bytes, void *dest)
-//{
-//    const std::byte* data_bytes = reinterpret_cast<const std::byte*>(data);
-//    std::byte* dest_byes = reinterpret_cast<std::byte*>(dest);
-//    std::reverse_copy(data_bytes, data_bytes + data_size_bytes, dest_byes);
-//}
-
 size_t BinarySerializer::writeSingle(const std::string& str)
 {
-    std::cout<<"Writing String" <<std::endl;
-
     // String size.
     size_t str_size = str.size();
 
@@ -200,6 +195,36 @@ size_t BinarySerializer::writeSingle(const std::string& str)
 
     // Return the writed size.
     return total_size;
+}
+
+void BinarySerializer::readSingle(std::string &value)
+{
+    // Mutex.
+    std::lock_guard<std::mutex> lock(this->mtx_);
+
+    // Ensure that there's enough data left to read the size of the string.
+    if (this->offset_ + sizeof(size_t) > this->size_)
+        throw std::out_of_range("BinarySerializer: Not enough data left to read the size of the string");
+
+    // Read the size of the string.
+    size_t size;
+    BinarySerializer::binarySerializeDeserialize(this->data_.get() + this->offset_, sizeof(size_t), &size);
+
+    // Check if the string is empty.
+    if(size == 0)
+        return;
+
+    // Update the offset.
+    this->offset_ += sizeof(size_t);
+
+    // Check if we have enough data left to read the string.
+    if (this->offset_ + size > this->size_)
+        throw std::out_of_range("BinarySerializer: Read string beyond the data size.");
+
+    // Read the string.
+    value.resize(size);
+    BinarySerializer::binarySerializeDeserialize(this->data_.get() + this->offset_, size, value.data());
+    this->offset_ += size;
 }
 
 }} // END NAMESPACES.

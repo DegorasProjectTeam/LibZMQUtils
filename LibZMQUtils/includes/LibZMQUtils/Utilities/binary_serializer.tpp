@@ -27,7 +27,7 @@
  * @brief This file contains the declaration of the BinarySerializer class.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2307.1
+ * @version 2308.2
 ***********************************************************************************************************************/
 
 // =====================================================================================================================
@@ -60,6 +60,18 @@ namespace zmqutils{
 namespace utils{
 // =====================================================================================================================
 
+template<typename T>
+void BinarySerializer::checkTrivial()
+{
+    static_assert(std::is_trivial_v<T>, "Non-trivial types are not supported.");
+}
+
+template<typename T>
+void BinarySerializer::checkTriviallyCopyable()
+{
+    static_assert(std::is_trivially_copyable_v<T>, "Non-trivially copyable types are not supported.");
+}
+
 template<typename T, typename C>
 void BinarySerializer::binarySerializeDeserialize(const T* src, size_t data_size_bytes, C* dst)
 {
@@ -73,17 +85,21 @@ void BinarySerializer::binarySerializeDeserialize(const T* src, size_t data_size
     std::reverse_copy(data_bytes, data_bytes + data_size_bytes, dest_bytes);
 }
 
-
-
 template<typename T>
 size_t BinarySerializer::calcSize(const T& value)
 {
     if constexpr(std::is_base_of_v<Serializable, std::decay_t<T>>)
+    {
         return value.serializedSize();
+    }
     else if constexpr(std::is_same_v<std::decay_t<T>, std::string>)
+    {
         return sizeof(size_t) + value.size();
+    }
     else if constexpr(std::is_trivially_copyable_v<std::decay_t<T>> && std::is_trivial_v<std::decay_t<T>>)
+    {
         return sizeof(value);
+    }
     else
         static_assert(sizeof(T) == 0, "Unsupported type.");
 }
@@ -97,33 +113,39 @@ size_t BinarySerializer::writeRecursive(const T& value, const Args&... args)
         return this->writeSingle(value) + this->writeRecursive(std::forward<const Args&>(args)...);
 }
 
-//template<typename... Args>
-//size_t BinarySerializer::write(const Args&... args)
-//{
-//    // Check the types.
-//    (BinarySerializer::checkTriviallyCopyable<Args>(), ...);
-//    (BinarySerializer::checkTrivial<Args>(), ...);
+template<typename T, typename... Args>
+void BinarySerializer::readRecursive(T& value, Args&... args)
+{
+    this->readSingle(value);
+    if constexpr (sizeof...(args) > 0)
+        this->readRecursive(std::forward<Args&>(args)...);
+}
 
-//    // Sum of sizes of all arguments and reserve.
-//    const size_t total_size = (sizeof(args) + ... + 0);
-//    reserve(this->size_ + total_size);
+template<typename... Args>
+size_t BinarySerializer::fastSerialization(std::unique_ptr<std::byte>& out, const Args&... args)
+{
+    // Do the serialization
+    BinarySerializer serializer;
+    size_t size = serializer.write(std::forward<const Args&>(args)...);
+    out = serializer.moveUnique();
+    return size;
+}
 
-//    // Perform each write.
-//    (void)std::initializer_list<int> { (this->writeSingle(args), 0)... };
-
-//    // Return the total size.
-//    return total_size;
-//}
-
-
+template<typename... Args>
+void BinarySerializer::fastDeserialization(void* src, size_t size, Args&... args)
+{
+    // Do the deserialization.
+    BinarySerializer serializer(src, size);
+    serializer.read(std::forward<Args&>(args)...);
+    if(!serializer.allReaded())
+        throw std::out_of_range("BinarySerializer: Not all data was deserialized.");
+}
 
 template<typename T, typename... Args, typename>
 size_t BinarySerializer::write(const T& value, const Args&... args)
 {
     // Calculate total size of all arguments.
-    std::cout<<"Total size internal"<<std::endl;
     size_t total_size = (BinarySerializer::calcSize(value) + ... + BinarySerializer::calcSize(args));
-    std::cout<<total_size<<std::endl;
 
     // Reserve space in one go.
     reserve(this->size_ + total_size);
@@ -133,6 +155,34 @@ size_t BinarySerializer::write(const T& value, const Args&... args)
 
     // Return the writed size.
     return total_size;
+}
+
+template<typename T, typename... Args>
+void BinarySerializer::read(T& value, Args&... args)
+{
+    // Read the data.
+    this->readRecursive(value, args...);
+}
+
+template<typename T>
+typename std::enable_if<
+        !std::is_base_of<Serializable, T>::value &&
+        !std::is_same<std::nullptr_t &&, T>::value &&
+        !std::is_pointer<T>::value, T>::type
+BinarySerializer::readSingle()
+{
+    // Check the types.
+    (BinarySerializer::checkTriviallyCopyable<T>());
+    (BinarySerializer::checkTrivial<T>());
+
+    // Read single.
+    std::lock_guard<std::mutex> lock(this->mtx_);
+    if (this->offset_ + sizeof(T) > this->size_)
+        throw std::out_of_range("BinarySerializer: Read beyond the data size");
+    T value;
+    BinarySerializer::binarySerializeDeserialize(this->data_.get() + this->offset_, sizeof(T), &value);
+    this->offset_ += sizeof(T);
+    return value;
 }
 
 template<typename T>
@@ -156,37 +206,31 @@ BinarySerializer::writeSingle(const T& obj)
     return sizeof(T);
 }
 
-
-template<typename... Args>
-void BinarySerializer::read(Args&... args)
+template<typename T>
+size_t BinarySerializer::writeSingle(const std::vector<T>& v)
 {
     // Check the types.
-    (BinarySerializer::checkTriviallyCopyable<Args>(), ...);
-    (BinarySerializer::checkTrivial<Args>(), ...);
+    BinarySerializer::checkTriviallyCopyable<T>();
+    BinarySerializer::checkTrivial<T>();
 
-    // Read the data.
-    (void)std::initializer_list<int>{ (readSingle(args), 0)... };
+    // Get the total size and reserve.
+    size_t total_size = sizeof(T)*v.size();
+    this->reserve(total_size);
+
+    // Write each value of the vector.
+    for(const auto& val : v)
+        this->writeSingle(val);
+
+    // Return the writed size.
+    return total_size;
 }
 
 template<typename T>
-T BinarySerializer::readSingle()
-{
-    // Check the types.
-    (BinarySerializer::checkTriviallyCopyable<T>());
-    (BinarySerializer::checkTrivial<T>());
-
-    // Read single.
-    std::lock_guard<std::mutex> lock(this->mtx_);
-    if (this->offset_ + sizeof(T) > this->size_)
-        throw std::out_of_range("BinarySerializer: Read beyond the data size");
-    T value;
-    BinarySerializer::binarySerializeDeserialize(this->data_.get() + this->offset_, sizeof(T), &value);
-    this->offset_ += sizeof(T);
-    return value;
-}
-
-template<typename T>
-void BinarySerializer::readSingle(T& value)
+typename std::enable_if<
+        !std::is_base_of<Serializable, T>::value &&
+        !std::is_same<std::nullptr_t &&, T>::value &&
+        !std::is_pointer<T>::value, void>::type
+BinarySerializer::readSingle(T& value)
 {
     // Check the types.
     (BinarySerializer::checkTriviallyCopyable<T>());
@@ -200,42 +244,9 @@ void BinarySerializer::readSingle(T& value)
     this->offset_ += sizeof(T);
 }
 
-template<typename T>
-void BinarySerializer::checkTrivial()
-{
-    static_assert(std::is_trivial_v<T>, "Non-trivial types are not supported.");
-}
-
-template<typename T>
-void BinarySerializer::checkTriviallyCopyable()
-{
-    static_assert(std::is_trivially_copyable_v<T>, "Non-trivially copyable types are not supported.");
-}
-
-template<typename... Args>
-size_t BinarySerializer::fastSerialization(std::unique_ptr<std::byte>& out, const Args&... args)
-{
-    // Do the serialization
-    BinarySerializer serializer;
-    size_t size = serializer.write(std::forward<const Args&>(args)...);
-    out = serializer.moveUnique();
-
-    std::cout<<"Writing internal"<<std::endl;
-    std::cout<<size<<std::endl;
 
 
-    return size;
-}
 
-template<typename... Args>
-void BinarySerializer::fastDeserialization(void* in, size_t size, Args&... args)
-{
-    // Do the deserialization.
-    BinarySerializer serializer(in, size);
-    serializer.read(std::forward<Args&>(args)...);
-    if(!serializer.allReaded())
-        throw std::out_of_range("BinarySerializer: Not all data was deserialized.");
-}
 
 }} // END NAMESPACES.
 // =====================================================================================================================

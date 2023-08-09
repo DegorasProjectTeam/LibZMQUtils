@@ -27,7 +27,7 @@
  * @brief This file contains common elements for the whole library.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2307.1
+ * @version 2308.2
 ***********************************************************************************************************************/
 
 // =====================================================================================================================
@@ -48,7 +48,7 @@
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/libzmqutils_global.h"
+#include "LibZMQUtils/Global/libzmqutils_global.h"
 #include "LibZMQUtils/Utilities/utils.h"
 #include "LibZMQUtils/Utilities/uuid_generator.h"
 // =====================================================================================================================

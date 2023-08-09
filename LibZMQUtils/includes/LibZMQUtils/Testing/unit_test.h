@@ -1,11 +1,11 @@
 /***********************************************************************************************************************
- *   LibZMQUtils (ZMQ Utilitites Library): A libre library with ZMQ related useful utilities.                          *
+ *   LibDPSLR (Degoras Project SLR Library): A libre base library for SLR related developments.                        *                                      *
  *                                                                                                                     *
  *   Copyright (C) 2023 Degoras Project Team                                                                           *
  *                      < Ángel Vera Herrera, avera@roa.es - angeldelaveracruz@gmail.com >                             *
  *                      < Jesús Relinque Madroñal >                                                                    *
  *                                                                                                                     *
- *   This file is part of LibZMQUtils.                                                                                 *
+ *   This file is part of LibDPSLR.                                                                                    *
  *                                                                                                                     *
  *   Licensed under the European Union Public License (EUPL), Version 1.2 or subsequent versions of the EUPL license   *
  *   as soon they will be approved by the European Commission (IDABC).                                                 *
@@ -22,114 +22,181 @@
  *   along with this project. If not, see the license at < https://eupl.eu/ >.                                         *
  **********************************************************************************************************************/
 
-/** ********************************************************************************************************************
- * @file utils.h
- * @brief This file contains the declaration of several utilities for the project development.
- * @author Degoras Project Team
- * @copyright EUPL License
- * @version 2308.2
-***********************************************************************************************************************/
-
 // =====================================================================================================================
 #pragma once
 // =====================================================================================================================
 
 // C++ INCLUDES
 // =====================================================================================================================
-#include <algorithm>
-#include <string>
+#include <unistd.h>
 #include <iostream>
+#include <sstream>
+#include <list>
 #include <map>
 #include <vector>
-#include <cstring>
-#include <chrono>
-#include <array>
-#include <utility>
-#include <functional>
 // =====================================================================================================================
 
-// ZMQUTILS INCLUDES
+// LIBDPSLR INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/Global/libzmqutils_global.h"
-// =====================================================================================================================
-
-// DEFINITIONS
-// =====================================================================================================================
-#if defined(__MINGW32__) || defined(_MSC_VER)
-#define MKGMTIME _mkgmtime
-#else
-#define MKGMTIME timegm
-#endif
+#include "LibDPSLR/libdpslr_global.h"
+#include <LibDPSLR/Timing/time_utils.h>
 // =====================================================================================================================
 
-// ZMQUTILS NAMESPACES
+// DPSLR NAMESPACES
 // =====================================================================================================================
-namespace zmqutils{
-namespace utils{
-// =====================================================================================================================
-
-// CONVENIENT ALIAS AND ENUMERATIONS
-// =====================================================================================================================
-/// High resolution time point to store datetimes (uses Unix Time).
-using HRTimePointStd = std::chrono::time_point<std::chrono::high_resolution_clock>;
-/// Steady clock time point for measuring intervals.
-using SCTimePointStd =  std::chrono::steady_clock::time_point;
+namespace dpslr{
+namespace testing{
 // =====================================================================================================================
 
-struct LIBZMQUTILS_EXPORT NetworkAdapterInfo
+
+struct TestLog
 {
-    std::string id;
-    std::string name;
-    std::string descr;
-    std::string ip;
+
+public:
+
+    TestLog(const std::string& module, const std::string& test, const std::string &det_ex,
+            bool passed, const dpslr::timing::common::HRTimePointStd &tp, long long elapsed);
+
+    TestLog(const TestLog&) = default;
+
+    std::string makeLog(const std::string& storage_path = std::string()) const;
+
+    const std::string& getModuleName() const;
+
+    bool getResult() const;
+
+    ~TestLog() = default;
+
+private:
+
+    std::string formatResult() const;
+
+    // Stringstreams.
+    std::string module_;
+    std::string test_;
+    std::string det_ex_;
+    bool passed_;
+    std::string tp_str_;
+    long long elapsed_;
 };
 
-LIBZMQUTILS_EXPORT std::vector<NetworkAdapterInfo> getHostIPsWithInterfaces();
 
-LIBZMQUTILS_EXPORT std::string getHostname();
-
-LIBZMQUTILS_EXPORT unsigned getCurrentPID();
-
-LIBZMQUTILS_EXPORT std::string timePointToString(const HRTimePointStd& tp,
-                                                 const std::string& format = "%Y-%m-%dT%H:%M:%S",
-                                                 bool add_ms = true, bool add_ns = false, bool utc = true);
-
-LIBZMQUTILS_EXPORT std::string timePointToIso8601(const HRTimePointStd& tp, bool add_ms = true, bool add_ns = false);
-
-LIBZMQUTILS_EXPORT std::string currentISO8601Date(bool add_ms = true);
-
-template<typename Enum, std::size_t N>
-std::string getEnumString(Enum value, const std::array<const char*, N>& str_array)
+class LIBDPSLR_EXPORT TestSummary
 {
-    static_assert(std::is_enum<Enum>::value, "getEnumString - Template argument must be an enum type.");
+public:
 
-    using underlying = typename std::underlying_type<Enum>::type;
-    underlying index = static_cast<underlying>(value);
+    TestSummary();
 
-    if (index < str_array.size())
-        return str_array[index];
+    void setSessionName(const std::string& name);
 
-    return "Unknown value.";
-}
+    void addLog(const TestLog& log);
 
+    void clear();
 
+    void makeSummary(bool show = true, const std::string& storage_path = std::string()) const;
 
-namespace internal
+    ~TestSummary() = default;
+
+private:
+
+    std::multimap<std::string, TestLog> test_logs_;
+    std::string session_;
+    unsigned n_pass_;
+    unsigned n_fail_;
+};
+
+class TestBase
 {
-    template <typename T, std::size_t... Is1, std::size_t... Is2>
-    constexpr std::array<T, sizeof...(Is1) + sizeof...(Is2)>
-    joinArrays(const std::array<T, sizeof...(Is1)>& a1, const std::array<T, sizeof...(Is2)>& a2,
-               std::index_sequence<Is1...>, std::index_sequence<Is2...>)
+
+protected:
+
+    TestBase(const std::string& name):
+        test_name_(name),
+        result_(true)
+    {}
+
+public:
+
+    template<typename T>
+    inline bool expectEQ(const T& arg1, const T& arg2)
     {
-        return { a1[Is1]..., a2[Is2]... };
+        bool result = (arg1 == arg2);
+        return result;
     }
-}
 
-template <typename T, std::size_t N1, std::size_t N2>
-constexpr std::array<T, N1 + N2> joinArraysConstexpr(const std::array<T, N1>& a1, const std::array<T, N2>& a2)
+    template<typename T>
+    inline bool expectNE(const T& arg1, const T& arg2)
+    {
+        bool result = (arg1 != arg2);
+        return result;
+    }
+
+    virtual void runTest(){};
+
+    std::string test_name_;
+    bool result_;
+};
+
+
+
+class LIBDPSLR_EXPORT UnitTest
 {
-    return internal::joinArrays(a1, a2, std::make_index_sequence<N1>(), std::make_index_sequence<N2>());
-}
+
+public:
+
+    // Deleting the copy constructor.
+    UnitTest(const UnitTest& obj) = delete;
+
+    inline static UnitTest& instance()
+    {
+        static UnitTest uTest;
+        return uTest;
+    }
+
+    void setSessionName(std::string&& session)
+    {
+        this->session_ = std::move(session);
+        this->summary_.setSessionName(this->session_);
+    }
+
+    void addTest(std::pair<std::string, TestBase*> p)
+    {
+        this->test_dict_.insert(p);
+    }
+
+    void runTests();
+
+    void clear()
+    {
+        this->test_dict_.clear();
+        this->summary_.clear();
+    }
+
+    template<typename T>
+    inline bool expectEQ(const T& arg1, const T& arg2)
+    {
+        bool result = (arg1 == arg2);
+        return result;
+    }
+
+    template<typename T>
+    inline bool expectNE(const T& arg1, const T& arg2)
+    {
+        bool result = (arg1 != arg2);
+        return result;
+    }
+
+    virtual ~UnitTest() {}
+
+private:
+
+    UnitTest() {}
+
+    // Members.
+    std::multimap<std::string, TestBase*> test_dict_;
+    TestSummary summary_;
+    std::string session_;
+};
 
 }} // END NAMESPACES.
 // =====================================================================================================================

@@ -1,11 +1,11 @@
 /***********************************************************************************************************************
- *   LibZMQUtils (ZMQ Utilitites Library): A libre library with ZMQ related useful utilities.                          *
+ *   LibDPSLR (Degoras Project SLR Library): A libre base library for SLR related developments.                        *                                      *
  *                                                                                                                     *
  *   Copyright (C) 2023 Degoras Project Team                                                                           *
  *                      < Ángel Vera Herrera, avera@roa.es - angeldelaveracruz@gmail.com >                             *
  *                      < Jesús Relinque Madroñal >                                                                    *
  *                                                                                                                     *
- *   This file is part of LibZMQUtils.                                                                                 *
+ *   This file is part of LibDPSLR.                                                                                    *
  *                                                                                                                     *
  *   Licensed under the European Union Public License (EUPL), Version 1.2 or subsequent versions of the EUPL license   *
  *   as soon they will be approved by the European Commission (IDABC).                                                 *
@@ -22,63 +22,57 @@
  *   along with this project. If not, see the license at < https://eupl.eu/ >.                                         *
  **********************************************************************************************************************/
 
-/** ********************************************************************************************************************
- * @file zmq_context_handler.h
- * @brief This file contains the declaration of the global ZMQContextHandler class.
- * @author Degoras Project Team
- * @copyright EUPL License
- * @version 2308.1
-***********************************************************************************************************************/
-
-// =====================================================================================================================
-#pragma once
-// =====================================================================================================================
-
 // C++ INCLUDES
 // =====================================================================================================================
-#include <iostream>
-#include <vector>
-#include <functional>
-#include <mutex>
-#include <zmq/zmq.hpp>
-#include <zmq/zmq_addon.hpp>
+#include <stdlib.h>
+#include <thread>
+#include <chrono>
 // =====================================================================================================================
 
-// ZMQUTILS INCLUDES
+// LIBDPSLR INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/libzmqutils_global.h"
-// =====================================================================================================================
-
-// ZMQUTILS NAMESPACES
-// =====================================================================================================================
-namespace zmqutils{
+#include "LibDPSLR/Testing/unit_test.h"
 // =====================================================================================================================
 
-class LIBZMQUTILS_EXPORT ZMQContextHandler
-{
+// MACROS
+// =====================================================================================================================
 
-public:
+#define M_START_UNIT_TEST_SESSION(SessionName)                    \
+UnitTest::instance().clear();                                     \
+UnitTest::instance().setSessionName(std::string(SessionName));    \
 
-    static ZMQContextHandler& getInstance();
+#define M_DECLARE_UNIT_TEST(Module, TestName)               \
+using dpslr::testing::TestBase;                             \
+using dpslr::testing::UnitTest;                             \
+class Test_##Module##_##TestName : public TestBase          \
+{                                                           \
+        Test_##Module##_##TestName(): TestBase(#TestName){} \
+        public:                                             \
+        static Test_##Module##_##TestName* instance()       \
+    {                                                       \
+            static Test_##Module##_##TestName test;         \
+            return &test;                                   \
+    }                                                       \
+        void runTest() override;                            \
+};                                                          \
 
-    virtual ~ZMQContextHandler();
+#define M_DEFINE_UNIT_TEST(Module, TestName)       \
+void Test_##Module##_##TestName::runTest()      \
 
-protected:
+#define M_REGISTER_UNIT_TEST(Module, TestName)                                                        \
+    UnitTest::instance().addTest(                                                        \
+            std::pair<std::string, TestBase*>(#Module, Test_##Module##_##TestName::instance()));   \
 
-    ZMQContextHandler();
-    ZMQContextHandler(const ZMQContextHandler&) = delete;
-    ZMQContextHandler& operator=(const ZMQContextHandler&) = delete;
+#define M_RUN_UNIT_TESTS() \
+dpslr::testing::UnitTest::instance().runTests();  \
 
-    const std::unique_ptr<zmq::context_t>& getContext();
+#define M_EXPECTED_EQ(arg1, arg2)          \
+this->result_ &= expectEQ(arg1, arg2);   \
 
-    // Aliases.
-    using ContextHandlerReference = std::reference_wrapper<ZMQContextHandler>;
+#define MEXPECTED_NE(arg1, arg2)          \
+this->result_ &= expectNE(arg1, arg2);   \
 
-    // Internal variables and containers.
-    inline static std::mutex mtx_;                                   ///< Safety mutex.
-    inline static std::unique_ptr<zmq::context_t> context_;          ///< ZMQ global context.
-    inline static std::vector<ContextHandlerReference> instances_;   ///< Instances of the ContextHandler.
-};
-
-} // END NAMESPACES.
+#define M_SLEEP_US(arg1)          \
+std::this_thread::sleep_for(std::chrono::microseconds(arg1));   \
+ \
 // =====================================================================================================================

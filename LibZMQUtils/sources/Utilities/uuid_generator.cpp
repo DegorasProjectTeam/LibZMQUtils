@@ -27,7 +27,7 @@
  * @brief This file contains the implementation of the UUIDGenerator class.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2307.1
+ * @version 2308.2
 ***********************************************************************************************************************/
 
 // C++ INCLUDES
