@@ -1,11 +1,11 @@
 /***********************************************************************************************************************
- *   LibDPSLR (Degoras Project SLR Library): A libre base library for SLR related developments.                        *                                      *
+ *   LibZMQUtils (ZMQ Utilitites Library): A libre library with ZMQ related useful utilities.                          *
  *                                                                                                                     *
  *   Copyright (C) 2023 Degoras Project Team                                                                           *
  *                      < Ángel Vera Herrera, avera@roa.es - angeldelaveracruz@gmail.com >                             *
  *                      < Jesús Relinque Madroñal >                                                                    *
  *                                                                                                                     *
- *   This file is part of LibDPSLR.                                                                                    *
+ *   This file is part of LibZMQUtils.                                                                                 *
  *                                                                                                                     *
  *   Licensed under the European Union Public License (EUPL), Version 1.2 or subsequent versions of the EUPL license   *
  *   as soon they will be approved by the European Commission (IDABC).                                                 *
@@ -22,63 +22,95 @@
  *   along with this project. If not, see the license at < https://eupl.eu/ >.                                         *
  **********************************************************************************************************************/
 
-// C++ INCLUDES
-// =====================================================================================================================
-#include <stdlib.h>
-#include <thread>
-#include <chrono>
-// =====================================================================================================================
+/** ********************************************************************************************************************
+ * @file string_helpers.tpp
+ * @brief This file contains the function implementations related with the string helper tools.
+ * @author Degoras Project Team
+ * @copyright EUPL License
+ * @version 2308.1
+***********************************************************************************************************************/
 
-// LIBDPSLR INCLUDES
-// =====================================================================================================================
-#include "LibZMQUtils/Testing/unit_test.h"
-// =====================================================================================================================
-
-// =====================================================================================================================
-using zmqutils::testing::TestBase;
-using zmqutils::testing::UnitTest;
-using zmqutils::testing::TestSummary;
+// ========== C++ INCLUDES =============================================================================================
+#include <algorithm>
+#include <stdexcept>
+#include <regex>
+#include <random>
 // =====================================================================================================================
 
-// MACROS
+// ========== DP INCLUDES ==============================================================================================
+#include "LibZMQUtils/InternalHelpers/string_helpers.h"
 // =====================================================================================================================
 
-#define M_START_UNIT_TEST_SESSION(SessionName)                    \
-UnitTest::instance().clear();                                     \
-UnitTest::instance().setSessionName(std::string(SessionName));    \
+// ========== DPSLR NAMESPACES =========================================================================================
+namespace zmqutils{
+namespace helpers{
+namespace strings{
+// =====================================================================================================================
 
-#define M_DECLARE_UNIT_TEST(Module, TestName)               \
-                           \
-class Test_##Module##_##TestName : public TestBase          \
-{                                                           \
-        Test_##Module##_##TestName(): TestBase(#TestName){} \
-        public:                                             \
-        static Test_##Module##_##TestName* instance()       \
-    {                                                       \
-            static Test_##Module##_##TestName test;         \
-            return &test;                                   \
-    }                                                       \
-        void runTest() override;                            \
-};                                                          \
+std::string toUpper(const std::string& str)
+{
+    // Aux string.
+    std::string result;
+    // Make the transformation and return the new string..
+    std::transform(str.begin(), str.end(), std::back_inserter(result), ::toupper);
+    return result;
+}
 
-#define M_DEFINE_UNIT_TEST(Module, TestName)       \
-void Test_##Module##_##TestName::runTest()      \
+std::string toLower(const std::string& str)
+{
+    // Aux string.
+    std::string result;
+    // Make the transformation and return the new string..
+    std::transform(str.begin(), str.end(), std::back_inserter(result), ::tolower);
+    return result;
+}
 
-#define M_REGISTER_UNIT_TEST(Module, TestName)                                                        \
-    UnitTest::instance().addTest(                                                        \
-            std::pair<std::string, TestBase*>(#Module, Test_##Module##_##TestName::instance()));   \
+std::string ltrim(const std::string &s)
+{
+    return std::regex_replace(s, std::regex("^\\s+"), std::string(""));
+}
 
-#define M_RUN_UNIT_TESTS()        \
-UnitTest::instance().runTests();  \
-return 0;                         \
+std::string rtrim(const std::string &s)
+{
+    return std::regex_replace(s, std::regex("\\s+$"), std::string(""));
+}
 
-#define M_EXPECTED_EQ(arg1, arg2)        \
-this->result_ &= expectEQ(arg1, arg2);   \
+std::string trim(const std::string &s)
+{
+    return ltrim(rtrim(s));
+}
 
-#define MEXPECTED_NE(arg1, arg2)          \
-this->result_ &= expectNE(arg1, arg2);   \
+std::string rmLastLineBreak(const std::string &s)
+{
+    return s.substr(0, s.find_last_of('\n'));
+}
 
-#define M_SLEEP_US(arg1)          \
-std::this_thread::sleep_for(std::chrono::microseconds(arg1));   \
- \
+std::string replaceStr(const std::string& str, const std::string& target, const std::string& replacement)
+{
+    std::string result = str;
+    size_t pos = 0;
+    while ((pos = result.find(target, pos)) != std::string::npos)
+    {
+        result.replace(pos, target.length(), replacement);
+        pos += replacement.length();
+    }
+    return result;
+}
+
+std::string fillStr(const std::string& fillChar, size_t width)
+{
+    std::string result;
+    size_t fillSize = width / fillChar.size();
+    size_t remainder = width % fillChar.size();
+
+    for (size_t i = 0; i < fillSize; ++i)
+        result += fillChar;
+
+    if (remainder > 0)
+        result += fillChar.substr(0, remainder);
+
+    return result;
+}
+
+}}}// END NAMESPACES.
 // =====================================================================================================================

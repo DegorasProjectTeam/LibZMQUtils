@@ -115,14 +115,14 @@ struct trait_has_nullptr_t : std::disjunction<std::is_same<std::nullptr_t, Ts>..
  *
  * @see BinarySerializer
  */
-class Serializable
+class LIBZMQUTILS_EXPORT Serializable
 {
 public:
 
     /**
      * @brief Virtual destructor to allow proper cleanup of derived classes.
      */
-    virtual ~Serializable() = default;
+    virtual ~Serializable();
 
     /**
      * @brief Method to serialize the object into a binary format.
@@ -200,6 +200,12 @@ public:
 class LIBZMQUTILS_EXPORT BinarySerializer
 {
 public:
+
+    enum class Endianess
+    {
+        LITTLE_ENDIAN = 0,
+        BIG_ENDIAN
+    };
 
     /**
      * @brief Construct a new Binary Serializer object with a given capacity.
@@ -454,6 +460,8 @@ public:
 
 private:
 
+    static Endianess determineEndianess();
+
     // Internal function to check if the type is trivially copiable.
     template<typename T>
     static void checkTriviallyCopyable();
@@ -462,13 +470,23 @@ private:
     template<typename T>
     static void checkTrivial();
 
-    // Internal binary serialization/deserialization helper function.
-    template<typename T, typename C>
-    static void binarySerializeDeserialize(const T* data, size_t data_size_bytes, C* dest);
-
     // Internal size calculator function.
     template<typename T>
-    static size_t calcSize(const T& value);
+    static uint64_t calcTotalSize(const T& data);
+
+    // Internal binary serialization/deserialization helper function.
+    template<typename T, typename C>
+    static void binarySerializeDeserialize(const T* src, size_t data_size_bytes, C* dst, bool reverse);
+
+    // Internal binary serialization helper function.
+    template<typename T, typename C>
+    void binarySerialize(const T* src, size_t data_size_bytes, C* dst);
+
+    // Internal binary deserialization helper function.
+    template<typename T, typename C>
+    void binaryDeserialize(const T *src, size_t data_size_bytes, C *dst);
+
+
 
     // Recursive writing helper.
     template<typename T, typename... Args>
@@ -528,7 +546,8 @@ private:
     std::atomic<size_t> size_;               ///< Current size of the data.
     std::atomic<size_t> capacity_;           ///< Current capacity.
     std::atomic<size_t> offset_;             ///< Offset when reading.
-    mutable std::mutex mtx_;                 ///< Mutex for thread safety
+    Endianess endianess_;                    ///< Represent the endianess of the system.
+    mutable std::recursive_mutex mtx_;       ///< Mutex for thread safety
 };
 
 }} // END NAMESPACES.

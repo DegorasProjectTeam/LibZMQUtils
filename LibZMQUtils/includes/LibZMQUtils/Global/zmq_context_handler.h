@@ -79,9 +79,9 @@ protected:
 private:
 
     // Internal variables and containers.
-    inline static std::mutex mtx_;                                   ///< Safety mutex.
-    inline static std::unique_ptr<zmq::context_t> context_;          ///< ZMQ global context.
-    inline static std::vector<ContextHandlerReference> instances_;   ///< Instances of the ContextHandler.
+    inline static std::mutex mtx_;                                    ///< Safety mutex.
+    inline static std::unique_ptr<zmq::context_t> context_;           ///< ZMQ global context.
+    inline static std::vector<ContextHandlerReference> instances_;    ///< Instances of the ContextHandler.
 };
 
 } // END NAMESPACES.

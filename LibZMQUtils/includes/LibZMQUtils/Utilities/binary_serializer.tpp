@@ -73,32 +73,58 @@ void BinarySerializer::checkTriviallyCopyable()
 }
 
 template<typename T, typename C>
-void BinarySerializer::binarySerializeDeserialize(const T* src, size_t data_size_bytes, C* dst)
+void BinarySerializer::binarySerialize(const T *src, size_t data_size_bytes, C *dst)
+{
+    bool reverse = this->endianess_ == Endianess::LITTLE_ENDIAN;
+    BinarySerializer::binarySerializeDeserialize(src, data_size_bytes, dst, reverse);
+}
+
+template<typename T, typename C>
+void BinarySerializer::binaryDeserialize(const T *src, size_t data_size_bytes, C *dst)
+{
+    bool reverse = this->endianess_ == Endianess::LITTLE_ENDIAN;
+    BinarySerializer::binarySerializeDeserialize(src, data_size_bytes, dst, reverse);
+}
+
+template<typename TSRC, typename TDEST>
+void BinarySerializer::binarySerializeDeserialize(const TSRC* src, size_t data_size_bytes, TDEST* dst, bool reverse)
 {
     // Check the types.
-    (BinarySerializer::checkTriviallyCopyable<T>());
-    (BinarySerializer::checkTrivial<T>());
+    (BinarySerializer::checkTriviallyCopyable<TDEST>());
+    (BinarySerializer::checkTrivial<TDEST>());
+
+    // Zero-fill the entire output first.
+    std::memset(dst, 0, sizeof(TDEST));
 
     // Serialize the data.
     const std::byte* data_bytes = reinterpret_cast<const std::byte*>(src);
     std::byte* dest_bytes = reinterpret_cast<std::byte*>(dst);
-    std::reverse_copy(data_bytes, data_bytes + data_size_bytes, dest_bytes);
+
+    // Copy the data (with reverse if neccesary).
+    if (reverse)
+    {
+        std::reverse_copy(data_bytes, data_bytes + data_size_bytes, dest_bytes);
+    }
+    else
+    {
+        std::copy(data_bytes, data_bytes + data_size_bytes, dest_bytes);
+    }
 }
 
 template<typename T>
-size_t BinarySerializer::calcSize(const T& value)
+uint64_t BinarySerializer::calcTotalSize(const T& data)
 {
     if constexpr(std::is_base_of_v<Serializable, std::decay_t<T>>)
     {
-        return value.serializedSize();
+        return data.serializedSize();
     }
     else if constexpr(std::is_same_v<std::decay_t<T>, std::string>)
     {
-        return sizeof(size_t) + value.size();
+        return sizeof(uint64_t) + data.size();
     }
     else if constexpr(std::is_trivially_copyable_v<std::decay_t<T>> && std::is_trivial_v<std::decay_t<T>>)
     {
-        return sizeof(value);
+        return sizeof(uint64_t) + sizeof(data);
     }
     else
         static_assert(sizeof(T) == 0, "Unsupported type.");
@@ -145,7 +171,7 @@ template<typename T, typename... Args, typename>
 size_t BinarySerializer::write(const T& value, const Args&... args)
 {
     // Calculate total size of all arguments.
-    size_t total_size = (BinarySerializer::calcSize(value) + ... + BinarySerializer::calcSize(args));
+    size_t total_size = (BinarySerializer::calcTotalSize(value) + ... + BinarySerializer::calcTotalSize(args));
 
     // Reserve space in one go.
     reserve(this->size_ + total_size);
@@ -176,7 +202,7 @@ BinarySerializer::readSingle()
     (BinarySerializer::checkTrivial<T>());
 
     // Read single.
-    std::lock_guard<std::mutex> lock(this->mtx_);
+    std::lock_guard<std::recursive_mutex> lock(this->mtx_);
     if (this->offset_ + sizeof(T) > this->size_)
         throw std::out_of_range("BinarySerializer: Read beyond the data size");
     T value;
@@ -190,21 +216,33 @@ typename std::enable_if<
         !std::is_base_of<Serializable, T>::value &&
         !std::is_same<std::nullptr_t &&, T>::value &&
         !std::is_pointer<T>::value, size_t>::type
-BinarySerializer::writeSingle(const T& obj)
+BinarySerializer::writeSingle(const T& data)
 {
     // Check the types.
     (BinarySerializer::checkTriviallyCopyable<T>());
     (BinarySerializer::checkTrivial<T>());
 
-    // Write single.
-    reserve(this->size_ + sizeof(T));
-    std::lock_guard<std::mutex> lock(this->mtx_);
-    BinarySerializer::binarySerializeDeserialize(&obj, sizeof(T), this->data_.get() + size_);
-    this->size_ += sizeof(T);
+    // Safety mutex.
+    std::lock_guard<std::recursive_mutex> lock(this->mtx_);
+
+    // Get the size of the data.
+    uint64_t total_size = BinarySerializer::calcTotalSize(data);
+    uint64_t data_size = sizeof(T);
+
+    // Serialize the size of the data.
+    reserve(this->size_ + total_size);
+    BinarySerializer::binarySerialize(&data_size, sizeof(uint64_t), this->data_.get() + this->size_);
+    this->size_ += sizeof(uint64_t);
+
+    // Serialize the data.
+    BinarySerializer::binarySerialize(&data, data_size, this->data_.get() + this->size_);
+    this->size_ += data_size;
 
     // Return the size.
-    return sizeof(T);
+    return total_size;
 }
+
+
 
 template<typename T>
 size_t BinarySerializer::writeSingle(const std::vector<T>& v)
@@ -214,8 +252,11 @@ size_t BinarySerializer::writeSingle(const std::vector<T>& v)
     BinarySerializer::checkTrivial<T>();
 
     // Get the total size and reserve.
-    size_t total_size = sizeof(T)*v.size();
-    this->reserve(total_size);
+    uint64_t total_size = sizeof(uint64_t) + sizeof(T)*v.size();
+    this->reserve(this->size_ + total_size);
+
+    // Serialize size.
+    this->writeSingle(sizeof(T)*v.size());
 
     // Write each value of the vector.
     for(const auto& val : v)
@@ -236,12 +277,31 @@ BinarySerializer::readSingle(T& value)
     (BinarySerializer::checkTriviallyCopyable<T>());
     (BinarySerializer::checkTrivial<T>());
 
-    // Read single.
-    std::lock_guard<std::mutex> lock(mtx_);
-    if (this->offset_ + sizeof(T) > this->size_)
-        throw std::out_of_range("BinarySerializer: Read beyond the data size");
-    BinarySerializer::binarySerializeDeserialize(this->data_.get() + this->offset_, sizeof(T), &value);
-    this->offset_ += sizeof(T);
+    // Safety mutex.
+    std::lock_guard<std::recursive_mutex> lock(this->mtx_);
+
+    // Ensure that there's enough data left to read the size of the value.
+    if (this->offset_ + sizeof(uint64_t) > this->size_)
+        throw std::out_of_range("BinarySerializer: Not enough data left to read the size of the value.");
+
+    // Read the size of the value.
+    size_t size;
+    BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, sizeof(uint64_t), &size);
+
+    // Update the offset.
+    this->offset_ += sizeof(uint64_t);
+
+    // Check if we have enough data left to read the value.
+    if (this->offset_ + size > this->size_)
+        throw std::out_of_range("BinarySerializer: Read value beyond the data size.");
+
+    // Check if the size is greater than the expected size for the type.
+    if (size > sizeof(T))
+        throw std::logic_error("BinarySerializer: The serialized value size is greater than type for storage.");
+
+    // Read the value.
+    BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, size, &value);
+    this->offset_ += size;
 }
 
 

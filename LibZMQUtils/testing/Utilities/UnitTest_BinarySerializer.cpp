@@ -1,162 +1,103 @@
 
-#include <cassert>
 #include <iostream>
+#include <vector>
 
-#include <LibDPSLR/Mathematics/Matrix>
+#include <LibZMQUtils/Utils>
+#include <LibZMQUtils/Testing/UnitTest>
 
-using dpslr::math::Matrix;
+using zmqutils::utils::BinarySerializer;
+using zmqutils::utils::Serializable;
 
-void testMatrixIdentity()
+M_DECLARE_UNIT_TEST(BinarySerializer, Trivial)
+M_DECLARE_UNIT_TEST(BinarySerializer, String)
+M_DECLARE_UNIT_TEST(BinarySerializer, VectorTrivial)
+
+M_DEFINE_UNIT_TEST(BinarySerializer, Trivial)
 {
-    // Test identity property.
-    Matrix<unsigned> identity2 = Matrix<unsigned>::I(2);
-    Matrix<unsigned> identity3 = Matrix<unsigned>::I(3);
-    Matrix<unsigned> identity4 = Matrix<unsigned>::I(4);
-    Matrix<unsigned> identity5 = Matrix<unsigned>::I(5);
+    BinarySerializer serializer;
+    std::string result("00 00 00 00 00 00 00 08 41 13 1e 76 5c d4 66 f5 00 00 00 00 00 00 00 08 c0 8e c2 c5 "
+                       "33 38 3b b1 00 00 00 00 00 00 00 04 ff ff ff de 00 00 00 00 00 00 00 04 00 00 00 05");
 
-    // Check the identity matrices.
-    bool is_iden_2 = identity2.isIdentity();
-    bool is_iden_3 = identity3.isIdentity();
-    bool is_iden_4 = identity4.isIdentity();
-    bool is_iden_5 = identity5.isIdentity();
+    double n1, n2;
+    int n3;
+    unsigned n4;
+    double r1, r2;
+    int r3;
+    unsigned r4;
 
-    // Output.
-    std::cout<<"---------------------------------"<<std::endl;
-    std::cout<<"testMatrixIdentity"<<std::endl<<std::endl;
-    std::cout<<identity2.toString()<<std::endl;
-    std::cout<<identity3.toString()<<std::endl;
-    std::cout<<identity4.toString()<<std::endl;
-    std::cout<<identity5.toString()<<std::endl;
-    std::cout<<"---------------------------------"<<std::endl<<std::endl;
+    n1 = 313245.590654;
+    n2 = -984.3462891;
+    n3 = -34;
+    n4 = 5;
 
-    // Asserts.
-    assert(is_iden_2);
-    assert(is_iden_3);
-    assert(is_iden_4);
-    assert(is_iden_5);
+    serializer.write(n1, n2, n3);
+    serializer.write(n4);
+    serializer.read(r1);
+    serializer.read(r2, r3, r4);
+
+    //M_EXPECTED_EQ(serializer.getDataHexString(), result)
+    M_EXPECTED_EQ(serializer.getSize(), 8*2 + 4 + 4 + 4*sizeof(uint64_t))
+    M_EXPECTED_EQ(r1, n1)
+    M_EXPECTED_EQ(r2, n2)
+    M_EXPECTED_EQ(r3, n3)
+    M_EXPECTED_EQ(r4, n4)
 }
 
-void testMatrixTranspose()
+M_DEFINE_UNIT_TEST(BinarySerializer, String)
 {
-    // Create a matrix for testing
-    Matrix<long double> matrix({{1.1, 2.2, 3.3},{4.4, 5.5, 6.6},{7.7, 8.8, 9.9},{10, 11, 12}});
+    BinarySerializer serializer;
+    std::string result("00 00 00 00 00 00 00 1b 2e 2e 2e 61 68 63 6e 61 4d 20 61 6c 20 65 64 20 72 61 67 75 6c 20 6e "
+                       "75 20 6e 45 00 00 00 00 00 00 00 04 20 20 20 20 00 00 00 00 00 00 00 12 31 32 33 2e 2e 2e 67 "
+                       "6e 69 72 74 73 2e 2e 2e 33 32 31 00 00 00 00 00 00 00 00");
+    std::string in1("En un lugar de la Mancha...");
+    std::string in2("    ");
+    std::string in3("123...string...321");
+    std::string in4("");
+    std::string out1, out2, out3, out4;
+    size_t size = in1.size() + in2.size() + in3.size() + in4.size() + sizeof(uint64_t)*4;
 
-    // Transpose the matrix
-    auto transposed = matrix.transpose();
 
-    // Output.
-    std::cout<<"---------------------------------"<<std::endl;
-    std::cout<<"testMatrixTranspose"<<std::endl<<std::endl;
-    std::cout<<matrix.toString()<<std::endl;
-    std::cout<<transposed.toString()<<std::endl;
-    std::cout<<"---------------------------------"<<std::endl<<std::endl;
+    serializer.write(in1, in2, in3, in4);
 
-    // Check the dimensions
-    assert(transposed.rowSize() == matrix.columnsSize());
-    assert(transposed.columnsSize() == matrix.rowSize());
 
-    // Check the values
-    assert(transposed[0][0] == 1.1);
-    assert(transposed[1][0] == 2.2);
-    assert(transposed[2][0] == 3.3);
-    assert(transposed[0][1] == 4.4);
-    assert(transposed[1][1] == 5.5);
-    assert(transposed[2][1] == 6.6);
-    assert(transposed[0][2] == 7.7);
-    assert(transposed[1][2] == 8.8);
-    assert(transposed[2][2] == 9.9);
+
+
+    serializer.read(out1, out2, out3, out4);
+
+    M_EXPECTED_EQ(serializer.getDataHexString(), result)
+    M_EXPECTED_EQ(serializer.getSize(), size)
+    //M_EXPECTED_EQ(in1, out1)
+    //M_EXPECTED_EQ(in2, out2)
+    //M_EXPECTED_EQ(in3, out3)
+    //M_EXPECTED_EQ(in4, out4)
 }
 
-void testMatrixMultiplication()
+M_DEFINE_UNIT_TEST(BinarySerializer, VectorTrivial)
 {
-    // Create matrices for testing
-    Matrix<long double> mat1({{1, 2, 3}, {4, 5, 6}, {7, 8, 9}});
-    Matrix<long double> mat2({{2, 4, 6}, {1, 3, 5}, {8, 9, 7}});
-    Matrix<long double> mat3({{1, 2, 3}, {4, 5, 6}});
-    Matrix<long double> mat4({{6, 5, 12, 8}, {14, 13, 26, 16}, {22, 21, 40, 24.8}});
-    Matrix<long double> bad1({{1, 2}, {3, 4, 5, 6}});
-    Matrix<long double> scalar_m({{2, 0, 0}, {0, 2, 0}, {0, 0, 2}});
+    BinarySerializer serializer;
+    std::string result("40 40 c0 00 00 00 00 00 40 8e c4 00 00 00 00 00");
 
-    // Perform matrix multiplication with scalar
-    Matrix<long double> result1 = mat1 * 2;
-    Matrix<long double> expected1({{2, 4, 6}, {8, 10, 12}, {14, 16, 18}});
+    std::vector<long double> v1 = {34.32315L, 45L, 23.34L, -876.3L, 12345L};
+    std::vector<long double> r1;
 
-    // Perform matrix multiplication with another matrix
-    Matrix<long double> result2 = mat1 * mat2;
-    Matrix<long double> expected2({{28, 37, 37}, {61, 85, 91}, {94, 133, 145}});
+    //serializer.write(v1);
+    //serializer.read(r1);
 
-    // Perform matrix multiplication with scalar matrix
-    Matrix<long double> result3 = mat1 * scalar_m;
-    Matrix<long double> expected3({{2, 4, 6}, {8, 10, 12}, {14, 16, 18}});
+    std::cout<<serializer.getDataHexString();
 
-    Matrix<long double> result4 = mat3 * mat4;
-    Matrix<long double> expected4({{100, 94, 184, 114.4}, {226, 211, 418, 260.8}});
-
-    // Invalid multiplication.
-    Matrix<long double> result5 = bad1 * mat1;
-
-    // Output.
-    std::cout<<"---------------------------------"<<std::endl;
-    std::cout<<"testMatrixMultiplication"<<std::endl<<std::endl;
-    std::cout<<mat1.toString()<<std::endl;
-    std::cout<<mat2.toString()<<std::endl;
-    std::cout<<scalar_m.toString()<<std::endl;
-    std::cout<<"mat1*2"<<std::endl<<std::endl;
-    std::cout<<result1.toString()<<std::endl;
-    std::cout<<"mat1*mat2"<<std::endl<<std::endl;
-    std::cout<<result2.toString()<<std::endl;
-    std::cout<<"mat1*scalar"<<std::endl<<std::endl;
-    std::cout<<result3.toString()<<std::endl;
-    std::cout<<"mat3*mat4"<<std::endl<<std::endl;
-    std::cout<<result4.toString()<<std::endl;
-    std::cout<<"---------------------------------"<<std::endl<<std::endl;
-
-    // Asserts.
-    assert(result1 == expected1);
-    assert(result2 == expected2);
-    assert(result3 == expected3);
-    assert(result4 == expected4);
-    assert(result5.isEmpty());
-}
-
-void testMatrixInverse()
-{
-    Matrix<long double> matrix(3, 3, 0);
-
-    matrix(0, 0) = 1;
-    matrix(0, 1) = 2;
-    matrix(0, 2) = 3;
-    matrix(1, 0) = 0;
-    matrix(1, 1) = 0;
-    matrix(1, 2) = 1;
-    matrix(2, 0) = 0;
-    matrix(2, 1) = 4;
-    matrix(2, 2) = 0;
-
-
-    Matrix<long double> inv = matrix.inverse();
-
-    std::cout<<matrix.toString()<<std::endl;
-    std::cout<<inv.toString()<<std::endl;
-
-
-    assert(inv(0, 0) == -5.0);
-    assert(inv(0, 1) == 3.0);
-    assert(inv(1, 0) == 4.0);
-    assert(inv(1, 1) == -2.0);
+    M_EXPECTED_EQ(serializer.getDataHexString(), result)
+    M_EXPECTED_EQ(v1, r1)
 }
 
 int main()
 {
-    std::cout << "Unit Test: Class dpslr::math::Matrix" << std::endl;
+    // Start of the session.
+    M_START_UNIT_TEST_SESSION("LibZMQUtils BinarySerializer Session")
 
-    testMatrixIdentity();
-    testMatrixTranspose();
-    testMatrixMultiplication();
-    testMatrixInverse();
+    // Register the tests.
+    M_REGISTER_UNIT_TEST(BinarySerializer, Trivial)
+    M_REGISTER_UNIT_TEST(BinarySerializer, String)
 
-    // All assertions passed
-    std::cout << "All tests passed!\n";
-
-    return 0;
+    // Run the unit tests.
+    M_RUN_UNIT_TESTS()
 }

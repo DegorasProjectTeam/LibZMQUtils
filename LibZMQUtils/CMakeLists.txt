@@ -66,3 +66,4 @@ endif()
 
 # Add the diferents subprojects directories.
 add_subdirectory(examples)
+add_subdirectory(testing)

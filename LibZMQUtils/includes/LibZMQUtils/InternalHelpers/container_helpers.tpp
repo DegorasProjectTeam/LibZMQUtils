@@ -23,11 +23,11 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file unit_test.h
- * @brief This file contains the declaration of the UnitTest class and related.
+ * @file container_helpers.tpp
+ * @brief This file contains the template implementation of several helper tools related with containers.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2308.2
+ * @version 2308.1
 ***********************************************************************************************************************/
 
 // =====================================================================================================================
@@ -35,161 +35,107 @@
 // =====================================================================================================================
 
 // C++ INCLUDES
-// =====================================================================================================================
-#include <unistd.h>
-#include <iostream>
+//======================================================================================================================
+#include <string>
+#include <limits>
+#include <algorithm>
 #include <sstream>
-#include <list>
-#include <map>
+#include <iomanip>
 #include <vector>
+#include <map>
+#include <iterator>
+#include <cmath>
 // =====================================================================================================================
 
-// LIBDPSLR INCLUDES
-// =====================================================================================================================
-#include "LibZMQUtils/Global/libzmqutils_global.h"
-#include <LibZMQUtils/Utilities/utils.h>
-// =====================================================================================================================
-
-// DPSLR NAMESPACES
+// ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
-namespace testing{
+namespace helpers{
+namespace containers{
 // =====================================================================================================================
 
-
-struct LIBZMQUTILS_EXPORT TestLog
+template <typename T>
+std::size_t searchClosest(const std::vector<T>& sorted_array, T x)
 {
+    auto iter_geq = std::lower_bound(sorted_array.begin(), sorted_array.end(), x);
 
-public:
+    if (iter_geq == sorted_array.begin())
+        return 0;
 
-    TestLog(const std::string& module, const std::string& test, const std::string &det_ex,
-            bool passed, const utils::HRTimePointStd &tp, long long elapsed);
+    if (iter_geq == sorted_array.end())
+        return sorted_array.size() - 1;
 
-    TestLog(const TestLog&) = default;
+    T a = *(iter_geq - 1);
+    T b = *iter_geq;
 
-    std::string makeLog(const std::string& storage_path = std::string()) const;
+    if (std::abs(x - a) < std::abs(x - b))
+        return std::distance(sorted_array.begin(), iter_geq - 1);
 
-    const std::string& getModuleName() const;
+    return std::distance(sorted_array.begin(), iter_geq);
+}
 
-    bool getResult() const;
-
-    ~TestLog() = default;
-
-private:
-
-    std::string formatResult() const;
-
-    // Stringstreams.
-    std::string module_;
-    std::string test_;
-    std::string det_ex_;
-    bool passed_;
-    std::string tp_str_;
-    long long elapsed_;
-};
-
-
-class LIBZMQUTILS_EXPORT TestSummary
+template <class Container>
+void insert(Container& a, const Container& b)
 {
+    a.insert(a.end(), b.begin(), b.end());
+}
 
-public:
-
-    TestSummary();
-
-    void setSessionName(const std::string& name);
-
-    void addLog(const TestLog& log);
-
-    void clear();
-
-    void makeSummary(bool show = true, const std::string& storage_path = std::string()) const;
-
-    ~TestSummary() = default;
-
-private:
-
-    std::multimap<std::string, TestLog> test_logs_;
-    std::string session_;
-    unsigned n_pass_;
-    unsigned n_fail_;
-};
-
-class LIBZMQUTILS_EXPORT TestBase
+template <typename Container, typename T>
+bool contains(const Container& container, T elem)
 {
-public:
+    const auto it = std::find(container.begin(), container.end(), elem);
+    return (it != container.end());
+}
 
-    virtual ~TestBase() = default;
-
-protected:
-
-    TestBase(const std::string& name);
-
-public:
-
-    template<typename T, typename = std::enable_if_t<!std::is_floating_point<T>::value>>
-    bool expectEQ(const T& arg1, const T& arg2)
-    {
-        bool result = (arg1 == arg2);
-        return result;
-    }
-
-    template<typename T, typename = std::enable_if_t<!std::is_floating_point<T>::value>>
-    bool expectNE(const T& arg1, const T& arg2)
-    {
-        bool result = (arg1 != arg2);
-        return result;
-    }
-
-    template<typename T, typename = std::enable_if_t<std::is_floating_point<T>::value>>
-    bool expectEQ(const T& arg1, const T& arg2, const T& tolerance = std::numeric_limits<T>::epsilon())
-    {
-        return std::abs(arg1 - arg2) <= tolerance;
-    }
-
-    template<typename T, typename = std::enable_if_t<std::is_floating_point<T>::value>>
-    bool expectNE(const T& arg1, const T& arg2, const T& tolerance = std::numeric_limits<T>::epsilon())
-    {
-        return std::abs(arg1 - arg2) > tolerance;
-    }
-
-    virtual void runTest();
-
-    std::string test_name_;
-    bool result_;
-};
-
-
-
-class LIBZMQUTILS_EXPORT UnitTest
+template <typename K, typename T>
+bool contains(const std::map<K,T> &map, K key)
 {
+    const auto it = map.find(key);
+    return (it != map.end());
+}
 
-public:
+template <typename Container, typename T>
+bool find(const Container& container, const T  & elem, int& pos)
+{
+    bool result = false;
+    auto it = std::find(container.begin(), container.end(), elem);
+    if (it != container.end())
+    {
+        pos = std::distance(container.begin(), it);
+        result = true;
+    }
+    return result;
+}
 
-    // Deleting the copy constructor.
-    UnitTest(const UnitTest& obj) = delete;
+template<typename T>
+std::vector<T> extract(const std::vector<T>& data, const std::vector<size_t>& indexes)
+{
+    // Auxiliar container.
+    std::vector<T> result;
+    // Extract the data.
+    for(const std::size_t& index : indexes)
+        result.push_back(data[index]);
+    // Return the result.
+    return result;
+}
 
-    static UnitTest& instance();
+template<typename T>
+std::vector<T> dataBetween(const std::vector<T>& v, T lower, T upper)
+{
+    auto l = std::lower_bound(v.begin(), v.end(), lower);
+    auto u = std::upper_bound(v.begin(), v.end(), upper);
+    return std::vector<T>(l, u);
+}
 
-    void setSessionName(std::string&& session);
+template <class T>
+std::ostream& operator<<(std::ostream& out, const std::vector<T>& v)
+{
+    out << '[';
+    if (!v.empty())
+        std::copy (v.begin(), v.end(), std::ostream_iterator<T>(out, ","));
+    out << "\b]";
+    return out;
+}
 
-    void addTest(std::pair<std::string, TestBase*> p);
-
-    void runTests();
-
-    void clear();
-
-    virtual ~UnitTest();
-
-private:
-
-    UnitTest() = default;
-
-    // Members.
-    std::multimap<std::string, TestBase*> test_dict_;
-    TestSummary summary_;
-    std::string session_;
-
-};
-
-}} // END NAMESPACES.
+}}}// END NAMESPACES.
 // =====================================================================================================================

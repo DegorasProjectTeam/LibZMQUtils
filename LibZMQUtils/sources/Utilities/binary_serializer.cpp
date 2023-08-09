@@ -54,15 +54,24 @@ namespace zmqutils{
 namespace utils{
 // =====================================================================================================================
 
+Serializable::~Serializable(){}
+
 BinarySerializer::BinarySerializer(size_t capacity) :
         data_(new std::byte[capacity]),
         size_(0),
         capacity_(capacity),
-        offset_(0){}
+        offset_(0),
+        endianess_(this->determineEndianess())
+{}
 
-BinarySerializer::BinarySerializer(void *src, size_t size)
-        : data_(nullptr), size_(0), capacity_(0), offset_(0)
+BinarySerializer::BinarySerializer(void *src, size_t size) :
+    data_(nullptr),
+    size_(0),
+    capacity_(0),
+    offset_(0),
+    endianess_(this->determineEndianess())
 {
+    // Load the test.
     this->loadData(src, size);
 }
 
@@ -70,7 +79,7 @@ void BinarySerializer::reserve(size_t size)
 {
     if (size > this->capacity_)
     {
-        std::lock_guard<std::mutex> lock(this->mtx_);
+        std::lock_guard<std::recursive_mutex> lock(this->mtx_);
         std::unique_ptr<std::byte[]> new_data(new std::byte[size]);
         if (this->data_)
             std::memcpy(new_data.get(), data_.get(), size_);
@@ -84,7 +93,7 @@ void BinarySerializer::loadData(void* src, size_t size)
     if(src != nullptr)
     {
         this->reserve(size);
-        std::lock_guard<std::mutex> lock(this->mtx_);
+        std::lock_guard<std::recursive_mutex> lock(this->mtx_);
         std::memcpy(this->data_.get(), src, size);
         this->size_ = size;
         this->offset_ = 0;
@@ -93,7 +102,7 @@ void BinarySerializer::loadData(void* src, size_t size)
 
 void BinarySerializer::clearData()
 {
-    std::lock_guard<std::mutex> lock(this->mtx_);
+    std::lock_guard<std::recursive_mutex> lock(this->mtx_);
     this->data_.reset(nullptr);
     this->size_ = 0;
     this->capacity_ = 0;
@@ -107,7 +116,7 @@ void BinarySerializer::resetReading()
 
 std::unique_ptr<std::byte> BinarySerializer::moveUnique()
 {
-    std::lock_guard<std::mutex> lock(this->mtx_);
+    std::lock_guard<std::recursive_mutex> lock(this->mtx_);
     this->size_ = 0;
     this->capacity_ = 0;
     this->offset_ = 0;
@@ -122,7 +131,7 @@ std::unique_ptr<std::byte> BinarySerializer::moveUnique(size_t& size)
 
 std::byte* BinarySerializer::release()
 {
-    std::lock_guard<std::mutex> lock(this->mtx_);
+    std::lock_guard<std::recursive_mutex> lock(this->mtx_);
     this->size_ = 0;
     this->capacity_ = 0;
     this->offset_ = 0;
@@ -131,6 +140,7 @@ std::byte* BinarySerializer::release()
 
 std::byte *BinarySerializer::release(size_t& size)
 {
+    std::lock_guard<std::recursive_mutex> lock(this->mtx_);
     size = this->size_;
     return this->release();
 }
@@ -147,20 +157,27 @@ bool BinarySerializer::allReaded() const
 
 std::string BinarySerializer::getDataHexString() const
 {
-    std::lock_guard<std::mutex> lock(this->mtx_);
+    std::lock_guard<std::recursive_mutex> lock(this->mtx_);
     std::stringstream ss;
     for(size_t i = 0; i < this->size_; i++)
-        ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned int>(this->data_.get()[i]) << " ";
+    {
+        ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned int>(this->data_.get()[i]);
+        if (i < this->size_ - 1)
+            ss << " ";
+    }
     return ss.str();
 }
 
-size_t BinarySerializer::writeSingle(const Serializable &obj)
+BinarySerializer::Endianess BinarySerializer::determineEndianess()
 {
-    return obj.serialize(*this);
+    uint16_t number = 1;
+    uint8_t* byte_ptr = reinterpret_cast<uint8_t*>(&number);
+    return (byte_ptr[0] == 1) ? Endianess::LITTLE_ENDIAN : Endianess::BIG_ENDIAN;
 }
 
 std::string BinarySerializer::toJsonString() const
 {
+    std::lock_guard<std::recursive_mutex> lock(this->mtx_);
     std::stringstream ss;
     ss << "{"
        << "\"size\": " << this->size_ << ", "
@@ -171,59 +188,67 @@ std::string BinarySerializer::toJsonString() const
     return ss.str();
 }
 
+size_t BinarySerializer::writeSingle(const Serializable &obj)
+{
+    // Lock guard.
+    std::lock_guard<std::recursive_mutex> lock(this->mtx_);
+    // Serialize the object.
+    return obj.serialize(*this);
+}
+
 size_t BinarySerializer::writeSingle(const std::string& str)
 {
     // String size.
-    size_t str_size = str.size();
+    uint64_t str_size = str.size();
 
-    // Get the total size.
-    size_t total_size = sizeof(size_t) + str_size;
+    // Get the size of the data.
+    uint64_t total_size = BinarySerializer::calcTotalSize(str);
 
     // Reserve space.
     this->reserve(this->size_ + total_size);
 
     // Lock guard.
-    std::lock_guard<std::mutex> lock(this->mtx_);
+    std::lock_guard<std::recursive_mutex> lock(this->mtx_);
 
     // Serialize size.
-    BinarySerializer::binarySerializeDeserialize(&str_size, sizeof(size_t), this->data_.get() + size_);
-    this->size_ += sizeof(size_t);
+    BinarySerializer::binarySerialize(&str_size, sizeof(uint64_t), this->data_.get() + size_);
+    this->size_ += sizeof(uint64_t);
 
     // Serialize string.
-    BinarySerializer::binarySerializeDeserialize(str.data(), str_size, this->data_.get() + size_);
+    BinarySerializer::binarySerialize(str.data(), str_size, this->data_.get() + size_);
     this->size_ += str_size;
 
     // Return the writed size.
     return total_size;
 }
 
-void BinarySerializer::readSingle(std::string &value)
+void BinarySerializer::readSingle(std::string &str)
 {
     // Mutex.
-    std::lock_guard<std::mutex> lock(this->mtx_);
+    std::lock_guard<std::recursive_mutex> lock(this->mtx_);
 
     // Ensure that there's enough data left to read the size of the string.
     if (this->offset_ + sizeof(size_t) > this->size_)
-        throw std::out_of_range("BinarySerializer: Not enough data left to read the size of the string");
+        throw std::out_of_range("BinarySerializer: Not enough data left to read the size of the string.");
 
     // Read the size of the string.
-    size_t size;
-    BinarySerializer::binarySerializeDeserialize(this->data_.get() + this->offset_, sizeof(size_t), &size);
+    uint64_t size;
+    BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, sizeof(uint64_t), &size);
+
+    // Update the offset.
+    this->offset_ += sizeof(uint64_t);
 
     // Check if the string is empty.
     if(size == 0)
         return;
-
-    // Update the offset.
-    this->offset_ += sizeof(size_t);
 
     // Check if we have enough data left to read the string.
     if (this->offset_ + size > this->size_)
         throw std::out_of_range("BinarySerializer: Read string beyond the data size.");
 
     // Read the string.
-    value.resize(size);
-    BinarySerializer::binarySerializeDeserialize(this->data_.get() + this->offset_, size, value.data());
+    str.resize(size);
+    BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, size, str.data());
     this->offset_ += size;
 }
 

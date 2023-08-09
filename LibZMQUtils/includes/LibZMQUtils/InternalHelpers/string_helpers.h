@@ -23,11 +23,11 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file unit_test.h
- * @brief This file contains the declaration of the UnitTest class and related.
+ * @file string_helpers.h
+ * @brief This file contains several helper tools related with strings.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2308.2
+ * @version 2308.1
 ***********************************************************************************************************************/
 
 // =====================================================================================================================
@@ -35,161 +35,92 @@
 // =====================================================================================================================
 
 // C++ INCLUDES
-// =====================================================================================================================
-#include <unistd.h>
-#include <iostream>
-#include <sstream>
-#include <list>
-#include <map>
-#include <vector>
+//======================================================================================================================
+#include <string>
 // =====================================================================================================================
 
-// LIBDPSLR INCLUDES
+// ZMQUTILS INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/Global/libzmqutils_global.h"
-#include <LibZMQUtils/Utilities/utils.h>
 // =====================================================================================================================
 
-// DPSLR NAMESPACES
+// ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
-namespace testing{
+namespace helpers{
+namespace strings{
 // =====================================================================================================================
 
+// Transform a string to upper case.
+std::string toUpper(const std::string& str);
 
-struct LIBZMQUTILS_EXPORT TestLog
-{
+// Transform a string to lower case.
+std::string toLower(const std::string& str);
 
-public:
+// String left trim.
+std::string ltrim(const std::string& str);
 
-    TestLog(const std::string& module, const std::string& test, const std::string &det_ex,
-            bool passed, const utils::HRTimePointStd &tp, long long elapsed);
+// String right trim.
+std::string rtrim(const std::string& str);
 
-    TestLog(const TestLog&) = default;
+// String trim.
+std::string trim(const std::string& str);
 
-    std::string makeLog(const std::string& storage_path = std::string()) const;
+/**
+ * @brief Takes a string and returns a new string with the last line break removed.
+ * @param str The input string.
+ * @return The modified string without the last line break.
+ * @note If the input string does not contain any line breaks, the original string is returned.
+ */
+std::string rmLastLineBreak(const std::string& str);
 
-    const std::string& getModuleName() const;
+/**
+ * @brief Replaces occurrences of a substring in a string with a specified replacement string.
+ * @param str The string to modify.
+ * @param target The substring to search for and replace.
+ * @param replacement The string to replace occurrences of the target substring with.
+ * @return A new string with the replacements.
+ */
+std::string replaceStr(const std::string& str, const std::string& target, const std::string& repl);
 
-    bool getResult() const;
+/**
+ * @brief Creates a string with a specified width filled with a given character.
+ * @param fillChar The character used to fill the string.
+ * @param width The desired width of the string.
+ * @return The resulting string with the specified width and filled characters.
+ */
+std::string fillStr(const std::string& fillChar, size_t width);
 
-    ~TestLog() = default;
+// Custom split.
+template <class Container>
+void split (Container& result, const std::string& s, const std::string& delimiters, bool empties = true);
 
-private:
+// Custom split 2.
+template <class Container>
+Container split (const std::string& s, const std::string& delimiters, bool empties = true );
 
-    std::string formatResult() const;
+/**
+ * @brief Concatenates elements from a container into a single string, separated by the specified delimiter.
+ * @tparam Container The type of the container.
+ * @param strings The container of strings to join.
+ * @param delimiters The delimiter string to insert between elements (default: " ").
+ * @return The concatenated string.
+ */
+template <typename Container>
+std::string join(const Container& strings, const std::string& del = " ");
 
-    // Stringstreams.
-    std::string module_;
-    std::string test_;
-    std::string det_ex_;
-    bool passed_;
-    std::string tp_str_;
-    long long elapsed_;
-};
+// Custom number to fixed string conversion.
+template<typename T>
+std::string numberToFixstr(T x, unsigned int prec);
 
+// Custom number to fixed string conversion.
+template<typename T>
+std::string numberToStr(T x, unsigned int prec, unsigned int dec_places, bool fixed = true);
 
-class LIBZMQUTILS_EXPORT TestSummary
-{
+}}} // END NAMESPACES
+// =====================================================================================================================
 
-public:
-
-    TestSummary();
-
-    void setSessionName(const std::string& name);
-
-    void addLog(const TestLog& log);
-
-    void clear();
-
-    void makeSummary(bool show = true, const std::string& storage_path = std::string()) const;
-
-    ~TestSummary() = default;
-
-private:
-
-    std::multimap<std::string, TestLog> test_logs_;
-    std::string session_;
-    unsigned n_pass_;
-    unsigned n_fail_;
-};
-
-class LIBZMQUTILS_EXPORT TestBase
-{
-public:
-
-    virtual ~TestBase() = default;
-
-protected:
-
-    TestBase(const std::string& name);
-
-public:
-
-    template<typename T, typename = std::enable_if_t<!std::is_floating_point<T>::value>>
-    bool expectEQ(const T& arg1, const T& arg2)
-    {
-        bool result = (arg1 == arg2);
-        return result;
-    }
-
-    template<typename T, typename = std::enable_if_t<!std::is_floating_point<T>::value>>
-    bool expectNE(const T& arg1, const T& arg2)
-    {
-        bool result = (arg1 != arg2);
-        return result;
-    }
-
-    template<typename T, typename = std::enable_if_t<std::is_floating_point<T>::value>>
-    bool expectEQ(const T& arg1, const T& arg2, const T& tolerance = std::numeric_limits<T>::epsilon())
-    {
-        return std::abs(arg1 - arg2) <= tolerance;
-    }
-
-    template<typename T, typename = std::enable_if_t<std::is_floating_point<T>::value>>
-    bool expectNE(const T& arg1, const T& arg2, const T& tolerance = std::numeric_limits<T>::epsilon())
-    {
-        return std::abs(arg1 - arg2) > tolerance;
-    }
-
-    virtual void runTest();
-
-    std::string test_name_;
-    bool result_;
-};
-
-
-
-class LIBZMQUTILS_EXPORT UnitTest
-{
-
-public:
-
-    // Deleting the copy constructor.
-    UnitTest(const UnitTest& obj) = delete;
-
-    static UnitTest& instance();
-
-    void setSessionName(std::string&& session);
-
-    void addTest(std::pair<std::string, TestBase*> p);
-
-    void runTests();
-
-    void clear();
-
-    virtual ~UnitTest();
-
-private:
-
-    UnitTest() = default;
-
-    // Members.
-    std::multimap<std::string, TestBase*> test_dict_;
-    TestSummary summary_;
-    std::string session_;
-
-};
-
-}} // END NAMESPACES.
+// TEMPLATES INCLUDES
+// =====================================================================================================================
+#include "LibZMQUtils/InternalHelpers/string_helpers.tpp"
 // =====================================================================================================================
