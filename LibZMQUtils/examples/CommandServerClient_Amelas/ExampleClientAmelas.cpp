@@ -278,7 +278,13 @@ int main(int, char**)
     zmqutils::internal_helpers::ConsoleConfig::setExitCallback(
         [&client](){client.stopClient();});
 
-    client.startClient();
+    bool started = client.startClient();
+
+    if(!started)
+    {
+        std::cout<<"Unable to start the client.";
+        return 1;
+    }
 
     //client.startAutoAlive();
     std::string command;

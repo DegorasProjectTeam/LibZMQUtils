@@ -201,7 +201,7 @@ void TestSummary::makeSummary(bool show, const std::string& storage_path) const
     std::stringstream fail;
     std::stringstream all_pass;
     std::string all_pass_color = this->n_fail_ == 0 ? "\033[038;2;0;210;000m" : "\033[170;2;0;038;000m";
-    std::string all_pass_str = this->n_fail_ == 0 ? "YES" : "NO";
+    std::string all_pass_str = this->n_fail_ == 0 ? "YES" : "NO ";
 
     test << "= Tests:    " << "\033[038;2;0;140;255m" << std::to_string(this->test_logs_.size()) << "\033[38;2;255;128;0m";
     pass << "= Passed:   " << "\033[038;2;0;210;000m" << std::to_string(this->n_pass_) << "\033[38;2;255;128;0m";
@@ -225,7 +225,7 @@ void TestSummary::makeSummary(bool show, const std::string& storage_path) const
     title << test.str() << std::string(134 - test.str().length(), ' ') << "=\n";
     title << pass.str() << std::string(134 - pass.str().length(), ' ') << "=\n";
     title << fail.str() << std::string(134 - fail.str().length(), ' ') << "=\n";
-    title << all_pass.str() << std::string(133 - fail.str().length(), ' ') << "=\n";
+    title << all_pass.str() << std::string(132 - fail.str().length(), ' ') << "=\n";
     title << sep1;
     title << "\n";
 

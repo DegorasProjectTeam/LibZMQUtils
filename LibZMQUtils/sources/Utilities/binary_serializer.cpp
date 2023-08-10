@@ -222,6 +222,19 @@ size_t BinarySerializer::writeSingle(const std::string& str)
     return total_size;
 }
 
+void BinarySerializer::readSingle(Serializable &obj)
+{
+    // Mutex.
+    std::lock_guard<std::recursive_mutex> lock(this->mtx_);
+
+    // Ensure that there's enough data left to read the object.
+    if (this->offset_ + obj.serializedSize() > this->size_)
+        throw std::out_of_range("BinarySerializer: Not enough data left to read the Serializable object.");
+
+    // Deserialize.
+    obj.deserialize(*this);
+}
+
 void BinarySerializer::readSingle(std::string &str)
 {
     // Mutex.

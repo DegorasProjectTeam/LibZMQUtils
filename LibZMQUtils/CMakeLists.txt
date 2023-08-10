@@ -25,7 +25,7 @@ set(SHORT_NAME ZMQUtils)
 set(CMAKE_COLOR_MAKEFILE ON)
 
 # Set diferent paths for build and deployment.
-set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -std=c++17 -pthread -O3")
+set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -std=c++17 -pthread -O3 -fopenmp")
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)

@@ -146,7 +146,7 @@ bool CommandClientBase::internalResetClient()
         this->client_socket_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::req);
         this->client_socket_->connect(this->server_endpoint_);
         // Set timeout so socket will not wait for answer more than client alive timeout.
-        //this->client_socket_->set(zmq::sockopt::rcvtimeo, common::kDefaultServerAliveTimeoutMsec);
+        this->client_socket_->set(zmq::sockopt::rcvtimeo, common::kDefaultServerAliveTimeoutMsec);
         this->client_socket_->set(zmq::sockopt::linger, 0);
 
         // Bind the REP close socket to an internal endpoint.

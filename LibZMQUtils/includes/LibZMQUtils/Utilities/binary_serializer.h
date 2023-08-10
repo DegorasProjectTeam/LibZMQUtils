@@ -529,6 +529,8 @@ private:
             !std::is_pointer<T>::value, void>::type
     readSingle(T& value);
 
+    void readSingle(Serializable& obj);
+
     void readSingle(std::string& value);
 
 

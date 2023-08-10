@@ -85,19 +85,19 @@ struct AltAzPos : public zmqutils::utils::Serializable
     double az;
     double el;
 
-    size_t serialize(zmqutils::utils::BinarySerializer& serializer) const override
+    size_t serialize(zmqutils::utils::BinarySerializer& serializer) const final
     {
         return serializer.write(az, el);
     }
 
-    void deserialize(zmqutils::utils::BinarySerializer& serializer) override
+    void deserialize(zmqutils::utils::BinarySerializer& serializer) final
     {
         serializer.read(az, el);
     }
 
-    size_t serializedSize() const override
+    size_t serializedSize() const final
     {
-        return (sizeof(double) + sizeof(double));
+        return (2*sizeof(uint64_t) + sizeof(double)*2);
     }
 };
 

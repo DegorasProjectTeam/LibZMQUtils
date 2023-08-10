@@ -293,6 +293,8 @@ void CommandServerBase::serverWorker()
         // Receive the data.
         result = this->recvFromSocket(request);
 
+        std::cout<<"HERE RECV"<<std::endl;
+
         // Check all the clients status.
         if(result == ServerResult::COMMAND_OK && this->flag_server_working_ && this->flag_check_clients_alive_ )
             this->checkClientsAliveStatus();

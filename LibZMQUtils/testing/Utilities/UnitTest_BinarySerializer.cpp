@@ -1,19 +1,56 @@
+/***********************************************************************************************************************
+ *   LibZMQUtils (ZMQ Utilitites Library): A libre library with ZMQ related useful utilities.                          *
+ *                                                                                                                     *
+ *   Copyright (C) 2023 Degoras Project Team                                                                           *
+ *                      < Ángel Vera Herrera, avera@roa.es - angeldelaveracruz@gmail.com >                             *
+ *                      < Jesús Relinque Madroñal >                                                                    *
+ *                                                                                                                     *
+ *   This file is part of LibZMQUtils.                                                                                 *
+ *                                                                                                                     *
+ *   Licensed under the European Union Public License (EUPL), Version 1.2 or subsequent versions of the EUPL license   *
+ *   as soon they will be approved by the European Commission (IDABC).                                                 *
+ *                                                                                                                     *
+ *   This project is free software: you can redistribute it and/or modify it under the terms of the EUPL license as    *
+ *   published by the IDABC, either Version 1.2 or, at your option, any later version.                                 *
+ *                                                                                                                     *
+ *   This project is distributed in the hope that it will be useful. Unless required by applicable law or agreed to in *
+ *   writing, it is distributed on an "AS IS" basis, WITHOUT ANY WARRANTY OR CONDITIONS OF ANY KIND; without even the  *
+ *   implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the EUPL license to check specific   *
+ *   language governing permissions and limitations and more details.                                                  *
+ *                                                                                                                     *
+ *   You should use this project in compliance with the EUPL license. You should have received a copy of the license   *
+ *   along with this project. If not, see the license at < https://eupl.eu/ >.                                         *
+ **********************************************************************************************************************/
 
+// C++ INCLUDES
+// =====================================================================================================================
 #include <iostream>
 #include <vector>
+// =====================================================================================================================
 
+// ZMQUTILS INCLUDES
+// =====================================================================================================================
 #include <LibZMQUtils/Utils>
 #include <LibZMQUtils/Testing/UnitTest>
+// =====================================================================================================================
 
+// =====================================================================================================================
 using zmqutils::utils::BinarySerializer;
 using zmqutils::utils::Serializable;
+// =====================================================================================================================
+
+// Basic tests.
 
 M_DECLARE_UNIT_TEST(BinarySerializer, Trivial)
 M_DECLARE_UNIT_TEST(BinarySerializer, String)
 M_DECLARE_UNIT_TEST(BinarySerializer, VectorTrivial)
+M_DECLARE_UNIT_TEST(BinarySerializer, Serializable)
 
 // Other tests.
+
 M_DECLARE_UNIT_TEST(BinarySerializer, TrivialIntensive)
+
+// Implementations.
 
 M_DEFINE_UNIT_TEST(BinarySerializer, Trivial)
 {
@@ -39,7 +76,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Trivial)
     serializer.read(r2, r3, r4);
 
     //M_EXPECTED_EQ(serializer.getDataHexString(), result)
-    M_EXPECTED_EQ(serializer.getSize(), 8*2 + 4 + 4 + 4*sizeof(uint64_t))
+    M_EXPECTED_EQ(serializer.getSize(), sizeof(double)*2 + sizeof(int) + sizeof(unsigned) + 4*sizeof(uint64_t))
     M_EXPECTED_EQ(r1, n1)
     M_EXPECTED_EQ(r2, n2)
     M_EXPECTED_EQ(r3, n3)
@@ -59,20 +96,15 @@ M_DEFINE_UNIT_TEST(BinarySerializer, String)
     std::string out1, out2, out3, out4;
     size_t size = in1.size() + in2.size() + in3.size() + in4.size() + sizeof(uint64_t)*4;
 
-
     serializer.write(in1, in2, in3, in4);
-
-
-
-
     serializer.read(out1, out2, out3, out4);
 
     M_EXPECTED_EQ(serializer.getDataHexString(), result)
     M_EXPECTED_EQ(serializer.getSize(), size)
-    //M_EXPECTED_EQ(in1, out1)
-    //M_EXPECTED_EQ(in2, out2)
-    //M_EXPECTED_EQ(in3, out3)
-    //M_EXPECTED_EQ(in4, out4)
+    M_EXPECTED_EQ(in1, out1)
+    M_EXPECTED_EQ(in2, out2)
+    M_EXPECTED_EQ(in3, out3)
+    M_EXPECTED_EQ(in4, out4)
 }
 
 M_DEFINE_UNIT_TEST(BinarySerializer, VectorTrivial)
@@ -86,10 +118,62 @@ M_DEFINE_UNIT_TEST(BinarySerializer, VectorTrivial)
     //serializer.write(v1);
     //serializer.read(r1);
 
-    std::cout<<serializer.getDataHexString();
 
     M_EXPECTED_EQ(serializer.getDataHexString(), result)
     M_EXPECTED_EQ(v1, r1)
+}
+
+M_DEFINE_UNIT_TEST(BinarySerializer, Serializable)
+{
+    class TestSer : public Serializable
+    {
+    public:
+
+        TestSer() = default;
+
+        TestSer(double number, const std::string& str):
+            number_(number), str_(str){}
+
+        size_t serialize(zmqutils::utils::BinarySerializer& serializer) const final
+        {
+            return serializer.write(this->number_, this->str_);
+        }
+
+        void deserialize(zmqutils::utils::BinarySerializer& serializer) final
+        {
+            serializer.read(this->number_, this->str_);
+        }
+
+        size_t serializedSize() const final
+        {
+            return (sizeof(uint64_t)*2 + sizeof(double) + this->str_.length());
+        }
+
+        bool operator ==(const TestSer& other) const
+        {
+            std::cout << "HEREEEE" << std::endl;
+            static constexpr double epsilon = 1e-9;
+            if (std::abs(number_ - other.number_) > epsilon) return false;
+            return str_ == other.str_;
+        }
+
+    private:
+        double number_;
+        std::string str_;
+    };
+
+    BinarySerializer serializer;
+    std::string result("00 00 00 00 00 00 00 08 c0 7c b5 58 e2 19 65 2c 00 00 00 00 00 00 00 1e 2e 2e 2e "
+                       "6f 67 6e 65 76 20 6f 64 6e 61 6c 6f 76 20 79 20 79 6f 76 20 6f 64 6e 61 6c 6f 56");
+
+    TestSer test_in(-459.3342, "Volando voy y volando vengo...");
+    TestSer test_out;
+
+    serializer.write(test_in);
+    serializer.read(test_out);
+
+    M_EXPECTED_EQ(test_in, test_out)
+    M_EXPECTED_EQ(result, serializer.getDataHexString())
 }
 
 M_DEFINE_UNIT_TEST(BinarySerializer, TrivialIntensive)
@@ -101,8 +185,6 @@ M_DEFINE_UNIT_TEST(BinarySerializer, TrivialIntensive)
     const size_t count = 1000;
     std::vector<double> original_numbers(count);
     std::vector<double> deserialized_numbers(count);
-
-    auto start_serialize = std::chrono::steady_clock::now();
 
     // Fill the original numbers with random values
     std::random_device rd;
@@ -126,11 +208,6 @@ M_DEFINE_UNIT_TEST(BinarySerializer, TrivialIntensive)
     for (size_t i = 0; i < count; i++) {
         M_EXPECTED_EQ(deserialized_numbers[i], original_numbers[i])
     }
-
-    auto end_serialize = std::chrono::steady_clock::now();
-    auto elapsed_serialize = std::chrono::duration_cast<std::chrono::microseconds>(end_serialize - start_serialize);
-    std::cout << "Serialization took: " << elapsed_serialize.count() << " microseconds\n";
-
 }
 
 int main()
@@ -141,6 +218,8 @@ int main()
     // Register the tests.
     M_REGISTER_UNIT_TEST(BinarySerializer, Trivial)
     M_REGISTER_UNIT_TEST(BinarySerializer, String)
+
+    M_REGISTER_UNIT_TEST(BinarySerializer, Serializable)
 
     M_REGISTER_UNIT_TEST(BinarySerializer, TrivialIntensive)
 
