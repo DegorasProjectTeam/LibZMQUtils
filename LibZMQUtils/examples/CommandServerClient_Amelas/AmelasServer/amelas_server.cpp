@@ -190,7 +190,7 @@ void AmelasServer::onWaitingCommand()
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void AmelasServer::onDeadClient(const HostClientInfo& client)
+void AmelasServer::onDeadClient(const HostInfo& client)
 {
     // Log.
     std::cout << std::string(100, '-') << std::endl;
@@ -205,7 +205,7 @@ void AmelasServer::onDeadClient(const HostClientInfo& client)
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void AmelasServer::onConnected(const HostClientInfo& client)
+void AmelasServer::onConnected(const HostInfo& client)
 {
     // Log.
     std::cout << std::string(100, '-') << std::endl;
@@ -221,7 +221,7 @@ void AmelasServer::onConnected(const HostClientInfo& client)
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void AmelasServer::onDisconnected(const HostClientInfo& client)
+void AmelasServer::onDisconnected(const HostInfo& client)
 {
     // Log.
     std::cout << std::string(100, '-') << std::endl;

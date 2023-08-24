@@ -60,6 +60,8 @@ namespace zmqutils{
 namespace utils{
 // =====================================================================================================================
 
+
+
 template<typename T>
 void BinarySerializer::checkTrivial()
 {
@@ -142,7 +144,10 @@ size_t BinarySerializer::writeRecursive(const T& value, const Args&... args)
 template<typename T, typename... Args>
 void BinarySerializer::readRecursive(T& value, Args&... args)
 {
+    std::cout<<"Read rec"<<std::endl;
+
     this->readSingle(value);
+
     if constexpr (sizeof...(args) > 0)
         this->readRecursive(std::forward<Args&>(args)...);
 }
@@ -174,7 +179,7 @@ size_t BinarySerializer::write(const T& value, const Args&... args)
     size_t total_size = (BinarySerializer::calcTotalSize(value) + ... + BinarySerializer::calcTotalSize(args));
 
     // Reserve space in one go.
-    reserve(this->size_ + total_size);
+    this->reserve(this->size_ + total_size);
 
     // Forward to recursive write function
     this->writeRecursive(value, args...);
@@ -191,46 +196,27 @@ void BinarySerializer::read(T& value, Args&... args)
 }
 
 template<typename T>
-typename std::enable_if<
-        !std::is_base_of<Serializable, T>::value &&
-        !std::is_same<std::nullptr_t &&, T>::value &&
-        !std::is_pointer<T>::value, T>::type
-BinarySerializer::readSingle()
-{
-    // Check the types.
-    (BinarySerializer::checkTriviallyCopyable<T>());
-    (BinarySerializer::checkTrivial<T>());
-
-    // Read single.
-    std::lock_guard<std::recursive_mutex> lock(this->mtx_);
-    if (this->offset_ + sizeof(T) > this->size_)
-        throw std::out_of_range("BinarySerializer: Read beyond the data size");
-    T value;
-    BinarySerializer::binarySerializeDeserialize(this->data_.get() + this->offset_, sizeof(T), &value);
-    this->offset_ += sizeof(T);
-    return value;
-}
-
-template<typename T>
-typename std::enable_if<
-        !std::is_base_of<Serializable, T>::value &&
-        !std::is_same<std::nullptr_t &&, T>::value &&
-        !std::is_pointer<T>::value, size_t>::type
+typename std::enable_if_t<
+        !std::is_base_of_v<Serializable, T> &&
+        !std::is_same_v<std::nullptr_t &&, T> &&
+        !std::is_pointer_v<T>, size_t>
 BinarySerializer::writeSingle(const T& data)
 {
     // Check the types.
     (BinarySerializer::checkTriviallyCopyable<T>());
     (BinarySerializer::checkTrivial<T>());
 
-    // Safety mutex.
-    std::lock_guard<std::recursive_mutex> lock(this->mtx_);
-
     // Get the size of the data.
     uint64_t total_size = BinarySerializer::calcTotalSize(data);
     uint64_t data_size = sizeof(T);
 
+    // Reserve space.
+    this->reserve(this->size_ + total_size);
+
+    // Safety mutex.
+    std::lock_guard<std::mutex> lock(this->mtx_);
+
     // Serialize the size of the data.
-    reserve(this->size_ + total_size);
     BinarySerializer::binarySerialize(&data_size, sizeof(uint64_t), this->data_.get() + this->size_);
     this->size_ += sizeof(uint64_t);
 
@@ -268,17 +254,26 @@ size_t BinarySerializer::writeSingle(const std::vector<T>& v)
 
 template<typename T>
 typename std::enable_if<
-        !std::is_base_of<Serializable, T>::value &&
-        !std::is_same<std::nullptr_t &&, T>::value &&
-        !std::is_pointer<T>::value, void>::type
+        !std::is_base_of_v<Serializable, T> &&
+        !std::is_same_v<std::nullptr_t &&, T> &&
+        !std::is_pointer_v<T> &&
+        !std::is_array_v<T>,
+    void>::type
 BinarySerializer::readSingle(T& value)
 {
     // Check the types.
     (BinarySerializer::checkTriviallyCopyable<T>());
     (BinarySerializer::checkTrivial<T>());
 
+    std::cout<<"READ INTERNAL SINGLE"<<std::endl;
+
+    int a = 0;
+
     // Safety mutex.
-    std::lock_guard<std::recursive_mutex> lock(this->mtx_);
+    std::lock_guard<std::mutex> lock(this->mtx_);
+
+    std::cout<<"READ INTERNAL SINGLE 2"<<std::endl;
+
 
     // Ensure that there's enough data left to read the size of the value.
     if (this->offset_ + sizeof(uint64_t) > this->size_)
@@ -302,10 +297,10 @@ BinarySerializer::readSingle(T& value)
     // Read the value.
     BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, size, &value);
     this->offset_ += size;
+
+    std::cout<<"READED"<<std::endl;
+
 }
-
-
-
 
 
 }} // END NAMESPACES.

@@ -117,6 +117,8 @@ void UnitTest::runTests()
             auto now_t = std::chrono::high_resolution_clock::now();
             bool result;
 
+            std::cout<<"Executing test: "<<test->test_name_<<std::endl;
+
             // Async execution.
             std::future<long long> future =
                 std::async(std::launch::async,

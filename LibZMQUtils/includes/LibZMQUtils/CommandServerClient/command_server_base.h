@@ -63,7 +63,7 @@ using common::CommandReply;
 using common::CommandRequest;
 using common::ServerCommand;
 using common::ServerResult;
-using common::HostClientInfo;
+using common::HostInfo;
 using common::CommandType;
 using utils::NetworkAdapterInfo;
 using utils::UUID;
@@ -295,7 +295,7 @@ public:
      *
      * @return A const reference to the map of connected clients.
      */
-    const std::map<UUID, HostClientInfo> &getConnectedClients() const;
+    const std::map<UUID, HostInfo> &getConnectedClients() const;
 
     /**
      * @brief Check if the server is currently working.
@@ -460,7 +460,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onConnected(const HostClientInfo&) = 0;
+    virtual void onConnected(const HostInfo&) = 0;
 
     /**
      * @brief Base disconnected callback. Subclasses must override this function.
@@ -473,7 +473,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onDisconnected(const HostClientInfo&) = 0;
+    virtual void onDisconnected(const HostInfo&) = 0;
 
     /**
      * @brief Base dead client callback. Subclasses must override this function.
@@ -486,7 +486,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onDeadClient(const HostClientInfo&) = 0;
+    virtual void onDeadClient(const HostInfo&) = 0;
 
     /**
      * @brief Base invalid message received callback. Subclasses must override this function.
@@ -630,7 +630,7 @@ private:
     std::condition_variable cv_server_depl_;  ///< Condition variable to notify the deployment status of the server.
 
     // Clients container.
-    std::map<UUID, HostClientInfo> connected_clients_;   ///< Dictionary with the connected clients.
+    std::map<UUID, HostInfo> connected_clients_;   ///< Dictionary with the connected clients.
 
     // Process functions container.
     ProcessFunctionsMap process_fnc_map_;        ///< Container with the internal factory process function.

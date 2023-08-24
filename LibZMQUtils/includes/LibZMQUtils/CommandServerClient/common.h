@@ -255,11 +255,11 @@ static constexpr std::array<const char*, 31>  ClientResultStr
 // COMMON STRUCTS
 // =====================================================================================================================
 
-struct LIBZMQUTILS_EXPORT HostClientInfo
+struct LIBZMQUTILS_EXPORT HostInfo
 {
-    HostClientInfo() = default;
-
-    HostClientInfo(const utils::UUID& uuid, const std::string& ip, const std::string& pid,
+    HostInfo() = default;
+    
+    HostInfo(const utils::UUID& uuid, const std::string& ip, const std::string& pid,
                    const std::string& hostname, const std::string& name = "");
 
     std::string toJsonString() const;

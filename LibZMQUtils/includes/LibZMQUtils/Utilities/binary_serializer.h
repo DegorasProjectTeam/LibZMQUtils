@@ -207,6 +207,11 @@ public:
         BIG_ENDIAN
     };
 
+    template <typename T>
+    using IsArrayOfTrivial = std::conjunction<
+        std::is_same<std::array<typename T::value_type, std::tuple_size<T>::value>, T>,
+        std::is_trivial<typename T::value_type>>;
+
     /**
      * @brief Construct a new Binary Serializer object with a given capacity.
      * @param capacity The initial capacity of the serializer. Default is 1024.
@@ -249,7 +254,7 @@ public:
      * @brief Release the data held by the serializer and return a raw pointer to it.
      * @return Raw pointer to the data.
      */
-    std::byte *release();
+    std::byte* release();
 
     /**
      * @brief Release the data held by the serializer, return a raw pointer to it, and set the size variable.
@@ -437,28 +442,8 @@ public:
     template<typename T, typename... Args>
     void read(T& value, Args&... args);
 
-    /**
-     * @brief Reads a single value of type T from the internal buffer.
-     *
-     * This function template reads a single value of the given type from the binary serializer. It checks if the type
-     * meets the required conditions, such as being trivially copyable and trivial, and not being a pointer or a
-     * nullptr. Then it reads the value from the internal buffer.
-     *
-     * @tparam T The type of value to be read. The type must meet the conditions of not being a subclass of the
-     * Serializable interface, not being a nullptr, and not being a pointer.
-     *
-     * @return The value that has been read.
-     *
-     * @throw std::out_of_range If reading beyond the size of the stored data.
-     */
-    template<typename T>
-    typename std::enable_if<
-            !std::is_base_of<Serializable, T>::value &&
-            !std::is_same<std::nullptr_t &&, T>::value &&
-            !std::is_pointer<T>::value, T>::type
-    readSingle();
-
 private:
+
 
     static Endianess determineEndianess();
 
@@ -502,10 +487,10 @@ private:
 
     // Generic writing.
     template<typename T>
-    typename std::enable_if<
-            !std::is_base_of<Serializable, T>::value &&
-            !std::is_same<std::nullptr_t &&, T>::value &&
-            !std::is_pointer<T>::value, size_t>::type
+    typename std::enable_if_t<
+            !std::is_base_of_v<Serializable, T> &&
+            !std::is_same_v<std::nullptr_t &&, T> &&
+            !std::is_pointer_v<T>, size_t>
     writeSingle(const T& obj);
 
     // For writing Serializable objects.
@@ -524,24 +509,18 @@ private:
 
     template<typename T>
     typename std::enable_if<
-            !std::is_base_of<Serializable, T>::value &&
-            !std::is_same<std::nullptr_t &&, T>::value &&
-            !std::is_pointer<T>::value, void>::type
+            !std::is_base_of_v<Serializable, T> &&
+            !std::is_same_v<std::nullptr_t &&, T> &&
+            !std::is_pointer_v<T> &&
+            !std::is_array_v<T>,
+        void>::type
     readSingle(T& value);
 
     void readSingle(Serializable& obj);
 
     void readSingle(std::string& value);
 
-
-
-
-
-
     // -----------------------------------------------------------------------------------------------------------------
-
-
-
 
     // Internal containers and variables.
     std::unique_ptr<std::byte[]> data_;      ///< Internal data pointer.
@@ -549,10 +528,10 @@ private:
     std::atomic<size_t> capacity_;           ///< Current capacity.
     std::atomic<size_t> offset_;             ///< Offset when reading.
     Endianess endianess_;                    ///< Represent the endianess of the system.
-    mutable std::recursive_mutex mtx_;       ///< Mutex for thread safety
+    mutable std::mutex mtx_;                 ///< Mutex for thread safety
 };
 
-}} // END NAMESPACES.
+}} // END NAMESPACES.git s
 // =====================================================================================================================
 
 // TEMPLATES INCLUDES

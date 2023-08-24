@@ -75,7 +75,7 @@ CommandClientBase::CommandClientBase(const std::string& server_endpoint,
     pid = std::to_string(utils::getCurrentPID());
 
     // Store all the client info.
-    this->client_info_ = common::HostClientInfo(uuid, ip, pid, hostname, this->client_name_);
+    this->client_info_ = common::HostInfo(uuid, ip, pid, hostname, this->client_name_);
 }
 
 CommandClientBase::~CommandClientBase()
@@ -87,7 +87,7 @@ CommandClientBase::~CommandClientBase()
     this->internalStopClient();
 }
 
-const common::HostClientInfo &CommandClientBase::getClientInfo() const
+const common::HostInfo &CommandClientBase::getClientInfo() const
 {
     return this->client_info_;
 }
@@ -146,7 +146,7 @@ bool CommandClientBase::internalResetClient()
         this->client_socket_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::req);
         this->client_socket_->connect(this->server_endpoint_);
         // Set timeout so socket will not wait for answer more than client alive timeout.
-        this->client_socket_->set(zmq::sockopt::rcvtimeo, common::kDefaultServerAliveTimeoutMsec);
+        //this->client_socket_->set(zmq::sockopt::rcvtimeo, common::kDefaultServerAliveTimeoutMsec);
         this->client_socket_->set(zmq::sockopt::linger, 0);
 
         // Bind the REP close socket to an internal endpoint.
@@ -242,7 +242,21 @@ ClientResult CommandClientBase::sendCommand(const RequestData& request, CommandR
         // Internal send callback.
         this->onSendingCommand(request);
 
+//        bool more = multipart_msg.size() > 0;
+//        while (more)
+//        {
+//            auto msg = multipart_msg.pop();
+//            more = multipart_msg.size() > 0;
+//            this->client_socket_->send(msg,  zmq::send_flags::none);
+//        }
+
+//        auto msg_1 = multipart_msg.pop();
+//        this->client_socket_->send(msg_1, zmq::send_flags::sndmore);
+        //auto msg_2 = multipart_msg.pop();
+        //this->client_socket_->send(msg_2, zmq::send_flags::none);
         // Send the multiple messages.
+
+        //multipart_msg.pop();
         multipart_msg.send(*this->client_socket_);
     }
     catch (const zmq::error_t &error)
@@ -262,13 +276,12 @@ ClientResult CommandClientBase::sendCommand(const RequestData& request, CommandR
     // Receive the data.    
     fut_recv_ = std::async(std::launch::async, &CommandClientBase::recvFromSocket, this, std::ref(reply));
 
-    // Recv timeout.
-    std::chrono::milliseconds timeout(20);
+    using namespace std::chrono_literals;
 
     // Retrieve the result and reset the future
     while (true)
     {
-        if (fut_recv_.wait_for(timeout) == std::future_status::ready)
+        if (fut_recv_.wait_for(20ms) == std::future_status::ready)
         {
             result = fut_recv_.get();
             break;
@@ -624,6 +637,7 @@ ClientResult CommandClientBase::doConnect()
     // Update the request.
     request.command = common::ServerCommand::REQ_CONNECT;
     request.params = serializer.moveUnique(request.params_size);
+
 
     // Send the command.
     return this->sendCommand(request, reply);

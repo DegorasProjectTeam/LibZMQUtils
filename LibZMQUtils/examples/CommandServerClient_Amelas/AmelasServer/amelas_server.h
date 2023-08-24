@@ -67,7 +67,7 @@ using zmqutils::common::CommandReply;
 using zmqutils::common::CommandRequest;
 using zmqutils::common::ServerResult;
 using zmqutils::common::ServerCommand;
-using zmqutils::common::HostClientInfo;
+using zmqutils::common::HostInfo;
 using zmqutils::utils::CallbackHandler;
 // ---------------------------------------------------------------------------------------------------------------------
 
@@ -127,13 +127,13 @@ private:
     virtual void onWaitingCommand() final;
 
     // Internal dead client callback.
-    virtual void onDeadClient(const HostClientInfo&) final;
+    virtual void onDeadClient(const HostInfo&) final;
 
     // Internal overrided connect callback.
-    virtual void onConnected(const HostClientInfo&) final;
+    virtual void onConnected(const HostInfo&) final;
 
     // Internal overrided disconnect callback.
-    virtual void onDisconnected(const HostClientInfo&) final;
+    virtual void onDisconnected(const HostInfo&) final;
 
     // Internal overrided command received callback.
     virtual void onCommandReceived(const CommandRequest&) final;

@@ -25,7 +25,7 @@
 #include "LibZMQUtils/CommandServerClient/common.h"
 
 
-zmqutils::common::HostClientInfo::HostClientInfo(
+zmqutils::common::HostInfo::HostInfo(
                                 const utils::UUID& uuid,
                                 const std::string& ip,
                                 const std::string& pid,
@@ -38,7 +38,7 @@ zmqutils::common::HostClientInfo::HostClientInfo(
     name(name)
 {}
 
-std::string zmqutils::common::HostClientInfo::toJsonString() const
+std::string zmqutils::common::HostInfo::toJsonString() const
 {
     std::stringstream ss;
     ss << "{\n"

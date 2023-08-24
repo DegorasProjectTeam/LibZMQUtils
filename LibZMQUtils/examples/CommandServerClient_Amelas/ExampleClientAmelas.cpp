@@ -181,7 +181,10 @@ void parseCommand(CommandClientBase &client, const std::string &command)
                 client_result = client.doConnect();
 
                 if (client_result == ClientResult::CLIENT_STOPPED)
+                {
+                    delete[] command_str;
                     return;
+                }
 
 
             }
@@ -267,7 +270,7 @@ int main(int, char**)
     zmqutils::internal_helpers::ConsoleConfig cmd_config(true, false, false);
 
     // Configuration variables.
-    int port = 9999;
+    unsigned port = 9999;
     std::string ip = "127.0.0.1";
 
     std::string endpoint = "tcp://" + ip + ":" + std::to_string(port);

@@ -397,7 +397,8 @@ class multipart_t
     {
         clear();
         bool more = true;
-        while (more) {
+        while (more)
+        {
             message_t message;
 #ifdef ZMQ_CPP11
             if (!socket.recv(message, static_cast<recv_flags>(flags)))

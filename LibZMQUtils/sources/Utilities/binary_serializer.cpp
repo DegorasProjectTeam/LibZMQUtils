@@ -79,7 +79,7 @@ void BinarySerializer::reserve(size_t size)
 {
     if (size > this->capacity_)
     {
-        std::lock_guard<std::recursive_mutex> lock(this->mtx_);
+        std::lock_guard<std::mutex> lock(this->mtx_);
         std::unique_ptr<std::byte[]> new_data(new std::byte[size]);
         if (this->data_)
             std::memcpy(new_data.get(), data_.get(), size_);
@@ -93,7 +93,7 @@ void BinarySerializer::loadData(void* src, size_t size)
     if(src != nullptr)
     {
         this->reserve(size);
-        std::lock_guard<std::recursive_mutex> lock(this->mtx_);
+        std::lock_guard<std::mutex> lock(this->mtx_);
         std::memcpy(this->data_.get(), src, size);
         this->size_ = size;
         this->offset_ = 0;
@@ -102,7 +102,7 @@ void BinarySerializer::loadData(void* src, size_t size)
 
 void BinarySerializer::clearData()
 {
-    std::lock_guard<std::recursive_mutex> lock(this->mtx_);
+    std::lock_guard<std::mutex> lock(this->mtx_);
     this->data_.reset(nullptr);
     this->size_ = 0;
     this->capacity_ = 0;
@@ -116,7 +116,7 @@ void BinarySerializer::resetReading()
 
 std::unique_ptr<std::byte> BinarySerializer::moveUnique()
 {
-    std::lock_guard<std::recursive_mutex> lock(this->mtx_);
+    std::lock_guard<std::mutex> lock(this->mtx_);
     this->size_ = 0;
     this->capacity_ = 0;
     this->offset_ = 0;
@@ -131,7 +131,7 @@ std::unique_ptr<std::byte> BinarySerializer::moveUnique(size_t& size)
 
 std::byte* BinarySerializer::release()
 {
-    std::lock_guard<std::recursive_mutex> lock(this->mtx_);
+    std::lock_guard<std::mutex> lock(this->mtx_);
     this->size_ = 0;
     this->capacity_ = 0;
     this->offset_ = 0;
@@ -140,7 +140,6 @@ std::byte* BinarySerializer::release()
 
 std::byte *BinarySerializer::release(size_t& size)
 {
-    std::lock_guard<std::recursive_mutex> lock(this->mtx_);
     size = this->size_;
     return this->release();
 }
@@ -157,7 +156,7 @@ bool BinarySerializer::allReaded() const
 
 std::string BinarySerializer::getDataHexString() const
 {
-    std::lock_guard<std::recursive_mutex> lock(this->mtx_);
+    std::lock_guard<std::mutex> lock(this->mtx_);
     std::stringstream ss;
     for(size_t i = 0; i < this->size_; i++)
     {
@@ -170,14 +169,13 @@ std::string BinarySerializer::getDataHexString() const
 
 BinarySerializer::Endianess BinarySerializer::determineEndianess()
 {
-    uint16_t number = 1;
-    uint8_t* byte_ptr = reinterpret_cast<uint8_t*>(&number);
+    constexpr uint16_t number = 1;
+    const uint8_t* byte_ptr = reinterpret_cast<const uint8_t*>(&number);
     return (byte_ptr[0] == 1) ? Endianess::LITTLE_ENDIAN : Endianess::BIG_ENDIAN;
 }
 
 std::string BinarySerializer::toJsonString() const
 {
-    std::lock_guard<std::recursive_mutex> lock(this->mtx_);
     std::stringstream ss;
     ss << "{"
        << "\"size\": " << this->size_ << ", "
@@ -190,8 +188,6 @@ std::string BinarySerializer::toJsonString() const
 
 size_t BinarySerializer::writeSingle(const Serializable &obj)
 {
-    // Lock guard.
-    std::lock_guard<std::recursive_mutex> lock(this->mtx_);
     // Serialize the object.
     return obj.serialize(*this);
 }
@@ -208,7 +204,7 @@ size_t BinarySerializer::writeSingle(const std::string& str)
     this->reserve(this->size_ + total_size);
 
     // Lock guard.
-    std::lock_guard<std::recursive_mutex> lock(this->mtx_);
+    std::lock_guard<std::mutex> lock(this->mtx_);
 
     // Serialize size.
     BinarySerializer::binarySerialize(&str_size, sizeof(uint64_t), this->data_.get() + size_);
@@ -224,9 +220,6 @@ size_t BinarySerializer::writeSingle(const std::string& str)
 
 void BinarySerializer::readSingle(Serializable &obj)
 {
-    // Mutex.
-    std::lock_guard<std::recursive_mutex> lock(this->mtx_);
-
     // Ensure that there's enough data left to read the object.
     if (this->offset_ + obj.serializedSize() > this->size_)
         throw std::out_of_range("BinarySerializer: Not enough data left to read the Serializable object.");
@@ -238,7 +231,7 @@ void BinarySerializer::readSingle(Serializable &obj)
 void BinarySerializer::readSingle(std::string &str)
 {
     // Mutex.
-    std::lock_guard<std::recursive_mutex> lock(this->mtx_);
+    std::lock_guard<std::mutex> lock(this->mtx_);
 
     // Ensure that there's enough data left to read the size of the string.
     if (this->offset_ + sizeof(size_t) > this->size_)

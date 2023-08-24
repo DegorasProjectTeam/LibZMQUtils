@@ -82,7 +82,7 @@ public:
 
     void setAutomaticAliveEnabled(bool);
 
-    const common::HostClientInfo& getClientInfo() const;
+    const common::HostInfo& getClientInfo() const;
 
     const std::string& getServerEndpoint() const;
 
@@ -173,8 +173,8 @@ private:
     zmq::multipart_t prepareMessage(const RequestData &msg);
 
     // Internal client identification.
-    common::HostClientInfo client_info_;       ///< External client information for identification.
-    std::string client_name_;                  ///< Internal client name. Will not be use as id.
+    common::HostInfo client_info_;       ///< External client information for identification.
+    std::string client_name_;            ///< Internal client name. Will not be use as id.
 
     // Server endpoint.
     std::string server_endpoint_;              ///< Server endpoint.

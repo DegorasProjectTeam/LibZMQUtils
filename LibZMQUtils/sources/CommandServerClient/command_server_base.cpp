@@ -82,7 +82,7 @@ CommandServerBase::CommandServerBase(unsigned port,
 
 const std::future<void> &CommandServerBase::getServerWorkerFuture() const {return this->fut_server_worker_;}
 
-const std::map<UUID, HostClientInfo> &CommandServerBase::getConnectedClients() const
+const std::map<UUID, HostInfo> &CommandServerBase::getConnectedClients() const
 {return this->connected_clients_;}
 
 void CommandServerBase::setClientStatusCheck(bool enable)
@@ -227,7 +227,7 @@ ServerResult CommandServerBase::execReqConnect(const CommandRequest& cmd_req)
         return ServerResult::ALREADY_CONNECTED;
 
     // Store the client.
-    HostClientInfo client_info(cmd_req.client_uuid, ip, pid, hostname, name);
+    HostInfo client_info(cmd_req.client_uuid, ip, pid, hostname, name);
     client_info.last_seen = std::chrono::steady_clock::now();
 
     // Add the new client.
@@ -290,10 +290,12 @@ void CommandServerBase::serverWorker()
         request = CommandRequest();
         reply = CommandReply();
 
+        std::cout<<"HERE RECV BEF"<<std::endl;
+
         // Receive the data.
         result = this->recvFromSocket(request);
 
-        std::cout<<"HERE RECV"<<std::endl;
+        std::cout<<"HERE RECV AFT"<<std::endl;
 
         // Check all the clients status.
         if(result == ServerResult::COMMAND_OK && this->flag_server_working_ && this->flag_check_clients_alive_ )
@@ -409,6 +411,8 @@ ServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
         return ServerResult::INTERNAL_ZMQ_ERROR;
     }
 
+
+
     // Check if we want to close the server.
     if(recv_result && multipart_msg.size() == 1 && multipart_msg.begin()->empty() && !this->flag_server_working_)
         return ServerResult::COMMAND_OK;
@@ -430,7 +434,12 @@ ServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
         if (msg_uuid.size() == UUID::kUUIDSize)
         {
             std::array<std::byte, 16> uuid_bytes;
-            utils::BinarySerializer::fastDeserialization(msg_uuid.data(), msg_uuid.size(), uuid_bytes);
+
+            const std::byte* data_bytes = reinterpret_cast<const std::byte*>(msg_uuid.data());
+
+
+            std::copy(data_bytes, data_bytes + msg_uuid.size(), uuid_bytes.begin());
+
             request.client_uuid = UUID(uuid_bytes);
         }
         else
@@ -440,13 +449,13 @@ ServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
         this->updateClientLastConnection(request.client_uuid);
 
         // Get the command.
-        if (msg_command.size() == sizeof(ServerCommand))
+        if (msg_command.size() == sizeof(std::uint64_t) + sizeof(std::int32_t))
         {
             // Auxiliar command container.
             std::int32_t raw_command;
 
             // Deserialize.
-            utils::BinarySerializer::fastDeserialization(msg_command.data(), sizeof(ServerCommand), raw_command);
+            utils::BinarySerializer::fastDeserialization(msg_command.data(), msg_command.size(), raw_command);
 
             // Validate the base command or the external command.
             if(CommandServerBase::validateCommand(raw_command))
@@ -458,6 +467,8 @@ ServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
                 request.command = ServerCommand::INVALID_COMMAND;
                 return ServerResult::INVALID_MSG;
             }
+
+
         }
         else
         {

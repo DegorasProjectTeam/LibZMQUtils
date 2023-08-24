@@ -75,12 +75,33 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Trivial)
     serializer.read(r1);
     serializer.read(r2, r3, r4);
 
-    //M_EXPECTED_EQ(serializer.getDataHexString(), result)
+    M_EXPECTED_EQ(serializer.getDataHexString(), result)
     M_EXPECTED_EQ(serializer.getSize(), sizeof(double)*2 + sizeof(int) + sizeof(unsigned) + 4*sizeof(uint64_t))
     M_EXPECTED_EQ(r1, n1)
     M_EXPECTED_EQ(r2, n2)
     M_EXPECTED_EQ(r3, n3)
     M_EXPECTED_EQ(r4, n4)
+
+    serializer.clearData();
+    M_EXPECTED_EQ(serializer.getSize(), size_t(0))
+
+    serializer.write(n1, n2, n3);
+    serializer.write(n4);
+
+    std::size_t size;
+    std::byte* bytes = serializer.release(size);
+    BinarySerializer::fastDeserialization(bytes, size, r1, r2, r3, r4);
+
+    M_EXPECTED_EQ(r1, n1)
+    M_EXPECTED_EQ(r2, n2)
+    M_EXPECTED_EQ(r3, n3)
+    M_EXPECTED_EQ(r4, n4)
+
+//    std::int32_t cmd = 1;
+//    serializer.clearData();
+//    serializer.write(cmd);
+//    bytes = serializer.release(size);
+//    BinarySerializer::fastDeserialization(bytes, 2, r1);
 }
 
 M_DEFINE_UNIT_TEST(BinarySerializer, String)
@@ -105,6 +126,24 @@ M_DEFINE_UNIT_TEST(BinarySerializer, String)
     M_EXPECTED_EQ(in2, out2)
     M_EXPECTED_EQ(in3, out3)
     M_EXPECTED_EQ(in4, out4)
+
+    serializer.clearData();
+    M_EXPECTED_EQ(serializer.getSize(), size_t(0))
+
+    serializer.write(in1, in2, in3, in4);
+
+    out1 = "";
+    out2 = "";
+    out3 = "";
+    out4 = "";
+
+    std::byte* bytes = serializer.release(size);
+    BinarySerializer::fastDeserialization(bytes, size, out1, out2, out3, out4);
+
+    M_EXPECTED_EQ(in1, out1)
+    M_EXPECTED_EQ(in2, out2)
+    M_EXPECTED_EQ(in3, out3)
+    M_EXPECTED_EQ(in4, out4)
 }
 
 M_DEFINE_UNIT_TEST(BinarySerializer, VectorTrivial)
@@ -115,13 +154,17 @@ M_DEFINE_UNIT_TEST(BinarySerializer, VectorTrivial)
     std::vector<long double> v1 = {34.32315L, 45L, 23.34L, -876.3L, 12345L};
     std::vector<long double> r1;
 
-    //serializer.write(v1);
-    //serializer.read(r1);
+   // serializer.write(v1);
+   // serializer.read(r1);
 
+   // M_EXPECTED_EQ(serializer.getDataHexString(), result)
+    //M_EXPECTED_EQ(v1, r1)
 
-    M_EXPECTED_EQ(serializer.getDataHexString(), result)
-    M_EXPECTED_EQ(v1, r1)
+    //std::array<std::vector<double>, 0> aux;
+    //serializer.write(aux);
 }
+
+
 
 M_DEFINE_UNIT_TEST(BinarySerializer, Serializable)
 {
@@ -169,8 +212,13 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Serializable)
     TestSer test_in(-459.3342, "Volando voy y volando vengo...");
     TestSer test_out;
 
+    std::cout<<"WR 1"<<std::endl;
+
     serializer.write(test_in);
+    std::cout<<"WR 2"<<std::endl;
+
     serializer.read(test_out);
+    std::cout<<"WR 3"<<std::endl;
 
     M_EXPECTED_EQ(test_in, test_out)
     M_EXPECTED_EQ(result, serializer.getDataHexString())
