@@ -60,8 +60,6 @@ int main(int, char**)
 
 
 
-
-
     // Restore the console.
     cmd_config.restoreConsole();
 

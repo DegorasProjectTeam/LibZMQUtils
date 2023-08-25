@@ -43,6 +43,7 @@ using zmqutils::utils::Serializable;
 
 M_DECLARE_UNIT_TEST(BinarySerializer, Trivial)
 M_DECLARE_UNIT_TEST(BinarySerializer, String)
+M_DECLARE_UNIT_TEST(BinarySerializer, ArrayTrivial)
 M_DECLARE_UNIT_TEST(BinarySerializer, VectorTrivial)
 M_DECLARE_UNIT_TEST(BinarySerializer, Serializable)
 
@@ -58,14 +59,14 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Trivial)
     BinarySerializer serializer;
 
     // Hex result.
-    std::string result("00 00 00 00 00 00 00 08 41 13 1e 76 5c d4 66 f5 00 00 00 00 00 00 00 08 c0 8e c2 c5 "
-                       "33 38 3b b1 00 00 00 00 00 00 00 04 ff ff ff de 00 00 00 00 00 00 00 04 00 00 00 05");
+    const std::string result("00 00 00 00 00 00 00 08 41 13 1e 76 5c d4 66 f5 00 00 00 00 00 00 00 08 c0 8e c2 c5 "
+                             "33 38 3b b1 00 00 00 00 00 00 00 04 ff ff ff de 00 00 00 00 00 00 00 04 00 00 00 05");
 
     // Data.
-    double n1 = 313245.590654;
-    double n2 = -984.3462891;
-    int n3 = -34;
-    unsigned n4 = 5;
+    const double n1 = 313245.590654;
+    const double n2 = -984.3462891;
+    const int n3 = -34;
+    const unsigned n4 = 5;
     double r1, r2;
     int r3;
     unsigned r4;
@@ -112,15 +113,15 @@ M_DEFINE_UNIT_TEST(BinarySerializer, String)
     BinarySerializer serializer;
 
     // Hex result.
-    std::string result("00 00 00 00 00 00 00 1b 2e 2e 2e 61 68 63 6e 61 4d 20 61 6c 20 65 64 20 72 61 67 75 6c 20 6e "
-                       "75 20 6e 45 00 00 00 00 00 00 00 04 20 20 20 20 00 00 00 00 00 00 00 12 31 32 33 2e 2e 2e 67 "
-                       "6e 69 72 74 73 2e 2e 2e 33 32 31 00 00 00 00 00 00 00 00");
+    const std::string result("00 00 00 00 00 00 00 1b 2e 2e 2e 61 68 63 6e 61 4d 20 61 6c 20 65 64 20 72 61 67 75 6c "
+                             "20 6e 75 20 6e 45 00 00 00 00 00 00 00 04 20 20 20 20 00 00 00 00 00 00 00 12 31 32 33 "
+                             "2e 2e 2e 67 6e 69 72 74 73 2e 2e 2e 33 32 31 00 00 00 00 00 00 00 00");
 
     // Data.
-    std::string in1("En un lugar de la Mancha...");
-    std::string in2("    ");
-    std::string in3("123...string...321");
-    std::string in4("");
+    const std::string in1("En un lugar de la Mancha...");
+    const std::string in2("    ");
+    const std::string in3("123...string...321");
+    const std::string in4("");
     std::string out1, out2, out3, out4;
     size_t size = in1.size() + in2.size() + in3.size() + in4.size() + sizeof(uint64_t)*4;
 
@@ -155,6 +156,41 @@ M_DEFINE_UNIT_TEST(BinarySerializer, String)
     M_EXPECTED_EQ(in4, out4)
 }
 
+M_DEFINE_UNIT_TEST(BinarySerializer, ArrayTrivial)
+{
+    // Serializer.
+    BinarySerializer serializer;
+
+    // Hex result.
+    const std::string result("00 00 00 00 00 00 00 10 00 00 00 00 00 00 00 01 12 34 56 78 90 ab cd ef fe dc ba 98 76 "
+                             "54 32 10 00 00 00 00 00 00 00 14 00 00 00 00 00 00 00 08 c0 00 00 00 00 00 00 00 bf f0 "
+                             "00 00 00 00 00 00 00 00 00 00 00 00 00 00 3f f1 99 99 99 99 99 9a 40 01 99 99 99 99 99 "
+                             "9a 40 0a 66 66 66 66 66 66 40 10 00 00 00 00 00 00 40 14 00 00 00 00 00 00 40 18 00 00 "
+                             "00 00 00 00 40 1c 00 00 00 00 00 00 40 20 00 00 00 00 00 00 40 22 00 00 00 00 00 00 40 "
+                             "24 00 00 00 00 00 00 40 26 00 00 00 00 00 00 40 28 00 00 00 00 00 00 c0 2a 00 00 00 00 "
+                             "00 00 c0 2c 00 00 00 00 00 00 c0 2e 00 00 00 00 00 00 c0 30 00 00 00 00 00 00 40 34 00 "
+                             "00 00 00 00 00");
+
+    // Data.
+    const std::array<std::byte, 16> uuid = {
+        std::byte(0x12), std::byte(0x34), std::byte(0x56), std::byte(0x78),
+        std::byte(0x90), std::byte(0xAB), std::byte(0xCD), std::byte(0xEF),
+        std::byte(0xFE), std::byte(0xDC), std::byte(0xBA), std::byte(0x98),
+        std::byte(0x76), std::byte(0x54), std::byte(0x32), std::byte(0x10)};
+    const std::array<double, 20> arr = {-2, -1, 0, 1.1, 2.2, 3.3, 4, 5, 6, 7 ,8 ,9 ,10, 11, 12, -13, -14, -15, -16, 20};
+    std::array<std::byte, 16> r_uuid;
+    std::array<double, 20> r_arr;
+
+    // Write, read.
+    serializer.write(uuid, arr);
+    serializer.read(r_uuid, r_arr);
+
+    // Checking.
+    M_EXPECTED_EQ(serializer.getDataHexString(), result)
+    M_EXPECTED_EQ(uuid, r_uuid)
+    M_EXPECTED_EQ(arr, r_arr)
+}
+
 M_DEFINE_UNIT_TEST(BinarySerializer, VectorTrivial)
 {
     BinarySerializer serializer;
@@ -168,7 +204,6 @@ M_DEFINE_UNIT_TEST(BinarySerializer, VectorTrivial)
 
    // M_EXPECTED_EQ(serializer.getDataHexString(), result)
     //M_EXPECTED_EQ(v1, r1)
-
 }
 
 
@@ -201,7 +236,6 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Serializable)
 
         bool operator ==(const TestSer& other) const
         {
-            std::cout << "HEREEEE" << std::endl;
             static constexpr double epsilon = 1e-9;
             if (std::abs(number_ - other.number_) > epsilon) return false;
             return str_ == other.str_;
@@ -219,13 +253,10 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Serializable)
     TestSer test_in(-459.3342, "Volando voy y volando vengo...");
     TestSer test_out;
 
-    std::cout<<"WR 1"<<std::endl;
 
     serializer.write(test_in);
-    std::cout<<"WR 2"<<std::endl;
 
     serializer.read(test_out);
-    std::cout<<"WR 3"<<std::endl;
 
     M_EXPECTED_EQ(test_in, test_out)
     M_EXPECTED_EQ(result, serializer.getDataHexString())
@@ -237,7 +268,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, TrivialIntensive)
 
     BinarySerializer serializer;
 
-    const size_t count = 1000;
+    const size_t count = 2000;
     std::vector<double> original_numbers(count);
     std::vector<double> deserialized_numbers(count);
 
@@ -245,19 +276,16 @@ M_DEFINE_UNIT_TEST(BinarySerializer, TrivialIntensive)
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<> dis(-1000000.0, 1000000.0);
-    for (double &num : original_numbers) {
+    for (double &num : original_numbers)
         num = dis(gen);
-    }
 
     // Serialize all the numbers
-    for (double num : original_numbers) {
+    for (double num : original_numbers)
         serializer.write(num);
-    }
 
     // Deserialize the numbers
-    for (double &num : deserialized_numbers) {
+    for (double &num : deserialized_numbers)
         serializer.read(num);
-    }
 
     // Check that the deserialized numbers match the original
     for (size_t i = 0; i < count; i++) {
@@ -273,6 +301,7 @@ int main()
     // Register the tests.
     M_REGISTER_UNIT_TEST(BinarySerializer, Trivial)
     M_REGISTER_UNIT_TEST(BinarySerializer, String)
+    M_REGISTER_UNIT_TEST(BinarySerializer, ArrayTrivial)
 
     M_REGISTER_UNIT_TEST(BinarySerializer, Serializable)
 

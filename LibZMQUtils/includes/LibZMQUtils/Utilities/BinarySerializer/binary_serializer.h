@@ -510,6 +510,10 @@ private:
     // For writing strings.
     size_t writeSingle(const std::string& str);
 
+    // For arrays of trivial types.
+    template<typename T, size_t L>
+    size_t writeSingle(const std::array<T, L>& arr);
+
     // For vectors of trivial types.
     template<typename T>
     size_t writeSingle(const std::vector<T>& v);
@@ -518,6 +522,7 @@ private:
 
     // Read data functions.
 
+    // Generic reading.
     template<typename T>
     typename std::enable_if<
             !is_container<T>::value &&
@@ -527,9 +532,15 @@ private:
         void>::type
     readSingle(T& value);
 
+    // For read Serializable objects.
     void readSingle(Serializable& obj);
 
-    void readSingle(std::string& value);
+    // For read strings.
+    void readSingle(std::string& str);
+
+    // For arrays of trivial types.
+    template<typename T, size_t L>
+    void readSingle(std::array<T, L>& arr);
 
     // -----------------------------------------------------------------------------------------------------------------
 

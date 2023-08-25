@@ -153,7 +153,7 @@ size_t BinarySerializer::fastSerialization(std::unique_ptr<std::byte>& out, cons
 {
     // Do the serialization
     BinarySerializer serializer;
-    size_t size = serializer.write(std::forward<const Args&>(args)...);
+    const size_t size = serializer.write(std::forward<const Args&>(args)...);
     out = serializer.moveUnique();
     return size;
 }
@@ -172,16 +172,16 @@ template<typename T, typename... Args, typename>
 size_t BinarySerializer::write(const T& value, const Args&... args)
 {
     // Calculate total size of all arguments.
-    size_t total_size = (BinarySerializer::calcTotalSize(value) + ... + BinarySerializer::calcTotalSize(args));
+    const size_t t_size = (BinarySerializer::calcTotalSize(value) + ... + BinarySerializer::calcTotalSize(args));
 
     // Reserve space in one go.
-    this->reserve(this->size_ + total_size);
+    this->reserve(this->size_ + t_size);
 
     // Forward to recursive write function
     this->writeRecursive(value, args...);
 
     // Return the writed size.
-    return total_size;
+    return t_size;
 }
 
 template<typename T, typename... Args>
@@ -204,8 +204,8 @@ BinarySerializer::writeSingle(const T& data)
     (BinarySerializer::checkTrivial<T>());
 
     // Get the size of the data.
-    std::uint64_t total_size = BinarySerializer::calcTotalSize(data);
-    std::uint64_t data_size = sizeof(T);
+    const std::uint64_t total_size = BinarySerializer::calcTotalSize(data);
+    constexpr std::uint64_t data_size = sizeof(T);
 
     // Reserve space.
     this->reserve(this->size_ + total_size);
@@ -222,6 +222,42 @@ BinarySerializer::writeSingle(const T& data)
     this->size_ += data_size;
 
     // Return the size.
+    return total_size;
+}
+
+
+template<typename T, size_t L>
+size_t BinarySerializer::writeSingle(const std::array<T, L>& arr)
+{
+    // Check the types.
+    BinarySerializer::checkTriviallyCopyable<T>();
+    BinarySerializer::checkTrivial<T>();
+
+    // Get the total size and reserve.
+    constexpr std::uint64_t array_size = L;
+    constexpr std::uint64_t elem_size = sizeof(T);
+    constexpr std::uint64_t total_size = sizeof(ElementSize) + sizeof(ElementSize) + elem_size*array_size;
+    this->reserve(this->size_ + total_size);
+
+    // Safety mutex.
+    std::lock_guard<std::mutex> lock(this->mtx_);
+
+    // Serialize array size.
+    BinarySerializer::binarySerialize(&array_size, sizeof(ElementSize), this->data_.get() + size_);
+    this->size_ += sizeof(ElementSize);
+
+    // Serialize the size of each element.
+    BinarySerializer::binarySerialize(&elem_size, sizeof(ElementSize), this->data_.get() + size_);
+    this->size_ += sizeof(ElementSize);
+
+    // Write each value of the array.
+    for(const auto& val : arr)
+    {
+        BinarySerializer::binarySerialize(&val, elem_size, this->data_.get() + this->size_);
+        this->size_ += elem_size;
+    }
+
+    // Return the writed size.
     return total_size;
 }
 
@@ -285,6 +321,55 @@ BinarySerializer::readSingle(T& value)
     // Read the value.
     BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, size, &value);
     this->offset_ += size;
+}
+
+// For arrays of trivial types.
+template<typename T, size_t L>
+void BinarySerializer::readSingle(std::array<T, L>& arr)
+{
+    // Safety mutex.
+    std::lock_guard<std::mutex> lock(this->mtx_);
+
+    // Ensure that there's enough data left to read the size of the array.
+    if (this->offset_ + sizeof(ElementSize) > this->size_)
+        throw std::out_of_range("BinarySerializer: Not enough data left to read the size of the array.");
+
+    // Read the size of the array.
+    std::uint64_t size_array;
+    BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, sizeof(ElementSize), &size_array);
+
+    // Update the offset.
+    this->offset_ += sizeof(ElementSize);
+
+    // Check if the array is empty.
+    if(size_array == 0)
+        return;
+
+    // Ensure that there's enough data left to read the size of each elements.
+    if (this->offset_ + sizeof(ElementSize) > this->size_)
+        throw std::out_of_range("BinarySerializer: Not enough data left to read the size of elements of the array.");
+
+    // Read the size of the elements.
+    std::uint64_t size_elem;
+    BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, sizeof(ElementSize), &size_elem);
+
+    // Update the offset.
+    this->offset_ += sizeof(ElementSize);
+
+    // Check if the size is 0.
+    if(size_elem == 0)
+        throw std::out_of_range("BinarySerializer: Unknow size of elements of the array.");
+
+    // Check if we have enough data left to read the string.
+    if (this->offset_ + size_elem*size_array > this->size_)
+        throw std::out_of_range("BinarySerializer: Read string beyond the data size.");
+
+    // Read all the elemnts.
+    for(std::uint64_t i = 0; i < size_array; i++)
+    {
+        BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, size_elem, &arr[i]);
+        this->offset_ += size_elem;
+    }
 }
 
 }} // END NAMESPACES.

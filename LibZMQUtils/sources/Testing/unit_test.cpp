@@ -77,29 +77,16 @@ const std::string &TestLog::getModuleName() const{return this->module_;}
 
 bool TestLog::getResult() const{return this->passed_;}
 
-/*
-TestSummary::TestSummary(const std::vector<TestLog> &):
-    total(passed + failed)
-{
-    _sBorder.fill('=');
-    _sBorder.width(80);
-    _sBorder << "\n";
-
-    _sPassed << "Tests Passed : " << "\x1b[38;5;40m"
-             << passed << "\x1b[0m";
-    _sFailed << "Tests Failed : " << "\x1b[38;5;160m"
-             << failed << "\x1b[0m";
-
-    _sTotal << "Number of tests: ";
-
-    std::cerr << "\n" << _sBorder.str() <<  _sTotal.str()
-              << total << "\n" << _sPassed.str() << "\n" << _sFailed.str()
-              << "\n" << _sBorder.str() << std::endl;
-}
-*/
-
 void UnitTest::runTests()
 {
+    // Separator.
+    std::string sep = helpers::strings::fillStr("=", 100) + "\n";
+
+    // Log.
+    std::cout<<"\033[38;2;255;128;0m"<<sep<<"=                                    ";
+    std::cout << "EXECUTING UNIT TEST SESSION                                   =\n";
+    std::cout<<"\033[38;2;255;128;0m"<<sep;
+
     // Iterate over the multimap in order of keys
     for (auto it = this->test_dict_.begin(); it != this->test_dict_.end();)
     {
@@ -117,7 +104,9 @@ void UnitTest::runTests()
             auto now_t = std::chrono::high_resolution_clock::now();
             bool result;
 
-            std::cout<<"Executing test: "<<test->test_name_<<std::endl;
+            // Log.
+            std::cout<<"\033[38;2;255;128;0m"<<"Executing test: "<<"\033[038;2;0;140;255m"
+                     <<test->test_name_<<"..."<<std::endl;
 
             // Async execution.
             std::future<long long> future =
@@ -157,6 +146,10 @@ void UnitTest::runTests()
         // Move the iterator to the next unique key
         it = range.second;
     }
+
+    // Log.
+    std::cout<<"\033[38;2;255;128;0m"<<"All tests executed!"<<std::endl;
+    std::cout<<"\033[38;2;255;128;0m"<<sep<<std::endl;
 
     // Make the summary.
     this->summary_.makeSummary(true);

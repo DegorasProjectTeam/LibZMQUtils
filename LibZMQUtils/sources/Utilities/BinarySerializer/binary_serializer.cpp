@@ -234,7 +234,7 @@ void BinarySerializer::readSingle(std::string &str)
     std::lock_guard<std::mutex> lock(this->mtx_);
 
     // Ensure that there's enough data left to read the size of the string.
-    if (this->offset_ + sizeof(size_t) > this->size_)
+    if (this->offset_ + sizeof(ElementSize) > this->size_)
         throw std::out_of_range("BinarySerializer: Not enough data left to read the size of the string.");
 
     // Read the size of the string.
