@@ -45,7 +45,7 @@
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/Utilities/binary_serializer.h"
+#include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
@@ -195,10 +195,10 @@ size_t BinarySerializer::writeSingle(const Serializable &obj)
 size_t BinarySerializer::writeSingle(const std::string& str)
 {
     // String size.
-    uint64_t str_size = str.size();
+    std::uint64_t str_size = str.size();
 
     // Get the size of the data.
-    uint64_t total_size = BinarySerializer::calcTotalSize(str);
+    std::uint64_t total_size = BinarySerializer::calcTotalSize(str);
 
     // Reserve space.
     this->reserve(this->size_ + total_size);
@@ -207,8 +207,8 @@ size_t BinarySerializer::writeSingle(const std::string& str)
     std::lock_guard<std::mutex> lock(this->mtx_);
 
     // Serialize size.
-    BinarySerializer::binarySerialize(&str_size, sizeof(uint64_t), this->data_.get() + size_);
-    this->size_ += sizeof(uint64_t);
+    BinarySerializer::binarySerialize(&str_size, sizeof(ElementSize), this->data_.get() + size_);
+    this->size_ += sizeof(ElementSize);
 
     // Serialize string.
     BinarySerializer::binarySerialize(str.data(), str_size, this->data_.get() + size_);
@@ -238,11 +238,11 @@ void BinarySerializer::readSingle(std::string &str)
         throw std::out_of_range("BinarySerializer: Not enough data left to read the size of the string.");
 
     // Read the size of the string.
-    uint64_t size;
-    BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, sizeof(uint64_t), &size);
+    std::uint64_t size;
+    BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, sizeof(ElementSize), &size);
 
     // Update the offset.
-    this->offset_ += sizeof(uint64_t);
+    this->offset_ += sizeof(ElementSize);
 
     // Check if the string is empty.
     if(size == 0)

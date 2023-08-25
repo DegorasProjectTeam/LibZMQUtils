@@ -54,27 +54,29 @@ M_DECLARE_UNIT_TEST(BinarySerializer, TrivialIntensive)
 
 M_DEFINE_UNIT_TEST(BinarySerializer, Trivial)
 {
+    // Serializer.
     BinarySerializer serializer;
+
+    // Hex result.
     std::string result("00 00 00 00 00 00 00 08 41 13 1e 76 5c d4 66 f5 00 00 00 00 00 00 00 08 c0 8e c2 c5 "
                        "33 38 3b b1 00 00 00 00 00 00 00 04 ff ff ff de 00 00 00 00 00 00 00 04 00 00 00 05");
 
-    double n1, n2;
-    int n3;
-    unsigned n4;
+    // Data.
+    double n1 = 313245.590654;
+    double n2 = -984.3462891;
+    int n3 = -34;
+    unsigned n4 = 5;
     double r1, r2;
     int r3;
     unsigned r4;
 
-    n1 = 313245.590654;
-    n2 = -984.3462891;
-    n3 = -34;
-    n4 = 5;
-
+    // Write, read.
     serializer.write(n1, n2, n3);
     serializer.write(n4);
     serializer.read(r1);
     serializer.read(r2, r3, r4);
 
+    // Checking.
     M_EXPECTED_EQ(serializer.getDataHexString(), result)
     M_EXPECTED_EQ(serializer.getSize(), sizeof(double)*2 + sizeof(int) + sizeof(unsigned) + 4*sizeof(uint64_t))
     M_EXPECTED_EQ(r1, n1)
@@ -82,34 +84,39 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Trivial)
     M_EXPECTED_EQ(r3, n3)
     M_EXPECTED_EQ(r4, n4)
 
+    // Clear test.
     serializer.clearData();
     M_EXPECTED_EQ(serializer.getSize(), size_t(0))
 
+    // Clear out variables.
+    r1 = r2 = 0.0L;
+    r3 = r4 = 0;
+
+    // Fast deserialization test.
     serializer.write(n1, n2, n3);
     serializer.write(n4);
-
     std::size_t size;
     std::byte* bytes = serializer.release(size);
     BinarySerializer::fastDeserialization(bytes, size, r1, r2, r3, r4);
 
+    // Checking.
     M_EXPECTED_EQ(r1, n1)
     M_EXPECTED_EQ(r2, n2)
     M_EXPECTED_EQ(r3, n3)
     M_EXPECTED_EQ(r4, n4)
-
-//    std::int32_t cmd = 1;
-//    serializer.clearData();
-//    serializer.write(cmd);
-//    bytes = serializer.release(size);
-//    BinarySerializer::fastDeserialization(bytes, 2, r1);
 }
 
 M_DEFINE_UNIT_TEST(BinarySerializer, String)
 {
+    // Serializer.
     BinarySerializer serializer;
+
+    // Hex result.
     std::string result("00 00 00 00 00 00 00 1b 2e 2e 2e 61 68 63 6e 61 4d 20 61 6c 20 65 64 20 72 61 67 75 6c 20 6e "
                        "75 20 6e 45 00 00 00 00 00 00 00 04 20 20 20 20 00 00 00 00 00 00 00 12 31 32 33 2e 2e 2e 67 "
                        "6e 69 72 74 73 2e 2e 2e 33 32 31 00 00 00 00 00 00 00 00");
+
+    // Data.
     std::string in1("En un lugar de la Mancha...");
     std::string in2("    ");
     std::string in3("123...string...321");
@@ -117,9 +124,11 @@ M_DEFINE_UNIT_TEST(BinarySerializer, String)
     std::string out1, out2, out3, out4;
     size_t size = in1.size() + in2.size() + in3.size() + in4.size() + sizeof(uint64_t)*4;
 
+    // Write, read.
     serializer.write(in1, in2, in3, in4);
     serializer.read(out1, out2, out3, out4);
 
+    // Checking.
     M_EXPECTED_EQ(serializer.getDataHexString(), result)
     M_EXPECTED_EQ(serializer.getSize(), size)
     M_EXPECTED_EQ(in1, out1)
@@ -127,19 +136,19 @@ M_DEFINE_UNIT_TEST(BinarySerializer, String)
     M_EXPECTED_EQ(in3, out3)
     M_EXPECTED_EQ(in4, out4)
 
+    // Clear test.
     serializer.clearData();
     M_EXPECTED_EQ(serializer.getSize(), size_t(0))
 
+    // Clear out variables.
+    out1 = out2 = out3 = out4 = "";
+
+    // Fast deserialization test.
     serializer.write(in1, in2, in3, in4);
-
-    out1 = "";
-    out2 = "";
-    out3 = "";
-    out4 = "";
-
     std::byte* bytes = serializer.release(size);
     BinarySerializer::fastDeserialization(bytes, size, out1, out2, out3, out4);
 
+    // Checking.
     M_EXPECTED_EQ(in1, out1)
     M_EXPECTED_EQ(in2, out2)
     M_EXPECTED_EQ(in3, out3)
@@ -160,8 +169,6 @@ M_DEFINE_UNIT_TEST(BinarySerializer, VectorTrivial)
    // M_EXPECTED_EQ(serializer.getDataHexString(), result)
     //M_EXPECTED_EQ(v1, r1)
 
-    //std::array<std::vector<double>, 0> aux;
-    //serializer.write(aux);
 }
 
 

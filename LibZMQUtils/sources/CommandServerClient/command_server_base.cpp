@@ -42,7 +42,7 @@
 // =====================================================================================================================
 #include "LibZMQUtils/CommandServerClient/command_server_base.h"
 #include "LibZMQUtils/Utilities/utils.h"
-#include "LibZMQUtils/Utilities/binary_serializer.h"
+#include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
@@ -290,12 +290,8 @@ void CommandServerBase::serverWorker()
         request = CommandRequest();
         reply = CommandReply();
 
-        std::cout<<"HERE RECV BEF"<<std::endl;
-
         // Receive the data.
         result = this->recvFromSocket(request);
-
-        std::cout<<"HERE RECV AFT"<<std::endl;
 
         // Check all the clients status.
         if(result == ServerResult::COMMAND_OK && this->flag_server_working_ && this->flag_check_clients_alive_ )
@@ -449,7 +445,7 @@ ServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
         this->updateClientLastConnection(request.client_uuid);
 
         // Get the command.
-        if (msg_command.size() == sizeof(std::uint64_t) + sizeof(std::int32_t))
+        if (msg_command.size() == sizeof(utils::BinarySerializer::ElementSize) + sizeof(CommandType))
         {
             // Auxiliar command container.
             std::int32_t raw_command;
@@ -467,8 +463,6 @@ ServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
                 request.command = ServerCommand::INVALID_COMMAND;
                 return ServerResult::INVALID_MSG;
             }
-
-
         }
         else
         {

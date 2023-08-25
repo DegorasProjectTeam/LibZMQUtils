@@ -12,7 +12,7 @@
 
 #include "LibZMQUtils/CommandServerClient/command_client_base.h"
 #include "LibZMQUtils/Utilities/utils.h"
-#include "LibZMQUtils/Utilities/binary_serializer.h"
+#include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
 
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
@@ -322,6 +322,17 @@ ClientResult CommandClientBase::sendCommand(const RequestData& request, CommandR
     return result;
 }
 
+bool CommandClientBase::waitForClose(std::chrono::milliseconds timeout)
+{
+    std::unique_lock<std::mutex> lock(client_close_mtx_);
+    if (timeout == std::chrono::milliseconds::zero()) {
+        client_close_cv_.wait(lock, [this]{ return this->flag_client_closed_.load(); });
+        return true;
+    } else {
+        return client_close_cv_.wait_for(lock, timeout, [this]{ return this->flag_client_closed_.load(); });
+    }
+}
+
 
 //ClientResult CommandClientBase::recvFromSocket(CommandReply& reply)
 //{
@@ -451,8 +462,8 @@ ClientResult CommandClientBase::recvFromSocket(CommandReply& reply)
                 // Get the multipart data.
                 zmq::message_t msg_res = multipart_msg.pop();
 
-                // Check the command size.
-                if (msg_res.size() != sizeof(ServerCommand))
+                // Check the result size.
+                if (msg_res.size() != sizeof(utils::BinarySerializer::ElementSize) + sizeof(common::ResultType))
                     return ClientResult::INVALID_MSG;
 
                 // Get the command.

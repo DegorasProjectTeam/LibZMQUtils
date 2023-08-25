@@ -51,7 +51,7 @@
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/Utilities/binary_serializer.h"
+#include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
@@ -59,8 +59,6 @@
 namespace zmqutils{
 namespace utils{
 // =====================================================================================================================
-
-
 
 template<typename T>
 void BinarySerializer::checkTrivial()
@@ -114,7 +112,7 @@ void BinarySerializer::binarySerializeDeserialize(const TSRC* src, size_t data_s
 }
 
 template<typename T>
-uint64_t BinarySerializer::calcTotalSize(const T& data)
+std::uint64_t BinarySerializer::calcTotalSize(const T& data)
 {
     if constexpr(std::is_base_of_v<Serializable, std::decay_t<T>>)
     {
@@ -122,11 +120,11 @@ uint64_t BinarySerializer::calcTotalSize(const T& data)
     }
     else if constexpr(std::is_same_v<std::decay_t<T>, std::string>)
     {
-        return sizeof(uint64_t) + data.size();
+        return sizeof(ElementSize) + data.size();
     }
     else if constexpr(std::is_trivially_copyable_v<std::decay_t<T>> && std::is_trivial_v<std::decay_t<T>>)
     {
-        return sizeof(uint64_t) + sizeof(data);
+        return sizeof(ElementSize) + sizeof(data);
     }
     else
         static_assert(sizeof(T) == 0, "Unsupported type.");
@@ -144,8 +142,6 @@ size_t BinarySerializer::writeRecursive(const T& value, const Args&... args)
 template<typename T, typename... Args>
 void BinarySerializer::readRecursive(T& value, Args&... args)
 {
-    std::cout<<"Read rec"<<std::endl;
-
     this->readSingle(value);
 
     if constexpr (sizeof...(args) > 0)
@@ -197,6 +193,7 @@ void BinarySerializer::read(T& value, Args&... args)
 
 template<typename T>
 typename std::enable_if_t<
+        !BinarySerializer::is_container<T>::value &&
         !std::is_base_of_v<Serializable, T> &&
         !std::is_same_v<std::nullptr_t &&, T> &&
         !std::is_pointer_v<T>, size_t>
@@ -207,8 +204,8 @@ BinarySerializer::writeSingle(const T& data)
     (BinarySerializer::checkTrivial<T>());
 
     // Get the size of the data.
-    uint64_t total_size = BinarySerializer::calcTotalSize(data);
-    uint64_t data_size = sizeof(T);
+    std::uint64_t total_size = BinarySerializer::calcTotalSize(data);
+    std::uint64_t data_size = sizeof(T);
 
     // Reserve space.
     this->reserve(this->size_ + total_size);
@@ -217,8 +214,8 @@ BinarySerializer::writeSingle(const T& data)
     std::lock_guard<std::mutex> lock(this->mtx_);
 
     // Serialize the size of the data.
-    BinarySerializer::binarySerialize(&data_size, sizeof(uint64_t), this->data_.get() + this->size_);
-    this->size_ += sizeof(uint64_t);
+    BinarySerializer::binarySerialize(&data_size, sizeof(ElementSize), this->data_.get() + this->size_);
+    this->size_ += sizeof(ElementSize);
 
     // Serialize the data.
     BinarySerializer::binarySerialize(&data, data_size, this->data_.get() + this->size_);
@@ -228,8 +225,6 @@ BinarySerializer::writeSingle(const T& data)
     return total_size;
 }
 
-
-
 template<typename T>
 size_t BinarySerializer::writeSingle(const std::vector<T>& v)
 {
@@ -238,7 +233,7 @@ size_t BinarySerializer::writeSingle(const std::vector<T>& v)
     BinarySerializer::checkTrivial<T>();
 
     // Get the total size and reserve.
-    uint64_t total_size = sizeof(uint64_t) + sizeof(T)*v.size();
+    std::uint64_t total_size = sizeof(ElementSize) + sizeof(T)*v.size();
     this->reserve(this->size_ + total_size);
 
     // Serialize size.
@@ -254,10 +249,10 @@ size_t BinarySerializer::writeSingle(const std::vector<T>& v)
 
 template<typename T>
 typename std::enable_if<
+        !BinarySerializer::is_container<T>::value &&
         !std::is_base_of_v<Serializable, T> &&
         !std::is_same_v<std::nullptr_t &&, T> &&
-        !std::is_pointer_v<T> &&
-        !std::is_array_v<T>,
+        !std::is_pointer_v<T>,
     void>::type
 BinarySerializer::readSingle(T& value)
 {
@@ -265,26 +260,19 @@ BinarySerializer::readSingle(T& value)
     (BinarySerializer::checkTriviallyCopyable<T>());
     (BinarySerializer::checkTrivial<T>());
 
-    std::cout<<"READ INTERNAL SINGLE"<<std::endl;
-
-    int a = 0;
-
     // Safety mutex.
     std::lock_guard<std::mutex> lock(this->mtx_);
 
-    std::cout<<"READ INTERNAL SINGLE 2"<<std::endl;
-
-
     // Ensure that there's enough data left to read the size of the value.
-    if (this->offset_ + sizeof(uint64_t) > this->size_)
+    if (this->offset_ + sizeof(ElementSize) > this->size_)
         throw std::out_of_range("BinarySerializer: Not enough data left to read the size of the value.");
 
     // Read the size of the value.
     size_t size;
-    BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, sizeof(uint64_t), &size);
+    BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, sizeof(ElementSize), &size);
 
     // Update the offset.
-    this->offset_ += sizeof(uint64_t);
+    this->offset_ += sizeof(ElementSize);
 
     // Check if we have enough data left to read the value.
     if (this->offset_ + size > this->size_)
@@ -297,11 +285,7 @@ BinarySerializer::readSingle(T& value)
     // Read the value.
     BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, size, &value);
     this->offset_ += size;
-
-    std::cout<<"READED"<<std::endl;
-
 }
-
 
 }} // END NAMESPACES.
 // =====================================================================================================================

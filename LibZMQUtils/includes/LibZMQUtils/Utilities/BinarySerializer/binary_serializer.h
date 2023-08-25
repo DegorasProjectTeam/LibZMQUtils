@@ -201,16 +201,14 @@ class LIBZMQUTILS_EXPORT BinarySerializer
 {
 public:
 
+    using ElementSize = std::uint64_t;
+
+    /// Enumeration representing the byte order (endianness) of data.
     enum class Endianess
     {
-        LITTLE_ENDIAN = 0,
-        BIG_ENDIAN
+        LITTLE_ENDIAN, ///< Little-endian byte order (LSB first).
+        BIG_ENDIAN     ///< Big-endian byte order (MSB first).
     };
-
-    template <typename T>
-    using IsArrayOfTrivial = std::conjunction<
-        std::is_same<std::array<typename T::value_type, std::tuple_size<T>::value>, T>,
-        std::is_trivial<typename T::value_type>>;
 
     /**
      * @brief Construct a new Binary Serializer object with a given capacity.
@@ -444,6 +442,20 @@ public:
 
 private:
 
+    // -----------------------------------------------------------------------------------------------------------------
+
+    // Type traits.
+
+    template <typename T>
+    struct is_container : std::false_type {};
+
+    template <typename... Args>
+    struct is_container<std::vector<Args...>> : std::true_type {};
+
+    template <typename T, std::size_t N>
+    struct is_container<std::array<T, N>> : std::true_type {};
+
+    // -----------------------------------------------------------------------------------------------------------------
 
     static Endianess determineEndianess();
 
@@ -457,7 +469,7 @@ private:
 
     // Internal size calculator function.
     template<typename T>
-    static uint64_t calcTotalSize(const T& data);
+    static std::uint64_t calcTotalSize(const T& data);
 
     // Internal binary serialization/deserialization helper function.
     template<typename T, typename C>
@@ -470,8 +482,6 @@ private:
     // Internal binary deserialization helper function.
     template<typename T, typename C>
     void binaryDeserialize(const T *src, size_t data_size_bytes, C *dst);
-
-
 
     // Recursive writing helper.
     template<typename T, typename... Args>
@@ -488,6 +498,7 @@ private:
     // Generic writing.
     template<typename T>
     typename std::enable_if_t<
+            !is_container<T>::value &&
             !std::is_base_of_v<Serializable, T> &&
             !std::is_same_v<std::nullptr_t &&, T> &&
             !std::is_pointer_v<T>, size_t>
@@ -509,10 +520,10 @@ private:
 
     template<typename T>
     typename std::enable_if<
+            !is_container<T>::value &&
             !std::is_base_of_v<Serializable, T> &&
             !std::is_same_v<std::nullptr_t &&, T> &&
-            !std::is_pointer_v<T> &&
-            !std::is_array_v<T>,
+            !std::is_pointer_v<T>,
         void>::type
     readSingle(T& value);
 
@@ -536,5 +547,5 @@ private:
 
 // TEMPLATES INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/Utilities/binary_serializer.tpp"
+#include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.tpp"
 // =====================================================================================================================

@@ -96,16 +96,7 @@ public:
 
     ClientResult sendCommand(const RequestData&, CommandReply&);
 
-    bool waitForClose(std::chrono::milliseconds timeout = std::chrono::milliseconds::zero())
-    {
-        std::unique_lock<std::mutex> lock(client_close_mtx_);
-        if (timeout == std::chrono::milliseconds::zero()) {
-            client_close_cv_.wait(lock, [this]{ return this->flag_client_closed_.load(); });
-            return true;
-        } else {
-            return client_close_cv_.wait_for(lock, timeout, [this]{ return this->flag_client_closed_.load(); });
-        }
-    }
+    bool waitForClose(std::chrono::milliseconds timeout = std::chrono::milliseconds::zero());
 
     /**
      * @brief Virtual destructor.

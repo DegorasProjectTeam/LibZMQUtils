@@ -226,9 +226,9 @@ void parseCommand(CommandClientBase &client, const std::string &command)
 
                 if (command_id == static_cast<CommandType>(AmelasServerCommand::REQ_GET_HOME_POSITION))
                 {
-                    if (reply.params_size == (res_sz + 2*double_sz))
+                    try
                     {
-                        ControllerError error;   // Trash
+                        ControllerError error;   // Trash. The controller error must be checked.
                         double az;
                         double el;
 
@@ -239,7 +239,7 @@ void parseCommand(CommandClientBase &client, const std::string &command)
                         std::cout<<"Az: "<<az<<std::endl;
                         std::cout<<"El: "<<el<<std::endl;
                     }
-                    else
+                    catch(...)
                     {
                         std::cout<<"BAD PARAMS"<<std::endl;
                         // RETURN BAD PARAMS
