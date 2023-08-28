@@ -73,10 +73,13 @@ UnitTest::instance().runTests();  \
 return 0;                         \
 
 #define M_EXPECTED_EQ(arg1, arg2)        \
-this->result_ &= expectEQ(arg1, arg2);   \
+this->result_ &= expectEQ(arg1, arg2);
 
-#define MEXPECTED_NE(arg1, arg2)          \
-this->result_ &= expectNE(arg1, arg2);   \
+#define M_EXPECTED_NE(arg1, arg2)         \
+this->result_ &= expectNE(arg1, arg2);
+
+#define M_FORCE_FAIL()        \
+this->result_ &= forceFail();
 
 #define M_SLEEP_US(arg1)          \
 std::this_thread::sleep_for(std::chrono::microseconds(arg1));   \

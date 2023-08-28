@@ -46,6 +46,7 @@
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
+#include "LibZMQUtils/InternalHelpers/file_helpers.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
@@ -165,6 +166,122 @@ std::string BinarySerializer::getDataHexString() const
             ss << " ";
     }
     return ss.str();
+}
+
+size_t BinarySerializer::writeFile(const std::string &in_filenamepath)
+{
+    // Get the filename.
+    std::string filename = helpers::files::getFileName(in_filenamepath);
+
+    // Create the ifstream.
+    std::ifstream file(in_filenamepath, std::ios::binary);
+
+    // Check if the file is open.
+    if(!file.is_open())
+        throw std::runtime_error("BinarySerializer: File for serialization can't be opened.");
+
+    // Get the size of the file.
+    file.seekg(0, std::ios::end);
+    const std::uint64_t file_size = static_cast<size_t>(file.tellg());
+    file.seekg(0, std::ios::beg);
+
+    // Get the size of the filename.
+    std::uint64_t filename_size = filename.size();
+
+    // Get the total size.
+    const std::uint64_t total_size = sizeof(ElementSize) + filename_size + sizeof(ElementSize) + file_size;
+
+    // Reserve space.
+    this->reserve(this->size_ + total_size);
+
+    // Lock guard.
+    std::lock_guard<std::mutex> lock(this->mtx_);
+
+    // Serialize name size.
+    BinarySerializer::binarySerialize(&filename_size, sizeof(ElementSize), this->data_.get() + size_);
+    this->size_ += sizeof(ElementSize);
+
+    // Serialize name string.
+    BinarySerializer::binarySerialize(filename.data(), filename_size, this->data_.get() + size_);
+    this->size_ += filename_size;
+
+    // Serialize file size.
+    BinarySerializer::binarySerialize(&file_size, sizeof(ElementSize), this->data_.get() + size_);
+    this->size_ += sizeof(ElementSize);
+
+    // Serialize the file.
+    file.read(reinterpret_cast<char*>(this->data_.get() + this->size_), static_cast<long long>(file_size));
+    this->size_ += file_size;
+
+    // Close the file.
+    file.close();
+
+    // Return the written size.
+    return total_size;
+}
+
+void BinarySerializer::readFile(const std::string& out_filepath)
+{
+    // Mutex.
+    std::lock_guard<std::mutex> lock(this->mtx_);
+
+    // Ensure that there's enough data left to read the size of the filename.
+    if (this->offset_ + sizeof(ElementSize) > this->size_)
+        throw std::out_of_range("BinarySerializer: Not enough data left to read the size of the filename.");
+
+    // Read the size of the filename.
+    std::uint64_t filename_size;
+    BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, sizeof(ElementSize), &filename_size);
+
+    // Update the offset.
+    this->offset_ += sizeof(ElementSize);
+
+    // Check if the filename is empty.
+    if(filename_size == 0)
+        throw std::runtime_error("BinarySerializer: Empty filename.");
+
+    // Ensure that there's enough data left to read the filename.
+    if (this->offset_ + filename_size > this->size_)
+        throw std::out_of_range("BinarySerializer: Not enough data left to read the filename.");
+
+    // Read the filename.
+    std::string filename;
+    filename.resize(filename_size);
+    BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, filename_size, filename.data());
+    this->offset_ += filename_size;
+
+    // Ensure that there's enough data left to read the size of the file.
+    if (this->offset_ + sizeof(ElementSize) > this->size_)
+        throw std::out_of_range("BinarySerializer: Not enough data left to read the size of the file.");
+
+    // Read the size of the file content.
+    std::uint64_t file_size;
+    BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, sizeof(ElementSize), &file_size);
+
+    // Update the offset.
+    this->offset_ += sizeof(ElementSize);
+
+    // Check if the file is empty.
+    if(file_size == 0)
+        return;
+
+    // Ensure that there's enough data left to read the file content.
+    if (this->offset_ + file_size > this->size_)
+        throw std::out_of_range("BinarySerializer: Not enough data left to read the file content.");
+
+    // Prepare the stream.
+    std::string final_path = out_filepath.empty() ? filename : (out_filepath + "/" + filename);
+    std::ofstream file_output(final_path, std::ios::binary);
+    if (!file_output.is_open())
+        throw std::runtime_error("BinarySerializer: File for deserialization can't be opened.");
+
+    // Read the file content.
+    file_output.write(reinterpret_cast<const char*>(this->data_.get() + this->offset_),
+                      static_cast<long long>(file_size));
+    this->offset_ += file_size;
+
+    // Close the file.
+    file_output.close();
 }
 
 BinarySerializer::Endianess BinarySerializer::determineEndianess()

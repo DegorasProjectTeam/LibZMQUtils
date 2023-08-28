@@ -26,6 +26,8 @@
 // =====================================================================================================================
 #include <iostream>
 #include <vector>
+#include <fstream>
+#include <stdio.h>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
@@ -46,6 +48,7 @@ M_DECLARE_UNIT_TEST(BinarySerializer, String)
 M_DECLARE_UNIT_TEST(BinarySerializer, ArrayTrivial)
 M_DECLARE_UNIT_TEST(BinarySerializer, VectorTrivial)
 M_DECLARE_UNIT_TEST(BinarySerializer, Serializable)
+M_DECLARE_UNIT_TEST(BinarySerializer, File)
 
 // Other tests.
 
@@ -79,7 +82,8 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Trivial)
 
     // Checking.
     M_EXPECTED_EQ(serializer.getDataHexString(), result)
-    M_EXPECTED_EQ(serializer.getSize(), sizeof(double)*2 + sizeof(int) + sizeof(unsigned) + 4*sizeof(uint64_t))
+    M_EXPECTED_EQ(serializer.getSize(), sizeof(double)*2 + sizeof(int) + sizeof(unsigned)
+                                            + 4*sizeof(BinarySerializer::ElementSize))
     M_EXPECTED_EQ(r1, n1)
     M_EXPECTED_EQ(r2, n2)
     M_EXPECTED_EQ(r3, n3)
@@ -123,7 +127,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, String)
     const std::string in3("123...string...321");
     const std::string in4("");
     std::string out1, out2, out3, out4;
-    size_t size = in1.size() + in2.size() + in3.size() + in4.size() + sizeof(uint64_t)*4;
+    size_t size = in1.size() + in2.size() + in3.size() + in4.size() + sizeof(BinarySerializer::ElementSize)*4;
 
     // Write, read.
     serializer.write(in1, in2, in3, in4);
@@ -206,8 +210,6 @@ M_DEFINE_UNIT_TEST(BinarySerializer, VectorTrivial)
     //M_EXPECTED_EQ(v1, r1)
 }
 
-
-
 M_DEFINE_UNIT_TEST(BinarySerializer, Serializable)
 {
     class TestSer : public Serializable
@@ -262,6 +264,60 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Serializable)
     M_EXPECTED_EQ(result, serializer.getDataHexString())
 }
 
+M_DEFINE_UNIT_TEST(BinarySerializer, File)
+{
+    // Serializer.
+    BinarySerializer serializer;
+
+    // Hex result.
+    const std::string result("00 00 00 00 00 00 00 12 74 78 74 2e 65 6c 69 66 5f 74 73 65 74 5f 70 6d 65 74 00 00 00 "
+                             "00 00 00 00 3f 48 65 6c 6c 6f 20 64 61 72 6b 6e 65 73 73 20 6d 79 20 6f 6c 64 20 66 72 "
+                             "69 65 6e 64 21 0a 49 27 76 65 20 63 6f 6d 65 20 74 6f 20 74 61 6c 6b 20 77 69 74 68 20 "
+                             "79 6f 75 20 61 67 61 69 6e 2e");
+
+    // Create a temporary file with some content.
+    std::string filename = "temp_test_file.txt";
+    std::string file_content = "Hello darkness my old friend!\nI've come to talk with you again.";
+    std::ofstream temp_file(filename, std::ios::binary);
+    temp_file.write(file_content.c_str(), static_cast<long long>(file_content.size()));
+    temp_file.close();
+
+    // Serialize the file.
+    size_t ser_size = serializer.writeFile(filename);
+
+    // Delete the file.
+    remove(filename.c_str());
+
+    std::cout<<serializer.getDataHexString();
+
+    // Deserialize the file.
+    serializer.readFile("");
+
+    // Open the file.
+    std::ifstream output(filename);
+
+    // Check the file.
+    if(!output.is_open())
+    {
+        M_FORCE_FAIL()
+        return;
+    }
+
+    // Read the deserialized content from the output stream.
+    std::string deserialized_content((std::istreambuf_iterator<char>(output)),
+                                     std::istreambuf_iterator<char>());
+
+    // Verify the results.
+    M_EXPECTED_EQ(ser_size, sizeof(BinarySerializer::ElementSize)*2 + file_content.size() + filename.size())
+    M_EXPECTED_EQ(deserialized_content, file_content)
+
+    // Delete the file.
+    output.close();
+    remove(filename.c_str());
+}
+
+
+
 M_DEFINE_UNIT_TEST(BinarySerializer, TrivialIntensive)
 {
     // WARNING: This test is not efficient on purpose.
@@ -304,9 +360,8 @@ int main()
     M_REGISTER_UNIT_TEST(BinarySerializer, ArrayTrivial)
 
     M_REGISTER_UNIT_TEST(BinarySerializer, Serializable)
-
+    M_REGISTER_UNIT_TEST(BinarySerializer, File)
     M_REGISTER_UNIT_TEST(BinarySerializer, TrivialIntensive)
-
 
     // Run the unit tests.
     M_RUN_UNIT_TESTS()

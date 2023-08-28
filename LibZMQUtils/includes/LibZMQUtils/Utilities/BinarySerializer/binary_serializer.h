@@ -45,6 +45,8 @@
 #include <cstring>
 #include <mutex>
 #include <atomic>
+#include <fstream>
+#include <istream>
 #include <vector>
 // =====================================================================================================================
 
@@ -172,8 +174,8 @@ public:
  * - **Strings:** Standard C++ strings are supported, and their size information is stored to facilitate
  *   deserialization.
  *
- * - **Vectors of Trivially Copyable and Trivial Types:** Vectors containing trivially copyable and trivial types can
- *    be serialized/deserialized directly.
+ * - **Vectors and arrays of Trivially Copyable and Trivial Types:** Vectors containing trivially copyable and trivial
+ *   types can be serialized/deserialized directly.
  *
  * - **Subclasses of the Serializable Class (properly implemented):** Classes that inherit from the Serializable
  *   interface and provide proper implementations of the `serialize`, `deserialize`, and `serializedSize` methods.
@@ -189,11 +191,8 @@ public:
  * Before using this class with unsupported data types, appropriate checks should be added to ensure they meet the
  * necessary conditions for serialization and deserialization.
  *
- * @warning This class assumes a certain byte order (either big endian or little endian) for the data being serialized
- * or deserialized. It's important to be aware of the byte order in the context the data will be used. Therefore,
- * consider detecting the machine's byte order and adjust the reversal accordingly if using this class in a context
- * with different native byte order. However, this is usually not a problem with modern platforms, which typically use
- * the same byte order (little-endian).
+ * @note This class will detect the machine's byte order and will adjust the reversal accordingly if using this
+ * class in a context with different native byte order.
  *
  * @see Serializable
  */
@@ -402,9 +401,27 @@ public:
      * @note The types being deserialized must meet the required conditions, such as being trivially copyable and
      * trivial, directly supported by this class, or being a subclass of the Serializable interface.
      */
-    template<typename T, typename... Args,
-             typename = std::enable_if_t<!trait_has_nullptr_t<T, Args...>::value>>
+    template<typename T, typename... Args, typename = std::enable_if_t<!trait_has_nullptr_t<T, Args...>::value>>
     size_t write(const T& value, const Args&... args);
+
+    /**
+     * @brief Serializes a file and its associated metadata into the binary stream.
+     *
+     * This function reads the content of the specified file, its name and size, and serializes them into the binary
+     * serializer. It calculates the total size required for the serialized data and reserves the necessary space in
+     * the serializer's buffer. The file content, size, and name are serialized in the order: size of filename,
+     * filename, size of file content, file content.
+     *
+     * @param in_filenamepath The path to the file to be serialized (with the filename included).
+     *
+     * @return The total size in bytes that the serialized file and metadata occupy.
+     *
+     * @throw std::runtime_error If the file can't be opened for serialization.
+     *
+     * @note The function serializes the file content as binary data and does not perform any conversion or
+     * transformation on the file content itself.
+     */
+    size_t writeFile(const std::string& in_filenamepath);
 
     /**
      * @brief Variadic template function to read multiple data types at once from the internal buffer.
@@ -439,6 +456,8 @@ public:
      */
     template<typename T, typename... Args>
     void read(T& value, Args&... args);
+
+    void readFile(const std::string& out_filepath);
 
 private:
 
@@ -517,6 +536,8 @@ private:
     // For vectors of trivial types.
     template<typename T>
     size_t writeSingle(const std::vector<T>& v);
+
+
 
     // -----------------------------------------------------------------------------------------------------------------
 

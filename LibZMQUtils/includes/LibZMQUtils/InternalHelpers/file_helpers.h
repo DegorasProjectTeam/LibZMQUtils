@@ -23,11 +23,11 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file unit_test.h
- * @brief This file contains the declaration of the UnitTest class and related.
+ * @file file_helpers.h
+ * @brief This file contains several helper tools related with files and directories.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2308.2
+ * @version 2305.1
 ***********************************************************************************************************************/
 
 // =====================================================================================================================
@@ -36,165 +36,28 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
-#include <unistd.h>
-#include <iostream>
-#include <sstream>
-#include <list>
-#include <map>
-#include <vector>
+#include <string>
+#include <fstream>
 // =====================================================================================================================
 
-// LIBDPSLR INCLUDES
+// ZMQUTILS INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/Global/libzmqutils_global.h"
-#include <LibZMQUtils/Utilities/utils.h>
 // =====================================================================================================================
 
-// DPSLR NAMESPACES
+// ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
-namespace testing{
+namespace helpers{
+namespace files{
 // =====================================================================================================================
 
+// Directories related helper functions.
+// ---------------------------------------------------------------------------------------------------------------------
 
-struct LIBZMQUTILS_EXPORT TestLog
-{
+std::string getCurrentDir();
 
-public:
+std::string getFileName(const std::string& filePath);
 
-    TestLog(const std::string& module, const std::string& test, const std::string &det_ex,
-            bool passed, const utils::HRTimePointStd &tp, long long elapsed);
-
-    TestLog(const TestLog&) = default;
-
-    std::string makeLog(const std::string& storage_path = std::string()) const;
-
-    const std::string& getModuleName() const;
-
-    bool getResult() const;
-
-    ~TestLog() = default;
-
-private:
-
-    std::string formatResult() const;
-
-    // Stringstreams.
-    std::string module_;
-    std::string test_;
-    std::string det_ex_;
-    bool passed_;
-    std::string tp_str_;
-    long long elapsed_;
-};
-
-
-class LIBZMQUTILS_EXPORT TestSummary
-{
-
-public:
-
-    TestSummary();
-
-    void setSessionName(const std::string& name);
-
-    void addLog(const TestLog& log);
-
-    void clear();
-
-    void makeSummary(bool show = true, const std::string& storage_path = std::string()) const;
-
-    ~TestSummary() = default;
-
-private:
-
-    std::multimap<std::string, TestLog> test_logs_;
-    std::string session_;
-    unsigned n_pass_;
-    unsigned n_fail_;
-};
-
-class LIBZMQUTILS_EXPORT TestBase
-{
-public:
-
-    virtual ~TestBase() = default;
-
-protected:
-
-    TestBase(const std::string& name);
-
-public:
-
-    bool forceFail()
-    {
-        return false;
-    }
-
-    template<typename T, typename = std::enable_if_t<!std::is_floating_point<T>::value>>
-    bool expectEQ(const T& arg1, const T& arg2)
-    {
-        bool result = (arg1 == arg2);
-        return result;
-    }
-
-    template<typename T, typename = std::enable_if_t<!std::is_floating_point<T>::value>>
-    bool expectNE(const T& arg1, const T& arg2)
-    {
-        bool result = (arg1 != arg2);
-        return result;
-    }
-
-    template<typename T, typename = std::enable_if_t<std::is_floating_point<T>::value>>
-    bool expectEQ(const T& arg1, const T& arg2, const T& tolerance = std::numeric_limits<T>::epsilon())
-    {
-        return std::abs(arg1 - arg2) <= tolerance;
-    }
-
-    template<typename T, typename = std::enable_if_t<std::is_floating_point<T>::value>>
-    bool expectNE(const T& arg1, const T& arg2, const T& tolerance = std::numeric_limits<T>::epsilon())
-    {
-        return std::abs(arg1 - arg2) > tolerance;
-    }
-
-    virtual void runTest();
-
-    std::string test_name_;
-    bool result_;
-};
-
-
-
-class LIBZMQUTILS_EXPORT UnitTest
-{
-
-public:
-
-    // Deleting the copy constructor.
-    UnitTest(const UnitTest& obj) = delete;
-
-    static UnitTest& instance();
-
-    void setSessionName(std::string&& session);
-
-    void addTest(std::pair<std::string, TestBase*> p);
-
-    void runTests();
-
-    void clear();
-
-    virtual ~UnitTest();
-
-private:
-
-    UnitTest() = default;
-
-    // Members.
-    std::multimap<std::string, TestBase*> test_dict_;
-    TestSummary summary_;
-    std::string session_;
-
-};
-
-}} // END NAMESPACES.
+}}} // END NAMESPACES
 // =====================================================================================================================
