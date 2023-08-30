@@ -200,7 +200,7 @@ class LIBZMQUTILS_EXPORT BinarySerializer
 {
 public:
 
-    using ElementSize = std::uint64_t;
+    using SizeUnit = std::uint64_t;
 
     /// Enumeration representing the byte order (endianness) of data.
     enum class Endianess
@@ -213,7 +213,7 @@ public:
      * @brief Construct a new Binary Serializer object with a given capacity.
      * @param capacity The initial capacity of the serializer. Default is 1024.
      */
-    BinarySerializer(size_t capacity = 1024);
+    BinarySerializer(SizeUnit capacity = 1024);
 
     /**
      * @brief Construct a new Binary Serializer object and load the given data.
@@ -221,13 +221,13 @@ public:
      * @param size Size of the data to load.
      * @warning The @a src parameter is a void pointer, so be careful.
      */
-    BinarySerializer(void* src, size_t size);
+    BinarySerializer(void* src, SizeUnit size);
 
     /**
      * @brief Reserve memory for the serializer.
      * @param size The size of memory to reserve.
      */
-    void reserve(size_t size);
+    void reserve(SizeUnit size);
 
     /**
      * @brief Load data into the serializer.
@@ -235,7 +235,7 @@ public:
      * @param size Size of the data to load.
      * @warning The @a data parameter is a void pointer, so be careful.
      */
-    void loadData(void *src, size_t size);
+    void loadData(void *src, SizeUnit size);
 
     /**
      * @brief Clear the data held by the serializer.
@@ -258,7 +258,7 @@ public:
      * @param[out] size The size of the data.
      * @return Raw pointer to the data.
      */
-    std::byte* release(size_t& size);
+    std::byte* release(SizeUnit& size);
 
     /**
      * @brief Move the unique pointer to the data held by the serializer and return it.
@@ -271,13 +271,13 @@ public:
      * @param[out] size The size of the data.
      * @return Unique pointer to the data.
      */
-    std::unique_ptr<std::byte> moveUnique(size_t& size);
+    std::unique_ptr<std::byte> moveUnique(SizeUnit& size);
 
     /**
      * @brief Get the current size of the data held by the serializer.
      * @return The current size of the data.
      */
-    size_t getSize() const;
+    SizeUnit getSize() const;
 
     /**
      * @brief Check whether all data has been read.
@@ -326,7 +326,7 @@ public:
      *   int x = 42;
      *   double y = 3.14;
      *   std::unique_ptr<std::byte> serializedData;
-     *   size_t size = BinarySerializer::fastSerialization(serializedData, x, y);
+     *   SizeUnit size = BinarySerializer::fastSerialization(serializedData, x, y);
      * @endcode
      *
      * @tparam Args Variadic template argument for types.
@@ -335,7 +335,7 @@ public:
      * @return The size of the serialized data.
      */
     template<typename... Args>
-    static size_t fastSerialization(std::unique_ptr<std::byte>& out, const Args&... args);
+    static SizeUnit fastSerialization(std::unique_ptr<std::byte>& out, const Args&... args);
 
     /**
      * @brief A static function that deserializes binary data into its original data items.
@@ -369,7 +369,7 @@ public:
      * @note This function must always read all the data of the buffer.
      */
     template<typename... Args>
-    static void fastDeserialization(void* src, size_t size, Args&... args);
+    static void fastDeserialization(void* src, SizeUnit size, Args&... args);
 
     /**
      * @brief Serializes the given values into the binary stream.
@@ -402,7 +402,7 @@ public:
      * trivial, directly supported by this class, or being a subclass of the Serializable interface.
      */
     template<typename T, typename... Args, typename = std::enable_if_t<!trait_has_nullptr_t<T, Args...>::value>>
-    size_t write(const T& value, const Args&... args);
+    SizeUnit write(const T& value, const Args&... args);
 
     /**
      * @brief Serializes a file and its associated metadata into the binary stream.
@@ -421,7 +421,7 @@ public:
      * @note The function serializes the file content as binary data and does not perform any conversion or
      * transformation on the file content itself.
      */
-    size_t writeFile(const std::string& in_filenamepath);
+    SizeUnit writeFile(const std::string& in_filenamepath);
 
     /**
      * @brief Variadic template function to read multiple data types at once from the internal buffer.
@@ -450,6 +450,7 @@ public:
      * behavior will occur. Also, this function should not be used with rvalue references.
      *
      * @throw std::out_of_range If you read beyond the size of the stored data.
+     * @throw std::logic_error If the serialized value size is greater than type for storage.
      *
      * @note The types being deserialized must meet the required conditions, such as being trivially copyable and
      * trivial, directly supported by this class, or being a subclass of the Serializable interface.
@@ -457,6 +458,20 @@ public:
     template<typename T, typename... Args>
     void read(T& value, Args&... args);
 
+    /**
+     * @brief Deserializes and writes the content of a previously serialized file to a new file.
+     *
+     * This function reads the serialized data from the internal buffer and deserializes it to reconstruct the content
+     * of a previously serialized file. It then writes the deserialized content to a new file in the specified path.
+     *
+     * @param out_filepath The path of the new file to be created.
+     *
+     * @throws std::out_of_range If there's not enough data left to read the size of the filename or file content.
+     * @throws std::runtime_error If the file for can't be opened or if an empty filename is encountered.
+     *
+     * @note This function assumes that the serialized data in the internal buffer corresponds to a previously
+     * serialized file created using the `writeFile` function.
+     */
     void readFile(const std::string& out_filepath);
 
 private:
@@ -471,11 +486,12 @@ private:
     template <typename... Args>
     struct is_container<std::vector<Args...>> : std::true_type {};
 
-    template <typename T, std::size_t N>
+    template <typename T, SizeUnit N>
     struct is_container<std::array<T, N>> : std::true_type {};
 
     // -----------------------------------------------------------------------------------------------------------------
 
+    // Internal function to determine the endianess of the system.
     static Endianess determineEndianess();
 
     // Internal function to check if the type is trivially copiable.
@@ -488,23 +504,31 @@ private:
 
     // Internal size calculator function.
     template<typename T>
-    static std::uint64_t calcTotalSize(const T& data);
+    static SizeUnit calcTotalSize(const T& data);
+
+    // Internal size calculator function for vectors.
+    template<typename T>
+    static SizeUnit calcTotalSize(const std::vector<T>& data);
+
+    // Internal size calculator function for arrays.
+    template<typename T, size_t L>
+    static SizeUnit calcTotalSize(const std::array<T, L>& data);
 
     // Internal binary serialization/deserialization helper function.
     template<typename T, typename C>
-    static void binarySerializeDeserialize(const T* src, size_t data_size_bytes, C* dst, bool reverse);
+    static void binarySerializeDeserialize(const T* src, SizeUnit data_size_bytes, C* dst, bool reverse);
 
     // Internal binary serialization helper function.
     template<typename T, typename C>
-    void binarySerialize(const T* src, size_t data_size_bytes, C* dst);
+    void binarySerialize(const T* src, SizeUnit data_size_bytes, C* dst);
 
     // Internal binary deserialization helper function.
     template<typename T, typename C>
-    void binaryDeserialize(const T *src, size_t data_size_bytes, C *dst);
+    void binaryDeserialize(const T *src, SizeUnit data_size_bytes, C *dst);
 
     // Recursive writing helper.
     template<typename T, typename... Args>
-    size_t writeRecursive(const T& value, const Args&... args);
+    void writeRecursive(const T& value, const Args&... args);
 
     // Recursive reaad helper.
     template<typename T, typename... Args>
@@ -520,24 +544,22 @@ private:
             !is_container<T>::value &&
             !std::is_base_of_v<Serializable, T> &&
             !std::is_same_v<std::nullptr_t &&, T> &&
-            !std::is_pointer_v<T>, size_t>
+            !std::is_pointer_v<T>, void>
     writeSingle(const T& obj);
 
     // For writing Serializable objects.
-    size_t writeSingle(const Serializable& obj);
+    void writeSingle(const Serializable& obj);
 
     // For writing strings.
-    size_t writeSingle(const std::string& str);
+    void writeSingle(const std::string& str);
 
     // For arrays of trivial types.
-    template<typename T, size_t L>
-    size_t writeSingle(const std::array<T, L>& arr);
+    template<typename T, SizeUnit L>
+    void writeSingle(const std::array<T, L>& arr);
 
     // For vectors of trivial types.
     template<typename T>
-    size_t writeSingle(const std::vector<T>& v);
-
-
+    void writeSingle(const std::vector<T>& v);
 
     // -----------------------------------------------------------------------------------------------------------------
 
@@ -545,12 +567,11 @@ private:
 
     // Generic reading.
     template<typename T>
-    typename std::enable_if<
+    typename std::enable_if_t<
             !is_container<T>::value &&
             !std::is_base_of_v<Serializable, T> &&
             !std::is_same_v<std::nullptr_t &&, T> &&
-            !std::is_pointer_v<T>,
-        void>::type
+            !std::is_pointer_v<T>, void>
     readSingle(T& value);
 
     // For read Serializable objects.
@@ -563,18 +584,22 @@ private:
     template<typename T, size_t L>
     void readSingle(std::array<T, L>& arr);
 
+    // For vectors of trivial types.
+    template<typename T>
+    void readSingle(std::vector<T>& v);
+
     // -----------------------------------------------------------------------------------------------------------------
 
     // Internal containers and variables.
-    std::unique_ptr<std::byte[]> data_;      ///< Internal data pointer.
-    std::atomic<size_t> size_;               ///< Current size of the data.
-    std::atomic<size_t> capacity_;           ///< Current capacity.
-    std::atomic<size_t> offset_;             ///< Offset when reading.
-    Endianess endianess_;                    ///< Represent the endianess of the system.
-    mutable std::mutex mtx_;                 ///< Mutex for thread safety
+    std::unique_ptr<std::byte[]> data_;   ///< Internal data pointer.
+    std::atomic<SizeUnit> size_;          ///< Current size of the data.
+    std::atomic<SizeUnit> capacity_;      ///< Current capacity.
+    std::atomic<SizeUnit> offset_;        ///< Offset when reading.
+    Endianess endianess_;                 ///< Represent the endianess of the system.
+    mutable std::mutex mtx_;              ///< Mutex for thread safety
 };
 
-}} // END NAMESPACES.git s
+}} // END NAMESPACES
 // =====================================================================================================================
 
 // TEMPLATES INCLUDES

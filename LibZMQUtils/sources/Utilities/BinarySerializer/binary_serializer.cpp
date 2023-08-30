@@ -57,7 +57,7 @@ namespace utils{
 
 Serializable::~Serializable(){}
 
-BinarySerializer::BinarySerializer(size_t capacity) :
+BinarySerializer::BinarySerializer(SizeUnit capacity) :
         data_(new std::byte[capacity]),
         size_(0),
         capacity_(capacity),
@@ -65,7 +65,7 @@ BinarySerializer::BinarySerializer(size_t capacity) :
         endianess_(this->determineEndianess())
 {}
 
-BinarySerializer::BinarySerializer(void *src, size_t size) :
+BinarySerializer::BinarySerializer(void *src, SizeUnit size) :
     data_(nullptr),
     size_(0),
     capacity_(0),
@@ -76,7 +76,7 @@ BinarySerializer::BinarySerializer(void *src, size_t size) :
     this->loadData(src, size);
 }
 
-void BinarySerializer::reserve(size_t size)
+void BinarySerializer::reserve(SizeUnit size)
 {
     if (size > this->capacity_)
     {
@@ -89,7 +89,7 @@ void BinarySerializer::reserve(size_t size)
     }
 }
 
-void BinarySerializer::loadData(void* src, size_t size)
+void BinarySerializer::loadData(void* src, SizeUnit size)
 {
     if(src != nullptr)
     {
@@ -124,7 +124,7 @@ std::unique_ptr<std::byte> BinarySerializer::moveUnique()
     return std::unique_ptr<std::byte>(this->data_.release());
 }
 
-std::unique_ptr<std::byte> BinarySerializer::moveUnique(size_t& size)
+std::unique_ptr<std::byte> BinarySerializer::moveUnique(SizeUnit& size)
 {
     size = this->size_;
     return this->moveUnique();
@@ -139,13 +139,13 @@ std::byte* BinarySerializer::release()
     return this->data_.release();
 }
 
-std::byte *BinarySerializer::release(size_t& size)
+std::byte *BinarySerializer::release(SizeUnit& size)
 {
     size = this->size_;
     return this->release();
 }
 
-size_t BinarySerializer::getSize() const
+BinarySerializer::SizeUnit BinarySerializer::getSize() const
 {
     return this->size_;
 }
@@ -168,7 +168,7 @@ std::string BinarySerializer::getDataHexString() const
     return ss.str();
 }
 
-size_t BinarySerializer::writeFile(const std::string &in_filenamepath)
+BinarySerializer::SizeUnit BinarySerializer::writeFile(const std::string &in_filenamepath)
 {
     // Get the filename.
     std::string filename = helpers::files::getFileName(in_filenamepath);
@@ -182,14 +182,14 @@ size_t BinarySerializer::writeFile(const std::string &in_filenamepath)
 
     // Get the size of the file.
     file.seekg(0, std::ios::end);
-    const std::uint64_t file_size = static_cast<size_t>(file.tellg());
+    const SizeUnit file_size = static_cast<SizeUnit>(file.tellg());
     file.seekg(0, std::ios::beg);
 
     // Get the size of the filename.
-    std::uint64_t filename_size = filename.size();
+    SizeUnit filename_size = filename.size();
 
     // Get the total size.
-    const std::uint64_t total_size = sizeof(ElementSize) + filename_size + sizeof(ElementSize) + file_size;
+    const SizeUnit total_size = sizeof(SizeUnit) + filename_size + sizeof(SizeUnit) + file_size;
 
     // Reserve space.
     this->reserve(this->size_ + total_size);
@@ -198,16 +198,16 @@ size_t BinarySerializer::writeFile(const std::string &in_filenamepath)
     std::lock_guard<std::mutex> lock(this->mtx_);
 
     // Serialize name size.
-    BinarySerializer::binarySerialize(&filename_size, sizeof(ElementSize), this->data_.get() + size_);
-    this->size_ += sizeof(ElementSize);
+    BinarySerializer::binarySerialize(&filename_size, sizeof(SizeUnit), this->data_.get() + size_);
+    this->size_ += sizeof(SizeUnit);
 
     // Serialize name string.
     BinarySerializer::binarySerialize(filename.data(), filename_size, this->data_.get() + size_);
     this->size_ += filename_size;
 
     // Serialize file size.
-    BinarySerializer::binarySerialize(&file_size, sizeof(ElementSize), this->data_.get() + size_);
-    this->size_ += sizeof(ElementSize);
+    BinarySerializer::binarySerialize(&file_size, sizeof(SizeUnit), this->data_.get() + size_);
+    this->size_ += sizeof(SizeUnit);
 
     // Serialize the file.
     file.read(reinterpret_cast<char*>(this->data_.get() + this->size_), static_cast<long long>(file_size));
@@ -226,15 +226,15 @@ void BinarySerializer::readFile(const std::string& out_filepath)
     std::lock_guard<std::mutex> lock(this->mtx_);
 
     // Ensure that there's enough data left to read the size of the filename.
-    if (this->offset_ + sizeof(ElementSize) > this->size_)
+    if (this->offset_ + sizeof(SizeUnit) > this->size_)
         throw std::out_of_range("BinarySerializer: Not enough data left to read the size of the filename.");
 
     // Read the size of the filename.
     std::uint64_t filename_size;
-    BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, sizeof(ElementSize), &filename_size);
+    BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, sizeof(SizeUnit), &filename_size);
 
     // Update the offset.
-    this->offset_ += sizeof(ElementSize);
+    this->offset_ += sizeof(SizeUnit);
 
     // Check if the filename is empty.
     if(filename_size == 0)
@@ -251,15 +251,15 @@ void BinarySerializer::readFile(const std::string& out_filepath)
     this->offset_ += filename_size;
 
     // Ensure that there's enough data left to read the size of the file.
-    if (this->offset_ + sizeof(ElementSize) > this->size_)
+    if (this->offset_ + sizeof(SizeUnit) > this->size_)
         throw std::out_of_range("BinarySerializer: Not enough data left to read the size of the file.");
 
     // Read the size of the file content.
     std::uint64_t file_size;
-    BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, sizeof(ElementSize), &file_size);
+    BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, sizeof(SizeUnit), &file_size);
 
     // Update the offset.
-    this->offset_ += sizeof(ElementSize);
+    this->offset_ += sizeof(SizeUnit);
 
     // Check if the file is empty.
     if(file_size == 0)
@@ -303,36 +303,27 @@ std::string BinarySerializer::toJsonString() const
     return ss.str();
 }
 
-size_t BinarySerializer::writeSingle(const Serializable &obj)
+void BinarySerializer::writeSingle(const Serializable &obj)
 {
     // Serialize the object.
-    return obj.serialize(*this);
+    obj.serialize(*this);
 }
 
-size_t BinarySerializer::writeSingle(const std::string& str)
+void BinarySerializer::writeSingle(const std::string& str)
 {
     // String size.
-    std::uint64_t str_size = str.size();
-
-    // Get the size of the data.
-    std::uint64_t total_size = BinarySerializer::calcTotalSize(str);
-
-    // Reserve space.
-    this->reserve(this->size_ + total_size);
+    SizeUnit str_size = str.size();
 
     // Lock guard.
     std::lock_guard<std::mutex> lock(this->mtx_);
 
     // Serialize size.
-    BinarySerializer::binarySerialize(&str_size, sizeof(ElementSize), this->data_.get() + size_);
-    this->size_ += sizeof(ElementSize);
+    BinarySerializer::binarySerialize(&str_size, sizeof(SizeUnit), this->data_.get() + size_);
+    this->size_ += sizeof(SizeUnit);
 
     // Serialize string.
     BinarySerializer::binarySerialize(str.data(), str_size, this->data_.get() + size_);
     this->size_ += str_size;
-
-    // Return the writed size.
-    return total_size;
 }
 
 void BinarySerializer::readSingle(Serializable &obj)
@@ -351,15 +342,15 @@ void BinarySerializer::readSingle(std::string &str)
     std::lock_guard<std::mutex> lock(this->mtx_);
 
     // Ensure that there's enough data left to read the size of the string.
-    if (this->offset_ + sizeof(ElementSize) > this->size_)
+    if (this->offset_ + sizeof(SizeUnit) > this->size_)
         throw std::out_of_range("BinarySerializer: Not enough data left to read the size of the string.");
 
     // Read the size of the string.
-    std::uint64_t size;
-    BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, sizeof(ElementSize), &size);
+    SizeUnit size;
+    BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, sizeof(SizeUnit), &size);
 
     // Update the offset.
-    this->offset_ += sizeof(ElementSize);
+    this->offset_ += sizeof(SizeUnit);
 
     // Check if the string is empty.
     if(size == 0)

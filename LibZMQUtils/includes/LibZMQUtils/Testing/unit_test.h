@@ -126,33 +126,111 @@ protected:
 
 public:
 
+    // Type traits.
+    template <typename T>
+    struct is_container : std::false_type {};
+
+    template <typename... Args>
+    struct is_container<std::vector<Args...>> : std::true_type {};
+
+    template <typename T, size_t N>
+    struct is_container<std::array<T, N>> : std::true_type {};
+
     bool forceFail()
     {
         return false;
     }
 
-    template<typename T, typename = std::enable_if_t<!std::is_floating_point<T>::value>>
-    bool expectEQ(const T& arg1, const T& arg2)
+    template<typename T>
+    typename std::enable_if_t<
+            !is_container<T>::value &&
+            !std::is_floating_point_v<T>, bool>
+    expectEQ(const T& arg1, const T& arg2)
     {
         bool result = (arg1 == arg2);
         return result;
     }
 
-    template<typename T, typename = std::enable_if_t<!std::is_floating_point<T>::value>>
-    bool expectNE(const T& arg1, const T& arg2)
+    template<typename T>
+    typename std::enable_if_t<
+            !is_container<T>::value &&
+            std::is_floating_point_v<T>, bool>
+    expectEQ(const T& arg1, const T& arg2, const T& tolerance = std::numeric_limits<T>::epsilon())
+    {
+        return std::abs(arg1 - arg2) <= tolerance;
+    }
+
+    template<typename T>
+    typename std::enable_if_t<
+            !std::is_floating_point_v<T>, bool>
+    expectEQ(const std::vector<T>& v1, const std::vector<T>& v2)
+    {
+        if (v1.size() != v2.size())
+            return false;
+
+        for (size_t i = 0; i < v1.size(); ++i)
+        {
+            if (v1[i] != v2[i])
+                return false;
+        }
+        return true;
+    }
+
+    template<typename T>
+    typename std::enable_if_t<
+            std::is_floating_point_v<T>, bool>
+    expectEQ(const std::vector<T>& v1, const std::vector<T>& v2,  const T& tol = std::numeric_limits<T>::epsilon())
+    {
+        if (v1.size() != v2.size())
+            return false;
+
+        for (size_t i = 0; i < v1.size(); ++i)
+        {
+            if (std::abs(v1[i] - v2[i]) > tol)
+                return false;
+        }
+        return true;
+    }
+
+    template <typename T, size_t N>
+    typename std::enable_if_t<!std::is_floating_point_v<T>, bool>
+    expectEQ(const std::array<T, N>& arr1, const std::array<T, N>& arr2)
+    {
+        for (size_t i = 0; i < N; ++i)
+        {
+            if (arr1[i] != arr2[i])
+                return false;
+        }
+        return true;
+    }
+
+    template <typename T, size_t N>
+    typename std::enable_if_t<std::is_floating_point_v<T>, bool>
+    expectEQ(const std::array<T, N>& arr1, const std::array<T, N>& arr2, const T& tol = std::numeric_limits<T>::epsilon())
+    {
+        for (size_t i = 0; i < N; ++i)
+        {
+            if (std::abs(arr1[i] - arr2[i]) > tol)
+                return false;
+        }
+        return true;
+    }
+
+    template<typename T>
+    typename std::enable_if_t<
+            !is_container<T>::value &&
+            !std::is_floating_point_v<T>, bool>
+    expectNE(const T& arg1, const T& arg2)
     {
         bool result = (arg1 != arg2);
         return result;
     }
 
-    template<typename T, typename = std::enable_if_t<std::is_floating_point<T>::value>>
-    bool expectEQ(const T& arg1, const T& arg2, const T& tolerance = std::numeric_limits<T>::epsilon())
-    {
-        return std::abs(arg1 - arg2) <= tolerance;
-    }
-
-    template<typename T, typename = std::enable_if_t<std::is_floating_point<T>::value>>
-    bool expectNE(const T& arg1, const T& arg2, const T& tolerance = std::numeric_limits<T>::epsilon())
+    template<typename T>
+    typename std::enable_if_t<
+            !is_container<T>::value &&
+            std::is_floating_point_v<T>, bool>
+    expectNE(const T& arg1, const T& arg2, const T& tolerance = std::numeric_limits<T>::epsilon())
     {
         return std::abs(arg1 - arg2) > tolerance;
     }

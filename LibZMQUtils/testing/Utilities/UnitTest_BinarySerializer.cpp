@@ -42,7 +42,6 @@ using zmqutils::utils::Serializable;
 // =====================================================================================================================
 
 // Basic tests.
-
 M_DECLARE_UNIT_TEST(BinarySerializer, Trivial)
 M_DECLARE_UNIT_TEST(BinarySerializer, String)
 M_DECLARE_UNIT_TEST(BinarySerializer, ArrayTrivial)
@@ -51,7 +50,6 @@ M_DECLARE_UNIT_TEST(BinarySerializer, Serializable)
 M_DECLARE_UNIT_TEST(BinarySerializer, File)
 
 // Other tests.
-
 M_DECLARE_UNIT_TEST(BinarySerializer, TrivialIntensive)
 
 // Implementations.
@@ -83,7 +81,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Trivial)
     // Checking.
     M_EXPECTED_EQ(serializer.getDataHexString(), result)
     M_EXPECTED_EQ(serializer.getSize(), sizeof(double)*2 + sizeof(int) + sizeof(unsigned)
-                                            + 4*sizeof(BinarySerializer::ElementSize))
+                                            + 4*sizeof(BinarySerializer::SizeUnit))
     M_EXPECTED_EQ(r1, n1)
     M_EXPECTED_EQ(r2, n2)
     M_EXPECTED_EQ(r3, n3)
@@ -127,7 +125,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, String)
     const std::string in3("123...string...321");
     const std::string in4("");
     std::string out1, out2, out3, out4;
-    size_t size = in1.size() + in2.size() + in3.size() + in4.size() + sizeof(BinarySerializer::ElementSize)*4;
+    size_t size = in1.size() + in2.size() + in3.size() + in4.size() + sizeof(BinarySerializer::SizeUnit)*4;
 
     // Write, read.
     serializer.write(in1, in2, in3, in4);
@@ -197,17 +195,27 @@ M_DEFINE_UNIT_TEST(BinarySerializer, ArrayTrivial)
 
 M_DEFINE_UNIT_TEST(BinarySerializer, VectorTrivial)
 {
+    // Serializer.
     BinarySerializer serializer;
-    std::string result("40 40 c0 00 00 00 00 00 40 8e c4 00 00 00 00 00");
 
-    std::vector<long double> v1 = {34.32315L, 45L, 23.34L, -876.3L, 12345L};
+    // Data.
+    const std::vector<long double> v1 = {34.32315L, -423423785.434334534242L, 23.34L, -876.3L, 12345L};
+    const std::vector<int> v2 = {-2, -1, 0, 1, 2, 3, 4, 5, 6, 7 ,8 ,9 ,10, 11, 12, -13, -14, -15, -16, 20};
     std::vector<long double> r1;
+    std::vector<int> r2;
+    size_t size1 = v1.size()*sizeof(long double) + sizeof(BinarySerializer::SizeUnit)*2;
+    size_t size2 = v2.size()*sizeof(int) + sizeof(BinarySerializer::SizeUnit)*2;
 
-   // serializer.write(v1);
-   // serializer.read(r1);
+    // Write, read.
+    serializer.write(v1);
+    serializer.write(v2);
+    serializer.read(r1);
+    serializer.read(r2);
 
-   // M_EXPECTED_EQ(serializer.getDataHexString(), result)
-    //M_EXPECTED_EQ(v1, r1)
+    // Checking.
+    M_EXPECTED_EQ(size1 + size2, serializer.getSize())
+    M_EXPECTED_EQ(v1, r1)
+    M_EXPECTED_EQ(v2, r2)
 }
 
 M_DEFINE_UNIT_TEST(BinarySerializer, Serializable)
@@ -236,7 +244,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Serializable)
             return (sizeof(uint64_t)*2 + sizeof(double) + this->str_.length());
         }
 
-        bool operator ==(const TestSer& other) const
+        inline bool operator ==(const TestSer& other) const
         {
             static constexpr double epsilon = 1e-9;
             if (std::abs(number_ - other.number_) > epsilon) return false;
@@ -248,18 +256,22 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Serializable)
         std::string str_;
     };
 
+    // Serializer.
     BinarySerializer serializer;
+
+    // Hex result.
     std::string result("00 00 00 00 00 00 00 08 c0 7c b5 58 e2 19 65 2c 00 00 00 00 00 00 00 1e 2e 2e 2e "
                        "6f 67 6e 65 76 20 6f 64 6e 61 6c 6f 76 20 79 20 79 6f 76 20 6f 64 6e 61 6c 6f 56");
 
+    // Data.
     TestSer test_in(-459.3342, "Volando voy y volando vengo...");
     TestSer test_out;
 
-
+    // Write, read.
     serializer.write(test_in);
-
     serializer.read(test_out);
 
+    // Checking.
     M_EXPECTED_EQ(test_in, test_out)
     M_EXPECTED_EQ(result, serializer.getDataHexString())
 }
@@ -288,8 +300,6 @@ M_DEFINE_UNIT_TEST(BinarySerializer, File)
     // Delete the file.
     remove(filename.c_str());
 
-    std::cout<<serializer.getDataHexString();
-
     // Deserialize the file.
     serializer.readFile("");
 
@@ -308,7 +318,8 @@ M_DEFINE_UNIT_TEST(BinarySerializer, File)
                                      std::istreambuf_iterator<char>());
 
     // Verify the results.
-    M_EXPECTED_EQ(ser_size, sizeof(BinarySerializer::ElementSize)*2 + file_content.size() + filename.size())
+    M_EXPECTED_EQ(serializer.getDataHexString(), result)
+    M_EXPECTED_EQ(ser_size, sizeof(BinarySerializer::SizeUnit)*2 + file_content.size() + filename.size())
     M_EXPECTED_EQ(deserialized_content, file_content)
 
     // Delete the file.
@@ -358,7 +369,7 @@ int main()
     M_REGISTER_UNIT_TEST(BinarySerializer, Trivial)
     M_REGISTER_UNIT_TEST(BinarySerializer, String)
     M_REGISTER_UNIT_TEST(BinarySerializer, ArrayTrivial)
-
+    M_REGISTER_UNIT_TEST(BinarySerializer, VectorTrivial)
     M_REGISTER_UNIT_TEST(BinarySerializer, Serializable)
     M_REGISTER_UNIT_TEST(BinarySerializer, File)
     M_REGISTER_UNIT_TEST(BinarySerializer, TrivialIntensive)

@@ -445,7 +445,7 @@ ServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
         this->updateClientLastConnection(request.client_uuid);
 
         // Get the command.
-        if (msg_command.size() == sizeof(utils::BinarySerializer::ElementSize) + sizeof(CommandType))
+        if (msg_command.size() == sizeof(utils::BinarySerializer::SizeUnit) + sizeof(CommandType))
         {
             // Auxiliar command container.
             std::int32_t raw_command;
