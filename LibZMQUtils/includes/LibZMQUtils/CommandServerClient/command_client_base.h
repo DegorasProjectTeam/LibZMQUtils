@@ -131,25 +131,7 @@ private:
 
     ClientResult recvFromSocket(CommandReply&);
 
-    void deleteSockets()
-    {
-        // Delete the pointers.
-        if(this->client_socket_)
-        {
-            delete this->client_socket_;
-            this->client_socket_ = nullptr;
-        }
-        if(this->req_close_socket_)
-        {
-            delete this->req_close_socket_;
-            this->req_close_socket_ = nullptr;
-        }
-        if(this->rep_close_socket_)
-        {
-            delete this->rep_close_socket_;
-            this->rep_close_socket_ = nullptr;
-        }
-    }
+    void deleteSockets();
 
     void internalStopClient();
 

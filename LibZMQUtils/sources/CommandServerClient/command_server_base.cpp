@@ -407,8 +407,6 @@ ServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
         return ServerResult::INTERNAL_ZMQ_ERROR;
     }
 
-
-
     // Check if we want to close the server.
     if(recv_result && multipart_msg.size() == 1 && multipart_msg.begin()->empty() && !this->flag_server_working_)
         return ServerResult::COMMAND_OK;
@@ -427,15 +425,10 @@ ServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
         zmq::message_t msg_command = multipart_msg.pop();
 
         // First get the uuid data.
-        if (msg_uuid.size() == UUID::kUUIDSize)
+        if (msg_uuid.size() == UUID::kUUIDSize + sizeof(utils::BinarySerializer::SizeUnit)*2)
         {
             std::array<std::byte, 16> uuid_bytes;
-
-            const std::byte* data_bytes = reinterpret_cast<const std::byte*>(msg_uuid.data());
-
-
-            std::copy(data_bytes, data_bytes + msg_uuid.size(), uuid_bytes.begin());
-
+            utils::BinarySerializer::fastDeserialization(msg_uuid.data(), msg_uuid.size(), uuid_bytes);
             request.client_uuid = UUID(uuid_bytes);
         }
         else

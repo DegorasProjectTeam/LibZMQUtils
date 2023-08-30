@@ -1,26 +1,57 @@
+/***********************************************************************************************************************
+ *   LibZMQUtils (ZMQ Utilitites Library): A libre library with ZMQ related useful utilities.                          *
+ *                                                                                                                     *
+ *   Copyright (C) 2023 Degoras Project Team                                                                           *
+ *                      < Ángel Vera Herrera, avera@roa.es - angeldelaveracruz@gmail.com >                             *
+ *                      < Jesús Relinque Madroñal >                                                                    *
+ *                                                                                                                     *
+ *   This file is part of LibZMQUtils.                                                                                 *
+ *                                                                                                                     *
+ *   Licensed under the European Union Public License (EUPL), Version 1.2 or subsequent versions of the EUPL license   *
+ *   as soon they will be approved by the European Commission (IDABC).                                                 *
+ *                                                                                                                     *
+ *   This project is free software: you can redistribute it and/or modify it under the terms of the EUPL license as    *
+ *   published by the IDABC, either Version 1.2 or, at your option, any later version.                                 *
+ *                                                                                                                     *
+ *   This project is distributed in the hope that it will be useful. Unless required by applicable law or agreed to in *
+ *   writing, it is distributed on an "AS IS" basis, WITHOUT ANY WARRANTY OR CONDITIONS OF ANY KIND; without even the  *
+ *   implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the EUPL license to check specific   *
+ *   language governing permissions and limitations and more details.                                                  *
+ *                                                                                                                     *
+ *   You should use this project in compliance with the EUPL license. You should have received a copy of the license   *
+ *   along with this project. If not, see the license at < https://eupl.eu/ >.                                         *
+ **********************************************************************************************************************/
 
+/** ********************************************************************************************************************
+ * @file command_client_base.cpp
+ * @brief This file contains the implementation of the CommandClientBase class and related.
+ * @author Degoras Project Team
+ * @copyright EUPL License
+ * @version 2308.2
+***********************************************************************************************************************/
+
+// C++ INCLUDES
+// =====================================================================================================================
 #include <zmq/zmq.hpp>
 #include <zmq/zmq_addon.hpp>
-
-#include <iostream>
-
 #include <iostream>
 #include <string>
 #include <cstring>
 #include <cstdlib>
 #include <algorithm>
+// =====================================================================================================================
 
+// ZMQUTILS INCLUDES
+// =====================================================================================================================
 #include "LibZMQUtils/CommandServerClient/command_client_base.h"
 #include "LibZMQUtils/Utilities/utils.h"
 #include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
+// =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
 // =====================================================================================================================
-
-
-
 
 CommandClientBase::CommandClientBase(const std::string& server_endpoint,
                                      const std::string& client_name,
@@ -46,7 +77,7 @@ CommandClientBase::CommandClientBase(const std::string& server_endpoint,
 
     // Check if we have active interfaces.
     if(interfcs.empty())
-        throw std::invalid_argument("CommandClientBase: No active network interface found.");
+        throw std::invalid_argument("CommandClientBase: No active network interfaces found.");
 
     // If no interface name provided, use the first active one.
     if (interf_name.empty())
@@ -242,21 +273,7 @@ ClientResult CommandClientBase::sendCommand(const RequestData& request, CommandR
         // Internal send callback.
         this->onSendingCommand(request);
 
-//        bool more = multipart_msg.size() > 0;
-//        while (more)
-//        {
-//            auto msg = multipart_msg.pop();
-//            more = multipart_msg.size() > 0;
-//            this->client_socket_->send(msg,  zmq::send_flags::none);
-//        }
-
-//        auto msg_1 = multipart_msg.pop();
-//        this->client_socket_->send(msg_1, zmq::send_flags::sndmore);
-        //auto msg_2 = multipart_msg.pop();
-        //this->client_socket_->send(msg_2, zmq::send_flags::none);
-        // Send the multiple messages.
-
-        //multipart_msg.pop();
+        // Send the msg.
         multipart_msg.send(*this->client_socket_);
     }
     catch (const zmq::error_t &error)
@@ -332,87 +349,6 @@ bool CommandClientBase::waitForClose(std::chrono::milliseconds timeout)
         return client_close_cv_.wait_for(lock, timeout, [this]{ return this->flag_client_closed_.load(); });
     }
 }
-
-
-//ClientResult CommandClientBase::recvFromSocket(CommandReply& reply)
-//{
-//    // Result variable.
-//    ClientResult result = ClientResult::COMMAND_OK;
-
-//    // Containers.
-//    bool recv_result;
-//    zmq::multipart_t multipart_msg;
-
-//    // Try to receive data. If an execption is thrown, receiving fails and an error code is generated.
-//    try
-//    {
-//        // Wait the reply.
-//        recv_result = multipart_msg.recv(*this->client_socket_);
-
-
-
-
-
-
-//    }
-//    catch(zmq::error_t& error)
-//    {
-//        // Check if we want too close the client.
-//        // The error code is for ZMQ EFSM error.
-//        if(error.num() == common::kZmqEFSMError && !this->flag_client_working_)
-//            return ClientResult::CLIENT_STOPPED;
-
-//        // Else, call to error callback.
-//        this->onClientError(error, "Error while receiving a reply.");
-//        return ClientResult::INTERNAL_ZMQ_ERROR;
-//    }
-
-//    // Check for empty msg or timeout reached.
-//    if (multipart_msg.empty() && !recv_result)
-//    {
-//        // Call to the timeout callback
-//        return ClientResult::TIMEOUT_REACHED;
-//    }
-//    else if (multipart_msg.empty())
-//        return ClientResult::EMPTY_MSG;
-
-//    // Check the multipart msg size.
-//    if (multipart_msg.size() == 1 || multipart_msg.size() == 2)
-//    {
-//        // Get the multipart data.
-//        zmq::message_t msg_res = multipart_msg.pop();
-
-//        // Get the command.
-//        if (msg_res.size()== sizeof(ServerCommand))
-//        {
-//            utils::BinarySerializer::fastDeserialization(msg_res.data(), msg_res.size(), reply.result);
-//        }
-//        else
-//            return ClientResult::INVALID_MSG;
-
-//        // If there is still one more part, they are the parameters.
-//        if (multipart_msg.size() == 1)
-//        {
-//            // Get the message and the size.
-//            zmq::message_t msg_params = multipart_msg.pop();
-
-//            // Check the parameters.
-//            if(msg_params.size() > 0)
-//            {
-//                // Get and store the parameters data.
-//                utils::BinarySerializer serializer(msg_params.data(), msg_params.size());
-//                reply.params = serializer.moveUnique(reply.params_size);
-//            }
-//            else
-//                return ClientResult::EMPTY_PARAMS;
-//        }
-//    }
-//    else
-//        return ClientResult::INVALID_PARTS;
-
-//    // Return the result.
-//    return result;
-//}
 
 ClientResult CommandClientBase::recvFromSocket(CommandReply& reply)
 {
@@ -500,6 +436,26 @@ ClientResult CommandClientBase::recvFromSocket(CommandReply& reply)
             this->internalStopClient();
             return ClientResult::INTERNAL_ZMQ_ERROR;
         }
+    }
+}
+
+void CommandClientBase::deleteSockets()
+{
+    // Delete the pointers.
+    if(this->client_socket_)
+    {
+        delete this->client_socket_;
+        this->client_socket_ = nullptr;
+    }
+    if(this->req_close_socket_)
+    {
+        delete this->req_close_socket_;
+        this->req_close_socket_ = nullptr;
+    }
+    if(this->rep_close_socket_)
+    {
+        delete this->rep_close_socket_;
+        this->rep_close_socket_ = nullptr;
     }
 }
 
@@ -692,9 +648,8 @@ zmq::multipart_t CommandClientBase::prepareMessage(const RequestData &request)
     utils::BinarySerializer serializer;
 
     // Prepare the uuid message.
-    const std::array<std::byte, 16>& uuid_bytes = this->client_info_.uuid.getBytes();
-    zmq::message_t msg_uuid(uuid_bytes.size());
-    std::copy(uuid_bytes.begin(), uuid_bytes.end(), static_cast<std::byte*>(msg_uuid.data()));
+    size_t uuid_size = serializer.write(this->client_info_.uuid.getBytes());
+    zmq::message_t msg_uuid(serializer.release(), uuid_size);
 
     // Preprare the command message.
     size_t cmd_size = serializer.write(request.command);
