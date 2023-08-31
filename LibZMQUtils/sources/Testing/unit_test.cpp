@@ -4,7 +4,6 @@
 // =====================================================================================================================
 #include <future>
 #include <iomanip>
-#include <unistd.h>
 #include <iostream>
 #include <sstream>
 #include <list>
@@ -271,7 +270,14 @@ TestBase::TestBase(const std::string &name):
     result_(true)
 {}
 
+bool TestBase::forceFail()
+{
+    return false;
+}
+
 void TestBase::runTest(){}
+
+TestBase::~TestBase(){}
 
 UnitTest &UnitTest::instance()
 {
@@ -295,8 +301,6 @@ void UnitTest::clear()
     this->test_dict_.clear();
     this->summary_.clear();
 }
-
-UnitTest::~UnitTest() {}
 
 // =====================================================================================================================
 

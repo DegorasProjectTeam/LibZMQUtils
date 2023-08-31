@@ -36,7 +36,6 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
-#include <unistd.h>
 #include <iostream>
 #include <sstream>
 #include <list>
@@ -57,26 +56,23 @@ namespace testing{
 // =====================================================================================================================
 
 
-struct LIBZMQUTILS_EXPORT TestLog
+struct TestLog
 {
 
 public:
 
-    TestLog(const std::string& module, const std::string& test, const std::string &det_ex,
-            bool passed, const utils::HRTimePointStd &tp, long long elapsed);
+    LIBZMQUTILS_EXPORT TestLog(const std::string& module, const std::string& test, const std::string &det_ex,
+                               bool passed, const utils::HRTimePointStd &tp, long long elapsed);
 
-    TestLog(const TestLog&) = default;
+    LIBZMQUTILS_EXPORT std::string makeLog(const std::string& storage_path = std::string()) const;
 
-    std::string makeLog(const std::string& storage_path = std::string()) const;
+    LIBZMQUTILS_EXPORT const std::string& getModuleName() const;
 
-    const std::string& getModuleName() const;
-
-    bool getResult() const;
-
-    ~TestLog() = default;
+    LIBZMQUTILS_EXPORT bool getResult() const;
 
 private:
 
+    // Format result helper.
     std::string formatResult() const;
 
     // Stringstreams.
@@ -89,22 +85,20 @@ private:
 };
 
 
-class LIBZMQUTILS_EXPORT TestSummary
+class TestSummary
 {
 
 public:
 
-    TestSummary();
+    LIBZMQUTILS_EXPORT TestSummary();
 
-    void setSessionName(const std::string& name);
+    LIBZMQUTILS_EXPORT void setSessionName(const std::string& name);
 
-    void addLog(const TestLog& log);
+    LIBZMQUTILS_EXPORT void addLog(const TestLog& log);
 
-    void clear();
+    LIBZMQUTILS_EXPORT void clear();
 
-    void makeSummary(bool show = true, const std::string& storage_path = std::string()) const;
-
-    ~TestSummary() = default;
+    LIBZMQUTILS_EXPORT void makeSummary(bool show = true, const std::string& storage_path = std::string()) const;
 
 private:
 
@@ -114,15 +108,13 @@ private:
     unsigned n_fail_;
 };
 
-class LIBZMQUTILS_EXPORT TestBase
+class TestBase
 {
 public:
 
-    virtual ~TestBase() = default;
-
 protected:
 
-    TestBase(const std::string& name);
+    LIBZMQUTILS_EXPORT TestBase(const std::string& name);
 
 public:
 
@@ -136,10 +128,7 @@ public:
     template <typename T, size_t N>
     struct is_container<std::array<T, N>> : std::true_type {};
 
-    bool forceFail()
-    {
-        return false;
-    }
+    LIBZMQUTILS_EXPORT bool forceFail();
 
     template<typename T>
     typename std::enable_if_t<
@@ -235,7 +224,9 @@ public:
         return std::abs(arg1 - arg2) > tolerance;
     }
 
-    virtual void runTest();
+    LIBZMQUTILS_EXPORT virtual void runTest();
+
+    LIBZMQUTILS_EXPORT virtual ~TestBase();
 
     std::string test_name_;
     bool result_;
@@ -243,7 +234,7 @@ public:
 
 
 
-class LIBZMQUTILS_EXPORT UnitTest
+class UnitTest
 {
 
 public:
@@ -251,17 +242,15 @@ public:
     // Deleting the copy constructor.
     UnitTest(const UnitTest& obj) = delete;
 
-    static UnitTest& instance();
+    LIBZMQUTILS_EXPORT static UnitTest& instance();
 
-    void setSessionName(std::string&& session);
+    LIBZMQUTILS_EXPORT void setSessionName(std::string&& session);
 
-    void addTest(std::pair<std::string, TestBase*> p);
+    LIBZMQUTILS_EXPORT void addTest(std::pair<std::string, TestBase*> p);
 
-    void runTests();
+    LIBZMQUTILS_EXPORT void runTests();
 
-    void clear();
-
-    virtual ~UnitTest();
+    LIBZMQUTILS_EXPORT void clear();
 
 private:
 

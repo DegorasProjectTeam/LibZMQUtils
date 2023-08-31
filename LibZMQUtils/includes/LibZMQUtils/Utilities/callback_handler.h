@@ -73,7 +73,7 @@ namespace utils{
  * @warning Remember that the function invokeCallback can throw exceptions.
  *
  */
-class LIBZMQUTILS_EXPORT CallbackHandler
+class CallbackHandler
 {
 public:
 
@@ -84,7 +84,7 @@ public:
     /**
      * @brief Default constructor.
      */
-    CallbackHandler() = default;
+    LIBZMQUTILS_EXPORT CallbackHandler() = default;
 
     /**
      * @brief Deleted copy constructor.
@@ -109,7 +109,7 @@ public:
     /**
      * @brief Default destructor.
      */
-    ~CallbackHandler() = default;
+    LIBZMQUTILS_EXPORT ~CallbackHandler() = default;
 
     /**
      * @brief Register a member function as a callback replacing the old one.
@@ -131,7 +131,7 @@ public:
      * @brief Remove a callback using its id.
      * @param id - The id of the callback to be removed.
      */
-    void removeCallback(CallbackId id)
+    LIBZMQUTILS_EXPORT void removeCallback(CallbackId id)
     {
         std::lock_guard<std::mutex> lock(this->mtx_);
         this->callback_map_.erase(id);
@@ -142,7 +142,7 @@ public:
      * @param id - The id of the callback to be checked.
      * @return bool - true if callback exists, false otherwise.
      */
-    bool hasCallback(CallbackId id) const
+    LIBZMQUTILS_EXPORT bool hasCallback(CallbackId id) const
     {
         std::lock_guard<std::mutex> lock(this->mtx_);
         return this->callback_map_.find(id) != this->callback_map_.end();
@@ -151,7 +151,7 @@ public:
     /**
      * @brief Remove all registered callbacks.
      */
-    void clearCallbacks()
+    LIBZMQUTILS_EXPORT void clearCallbacks()
     {
         std::lock_guard<std::mutex> lock(this->mtx_);
         this->callback_map_.clear();

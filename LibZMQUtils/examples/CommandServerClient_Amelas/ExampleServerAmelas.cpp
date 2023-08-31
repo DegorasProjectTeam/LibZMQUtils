@@ -39,6 +39,7 @@
 // C++ INCLUDES
 // =====================================================================================================================
 #ifdef _WIN32
+#define NOMINMAX
 #include <Windows.h>
 #endif
 #include <iostream>
@@ -47,6 +48,7 @@
 #include <csignal>
 #include <limits>
 #include <any>
+#include <sstream>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
@@ -116,7 +118,8 @@ int main(int, char**)
     {
         // Log.
         std::cout << "Server start failed!! Press Enter to exit!" << std::endl;
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        std::cin.clear();
         return 1;
     }
 

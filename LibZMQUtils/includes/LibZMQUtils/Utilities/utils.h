@@ -76,7 +76,7 @@ using HRTimePointStd = std::chrono::time_point<std::chrono::high_resolution_cloc
 using SCTimePointStd =  std::chrono::steady_clock::time_point;
 // =====================================================================================================================
 
-struct LIBZMQUTILS_EXPORT NetworkAdapterInfo
+struct NetworkAdapterInfo
 {
     std::string id;
     std::string name;

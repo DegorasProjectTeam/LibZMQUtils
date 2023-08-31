@@ -54,7 +54,7 @@
 namespace zmqutils{
 // =====================================================================================================================
 
-class LIBZMQUTILS_EXPORT ZMQContextHandler
+class ZMQContextHandler
 {
 
 public:
@@ -62,9 +62,9 @@ public:
     // Aliases.
     using ContextHandlerReference = std::reference_wrapper<ZMQContextHandler>;
 
-    static ZMQContextHandler& getInstance();
+    LIBZMQUTILS_EXPORT static ZMQContextHandler& getInstance();
 
-    virtual ~ZMQContextHandler();
+    LIBZMQUTILS_EXPORT virtual ~ZMQContextHandler();
 
 protected:
 

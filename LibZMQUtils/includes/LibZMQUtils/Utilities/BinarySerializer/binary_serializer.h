@@ -196,7 +196,7 @@ public:
  *
  * @see Serializable
  */
-class LIBZMQUTILS_EXPORT BinarySerializer
+class BinarySerializer
 {
 public:
 
@@ -213,7 +213,7 @@ public:
      * @brief Construct a new Binary Serializer object with a given capacity.
      * @param capacity The initial capacity of the serializer. Default is 1024.
      */
-    BinarySerializer(SizeUnit capacity = 1024);
+    LIBZMQUTILS_EXPORT BinarySerializer(SizeUnit capacity = 1024);
 
     /**
      * @brief Construct a new Binary Serializer object and load the given data.
@@ -221,13 +221,13 @@ public:
      * @param size Size of the data to load.
      * @warning The @a src parameter is a void pointer, so be careful.
      */
-    BinarySerializer(void* src, SizeUnit size);
+    LIBZMQUTILS_EXPORT BinarySerializer(void* src, SizeUnit size);
 
     /**
      * @brief Reserve memory for the serializer.
      * @param size The size of memory to reserve.
      */
-    void reserve(SizeUnit size);
+    LIBZMQUTILS_EXPORT void reserve(SizeUnit size);
 
     /**
      * @brief Load data into the serializer.
@@ -235,55 +235,55 @@ public:
      * @param size Size of the data to load.
      * @warning The @a data parameter is a void pointer, so be careful.
      */
-    void loadData(void *src, SizeUnit size);
+    LIBZMQUTILS_EXPORT void loadData(void *src, SizeUnit size);
 
     /**
      * @brief Clear the data held by the serializer.
      */
-    void clearData();
+    LIBZMQUTILS_EXPORT void clearData();
 
     /**
      * @brief Reset the internal read offset.
      */
-    void resetReading();
+    LIBZMQUTILS_EXPORT void resetReading();
 
     /**
      * @brief Release the data held by the serializer and return a raw pointer to it.
      * @return Raw pointer to the data.
      */
-    std::byte* release();
+    LIBZMQUTILS_EXPORT std::byte* release();
 
     /**
      * @brief Release the data held by the serializer, return a raw pointer to it, and set the size variable.
      * @param[out] size The size of the data.
      * @return Raw pointer to the data.
      */
-    std::byte* release(SizeUnit& size);
+    LIBZMQUTILS_EXPORT std::byte* release(SizeUnit& size);
 
     /**
      * @brief Move the unique pointer to the data held by the serializer and return it.
      * @return Unique pointer to the data.
      */
-    std::unique_ptr<std::byte> moveUnique();
+    LIBZMQUTILS_EXPORT std::unique_ptr<std::byte> moveUnique();
 
     /**
      * @brief Move the unique pointer to the data held by the serializer, return it, and set the size variable.
      * @param[out] size The size of the data.
      * @return Unique pointer to the data.
      */
-    std::unique_ptr<std::byte> moveUnique(SizeUnit& size);
+    LIBZMQUTILS_EXPORT std::unique_ptr<std::byte> moveUnique(SizeUnit& size);
 
     /**
      * @brief Get the current size of the data held by the serializer.
      * @return The current size of the data.
      */
-    SizeUnit getSize() const;
+    LIBZMQUTILS_EXPORT SizeUnit getSize() const;
 
     /**
      * @brief Check whether all data has been read.
      * @return True if all data has been read, false otherwise.
      */
-    bool allReaded() const;
+    LIBZMQUTILS_EXPORT bool allReaded() const;
 
     /**
      * @brief Convert the internal state of the BinarySerializer to a JSON-formatted string.
@@ -305,13 +305,13 @@ public:
      *
      * @return A string representing the BinarySerializer object in JSON format.
      */
-    std::string toJsonString() const;
+    LIBZMQUTILS_EXPORT std::string toJsonString() const;
 
     /**
      * @brief Get a hex string representation of the data held by the serializer.
      * @return Hex string representation of the data.
      */
-    std::string getDataHexString() const;
+    LIBZMQUTILS_EXPORT std::string getDataHexString() const;
 
     /**
      * @brief A static function that serializes multiple input data items into binary data.
@@ -421,7 +421,7 @@ public:
      * @note The function serializes the file content as binary data and does not perform any conversion or
      * transformation on the file content itself.
      */
-    SizeUnit writeFile(const std::string& in_filenamepath);
+    LIBZMQUTILS_EXPORT SizeUnit writeFile(const std::string& in_filenamepath);
 
     /**
      * @brief Variadic template function to read multiple data types at once from the internal buffer.
@@ -472,9 +472,9 @@ public:
      * @note This function assumes that the serialized data in the internal buffer corresponds to a previously
      * serialized file created using the `writeFile` function.
      */
-    void readFile(const std::string& out_filepath);
+    LIBZMQUTILS_EXPORT void readFile(const std::string& out_filepath);
 
-private:
+protected:
 
     // -----------------------------------------------------------------------------------------------------------------
 
@@ -548,10 +548,10 @@ private:
     writeSingle(const T& obj);
 
     // For writing Serializable objects.
-    void writeSingle(const Serializable& obj);
+    LIBZMQUTILS_EXPORT void writeSingle(const Serializable& obj);
 
     // For writing strings.
-    void writeSingle(const std::string& str);
+    LIBZMQUTILS_EXPORT void writeSingle(const std::string& str);
 
     // For arrays of trivial types.
     template<typename T, SizeUnit L>
@@ -575,10 +575,10 @@ private:
     readSingle(T& value);
 
     // For read Serializable objects.
-    void readSingle(Serializable& obj);
+    LIBZMQUTILS_EXPORT void readSingle(Serializable& obj);
 
     // For read strings.
-    void readSingle(std::string& str);
+    LIBZMQUTILS_EXPORT void readSingle(std::string& str);
 
     // For arrays of trivial types.
     template<typename T, size_t L>

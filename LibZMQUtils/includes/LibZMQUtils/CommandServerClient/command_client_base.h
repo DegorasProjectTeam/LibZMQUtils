@@ -63,48 +63,48 @@ using common::CommandType;
 using common::RequestData;
 // =====================================================================================================================
 
-class LIBZMQUTILS_EXPORT CommandClientBase : public ZMQContextHandler
+class CommandClientBase : public ZMQContextHandler
 {
 
 public:
     
-    CommandClientBase(const std::string& server_endpoint,
+    LIBZMQUTILS_EXPORT CommandClientBase(const std::string& server_endpoint,
                       const std::string& client_name = "",
                       const std::string& interf_name = "");
     
-    bool startClient();
+    LIBZMQUTILS_EXPORT bool startClient();
 
-    void stopClient();
+    LIBZMQUTILS_EXPORT void stopClient();
 
-    bool resetClient();
+    LIBZMQUTILS_EXPORT bool resetClient();
 
-    void setAliveCallbacksEnabled(bool);
+    LIBZMQUTILS_EXPORT void setAliveCallbacksEnabled(bool);
 
-    void setAutomaticAliveEnabled(bool);
+    LIBZMQUTILS_EXPORT void disableAutoAlive();
 
-    const common::HostInfo& getClientInfo() const;
+    LIBZMQUTILS_EXPORT const common::HostInfo& getClientInfo() const;
 
-    const std::string& getServerEndpoint() const;
+    LIBZMQUTILS_EXPORT const std::string& getServerEndpoint() const;
 
-    const std::string& getClientName() const;
+    LIBZMQUTILS_EXPORT const std::string& getClientName() const;
 
-    bool isWorking() const;
+    LIBZMQUTILS_EXPORT bool isWorking() const;
 
-    ClientResult doConnect();
+    LIBZMQUTILS_EXPORT ClientResult doConnect(bool auto_alive = false);
 
-    ClientResult doDisconnect();
+    LIBZMQUTILS_EXPORT ClientResult doDisconnect();
 
-    ClientResult doAlive();
+    LIBZMQUTILS_EXPORT ClientResult doAlive();
 
-    ClientResult sendCommand(const RequestData&, CommandReply&);
+    LIBZMQUTILS_EXPORT ClientResult sendCommand(const RequestData&, CommandReply&);
 
-    bool waitForClose(std::chrono::milliseconds timeout = std::chrono::milliseconds::zero());
+    LIBZMQUTILS_EXPORT bool waitForClose(std::chrono::milliseconds timeout = std::chrono::milliseconds::zero());
 
     /**
      * @brief Virtual destructor.
      * This destructor is virtual to ensure proper cleanup when the derived class is destroyed.
      */
-    virtual ~CommandClientBase() override;
+    LIBZMQUTILS_EXPORT virtual ~CommandClientBase() override;
 
 protected:
 
@@ -127,7 +127,6 @@ protected:
     virtual void onSendingCommand(const RequestData&) = 0;
 
     virtual void onClientError(const zmq::error_t&, const std::string& ext_info) = 0;
-
 
 private:
 

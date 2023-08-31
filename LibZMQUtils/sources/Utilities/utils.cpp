@@ -28,7 +28,7 @@
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#include <Windows.h>
+#include <windows.h>
 #else
 #include <sys/socket.h>
 #include <ifaddrs.h>
@@ -101,8 +101,8 @@ std::vector<NetworkAdapterInfo> getHostIPsWithInterfaces()
                 char desc_ch[260];
                 char df_char = ' ';
 
-                WideCharToMultiByte(CP_ACP,0,adapter_addrs->FriendlyName,-1, f_name_ch,260, &df_char, NULL);
-                WideCharToMultiByte(CP_ACP,0,adapter_addrs->Description,-1, desc_ch,260, &df_char, NULL);
+                WideCharToMultiByte(CP_ACP,0,adapter_addrs->FriendlyName,-1, f_name_ch,260, &df_char, nullptr);
+                WideCharToMultiByte(CP_ACP,0,adapter_addrs->Description,-1, desc_ch,260, &df_char, nullptr);
 
                 NetworkAdapterInfo adaptr;
                 adaptr.id = std::string(adapter_addrs->AdapterName);
@@ -162,15 +162,15 @@ std::string timePointToString(const HRTimePointStd &tp, const std::string &forma
     HRTimePointStd::duration dur = tp.time_since_epoch();
     const time_t secs = duration_cast<std::chrono::seconds>(dur).count();
     const long long mill = duration_cast<std::chrono::milliseconds>(dur).count();
-    const unsigned long long ns = duration_cast<std::chrono::nanoseconds>(dur).count();
-    const unsigned long long s_ns = secs * 1e9;
-    const unsigned long long t_ns = (ns - s_ns);
+    const long long ns = duration_cast<std::chrono::nanoseconds>(dur).count();
+    const long long s_ns = secs * static_cast<long long>(1e9);
+    const long long t_ns = (ns - s_ns);
     // Format the duration.
     if (const std::tm *tm = (utc ? std::gmtime(&secs) : std::localtime(&secs)))
     {
         ss << std::put_time(tm, format.c_str());
         if(add_ms && !add_ns)
-            ss << '.' << std::setw(3) << std::setfill('0') << (mill - secs * 1e3);
+            ss << '.' << std::setw(3) << std::setfill('0') << (mill - secs * static_cast<long long>(1e3));
         else if(add_ns)
             ss << '.' << std::setw(9) << std::setfill('0') << t_ns;
     }

@@ -255,7 +255,7 @@ static constexpr std::array<const char*, 31>  ClientResultStr
 // COMMON STRUCTS
 // =====================================================================================================================
 
-struct LIBZMQUTILS_EXPORT HostInfo
+struct HostInfo
 {
     HostInfo() = default;
     
@@ -275,9 +275,9 @@ struct LIBZMQUTILS_EXPORT HostInfo
     utils::SCTimePointStd last_seen;   ///< Host client last connection time. Used by servers.
 };
 
-struct LIBZMQUTILS_EXPORT CommandRequest
+struct CommandRequest
 {
-    CommandRequest();
+    LIBZMQUTILS_EXPORT CommandRequest();
 
     utils::UUID client_uuid;
     ServerCommand command;
@@ -285,24 +285,24 @@ struct LIBZMQUTILS_EXPORT CommandRequest
     size_t params_size;
 };
 
-struct LIBZMQUTILS_EXPORT CommandReply
+struct CommandReply
 {
-    CommandReply();
+    LIBZMQUTILS_EXPORT CommandReply();
 
-    std::unique_ptr<std::byte> params;
-    size_t params_size;
-    ServerResult result;
+    std::unique_ptr<std::byte> params;   ///< Serialized parameters of the command.
+    size_t params_size;                  ///< Total serialized parameters size.
+    ServerResult result;                 ///< Reply result from the server.
 };
 
-struct LIBZMQUTILS_EXPORT RequestData
+struct RequestData
 {
-    RequestData(ServerCommand id);
+    LIBZMQUTILS_EXPORT RequestData(ServerCommand id);
 
-    RequestData();
+    LIBZMQUTILS_EXPORT RequestData();
 
     ServerCommand command;                   ///< Command to be sent.
-    std::unique_ptr<std::byte> params;
-    size_t params_size;
+    std::unique_ptr<std::byte> params;       ///< Serialized parameters of the command.
+    size_t params_size;                      ///< Total serialized parameters size.
 };
 
 // =====================================================================================================================

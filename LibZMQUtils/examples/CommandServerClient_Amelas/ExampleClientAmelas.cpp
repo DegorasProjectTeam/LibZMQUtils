@@ -126,27 +126,13 @@ void parseCommand(CommandClientBase &client, const std::string &command)
 
                 BinarySerializer serializer;
 
-
                 serializer.write(pos);
-
-                AltAzPos* posi;
-
-
 
                 std::cout<<serializer.toJsonString();
 
                 command_msg.params_size = BinarySerializer::fastSerialization(command_msg.params, pos);
 
-                std::cout<<"Sending size: " << command_msg.params_size <<std::endl;
-
-
                 std::cout<<std::endl;
-                std::cout<<std::endl;
-                std::cout<<std::endl;
-                std::cout<<std::endl;
-                std::cout<<std::endl;
-
-
             }
             else
             {
@@ -279,7 +265,6 @@ int main(int, char**)
 
     // Configure the client.
     client.setAliveCallbacksEnabled(false);
-    client.setAutomaticAliveEnabled(true);
 
     // Set the exit callback to the console handler for safety.
     zmqutils::internal_helpers::ConsoleConfig::setExitCallback(
@@ -326,13 +311,14 @@ int main(int, char**)
         else if(command == "auto_alive_en")
         {
             std::cout << "Enabling auto-alive..." << std::endl;
-            client.setAutomaticAliveEnabled(true);
+            client.doDisconnect();
+            client.doConnect(true);
             continue;
         }
         else if(command == "auto_alive_ds")
         {
             std::cout << "Disabling auto-alive..." << std::endl;
-            client.setAutomaticAliveEnabled(false);
+            client.disableAutoAlive();
             continue;
         }
         else if(command == "auto_alive_clbk_en")

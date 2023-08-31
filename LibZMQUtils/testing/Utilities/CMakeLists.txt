@@ -5,7 +5,6 @@ foreach(subdir ${subdirs})
   add_subdirectory(${subdir})
 endforeach()
 
-set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -std=c++17  -pthread -O3 -fopenmp")
 set(APP_NAME "UnitTest_BinarySerializer")
 set(SOURCES "UnitTest_BinarySerializer.cpp")
 set(LIBRARIES LibZMQUtils)

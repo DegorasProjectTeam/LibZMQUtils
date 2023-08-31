@@ -132,7 +132,7 @@ private:
  *          does not actually provide a non-deterministic random number generator. In such cases, the randomness of the
  *          generated UUIDs may be weaker and a random seed will be generated using a timestamp.
  */
-class LIBZMQUTILS_EXPORT UUIDGenerator
+class UUIDGenerator
 {
 public:
 

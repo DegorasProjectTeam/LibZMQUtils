@@ -11,6 +11,9 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
 
+# Set the standard
+set(CMAKE_CXX_STANDARD 17)
+
 # Configure the version.
 set(MAJOR_VERSION 1)
 set(MINOR_VERSION 2)
@@ -25,7 +28,14 @@ set(SHORT_NAME ZMQUtils)
 set(CMAKE_COLOR_MAKEFILE ON)
 
 # Set diferent paths for build and deployment.
-set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -std=c++17 -pthread -O3 -fopenmp")
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -std=c++17 -pthread -O3 -fopenmp")
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    # Do nothing.
+else()
+    message(FATAL_ERROR "Compiler not supported by default.")
+endif()
+
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -56,12 +66,36 @@ add_library(LibZMQUtils SHARED ${SOURCES} ${HEADERS} ${TEMPLTS} ${ALIAS})
 
 # Link libraries. For win32 only.
 if (WIN32)
-    target_link_libraries(LibZMQUtils PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/external/zmq/libs/x86_64/libsodium.dll
-        ${CMAKE_CURRENT_SOURCE_DIR}/external/zmq/libs/x86_64/libzmq-v142-mt-4_3_4.dll
-        ws2_32
-        iphlpapi
-    )
+
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+
+        target_link_libraries(LibZMQUtils PUBLIC
+            ${CMAKE_CURRENT_SOURCE_DIR}/external/zmq/libs/x86_64/libsodium.dll
+            ${CMAKE_CURRENT_SOURCE_DIR}/external/zmq/libs/x86_64/libzmq-v142-mt-4_3_4.dll
+            ws2_32
+            iphlpapi
+        )
+
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+
+        target_compile_definitions(LibZMQUtils PRIVATE -DLIBZMQUTILS_LIBRARY)
+        target_compile_options(LibZMQUtils PRIVATE /std:c++17 /openmp)
+
+        # Add include directories
+        target_include_directories(LibZMQUtils PRIVATE
+           ${CMAKE_SOURCE_DIR}/includes
+           "external/zmq/includes"
+        )
+
+        # Link libraries
+        target_link_libraries(LibZMQUtils PUBLIC
+           ${CMAKE_CURRENT_SOURCE_DIR}/external/zmq/libs/x86_64/libzmq-v142-mt-4_3_4.lib
+           ws2_32
+           iphlpapi
+        )
+
+    endif()
+
 endif()
 
 # Add the diferents subprojects directories.

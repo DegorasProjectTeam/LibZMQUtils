@@ -60,12 +60,12 @@ using common::ServerCommand;
 using utils::CallbackHandler;
 // =====================================================================================================================
 
-class LIBZMQUTILS_EXPORT ClbkCommandServerBase : public CommandServerBase,
+class ClbkCommandServerBase : public CommandServerBase,
                                                  public CallbackHandler
 {
 public:
 
-    ClbkCommandServerBase(unsigned port, const std::string& local_addr = "*");
+    LIBZMQUTILS_EXPORT ClbkCommandServerBase(unsigned port, const std::string& local_addr = "*");
 
     template<typename ClassT, typename RetT = void, typename... Args>
     void registerCallback(ServerCommand command, ClassT* object, RetT(ClassT::*callback)(Args...))
@@ -73,11 +73,11 @@ public:
         CallbackHandler::registerCallback(static_cast<CallbackHandler::CallbackId>(command), object, callback);
     }
 
-    void removeCallback(ServerCommand command);
+    LIBZMQUTILS_EXPORT void removeCallback(ServerCommand command);
 
-    bool hasCallback(ServerCommand command);
+    LIBZMQUTILS_EXPORT bool hasCallback(ServerCommand command);
 
-    virtual ~ClbkCommandServerBase() override;
+    LIBZMQUTILS_EXPORT virtual ~ClbkCommandServerBase() override;
 
 protected:
 

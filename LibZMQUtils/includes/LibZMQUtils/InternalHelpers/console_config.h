@@ -66,14 +66,14 @@ namespace internal_helpers{
 
 #ifdef _WIN32
 
-class LIBZMQUTILS_EXPORT ConsoleConfig
+class ConsoleConfig
 {
 public:
 
     using ExitConsoleCallback = std::function<void()>;
 
 
-    ConsoleConfig(bool apply_ctrl_handler = false, bool hide_cursor = false, bool input_proc = false)
+    LIBZMQUTILS_EXPORT ConsoleConfig(bool apply_ctrl_handler = false, bool hide_cursor = false, bool input_proc = false)
     {
         // Set the global close flag to false.
         ConsoleConfig::gCloseFlag = false;
@@ -103,17 +103,17 @@ public:
     }
 
     // Setter function for exit callback
-    static void setExitCallback(const ExitConsoleCallback& exit_callback)
+    LIBZMQUTILS_EXPORT static void setExitCallback(const ExitConsoleCallback& exit_callback)
     {
         ConsoleConfig::exit_callback_ = exit_callback;
     }
 
-    ~ConsoleConfig()
+    LIBZMQUTILS_EXPORT ~ConsoleConfig()
     {
         restoreConsole();
     }
 
-    void restoreConsole()
+    LIBZMQUTILS_EXPORT void restoreConsole()
     {
         // Restore original input and output modes
         SetConsoleMode(hStdin_, originalInputMode_);
@@ -121,7 +121,7 @@ public:
     }
 
     // Signal handler for safety ending.
-    static BOOL WINAPI consoleCtrlHandler(DWORD dw_ctrl_t)
+    LIBZMQUTILS_EXPORT static BOOL WINAPI consoleCtrlHandler(DWORD dw_ctrl_t)
     {
         WSADATA wsa_data;
         WSAStartup(MAKEWORD(2,2), &wsa_data);
@@ -144,7 +144,7 @@ public:
         return FALSE;
     }
 
-    static void waitForClose()
+    LIBZMQUTILS_EXPORT static void waitForClose()
     {
         std::unique_lock<std::mutex> lock(ConsoleConfig::gMtx);
         ConsoleConfig::gCloseCv.wait(lock, []{ return ConsoleConfig::gCloseFlag.load(); });
@@ -153,7 +153,6 @@ public:
     static inline std::condition_variable gCloseCv;
     static inline std::atomic_bool gCloseFlag;
     static inline std::mutex gMtx;
-
 
 private:
 

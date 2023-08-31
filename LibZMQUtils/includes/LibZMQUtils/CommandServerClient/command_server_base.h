@@ -220,7 +220,7 @@ using utils::UUID;
  *
  * @see ServerCommand, ServerResult, CommandRequest, CommandReply, CommandClientBase, onCustomCommandReceived
  */
-class LIBZMQUTILS_EXPORT CommandServerBase : public ZMQContextHandler
+class CommandServerBase : public ZMQContextHandler
 {
 
 public:
@@ -248,19 +248,21 @@ public:
      * @warning When specifying the `local_addr`, ensure it is a valid IP address present on the system.
      *          Incorrect or unavailable addresses may result in connection failures.
      */
-    CommandServerBase(unsigned port, const std::string& local_addr = "*", const std::string& server_name = "");
+    LIBZMQUTILS_EXPORT CommandServerBase(unsigned port,
+                                         const std::string& local_addr = "*",
+                                         const std::string& server_name = "");
 
     /**
      * @brief Get the port number used by the server for incoming connections.
      * @return A const reference to the port number of the server.
      */
-    const unsigned& getServerPort() const;
+    LIBZMQUTILS_EXPORT const unsigned& getServerPort() const;
 
     /**
      * @brief Get the server name.
      * @return A const reference to the name of the server.
      */
-    const std::string& getServerName() const;
+    LIBZMQUTILS_EXPORT const std::string& getServerName() const;
 
     /**
      * @brief Get the network adapter addresses used by the server.
@@ -270,7 +272,7 @@ public:
      *
      * @return A const reference to a vector of NetworkAdapterInfo objects.
      */
-    const std::vector<NetworkAdapterInfo> &getServerAddresses() const;
+    LIBZMQUTILS_EXPORT const std::vector<NetworkAdapterInfo> &getServerAddresses() const;
 
     /**
      * @brief Get the endpoint of the server.
@@ -280,7 +282,7 @@ public:
      *
      * @return A const reference to the server's endpoint.
      */
-    const std::string& getServerEndpoint() const;
+    LIBZMQUTILS_EXPORT const std::string& getServerEndpoint() const;
 
     /**
      * @brief Get the future associated with the server's worker thread.
@@ -291,7 +293,7 @@ public:
      *
      * @return A const reference to the server's worker thread future.
      */
-    const std::future<void>& getServerWorkerFuture() const;
+    LIBZMQUTILS_EXPORT const std::future<void>& getServerWorkerFuture() const;
 
     /**
      * @brief Get a const reference to the map of connected clients.
@@ -302,7 +304,7 @@ public:
      *
      * @return A const reference to the map of connected clients.
      */
-    const std::map<UUID, HostInfo> &getConnectedClients() const;
+    LIBZMQUTILS_EXPORT const std::map<UUID, HostInfo> &getConnectedClients() const;
 
     /**
      * @brief Check if the server is currently working.
@@ -313,7 +315,7 @@ public:
      *
      * @return True if the server is working, false otherwise.
      */
-    bool isWorking() const;
+    LIBZMQUTILS_EXPORT bool isWorking() const;
 
     /**
      * @brief Enables or disables the client's alive status checking.
@@ -327,7 +329,7 @@ public:
      *          that usually use this kind of servers. Disabling the client alive status check could result in
      *          unexpected behavior or system instability in case of sudden client disconnections or failures.
      */
-    void setClientStatusCheck(bool);
+    LIBZMQUTILS_EXPORT void setClientStatusCheck(bool);
 
     /**
      * @brief Enables or disables the server callbacks when an alive message is received.
@@ -341,7 +343,7 @@ public:
      *
      * @param [in] enabled Boolean flag that determines whether callbacks are enabled (true) or disabled (false).
      */
-    void setAliveCallbacksEnabled(bool);
+    LIBZMQUTILS_EXPORT void setAliveCallbacksEnabled(bool);
 
     /**
      * @brief Starts the command server.
@@ -351,7 +353,7 @@ public:
      *
      * @return True if the server started, false otherwise.
      */
-    bool startServer();
+    LIBZMQUTILS_EXPORT bool startServer();
 
     /**
      * @brief Stops the command server.
@@ -359,14 +361,14 @@ public:
      * If the server is already stopped, the function does nothing. Otherwise
      * deletes the ZMQ context and cleans up the connected clients.
      */
-    void stopServer();
+    LIBZMQUTILS_EXPORT void stopServer();
 
     /**
      * @brief Virtual destructor.
      *
      * This destructor is virtual to ensure proper cleanup when the derived class is destroyed.
      */
-    virtual ~CommandServerBase() override;
+    LIBZMQUTILS_EXPORT virtual ~CommandServerBase() override;
 
 protected:
 
@@ -543,7 +545,7 @@ protected:
      *          to avoid blocking the server's main thread. Consider using separate threads or
      *          asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onCustomCommandReceived(const CommandRequest&, CommandReply&);
+    LIBZMQUTILS_EXPORT virtual void onCustomCommandReceived(const CommandRequest&, CommandReply&);
 
     /**
      * @brief Base server error callback. Subclasses must override this function.
