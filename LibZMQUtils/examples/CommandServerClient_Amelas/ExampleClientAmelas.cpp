@@ -277,6 +277,10 @@ int main(int, char**)
 
     AmelasClient client(endpoint, "AMELAS EXAMPLE CLIENT");
 
+    // Configure the client.
+    client.setAliveCallbacksEnabled(false);
+    client.setAutomaticAliveEnabled(true);
+
     // Set the exit callback to the console handler for safety.
     zmqutils::internal_helpers::ConsoleConfig::setExitCallback(
         [&client](){client.stopClient();});
@@ -296,23 +300,52 @@ int main(int, char**)
     while(!zmqutils::internal_helpers::ConsoleConfig::gCloseFlag)
     {
         // Get the command and parameters.
-        std::cout<<"--------------------------------------------"<<std::endl;
+        std::cout<<"------------------------------------------------------"<<std::endl;
         std::cout<<"-- Commands --"<<std::endl;
         std::cout<<"- REQ_CONNECT:    0"<<std::endl;
         std::cout<<"- REQ_DISCONNECT: 1"<<std::endl;
         std::cout<<"- REQ_ALIVE:      2"<<std::endl;
         std::cout<<"- CUSTOM:         cmd param1 param2 ..."<<std::endl;
-        std::cout<<"--------------------------------------------"<<std::endl;
+        std::cout<<"-- Other --"<<std::endl;
+        std::cout<<"- Client exit:             exit"<<std::endl;
+        std::cout<<"- Enable auto-alive:       auto_alive_en"<<std::endl;
+        std::cout<<"- Disable auto-alive:      auto_alive_ds"<<std::endl;
+        std::cout<<"- Enable auto-alive clbk:  auto_alive_clbk_en"<<std::endl;
+        std::cout<<"- Disable auto-alive clbk: auto_alive_clbk_ds"<<std::endl;
+        std::cout<<"------------------------------------------------------"<<std::endl;
         std::cout<<"Write a command: ";
         std::getline(std::cin, command);
 
-        // Check for exit.
+        // Check for other commands.
         if(command == "exit")
         {
-            // Manual stop.
             std::cout << "Stopping the client..." << std::endl;
             client.stopClient();
             break;
+        }
+        else if(command == "auto_alive_en")
+        {
+            std::cout << "Enabling auto-alive..." << std::endl;
+            client.setAutomaticAliveEnabled(true);
+            continue;
+        }
+        else if(command == "auto_alive_ds")
+        {
+            std::cout << "Disabling auto-alive..." << std::endl;
+            client.setAutomaticAliveEnabled(false);
+            continue;
+        }
+        else if(command == "auto_alive_clbk_en")
+        {
+            std::cout << "Enabling auto-alive clbk..." << std::endl;
+            client.setAliveCallbacksEnabled(true);
+            continue;
+        }
+        else if(command == "auto_alive_clbk_ds")
+        {
+            std::cout << "Disabling auto-alive clbk..." << std::endl;
+            client.setAliveCallbacksEnabled(false);
+            continue;
         }
 
         // Break if we want to close the example program.

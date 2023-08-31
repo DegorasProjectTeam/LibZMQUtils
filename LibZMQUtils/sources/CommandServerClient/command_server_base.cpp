@@ -85,6 +85,8 @@ const std::future<void> &CommandServerBase::getServerWorkerFuture() const {retur
 const std::map<UUID, HostInfo> &CommandServerBase::getConnectedClients() const
 {return this->connected_clients_;}
 
+bool CommandServerBase::isWorking() const{return this->flag_server_working_;}
+
 void CommandServerBase::setClientStatusCheck(bool enable)
 {
     // Safe mutex lock
@@ -265,9 +267,6 @@ ServerResult CommandServerBase::execReqDisconnect(const CommandRequest& cmd_req)
 
 void CommandServerBase::serverWorker()
 {
-
-    // TODO Stop the server if a ZMQ error occurrs.
-
     // Containers.
     ServerResult result;
     CommandRequest request;

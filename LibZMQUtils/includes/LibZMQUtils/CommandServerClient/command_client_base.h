@@ -88,6 +88,8 @@ public:
 
     const std::string& getClientName() const;
 
+    bool isWorking() const;
+
     ClientResult doConnect();
 
     ClientResult doDisconnect();
@@ -129,7 +131,7 @@ protected:
 
 private:
 
-    ClientResult recvFromSocket(CommandReply&);
+    ClientResult recvFromSocket(CommandReply&repl, zmq::socket_t *recv_socket);
 
     void deleteSockets();
 

@@ -96,9 +96,9 @@ using utils::UUID;
  * request, and once it  receives one, it sends a reply. This cycle then repeats in a strict alternating order,
  * ensuring that each request receives a corresponding reply.
  *
- * This strict request-reply cycle is essential when controlling hardware devices or low-level software modules, where
- * the order of commands and their corresponding responses is critical. By ensuring a strict request-reply order, we
- * can maintain consistent control over the devices and modules and reduce the risk of command conflicts or overlaps.
+ * This strict request-reply cycle is essential when controlling certain hardware devices or low-level software modules,
+ * where the order of commands and their corresponding responses is critical. By ensuring a strict request-reply order,
+ * we can maintain consistent control over the devices and modules and reduce the risk of command conflicts or overlaps.
  *
  * In the extended pattern provided by this class, each request from the client is essentially a command that the
  * server must execute. To handle this, we define a set of commands that the client can send, and we provide
@@ -106,18 +106,21 @@ using utils::UUID;
  * command execution is then sent back to the client as the reply.
  *
  * By extending the pattern in this way, we create a flexible and robust framework for controlling a wide range of
- * devices and software modules, while maintaining the strict request-reply order that ensures reliable and consistent
- * operation.
+ * hardware devices and software modules, while maintaining the strict request-reply order that ensures reliable and
+ * consistent operation.
+ *
+ * It is important to mention that, for other cases in which the strict request-reply cycle is not necessary, other
+ * approaches could be more interesting, such as the use of an infrastructure based on RPC (Remote Procedure Call).
  *
  * @section Case Of Use
  *
  * This communication pattern is particularly beneficial when controlling generic hardware devices like PLC or
- * microcontroller based devices, FPGA devices, generic robots etc. Also can be used in specialized devices, like
- * telescope mounts, domes, SLR Range Gate Generators (RGG), etc.
+ * microcontroller based devices, FPGA devices, generic custom robots etc. Also can be used in specialized devices,
+ * like telescope mounts, domes, SLR Range Gate Generators (RGG), etc.
  *
  * In all these examples, the concatenation between replies and responses is crucial. For example, this base server is
  * used in the ROA SLR Station in San Fernando, Spain, for control the RGG, the telescope mount, dome, and other
- * specialized software modules.
+ * specialized low-level software modules.
  *
  * @section Design
  *
@@ -137,8 +140,7 @@ using utils::UUID;
  * the string representation of the commands and errors.
  *
  * Then, create an instance of your subclass, and use the startServer and stopServer methods to control the server's
- * operation. You can query the server's state and information using the various getters (getServerPort,
- * getServerAddresses, getServerEndpoint, getServerWorkerFuture, getConnectedClients, and isWorking). You can also use
+ * operation. You can query the server's state and information using the various getters. You can also use
  * setClientStatusCheck to control the checking of clients' alive status.
  *
  * A similar usage pattern applies to the CommandClientBase class, which is meant to interact with a CommandServerBase
@@ -146,9 +148,13 @@ using utils::UUID;
  * client behaviors. Therefore, a typical usage scenario involves creating subclassed instances of both classes
  * CommandServerBase and CommandClientBase, where the server handles commands sent by the client.
  *
+ * Remember that error handling must be done in the subclass. That is, if an unexpected error occurs on the server, the
+ * server will not try to resolve it itself, nor will it try to stop the server. The subclasses are in charge of this
+ * management, which can be different depending on each use case.
+ *
  * @section Hierarchy
  *
- * The following functions need to be overriden in your subclass::
+ * The following functions need to be overriden in your subclass:
  *
  * - validateCustomCommand(ServerCommand)
  *
@@ -174,9 +180,7 @@ using utils::UUID;
  *
  * Finally, also remember add the virtual destructor to the subclass.
  *
- * @note
- *
- * This class is not directly useful on its own. Instead, it is intended to be subclassed and its callback
+ * @note This class is not directly useful on its own. Instead, it is intended to be subclassed and its callback
  * methods overridden to implement the desired server behavior.
  *
  * @warning Client-Specific Data:
@@ -197,11 +201,14 @@ using utils::UUID;
  * the server's network connections using external means, like a firewall or VPN. Always ensure that the network
  * environment in which the server operates is secure.
  *
- * @warning Overridden Callbacks:
+ * @warning Overridden callbacks with computationally intensive operations:
  *
  * When creating a subclass, ensure that blocking or computationally intensive operations are not present within the
  * overridden callbacks. Blocking the server thread can affect the server's performance and responsiveness. If
  * complex tasks are necessary, consider performing them asynchronously or using separate threads.
+ *
+ * However, it is necessary to remember that this pattern is designed for the control of low-level hardware equipment
+ * and similar, so cases like the previous one should not be common.
  *
  * @todo Future Enhancements:
  *
@@ -306,7 +313,7 @@ public:
      *
      * @return True if the server is working, false otherwise.
      */
-    bool isWorking() const{return this->flag_server_working_;}
+    bool isWorking() const;
 
     /**
      * @brief Enables or disables the client's alive status checking.

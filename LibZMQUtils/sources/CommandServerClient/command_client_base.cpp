@@ -62,8 +62,9 @@ CommandClientBase::CommandClientBase(const std::string& server_endpoint,
     rep_close_socket_(nullptr),
     req_close_socket_(nullptr),
     flag_client_closed_(true),
-    flag_autoalive_enabled_(true),
-    flag_alive_callbacks_(true)
+    flag_client_working_(false),
+    flag_autoalive_enabled_(false),
+    flag_alive_callbacks_(false)
 {
     // Auxiliar variables and containers.
     std::string ip, hostname, pid;
@@ -176,8 +177,6 @@ bool CommandClientBase::internalResetClient()
         // Zmq client socket.
         this->client_socket_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::req);
         this->client_socket_->connect(this->server_endpoint_);
-        // Set timeout so socket will not wait for answer more than client alive timeout.
-        //this->client_socket_->set(zmq::sockopt::rcvtimeo, common::kDefaultServerAliveTimeoutMsec);
         this->client_socket_->set(zmq::sockopt::linger, 0);
 
         // Bind the REP close socket to an internal endpoint.
@@ -236,10 +235,12 @@ const std::string &CommandClientBase::getClientName() const
     return this->client_name_;
 }
 
+bool CommandClientBase::isWorking() const{return this->flag_client_working_;}
+
 void CommandClientBase::startAutoAlive()
 {
     this->flag_autoalive_enabled_ = true;
-    //this->auto_alive_future_ = std::async(std::launch::async, [this]{this->aliveWorker();});
+    this->auto_alive_future_ = std::async(std::launch::async, [this]{this->aliveWorker();});
 }
 
 void CommandClientBase::stopAutoAlive()
@@ -270,8 +271,9 @@ ClientResult CommandClientBase::sendCommand(const RequestData& request, CommandR
         // Prepare the multipart msg.
         zmq::multipart_t multipart_msg(this->prepareMessage(request));
 
-        // Internal send callback.
-        this->onSendingCommand(request);
+        // Call to the internal sending command callback.
+        if (static_cast<ServerCommand>(request.command) != ServerCommand::REQ_ALIVE || this->flag_alive_callbacks_)
+            this->onSendingCommand(request);
 
         // Send the msg.
         multipart_msg.send(*this->client_socket_);
@@ -286,12 +288,13 @@ ClientResult CommandClientBase::sendCommand(const RequestData& request, CommandR
 
     // Now we need to wait the server response.
 
-    // Call to the internal waiting command callback (check first the last request).
+    // Call to the internal waiting command callback.
     if (static_cast<ServerCommand>(request.command) != ServerCommand::REQ_ALIVE || this->flag_alive_callbacks_)
         this->onWaitingReply();
 
-    // Receive the data.    
-    fut_recv_ = std::async(std::launch::async, &CommandClientBase::recvFromSocket, this, std::ref(reply));
+    // Receive the data.
+    fut_recv_ = std::async(std::launch::async, &CommandClientBase::recvFromSocket, this,
+                           std::ref(reply), this->client_socket_);
 
     using namespace std::chrono_literals;
 
@@ -306,9 +309,8 @@ ClientResult CommandClientBase::sendCommand(const RequestData& request, CommandR
     }
 
     // Use the cv for notify the auto alive worker.
-    // TODO
-    //    if (this->flag_autoalive_enabled_)
-    //        this->auto_alive_cv_.notify_one();
+    if (this->flag_autoalive_enabled_)
+        this->auto_alive_cv_.notify_one();
 
     // Check if the client stopped.
     if (result == ClientResult::CLIENT_STOPPED)
@@ -350,12 +352,101 @@ bool CommandClientBase::waitForClose(std::chrono::milliseconds timeout)
     }
 }
 
-ClientResult CommandClientBase::recvFromSocket(CommandReply& reply)
+//ClientResult CommandClientBase::recvFromSocket(CommandReply& reply)
+//{
+//    // Prepare the poller.
+//    std::vector<zmq::pollitem_t> items = {
+//        { static_cast<void*>(*this->client_socket_), 0, ZMQ_POLLIN, 0 },
+//        { static_cast<void*>(*this->rep_close_socket_), 0, ZMQ_POLLIN, 0 }};
+
+//    // Start time for check the timeout.
+//    auto start = std::chrono::steady_clock::now();
+
+//    // Poller loop.
+//    while(true)
+//    {
+//        try
+//        {
+//            // Use zmq::poll to set a timeout for receiving a message
+//            zmq::poll(items.data(), items.size(), std::chrono::milliseconds(common::kDefaultServerAliveTimeoutMsec));
+
+//            // Check if we must to close.
+//            if(!this->flag_client_working_ || (items[1].revents & ZMQ_POLLIN))
+//                return ClientResult::CLIENT_STOPPED;
+
+//            // Calculate elapsed time.
+//            auto end = std::chrono::steady_clock::now();
+//            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+
+//            // Check for timeout.
+//            if (elapsed.count() >= common::kDefaultServerAliveTimeoutMsec)
+//                return ClientResult::TIMEOUT_REACHED;
+
+//            // We have data.
+//            if (items[0].revents & ZMQ_POLLIN)
+//            {
+//                // Message has been received, try to process it
+//                zmq::multipart_t multipart_msg;
+//                multipart_msg.recv(*this->client_socket_);
+
+//                // Check for empty msg or timeout reached.
+//                if (multipart_msg.empty())
+//                    return ClientResult::EMPTY_MSG;
+
+//                // Check the multipart msg size.
+//                if (multipart_msg.size() != 1 && multipart_msg.size() != 2)
+//                    return ClientResult::INVALID_PARTS;
+
+//                // Get the multipart data.
+//                zmq::message_t msg_res = multipart_msg.pop();
+
+//                // Check the result size.
+//                if (msg_res.size() != sizeof(utils::BinarySerializer::SizeUnit) + sizeof(common::ResultType))
+//                    return ClientResult::INVALID_MSG;
+
+//                // Get the command.
+//                utils::BinarySerializer::fastDeserialization(msg_res.data(), msg_res.size(), reply.result);
+
+//                // If there is still one more part, they are the parameters.
+//                if (multipart_msg.size() == 1)
+//                {
+//                    // Get the message and the size.
+//                    zmq::message_t msg_params = multipart_msg.pop();
+
+//                    // Check the parameters.
+//                    if(msg_params.size() == 0)
+//                        return ClientResult::EMPTY_PARAMS;
+
+//                    // Get and store the parameters data.
+//                    utils::BinarySerializer serializer(msg_params.data(), msg_params.size());
+//                    reply.params = serializer.moveUnique(reply.params_size);
+//                }
+
+//                // All ok.
+//                return ClientResult::COMMAND_OK;
+//            }
+//        }
+//        catch(zmq::error_t& error)
+//        {
+//            // Check if we want too close the client.
+//            // The error code is for ZMQ EFSM error.
+//            if(error.num() == common::kZmqEFSMError && !this->flag_client_working_)
+//                return ClientResult::CLIENT_STOPPED;
+
+//            // Call to the error callback and stop the client for safety.
+//            this->onClientError(error, "CommandClientBase: Error while receiving a reply. Stopping the client.");
+//            this->internalStopClient();
+//            return ClientResult::INTERNAL_ZMQ_ERROR;
+//        }
+//    }
+//}
+
+ClientResult CommandClientBase::recvFromSocket(CommandReply& reply, zmq::socket_t* recv_socket)
 {
     // Prepare the poller.
     std::vector<zmq::pollitem_t> items = {
-        { static_cast<void*>(*client_socket_), 0, ZMQ_POLLIN, 0 },
-        { static_cast<void*>(*rep_close_socket_), 0, ZMQ_POLLIN, 0 }};
+          { static_cast<void*>(*recv_socket), 0, ZMQ_POLLIN, 0 },
+          { static_cast<void*>(*this->rep_close_socket_), 0, ZMQ_POLLIN, 0 }};
 
     // Start time for check the timeout.
     auto start = std::chrono::steady_clock::now();
@@ -385,7 +476,7 @@ ClientResult CommandClientBase::recvFromSocket(CommandReply& reply)
             {
                 // Message has been received, try to process it
                 zmq::multipart_t multipart_msg;
-                multipart_msg.recv(*this->client_socket_);
+                multipart_msg.recv(*recv_socket);
 
                 // Check for empty msg or timeout reached.
                 if (multipart_msg.empty())
@@ -439,6 +530,7 @@ ClientResult CommandClientBase::recvFromSocket(CommandReply& reply)
     }
 }
 
+
 void CommandClientBase::deleteSockets()
 {
     // Delete the pointers.
@@ -485,105 +577,148 @@ void CommandClientBase::internalStopClient()
 
 void CommandClientBase::aliveWorker()
 {
-    // Mutex for the condiction variable.
-    std::mutex mtx;
-    std::unique_lock<std::mutex> lock(mtx);
+    // Result.
+    ClientResult result = ClientResult::COMMAND_OK;
 
     // Request and reply.
     RequestData request;
     CommandReply reply;
 
+    // Alive socket.
+    zmq::socket_t* alive_socket = nullptr;
+
+    // First time flag.
+    bool first_time = true;
+
     // Update the request.
     request.command = common::ServerCommand::REQ_ALIVE;
 
-//    // Create the ZMQ auxiliar alive socket.
-//    try
-//    {
-//        zmq::socket_t *alive_socket = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::req);
-//        alive_socket->connect(this->server_endpoint_);
-//        alive_socket->set(zmq::sockopt::rcvtimeo, 100);
-//        alive_socket->set(zmq::sockopt::linger, 0);
+    // Create the ZMQ auxiliar alive socket.
+    try
+    {
+        // Create the alive socket.
+        alive_socket = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::req);
+        alive_socket->connect(this->server_endpoint_);
+        alive_socket->set(zmq::sockopt::linger, 0);
+    }
+    catch (const zmq::error_t &error)
+    {
+        // Safe mutex lock
+        std::unique_lock<std::mutex> lock(this->mtx_);
 
-//    }
-//    catch (const zmq::error_t &error)
-//    {
+        // Call to the error callback and stop the client for safety.
+        this->onClientError(error, "CommandClientBase: Error while creating automatic alive worker. Stopping the client.");
+        if(alive_socket)
+            delete alive_socket;
+        this->flag_autoalive_enabled_ = false;
+        this->internalStopClient();
+        return;
+    }
 
-//        // Call to the internal callback.
-//        this->onClientError(error, "TODO");
+    // Worker alive loop.
+    while(this->flag_autoalive_enabled_)
+    {
+        // Mutex for cv.
+        std::mutex m;
+        std::unique_lock<std::mutex> lk(m);
 
-//        return;
-//    }
+        // Wait the for the timeout or the cv.
+        if(!first_time)
+        {
+            // Avoid unnecesary alive messages.
+            auto res = this->auto_alive_cv_.wait_for(lk, std::chrono::milliseconds(common::kClientAlivePeriodMsec));
+            if (std::cv_status::timeout != res)
+                continue;
+        }
+        else
+            first_time = false;
 
-//    // Worker alive loop.
-//    while(this->flag_autoalive_enabled_)
-//    {
-//        std::chrono::steady_clock::time_point bef;
-//        std::chrono::steady_clock::time_point aft;
+        // Check if the client is active.
+        if(!this->isWorking())
+            continue;
 
-//        bef = std::chrono::steady_clock::now();
+        // Send the command.
+        try
+        {
+            // Prepare the multipart msg. The msg id will be the same of the original client socket.
+            zmq::multipart_t multipart_msg(this->prepareMessage(request));
 
-//        do
+            // Call to the internal sending command callback.
+            if (this->flag_alive_callbacks_)
+                this->onSendingCommand(request);
+
+            // Send the msg.
+            multipart_msg.send(*alive_socket);
+        }
+        catch (const zmq::error_t &error)
+        {
+            // Safe mutex lock
+            std::unique_lock<std::mutex> lock(this->mtx_);
+
+            // Call to the error callback and stop the client for safety.
+            this->onClientError(error, "CommandClientBase: Error while sending automatic alive. Stopping the client.");
+            if(alive_socket)
+                delete alive_socket;
+            this->flag_autoalive_enabled_ = false;
+            this->internalStopClient();
+            return;
+        }
+
+        // Now we need to wait the server response.
+
+        // Call to the internal waiting command callback.
+        if(this->flag_alive_callbacks_)
+            this->onWaitingReply();
+
+        // Receive the data.
+        result = this->recvFromSocket(reply, alive_socket);
+
+//        fut_recv_ = std::async(std::launch::async, &CommandClientBase::recvFromSocket, this,
+//                               std::ref(reply), alive_socket);
+
+//        using namespace std::chrono_literals;
+
+//        // Retrieve the result and reset the future
+//        while (true)
 //        {
-
-//        }while((bef - aft).count())
-
-
-
-
-//        auto res =
-//            this->auto_alive_cv_.wait_for(lk, std::chrono::milliseconds(common::kClientAlivePeriodMsec));
-
-//        if (std::cv_status::timeout == res)
-//        {
-//            msg = this->prepareMessage(
-//                            RequestData(static_cast<common::CommandType>(ServerCommand::REQ_ALIVE)));
-//            try
+//            if (fut_recv_.wait_for(20ms) == std::future_status::ready)
 //            {
-//                msg.send(*alive_socket);
-//            }  catch (const zmq::error_t &error)
-//            {
-//                // TODO: handle error
-//                std::cerr << "Failed to automatically send alive command with error: " << error.num() << std::endl;
-//                send_success = false;
+//                result = fut_recv_.get();
+//                break;
 //            }
-
-//            if (send_success)
-//            {
-//                auto recv_result = this->recvFromSocket(alive_socket, data_out, out_size);
-//                auto *data_bytes = static_cast<std::uint8_t*>(data_out);
-
-//                if (0 == recv_result && out_size == sizeof(common::ServerResult))
-//                {
-//                    common::ServerResult result;
-
-
-//                    zmqutils::utils::binarySerializeDeserialize(
-//                                data_bytes, sizeof(common::CommandReply), &result);
-
-//                    recv_success = result == common::ServerResult::COMMAND_OK;
-
-//                }
-//                else
-//                {
-//                    std::cerr << "Auto alive message answer receive failed" << std::endl;
-//                    recv_success = false;
-//                }
-
-//                delete[] data_bytes;
-//            }
-
-//            if (!send_success || !recv_success)
-//            {
-//                std::cerr << "Failed auto sending alive message. Process will be stopped." << std::endl;
-//                this->auto_alive_working_ = false;
-//            }
-
 //        }
 
-//    }
+        // Safety mutex.
+        std::unique_lock<std::mutex> lock(this->mtx_);
 
-//    delete alive_socket;
-//    */
+        // Check the result.
+        if (result == ClientResult::CLIENT_STOPPED)
+        {
+            this->flag_autoalive_enabled_ = false;
+        }
+        else if (result == ClientResult::TIMEOUT_REACHED)
+        {
+            // Call to the internall callback and reset the socket.
+            // NOTE: The client reset is neccesary for flush the ZMQ internal
+            this->onDeadServer();
+            this->flag_autoalive_enabled_ = false;
+            this->internalResetClient();
+        }
+        else if(result == ClientResult::COMMAND_OK)
+        {
+            if(this->flag_alive_callbacks_)
+                this->onReplyReceived(reply);
+        }
+        else if(result != ClientResult::COMMAND_OK && result != ClientResult::INTERNAL_ZMQ_ERROR)
+        {
+            // Internal callback.
+            this->onInvalidMsgReceived(reply);
+        }
+    }
+    
+    // Delete the alive socket.
+    if(alive_socket)
+        delete alive_socket;
 }
 
 ClientResult CommandClientBase::doConnect()
