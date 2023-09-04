@@ -68,7 +68,7 @@
 // ---------------------------------------------------------------------------------------------------------------------
 
 /**
- * @brief Main entry point of the program.
+ * @brief Main entry point of the program ExampleServerAmelas.
  *
  * Initializes an AmelasController and AmelasServer, then enters an infinite loop where it listens for client requests
  * and processes them using the server. If the user hits ctrl-c, the server is shut down and the program exits.

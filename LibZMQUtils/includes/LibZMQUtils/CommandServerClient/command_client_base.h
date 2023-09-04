@@ -130,7 +130,7 @@ protected:
 
 private:
 
-    ClientResult recvFromSocket(CommandReply&repl, zmq::socket_t *recv_socket);
+    ClientResult recvFromSocket(CommandReply&repl, zmq::socket_t *recv_socket, zmq::socket_t *close_socket);
 
     void deleteSockets();
 
@@ -154,9 +154,9 @@ private:
     std::string server_endpoint_;              ///< Server endpoint.
 
     // ZMQ sockets.
-    zmq::socket_t *client_socket_;      ///< ZMQ client socket.
-    zmq::socket_t *rep_close_socket_;   ///< ZMQ auxiliar REP close socket.
-    zmq::socket_t *req_close_socket_;   ///< ZMQ auxiliar REQ close socket.
+    zmq::socket_t *client_socket_;       ///< ZMQ client socket.
+    zmq::socket_t *recv_close_socket_;   ///< ZMQ auxiliar socket for requesting to close.
+    zmq::socket_t *req_close_socket_;    ///< ZMQ auxiliar socket for receiving the close request.
 
     // Condition variables with associated flags.
     std::condition_variable client_close_cv_;
@@ -166,9 +166,11 @@ private:
     mutable std::mutex mtx_;                    ///< Safety mutex.
     mutable std::mutex client_close_mtx_;
 
-    // Auto alive functionality.
-    std::future<common::ClientResult> fut_recv_;     ///< Future that stores the client recv status.
+    // Futures for receiving response from send command and auto alive
+    std::future<common::ClientResult> fut_recv_send_;   ///< Future that stores the client recv status for send command.
+    std::future<common::ClientResult> fut_recv_alive_;  ///< Future that stores the client recv status for auto alive.
 
+    // Auto alive functionality.
     std::future<void> auto_alive_future_;
     std::condition_variable auto_alive_cv_;
 

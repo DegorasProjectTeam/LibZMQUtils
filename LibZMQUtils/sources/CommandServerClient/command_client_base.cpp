@@ -50,7 +50,8 @@
 
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
-namespace zmqutils{
+namespace zmqutils
+{
 // =====================================================================================================================
 
 CommandClientBase::CommandClientBase(const std::string& server_endpoint,
@@ -59,7 +60,7 @@ CommandClientBase::CommandClientBase(const std::string& server_endpoint,
     client_name_(client_name),
     server_endpoint_(server_endpoint),
     client_socket_(nullptr),
-    rep_close_socket_(nullptr),
+    recv_close_socket_(nullptr),
     req_close_socket_(nullptr),
     flag_client_closed_(true),
     flag_client_working_(false),
@@ -179,13 +180,13 @@ bool CommandClientBase::internalResetClient()
         this->client_socket_->connect(this->server_endpoint_);
         this->client_socket_->set(zmq::sockopt::linger, 0);
 
-        // Bind the REP close socket to an internal endpoint.
-        rep_close_socket_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::rep);
-        rep_close_socket_->bind("inproc://close"+this->client_info_.uuid.toRFC4122String());
-        rep_close_socket_->set(zmq::sockopt::linger, 0);
+        // Bind the PUSH close socket to an internal endpoint.
+        recv_close_socket_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::pull);
+        recv_close_socket_->bind("inproc://close"+this->client_info_.uuid.toRFC4122String());
+        recv_close_socket_->set(zmq::sockopt::linger, 0);
 
-        // Connect the REQ close socket to the same internal endpoint.
-        req_close_socket_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::req);
+        // Connect the PULL close socket to the same internal endpoint.
+        req_close_socket_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::push);
         req_close_socket_->connect("inproc://close"+this->client_info_.uuid.toRFC4122String());
         req_close_socket_->set(zmq::sockopt::linger, 0);
 
@@ -252,7 +253,27 @@ void CommandClientBase::stopAutoAlive()
     {
         this->flag_autoalive_enabled_ = false;
         this->auto_alive_cv_.notify_all();
-        this->auto_alive_future_.wait();
+        // If the auto alive is waiting for a response.
+        if(this->auto_alive_future_.valid() &&
+            this->auto_alive_future_.wait_for(std::chrono::seconds(0)) == std::future_status::timeout)
+        {
+            // Create a pull socket to send close request
+            zmq::socket_t *pull_close_socket = nullptr;
+            try
+            {
+                pull_close_socket = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::rep);
+                pull_close_socket->bind("inproc://close" + this->client_info_.uuid.toRFC4122String() + "_autoalive");
+                pull_close_socket->set(zmq::sockopt::linger, 0);
+                // Send the close msg and wait for the future.
+                pull_close_socket->send(zmq::message_t(), zmq::send_flags::none);
+                this->auto_alive_future_.wait();
+                delete pull_close_socket;
+
+            } catch (...)
+            {
+                delete pull_close_socket;
+            }
+        }
     }
 }
 
@@ -296,20 +317,14 @@ ClientResult CommandClientBase::sendCommand(const RequestData& request, CommandR
         this->onWaitingReply();
 
     // Receive the data.
-    fut_recv_ = std::async(std::launch::async, &CommandClientBase::recvFromSocket, this,
-                           std::ref(reply), this->client_socket_);
+    this->fut_recv_send_ = std::async(std::launch::async, &CommandClientBase::recvFromSocket, this,
+                                      std::ref(reply), this->client_socket_, this->recv_close_socket_);
 
     using namespace std::chrono_literals;
 
     // Retrieve the result and reset the future
-    while (true)
-    {
-        if (fut_recv_.wait_for(20ms) == std::future_status::ready)
-        {
-            result = fut_recv_.get();
-            break;
-        }
-    }
+    while (this->fut_recv_send_.wait_for(20ms) != std::future_status::ready);
+    result = this->fut_recv_send_.get();
 
     // Use the cv for notify the auto alive worker.
     if (this->flag_autoalive_enabled_)
@@ -355,12 +370,13 @@ bool CommandClientBase::waitForClose(std::chrono::milliseconds timeout)
     }
 }
 
-ClientResult CommandClientBase::recvFromSocket(CommandReply& reply, zmq::socket_t* recv_socket)
+ClientResult CommandClientBase::recvFromSocket(CommandReply& reply, zmq::socket_t* recv_socket,
+                                               zmq::socket_t *close_socket)
 {
     // Prepare the poller.
     std::vector<zmq::pollitem_t> items = {
           { static_cast<void*>(*recv_socket), 0, ZMQ_POLLIN, 0 },
-          { static_cast<void*>(*this->rep_close_socket_), 0, ZMQ_POLLIN, 0 }};
+          { static_cast<void*>(*close_socket), 0, ZMQ_POLLIN, 0 }};
 
     // Start time for check the timeout.
     auto start = std::chrono::steady_clock::now();
@@ -458,10 +474,10 @@ void CommandClientBase::deleteSockets()
         delete this->req_close_socket_;
         this->req_close_socket_ = nullptr;
     }
-    if(this->rep_close_socket_)
+    if(this->recv_close_socket_)
     {
-        delete this->rep_close_socket_;
-        this->rep_close_socket_ = nullptr;
+        delete this->recv_close_socket_;
+        this->recv_close_socket_ = nullptr;
     }
 }
 
@@ -471,19 +487,22 @@ void CommandClientBase::internalStopClient()
     if (!this->flag_client_working_)
         return;
 
-    // If autoalive is enabled stop it.
-    if(this->flag_autoalive_enabled_)
-        this->disableAutoAlive();
-
     // Set the shared working flag to false (is atomic).
     this->flag_client_working_ = false;
 
     // If the client is waiting a response.
-    if(this->fut_recv_.valid() && this->fut_recv_.wait_for(std::chrono::seconds(0)) == std::future_status::timeout)
+    if(this->fut_recv_send_.valid() &&
+        this->fut_recv_send_.wait_for(std::chrono::seconds(0)) == std::future_status::timeout)
     {
         // Send the close msg and wait the future.
         this->req_close_socket_->send(zmq::message_t(), zmq::send_flags::none);
-        this->fut_recv_.wait();
+        this->fut_recv_send_.wait();
+    }
+
+    // If autoalive is enabled stop it.
+    if(this->flag_autoalive_enabled_)
+    {
+        this->disableAutoAlive();
     }
 
     // Safe mutex lock
@@ -503,7 +522,8 @@ void CommandClientBase::aliveWorker()
     CommandReply reply;
 
     // Alive socket.
-    zmq::socket_t* alive_socket = nullptr;
+    zmq::socket_t *alive_socket = nullptr;
+    zmq::socket_t *pull_close_socket = nullptr;
 
     // First time flag.
     bool first_time = true;
@@ -518,6 +538,11 @@ void CommandClientBase::aliveWorker()
         alive_socket = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::req);
         alive_socket->connect(this->server_endpoint_);
         alive_socket->set(zmq::sockopt::linger, 0);
+
+        // Connect the pull close socket to the internal endpoint.
+        pull_close_socket = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::pull);
+        pull_close_socket->connect("inproc://close" + this->client_info_.uuid.toRFC4122String() + "_autoalive");
+        pull_close_socket->set(zmq::sockopt::linger, 0);
     }
     catch (const zmq::error_t &error)
     {
@@ -528,6 +553,8 @@ void CommandClientBase::aliveWorker()
         this->onClientError(error, "CommandClientBase: Error while creating automatic alive worker. Stopping the client.");
         if(alive_socket)
             delete alive_socket;
+        if (pull_close_socket)
+            delete pull_close_socket;
         this->flag_autoalive_enabled_ = false;
         this->internalStopClient();
         return;
@@ -577,6 +604,8 @@ void CommandClientBase::aliveWorker()
             this->onClientError(error, "CommandClientBase: Error while sending automatic alive. Stopping the client.");
             if(alive_socket)
                 delete alive_socket;
+            if (pull_close_socket)
+                delete pull_close_socket;
             this->flag_autoalive_enabled_ = false;
             this->internalStopClient();
             return;
@@ -589,20 +618,14 @@ void CommandClientBase::aliveWorker()
             this->onWaitingReply();
 
         // Receive the data.
-        fut_recv_ = std::async(std::launch::async, &CommandClientBase::recvFromSocket, this,
-                               std::ref(reply), alive_socket);
+        this->fut_recv_alive_ = std::async(std::launch::async, &CommandClientBase::recvFromSocket, this,
+                                           std::ref(reply), alive_socket, pull_close_socket);
 
         using namespace std::chrono_literals;
 
         // Retrieve the result and reset the future
-        while (true)
-        {
-            if (fut_recv_.wait_for(20ms) == std::future_status::ready)
-            {
-                result = fut_recv_.get();
-                break;
-            }
-        }
+        while (this->fut_recv_alive_.wait_for(20ms) != std::future_status::ready);
+        result = this->fut_recv_alive_.get();
 
         // Safety mutex.
         std::unique_lock<std::mutex> lock(this->mtx_);
@@ -632,9 +655,12 @@ void CommandClientBase::aliveWorker()
         }
     }
     
-    // Delete the alive socket.
+    // Delete sockets.
     if(alive_socket)
         delete alive_socket;
+
+    if (pull_close_socket)
+        delete pull_close_socket;
 }
 
 ClientResult CommandClientBase::doConnect(bool auto_alive)
