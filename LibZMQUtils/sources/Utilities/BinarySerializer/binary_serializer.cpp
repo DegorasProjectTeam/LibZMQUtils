@@ -41,6 +41,7 @@
 #include <cstring>
 #include <mutex>
 #include <atomic>
+#include <sstream>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
