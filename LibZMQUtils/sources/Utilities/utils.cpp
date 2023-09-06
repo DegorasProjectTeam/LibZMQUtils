@@ -58,7 +58,6 @@ namespace utils{
 // =====================================================================================================================
 using std::chrono::duration;
 using std::chrono::duration_cast;
-using std::chrono::high_resolution_clock;
 using std::chrono::time_point_cast;
 // =====================================================================================================================
 
@@ -154,12 +153,12 @@ std::string getHostname()
 }
 
 
-std::string timePointToString(const HRTimePointStd &tp, const std::string &format, bool add_ms, bool add_ns, bool utc)
+std::string timePointToString(const TimePointStd &tp, const std::string &format, bool add_ms, bool add_ns, bool utc)
 {
     // Stream to hold the formatted string and the return container.
     std::ostringstream ss;
     // Convert the time point to a duration and get the different time fractions.
-    HRTimePointStd::duration dur = tp.time_since_epoch();
+    TimePointStd::duration dur = tp.time_since_epoch();
     const time_t secs = duration_cast<std::chrono::seconds>(dur).count();
     const long long mill = duration_cast<std::chrono::milliseconds>(dur).count();
     const long long ns = duration_cast<std::chrono::nanoseconds>(dur).count();
@@ -177,22 +176,22 @@ std::string timePointToString(const HRTimePointStd &tp, const std::string &forma
     else
     {
         // If error, return an empty string.
-        return std::string();
+        return {};
     }
     // Return the container.
     return ss.str();
 }
 
-std::string timePointToIso8601(const HRTimePointStd &tp, bool add_ms, bool add_ns)
+std::string timePointToIso8601(const TimePointStd &tp, bool add_ms, bool add_ns, bool utc)
 {
     // Return the ISO 8601 datetime.
-    return timePointToString(tp, "%Y-%m-%dT%H:%M:%S", add_ms, add_ns) + 'Z';
+    return timePointToString(tp, "%Y-%m-%dT%H:%M:%S", add_ms, add_ns, utc) + (utc ? "Z" : "");
 }
 
-std::string currentISO8601Date(bool add_ms)
+std::string currentISO8601Date(bool add_ms, bool add_ns, bool utc)
 {
-    auto now = high_resolution_clock::now();
-    return timePointToIso8601(now, add_ms);
+    auto now = TimePointStd::clock::now();
+    return timePointToIso8601(now, add_ms, add_ns, utc);
 }
 
 unsigned getCurrentPID()

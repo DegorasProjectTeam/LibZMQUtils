@@ -62,7 +62,7 @@ struct TestLog
 public:
 
     LIBZMQUTILS_EXPORT TestLog(const std::string& module, const std::string& test, const std::string &det_ex,
-                               bool passed, const utils::HRTimePointStd &tp, long long elapsed);
+                               bool passed, const utils::TimePointStd &tp, long long elapsed);
 
     LIBZMQUTILS_EXPORT std::string makeLog(const std::string& storage_path = std::string()) const;
 

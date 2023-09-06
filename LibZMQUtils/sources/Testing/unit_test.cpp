@@ -26,7 +26,7 @@ namespace testing{
 using namespace zmqutils::helpers;
 
 TestLog::TestLog(const std::string& module, const std::string& test, const std::string& det_ex,
-                 bool passed, const utils::HRTimePointStd& tp, long long elapsed) :
+                 bool passed, const utils::TimePointStd& tp, long long elapsed) :
     module_(module),
     test_(test),
     det_ex_(det_ex),
@@ -100,7 +100,7 @@ void UnitTest::runTests()
             TestBase* test = range_it->second;
             std::string det_ex;
             long long elapsed = 0;
-            auto now_t = std::chrono::high_resolution_clock::now();
+            auto now_t = utils::TimePointStd::clock::now();
             bool result;
 
             // Log.
@@ -179,7 +179,7 @@ void TestSummary::makeSummary(bool show, const std::string& storage_path) const
     std::string date = "= Datetime: " + utils::currentISO8601Date();
     std::string keys_str = "= Modules:  " + helpers::strings::join(keys, " - ");
     std::string filename = this->session_;
-    std::string date_file = utils::timePointToString(std::chrono::high_resolution_clock::now(),
+    std::string date_file = utils::timePointToString(utils::TimePointStd::clock::now(),
                                                       "%Y%m%d_%H%M%S", false, false);
     filename = helpers::strings::replaceStr(filename, " ", "");
     filename = helpers::strings::replaceStr(filename, ":", "");
