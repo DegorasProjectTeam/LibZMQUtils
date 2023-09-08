@@ -27,7 +27,7 @@
  * @brief This file contains the function implementations related with the string helper tools.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2308.1
+ * @version 2309.1
 ***********************************************************************************************************************/
 
 // ========== C++ INCLUDES =============================================================================================
@@ -43,7 +43,7 @@
 
 // ========== DPSLR NAMESPACES =========================================================================================
 namespace zmqutils{
-namespace helpers{
+namespace internal_helpers{
 namespace strings{
 // =====================================================================================================================
 

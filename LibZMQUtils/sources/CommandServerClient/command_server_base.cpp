@@ -27,7 +27,7 @@
  * @brief This file contains the implementation of the CommandServerBase class and related.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2308.2
+ * @version 2309.1
 ***********************************************************************************************************************/
 
 // C++ INCLUDES
@@ -42,6 +42,7 @@
 // =====================================================================================================================
 #include "LibZMQUtils/CommandServerClient/command_server_base.h"
 #include "LibZMQUtils/Utilities/utils.h"
+#include "LibZMQUtils/InternalHelpers/network_helpers.h"
 #include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
 // =====================================================================================================================
 
@@ -62,7 +63,7 @@ CommandServerBase::CommandServerBase(unsigned port,
     flag_alive_callbacks_(true)
 {
     // Get the adapters.
-    std::vector<utils::NetworkAdapterInfo> interfcs = utils::getHostIPsWithInterfaces();
+    std::vector<NetworkAdapterInfo> interfcs = internal_helpers::network::getHostIPsWithInterfaces();
     // Store the adapters.
     if(local_addr == "*")
         this->server_adapters_ = interfcs;
@@ -108,8 +109,10 @@ const unsigned& CommandServerBase::getServerPort() const {return this->server_po
 
 const std::string &CommandServerBase::getServerName() const{return this->server_name_;}
 
-const std::vector<utils::NetworkAdapterInfo>& CommandServerBase::getServerAddresses() const
-{return this->server_adapters_;}
+const std::vector<NetworkAdapterInfo>& CommandServerBase::getServerAddresses() const
+{
+    return this->server_adapters_;
+}
 
 const std::string& CommandServerBase::getServerEndpoint() const {return this->server_endpoint_;}
 
@@ -190,8 +193,6 @@ void CommandServerBase::internalStopServer()
     this->connected_clients_.clear();
 }
 
-
-
 CommandServerBase::~CommandServerBase()
 {
     // Stop the server.
@@ -217,6 +218,10 @@ ServerResult CommandServerBase::execReqConnect(const CommandRequest& cmd_req)
     try
     {
         serializer.read(ip, pid, hostname, name);
+
+        // Check the parameters.
+        if(!internal_helpers::network::isValidIP(ip))
+            return ServerResult::INVALID_CLIENT_IP;
     }
     catch (...)
     {

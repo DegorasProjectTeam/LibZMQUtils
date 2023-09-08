@@ -25,9 +25,10 @@
 /** ********************************************************************************************************************
  * @file container_helpers.tpp
  * @brief This file contains the template implementation of several helper tools related with containers.
+ * @warning Not exported. Only for internal library usage.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2308.1
+ * @version 2309.1
 ***********************************************************************************************************************/
 
 // =====================================================================================================================
@@ -50,7 +51,7 @@
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
-namespace helpers{
+namespace internal_helpers{
 namespace containers{
 // =====================================================================================================================
 
@@ -135,6 +136,18 @@ std::ostream& operator<<(std::ostream& out, const std::vector<T>& v)
         std::copy (v.begin(), v.end(), std::ostream_iterator<T>(out, ","));
     out << "\b]";
     return out;
+}
+
+template <typename Container>
+std::vector<typename Container::key_type> getMapKeys(const Container& container)
+{
+    std::vector<typename Container::key_type> keys;
+    for(auto it = container.begin(), end = container.end();
+         it != end; it = container.equal_range(it->first).second)
+    {
+        keys.push_back(it->first);
+    }
+    return keys;
 }
 
 }}}// END NAMESPACES.

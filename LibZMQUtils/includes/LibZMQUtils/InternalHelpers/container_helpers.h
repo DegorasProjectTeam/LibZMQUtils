@@ -24,10 +24,11 @@
 
 /** ********************************************************************************************************************
  * @file container_helpers.h
- * @brief This file contains several helper tools related with containers.
+ * @brief This file contains several helper tools related with containers.ç
+ * @warning Not exported. Only for internal library usage.
  * @author Degoras Project Team.
  * @copyright EUPL License
- * @version 2308.1
+ * @version 2309.1
 ***********************************************************************************************************************/
 
 // =====================================================================================================================
@@ -42,24 +43,16 @@
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/Global/libzmqutils_global.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
-namespace helpers{
+namespace internal_helpers{
 namespace containers{
 // =====================================================================================================================
 
-/**
- * @brief Searches for the closest element in a sorted array to a given value.
- *
- * @tparam T The type of elements in the array.
- * @param sorted_array The sorted array to search in.
- * @param x The value to find the closest element to.
- * @return The index of the closest element in the array.
- */
+// Custom search closest.
 template <typename T>
 std::size_t searchClosest(const std::vector<T>& sorted_array, T x);
 
@@ -85,16 +78,7 @@ template <class T>
 std::ostream& operator<<(std::ostream& out, const std::vector<T>& v);
 
 template <typename Container>
-std::vector<typename Container::key_type> getMapKeys(const Container& container)
-{
-    std::vector<typename Container::key_type> keys;
-    for(auto it = container.begin(), end = container.end();
-        it != end; it = container.equal_range(it->first).second)
-    {
-        keys.push_back(it->first);
-    }
-    return keys;
-}
+std::vector<typename Container::key_type> getMapKeys(const Container& container);
 
 }}} // END NAMESPACES.
 // =====================================================================================================================

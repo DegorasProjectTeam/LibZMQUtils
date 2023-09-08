@@ -17,7 +17,7 @@ set(CMAKE_CXX_STANDARD 17)
 # Configure the version.
 set(MAJOR_VERSION 1)
 set(MINOR_VERSION 2)
-set(PATCH_VERSION 1)
+set(PATCH_VERSION 3)
 set(VERSION ${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION})
 
 # Project name.
@@ -57,6 +57,7 @@ FILE(GLOB_RECURSE SOURCES ${CMAKE_SOURCE_DIR}/sources/*.cpp)
 source_group("Alias Files" FILES ${ALIAS})
 source_group("Header Files" FILES ${TEMPLTS})
 
+# Includes.
 include_directories(${CMAKE_SOURCE_DIR}/includes)
 include_directories("external/zmq/includes")
 

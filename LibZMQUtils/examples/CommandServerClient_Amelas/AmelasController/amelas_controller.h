@@ -27,7 +27,7 @@
  * @brief EXAMPLE FILE - This file contains the declaration of the AmelasController example class.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2308.2
+ * @version 2309.1
 ***********************************************************************************************************************/
 
 // =====================================================================================================================

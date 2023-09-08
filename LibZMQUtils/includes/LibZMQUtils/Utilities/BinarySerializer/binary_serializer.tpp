@@ -23,11 +23,11 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file binary_serializer.h
- * @brief This file contains the declaration of the BinarySerializer class.
+ * @file binary_serializer.tpp
+ * @brief This file contains the template implementation part of the BinarySerializer class.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2308.2
+ * @version 2309.1
 ***********************************************************************************************************************/
 
 // =====================================================================================================================

@@ -23,7 +23,8 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file custom_console.h
+ * @file console_config.h
+ *
  * @brief This file contains utility functions and classes for console interactions.
  *
  * The utilities of this module are used for creating examples demonstrating the use of the library. They provide
@@ -31,9 +32,10 @@
  * illustrative purposes and are not intended for real-world, production use. They may not have the robustness,
  * security, or optimizations necessary for production environments.
  *
+ * @warning Exported only for examples demostration.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2308.1
+ * @version 2309.1
 ***********************************************************************************************************************/
 
 // =====================================================================================================================
@@ -50,8 +52,6 @@
 #ifdef _WIN32
 #include <Windows.h>
 #endif
-#include <iostream>
-#include <chrono>
 #include <csignal>
 #include <atomic>
 #include <functional>
@@ -73,82 +73,19 @@ public:
     using ExitConsoleCallback = std::function<void()>;
 
 
-    LIBZMQUTILS_EXPORT ConsoleConfig(bool apply_ctrl_handler = false, bool hide_cursor = false, bool input_proc = false)
-    {
-        // Set the global close flag to false.
-        ConsoleConfig::gCloseFlag = false;
-
-        GetConsoleCursorInfo(hStdout_, &originalCursorInfo_);
-        GetConsoleMode(hStdin_, &originalInputMode_);
-
-        // Add the console control handler.
-        // Note: The handler will work async.
-        if(apply_ctrl_handler)
-            SetConsoleCtrlHandler(consoleCtrlHandler, TRUE);
-
-        // Disable the input proccesing.
-        if(input_proc)
-        {
-            DWORD mode = originalInputMode_ & ~static_cast<DWORD>(ENABLE_LINE_INPUT);
-            SetConsoleMode(hStdin_, mode);
-        }
-
-        // Hide the console cursor.
-        if(hide_cursor)
-        {
-            CONSOLE_CURSOR_INFO cursorInfo = originalCursorInfo_;
-            cursorInfo.bVisible = false;
-            SetConsoleCursorInfo(hStdout_, &cursorInfo);
-        }
-    }
+    LIBZMQUTILS_EXPORT ConsoleConfig(bool apply_ctrl_handler = false, bool hide_cursor = false, bool input_proc = false);
 
     // Setter function for exit callback
-    LIBZMQUTILS_EXPORT static void setExitCallback(const ExitConsoleCallback& exit_callback)
-    {
-        ConsoleConfig::exit_callback_ = exit_callback;
-    }
+    LIBZMQUTILS_EXPORT static void setExitCallback(const ExitConsoleCallback& exit_callback);
 
-    LIBZMQUTILS_EXPORT ~ConsoleConfig()
-    {
-        restoreConsole();
-    }
+    LIBZMQUTILS_EXPORT ~ConsoleConfig();
 
-    LIBZMQUTILS_EXPORT void restoreConsole()
-    {
-        // Restore original input and output modes
-        SetConsoleMode(hStdin_, originalInputMode_);
-        SetConsoleCursorInfo(hStdout_, &originalCursorInfo_);
-    }
+    LIBZMQUTILS_EXPORT void restoreConsole();
 
     // Signal handler for safety ending.
-    LIBZMQUTILS_EXPORT static BOOL WINAPI consoleCtrlHandler(DWORD dw_ctrl_t)
-    {
-        WSADATA wsa_data;
-        WSAStartup(MAKEWORD(2,2), &wsa_data);
+    LIBZMQUTILS_EXPORT static BOOL WINAPI consoleCtrlHandler(DWORD dw_ctrl_t);
 
-        std::lock_guard<std::mutex> lock(ConsoleConfig::gMtx);
-        if (dw_ctrl_t == CTRL_C_EVENT || dw_ctrl_t == CTRL_BREAK_EVENT || dw_ctrl_t == CTRL_CLOSE_EVENT)
-        {
-            // Update the closing flag.
-            ConsoleConfig::gCloseFlag = true;
-
-            // Call the exit callback
-            if(ConsoleConfig::exit_callback_)
-                ConsoleConfig::exit_callback_();
-
-            // Notify with the cv and return.
-            ConsoleConfig::gCloseCv.notify_all();
-
-            return TRUE;
-        }
-        return FALSE;
-    }
-
-    LIBZMQUTILS_EXPORT static void waitForClose()
-    {
-        std::unique_lock<std::mutex> lock(ConsoleConfig::gMtx);
-        ConsoleConfig::gCloseCv.wait(lock, []{ return ConsoleConfig::gCloseFlag.load(); });
-    }
+    LIBZMQUTILS_EXPORT static void waitForClose();
 
     static inline std::condition_variable gCloseCv;
     static inline std::atomic_bool gCloseFlag;

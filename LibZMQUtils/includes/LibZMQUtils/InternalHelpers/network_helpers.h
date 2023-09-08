@@ -23,72 +23,51 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file zmq_context_handler.cpp
- * @brief This file contains the implementation of the global ZMQContextHandler class.
+ * @file network_helpers.h
+ * @brief This file contains the declaration of several helper tools related with networking.
+ * @warning Not exported. Only for internal library usage.
  * @author Degoras Project Team
  * @copyright EUPL License
  * @version 2309.1
 ***********************************************************************************************************************/
 
+// =====================================================================================================================
+#pragma once
+// =====================================================================================================================
+
 // C++ INCLUDES
 // =====================================================================================================================
-#include <iostream>
 #include <vector>
-#include <functional>
-#include <mutex>
-#include <zmq/zmq.hpp>
-#include <zmq/zmq_addon.hpp>
+#include <fstream>
+#include <regex>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/Global/zmq_context_handler.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
-
-ZMQContextHandler::ZMQContextHandler()
-{
-    // For the first instance, create the context.
-    if (ZMQContextHandler::instances_.empty())
-        ZMQContextHandler::context_ = std::make_unique<zmq::context_t>(1);
-
-    // Register this instance.
-    ZMQContextHandler::instances_.push_back(std::ref(*this));
-}
-
-ZMQContextHandler &ZMQContextHandler::getInstance()
-{
-    static ZMQContextHandler instance;
-    return instance;
-}
-
-ZMQContextHandler::~ZMQContextHandler()
-{
-
-    // Safety mutex.
-    std::lock_guard<std::mutex> lock(ZMQContextHandler::mtx_);
-
-    // Unregister this instance.
-    ZMQContextHandler::instances_.erase(
-        std::remove_if(ZMQContextHandler::instances_.begin(), ZMQContextHandler::instances_.end(),
-                       [this](const ContextHandlerReference& ref)
-                       { return &ref.get() == this; }),
-        ZMQContextHandler::instances_.end());
-
-    // Destroy the context if no instances left.
-    if (ZMQContextHandler::instances_.empty())
-        ZMQContextHandler::context_.reset();
-}
-
-const std::unique_ptr<zmq::context_t>& ZMQContextHandler::getContext()
-{
-    return ZMQContextHandler::context_;
-}
-
+namespace internal_helpers{
+namespace network{
 // =====================================================================================================================
 
-} // END NAMESPACES.
+struct NetworkAdapterInfo
+{
+    std::string id;
+    std::string name;
+    std::string descr;
+    std::string ip;
+};
+
+std::vector<NetworkAdapterInfo> getHostIPsWithInterfaces();
+
+std::string getHostname();
+
+unsigned getCurrentPID();
+
+bool isValidIP(const std::string& ipAddress);
+
+}}} // END NAMESPACES
 // =====================================================================================================================

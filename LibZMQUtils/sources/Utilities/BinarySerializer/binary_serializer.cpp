@@ -27,7 +27,7 @@
  * @brief This file contains part of the implementation of the BinarySerializer class.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2308.2
+ * @version 2309.1
 ***********************************************************************************************************************/
 
 // C++ INCLUDES
@@ -37,10 +37,9 @@
 #include <cstdint>
 #include <iomanip>
 #include <iostream>
-#include <memory>
 #include <cstring>
-#include <mutex>
-#include <atomic>
+#include <fstream>
+#include <istream>
 #include <sstream>
 // =====================================================================================================================
 
@@ -172,7 +171,7 @@ std::string BinarySerializer::getDataHexString() const
 BinarySerializer::SizeUnit BinarySerializer::writeFile(const std::string &in_filenamepath)
 {
     // Get the filename.
-    std::string filename = helpers::files::getFileName(in_filenamepath);
+    std::string filename = internal_helpers::files::getFileName(in_filenamepath);
 
     // Create the ifstream.
     std::ifstream file(in_filenamepath, std::ios::binary);

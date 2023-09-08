@@ -23,7 +23,7 @@
 namespace zmqutils{
 namespace testing{
 
-using namespace zmqutils::helpers;
+using namespace zmqutils::internal_helpers;
 
 TestLog::TestLog(const std::string& module, const std::string& test, const std::string& det_ex,
                  bool passed, const utils::TimePointStd& tp, long long elapsed) :
@@ -79,7 +79,7 @@ bool TestLog::getResult() const{return this->passed_;}
 void UnitTest::runTests()
 {
     // Separator.
-    std::string sep = helpers::strings::fillStr("=", 100) + "\n";
+    std::string sep = internal_helpers::strings::fillStr("=", 100) + "\n";
 
     // Log.
     std::cout<<"\033[38;2;255;128;0m"<<sep<<"=                                    ";
@@ -172,23 +172,23 @@ void TestSummary::clear()
 void TestSummary::makeSummary(bool show, const std::string& storage_path) const
 {
     // Auxiliar containers.
-    std::vector<std::string> keys = helpers::containers::getMapKeys(this->test_logs_);
+    std::vector<std::string> keys = internal_helpers::containers::getMapKeys(this->test_logs_);
     std::stringstream title;
     std::stringstream border;
     std::string s_name = "= Session:  " + this->session_;
     std::string date = "= Datetime: " + utils::currentISO8601Date();
-    std::string keys_str = "= Modules:  " + helpers::strings::join(keys, " - ");
+    std::string keys_str = "= Modules:  " + internal_helpers::strings::join(keys, " - ");
     std::string filename = this->session_;
     std::string date_file = utils::timePointToString(utils::TimePointStd::clock::now(),
                                                       "%Y%m%d_%H%M%S", false, false);
-    filename = helpers::strings::replaceStr(filename, " ", "");
-    filename = helpers::strings::replaceStr(filename, ":", "");
-    filename = helpers::strings::replaceStr(filename, "_", "-");
-    filename = helpers::strings::toLower(filename) + "_";
+    filename = internal_helpers::strings::replaceStr(filename, " ", "");
+    filename = internal_helpers::strings::replaceStr(filename, ":", "");
+    filename = internal_helpers::strings::replaceStr(filename, "_", "-");
+    filename = internal_helpers::strings::toLower(filename) + "_";
     filename += date_file + ".utsum";
     std::string file = "= File:     " + filename;
-    std::string sep1 = helpers::strings::fillStr("=", 100) + "\n";
-    std::string sep2 = helpers::strings::fillStr("-", 100) + "\n";
+    std::string sep1 = internal_helpers::strings::fillStr("=", 100) + "\n";
+    std::string sep2 = internal_helpers::strings::fillStr("-", 100) + "\n";
 
     std::stringstream test;
     std::stringstream pass;
@@ -205,7 +205,7 @@ void TestSummary::makeSummary(bool show, const std::string& storage_path) const
     std::string pass_str = pass.str();
 
     // Get the keys.
-    keys = helpers::containers::getMapKeys(this->test_logs_);
+    keys = internal_helpers::containers::getMapKeys(this->test_logs_);
 
     // Generate the header.
     title << "\033[38;2;255;128;0m";

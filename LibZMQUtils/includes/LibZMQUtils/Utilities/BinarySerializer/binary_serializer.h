@@ -27,7 +27,7 @@
  * @brief This file contains the declaration of the Serializable class and BinarySerializer class.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2308.2
+ * @version 2309.1
 ***********************************************************************************************************************/
 
 // =====================================================================================================================
@@ -36,18 +36,10 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
-#include <algorithm>
-#include <cstddef>
-#include <cstdint>
-#include <iomanip>
-#include <iostream>
-#include <memory>
-#include <cstring>
 #include <mutex>
-#include <atomic>
-#include <fstream>
-#include <istream>
 #include <vector>
+#include <atomic>
+#include <memory>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
@@ -120,6 +112,12 @@ struct trait_has_nullptr_t : std::disjunction<std::is_same<std::nullptr_t, Ts>..
 class LIBZMQUTILS_EXPORT Serializable
 {
 public:
+
+    Serializable() = default;
+
+    Serializable(const Serializable&) = default;
+
+    Serializable& operator =(const Serializable&) = default;
 
     /**
      * @brief Virtual destructor to allow proper cleanup of derived classes.
@@ -210,13 +208,13 @@ public:
     };
 
     /**
-     * @brief Construct a new Binary Serializer object with a given capacity.
+     * @brief Construct a new ´BinarySerializer´ object with a given capacity.
      * @param capacity The initial capacity of the serializer. Default is 1024.
      */
     LIBZMQUTILS_EXPORT BinarySerializer(SizeUnit capacity = 1024);
 
     /**
-     * @brief Construct a new Binary Serializer object and load the given data.
+     * @brief Construct a new ´BinarySerializer´ object and load the given data.
      * @param src Pointer to the data source to load.
      * @param size Size of the data to load.
      * @warning The @a src parameter is a void pointer, so be careful.
@@ -286,7 +284,7 @@ public:
     LIBZMQUTILS_EXPORT bool allReaded() const;
 
     /**
-     * @brief Convert the internal state of the BinarySerializer to a JSON-formatted string.
+     * @brief Convert the internal state of the ´BinarySerializer´ to a JSON-formatted string.
      *
      * This function generates a JSON string that represents the current state of the BinarySerializer object. The JSON
      * string includes the following properties: size, capacity, offset, and hex_data (which represents the serialized
@@ -492,7 +490,7 @@ protected:
     // -----------------------------------------------------------------------------------------------------------------
 
     // Internal function to determine the endianess of the system.
-    static Endianess determineEndianess();
+    LIBZMQUTILS_EXPORT static Endianess determineEndianess();
 
     // Internal function to check if the type is trivially copiable.
     template<typename T>

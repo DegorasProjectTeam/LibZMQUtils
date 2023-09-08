@@ -27,7 +27,7 @@
  * @brief EXAMPLE FILE - This file contains common elements for the example AmelasServer module.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2308.2
+ * @version 2309.1
 ***********************************************************************************************************************/
 
 // =====================================================================================================================

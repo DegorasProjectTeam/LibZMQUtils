@@ -27,7 +27,7 @@
  * @brief This file contains the declaration of the CommandClientBase class and related.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2308.2
+ * @version 2309.1
 ***********************************************************************************************************************/
 
 // =====================================================================================================================
@@ -151,7 +151,7 @@ private:
     std::string client_name_;            ///< Internal client name. Will not be use as id.
 
     // Server endpoint.
-    std::string server_endpoint_;              ///< Server endpoint.
+    std::string server_endpoint_;        ///< Server endpoint.
 
     // ZMQ sockets.
     zmq::socket_t *client_socket_;       ///< ZMQ client socket.
@@ -164,7 +164,7 @@ private:
 
     // Mutex.
     mutable std::mutex mtx_;                    ///< Safety mutex.
-    mutable std::mutex client_close_mtx_;
+    mutable std::mutex client_close_mtx_;       ///< Safety mutex for closing client.
 
     // Futures for receiving response from send command and auto alive
     std::future<common::ClientResult> fut_recv_send_;   ///< Future that stores the client recv status for send command.
@@ -175,9 +175,9 @@ private:
     std::condition_variable auto_alive_cv_;
 
     // Usefull flags.
-    std::atomic_bool flag_client_working_;  ///< Flag for check the client working status.
-    std::atomic_bool flag_autoalive_enabled_;    ///< Flag for enables or disables the automatic sending of alive messages.
-    std::atomic_bool flag_alive_callbacks_; ///< Flag for enables or disables the callbacks for alive messages.
+    std::atomic_bool flag_client_working_;    ///< Flag for check the client working status.
+    std::atomic_bool flag_autoalive_enabled_; ///< Flag for enables or disables the automatic sending of alive messages.
+    std::atomic_bool flag_alive_callbacks_;   ///< Flag for enables or disables the callbacks for alive messages.
 };
 
 } // END NAMESPACES.

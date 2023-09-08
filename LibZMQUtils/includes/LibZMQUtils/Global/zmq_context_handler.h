@@ -24,10 +24,10 @@
 
 /** ********************************************************************************************************************
  * @file zmq_context_handler.h
- * @brief This file contains the declaration of the global ZMQContextHandler class.
+ * @brief This file contains the declaration of the global `ZMQContextHandler` class.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2308.1
+ * @version 2309.1
 ***********************************************************************************************************************/
 
 // =====================================================================================================================

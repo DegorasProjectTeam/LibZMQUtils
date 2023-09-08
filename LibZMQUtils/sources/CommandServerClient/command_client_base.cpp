@@ -27,7 +27,7 @@
  * @brief This file contains the implementation of the CommandClientBase class and related.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2308.2
+ * @version 2309.1
 ***********************************************************************************************************************/
 
 // C++ INCLUDES
@@ -44,7 +44,7 @@
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/CommandServerClient/command_client_base.h"
-#include "LibZMQUtils/Utilities/utils.h"
+#include "LibZMQUtils/InternalHelpers/network_helpers.h"
 #include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
 // =====================================================================================================================
 
@@ -69,13 +69,14 @@ CommandClientBase::CommandClientBase(const std::string& server_endpoint,
 {
     // Auxiliar variables and containers.
     std::string ip, hostname, pid;
-    utils::NetworkAdapterInfo sel_interf;
+    internal_helpers::network::NetworkAdapterInfo sel_interf;
 
     // Generate a unique UUID (v4) for the client.
     utils::UUID uuid = utils::UUIDGenerator::getInstance().generateUUIDv4();
 
     // Get the client interfaces.
-    std::vector<utils::NetworkAdapterInfo> interfcs = utils::getHostIPsWithInterfaces();
+    std::vector<internal_helpers::network::NetworkAdapterInfo> interfcs =
+        internal_helpers::network::getHostIPsWithInterfaces();
 
     // Check if we have active interfaces.
     if(interfcs.empty())
@@ -91,7 +92,7 @@ CommandClientBase::CommandClientBase(const std::string& server_endpoint,
     {
         // Search the interface we need.
         auto it = std::find_if(interfcs.begin(), interfcs.end(),
-                               [&interf_name](const utils::NetworkAdapterInfo& info)
+                               [&interf_name](const internal_helpers::network::NetworkAdapterInfo& info)
                                {return info.name == interf_name;});
 
         // Check if the interface exists.
@@ -104,8 +105,8 @@ CommandClientBase::CommandClientBase(const std::string& server_endpoint,
 
     // Store the ip, pid and hostname.
     ip = sel_interf.ip;
-    hostname = utils::getHostname();
-    pid = std::to_string(utils::getCurrentPID());
+    hostname = internal_helpers::network::getHostname();
+    pid = std::to_string(internal_helpers::network::getCurrentPID());
 
     // Store all the client info.
     this->client_info_ = common::HostInfo(uuid, ip, pid, hostname, this->client_name_);

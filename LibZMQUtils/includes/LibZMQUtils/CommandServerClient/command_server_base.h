@@ -27,7 +27,7 @@
  * @brief This file contains the declaration of the CommandServerBase class and related.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2308.2
+ * @version 2309.1
 ***********************************************************************************************************************/
 
 // =====================================================================================================================
@@ -48,7 +48,7 @@
 #include "LibZMQUtils/Global/libzmqutils_global.h"
 #include "LibZMQUtils/Global/zmq_context_handler.h"
 #include "LibZMQUtils/CommandServerClient/common.h"
-#include "LibZMQUtils/Utilities/utils.h"
+#include "LibZMQUtils/InternalHelpers/network_helpers.h"
 #include "LibZMQUtils/Utilities/uuid_generator.h"
 // =====================================================================================================================
 
@@ -65,7 +65,7 @@ using common::ServerCommand;
 using common::ServerResult;
 using common::HostInfo;
 using common::CommandType;
-using utils::NetworkAdapterInfo;
+using internal_helpers::network::NetworkAdapterInfo;
 using utils::UUID;
 // =====================================================================================================================
 
@@ -242,7 +242,7 @@ public:
      *
      * @note The server created with this constructor will be a base server and it doesn't have the complete
      *       implementation of specific request-response logic. It is intended to be subclassed to provide
-     *       custom request handling. You can implement the "onCustomCommandReceived" function as an internal
+     *       custom request handling. You can implement the `onCustomCommandReceived` function as an internal
      *       callback in the subclass to handle incoming requests and provide the desired response logic.
      *
      * @warning When specifying the `local_addr`, ensure it is a valid IP address present on the system.
@@ -267,7 +267,7 @@ public:
     /**
      * @brief Get the network adapter addresses used by the server.
      *
-     * This function returns a const reference to a vector of NetworkAdapterInfo objects. Each NetworkAdapterInfo
+     * This function returns a const reference to a vector of NetworkAdapterInfo objects. Each `NetworkAdapterInfo`
      * object contains information about a network adapter used by the server for communication.
      *
      * @return A const reference to a vector of NetworkAdapterInfo objects.
@@ -299,7 +299,7 @@ public:
      * @brief Get a const reference to the map of connected clients.
      *
      * This function returns a const reference to a std::map<std::string, HostClient> representing the list of
-     * connected clients. Each entry in the map consists of a string key (client identifier) and a HostClient
+     * connected clients. Each entry in the map consists of a string key (client identifier) and a `HostClient`
      * object containing information about the connected client.
      *
      * @return A const reference to the map of connected clients.
@@ -337,9 +337,9 @@ public:
      * This function controls whether the server callbacks are called upon receipt of an alive message from the client.
      * By default, the server callbacks are enabled and will be invoked when an alive message is received.
      *
-     * This is especially useful for debugging purposes. When debugging server behavior, the constant invocation of callbacks
-     * upon receipt of alive messages can cause clutter in the debug output. Disabling these callbacks can help streamline the
-     * debugging process and focus on the critical server functionality.
+     * This is especially useful for debugging purposes. When debugging server behavior, the constant invocation of
+     * callbacks upon receipt of alive messages can cause clutter in the debug output. Disabling these callbacks can
+     * help streamline the debugging process and focus on the critical server functionality.
      *
      * @param [in] enabled Boolean flag that determines whether callbacks are enabled (true) or disabled (false).
      */
@@ -378,11 +378,11 @@ protected:
     // -----------------------------------------------------------------------------------------------------------------
 
     /**
-     * @brief Register a function to process CommandRequest request from a custom server command.
+     * @brief Register a function to process `CommandRequest` request from a custom server command.
      *
      * This function allows you to register a function that will process the CommandRequest requests from a custom
-     * server command. The process function must take two parameters: a constant reference to a CommandRequest object
-     * and a reference to a CommandReply object.
+     * server command. The process function must take two parameters: a constant reference to a `CommandRequest` object
+     * and a reference to a `CommandReply` object.
      *
      * The registered function will be called automatically when a request with a custom command arrives at the server.
      *
@@ -392,8 +392,8 @@ protected:
      * @param obj A pointer to the instance of the object that contains the member function to be called.
      * @param func The member function to call when the server command receives a request.
      *
-     * @warning The @a func function must be a member function of the class pointed to by @a obj and take a constant
-     *          reference to a CommandRequest object and a reference to a CommandReply object as parameters.
+     * @warning The `func` function must be a member function of the class pointed to by `obj` and take a constant
+     *          reference to a `CommandRequest` object and a reference to a `CommandReply` object as parameters.
      */
     template <typename ClassT>
     void registerRequestProcFunc(ServerCommand command, ClassT* obj,
@@ -410,12 +410,12 @@ protected:
      *
      * This function checks if a custom command is valid. The validation is implementation-specific and
      * must be provided by any class that derives from this one. If the custom command is found to be
-     * invalid by this function, the internal callback method onCustomCommandReceived will not be invoked.
+     * invalid by this function, the internal callback method `onCustomCommandReceived` will not be invoked.
      *
-     * @note If you want handle in method onCustomCommandReceived commands that could be valid but the
+     * @note If you want handle in method `onCustomCommandReceived` commands that could be valid but the
      *       process logic is not yet implemented, this function must return true for these commands.
      *
-     * @param cmd The ServerCommand identifier to be validated.
+     * @param cmd The `ServerCommand` identifier to be validated.
      *
      * @return Returns true if the command is valid; false otherwise.
      */
@@ -516,7 +516,7 @@ protected:
      * @param The CommandRequest object representing the command execution request.
      *
      * @warning This internal callback must be used for log or similar purposes. For specific custom command
-     *          functionalities use the internal "onCustomCommandReceived".
+     *          functionalities use the internal `onCustomCommandReceived`.
      *
      * @warning The overrided callback must be non-blocking and have minimal computation time. Blocking or
      *          computationally intensive operations within internal callbacks can significantly affect the
@@ -529,10 +529,10 @@ protected:
     /**
      * @brief Base custom command received callback. Subclasses must override this function.
      *
-     * @param[in]  The CommandRequest object representing the command execution request.
-     * @param[out] The CommandReply object representing the command execution reply.
+     * @param[in]  The `CommandRequest` object representing the command execution request.
+     * @param[out] The `CommandReply` object representing the command execution reply.
      *
-     * @note This function must process the CommandRequest (function parameter input) and update the CommandReply
+     * @note This function must process the `CommandRequest` (function parameter input) and update the CommandReply
      *       (function parameter output), especially the result code.
      *
      * @note This method is only called when the received command has been validated as a valid custom command
@@ -623,12 +623,12 @@ private:
     zmq::socket_t* server_socket_;    ///< ZMQ server socket.
 
     // Endpoint data and server info.
-    std::string server_endpoint_;                              ///< Final server endpoint.
-    std::vector<utils::NetworkAdapterInfo> server_adapters_;   ///< Listen server adapters.
-    unsigned server_port_;                                     ///< Server port.
-    std::string server_name_;                                  ///< Server name. Will not be use as id.
-    std::string server_info_;                                  ///< Detailed server information.
-    std::string server_vers_;                                  ///< Server version.
+    std::string server_endpoint_;                       ///< Final server endpoint.
+    std::vector<NetworkAdapterInfo> server_adapters_;   ///< Listen server adapters.
+    unsigned server_port_;                              ///< Server port.
+    std::string server_name_;                           ///< Server name. Will not be use as id.
+    std::string server_info_;                           ///< Detailed server information.
+    std::string server_vers_;                           ///< Server version.
 
     // Mutex.
     mutable std::mutex mtx_;        ///< Safety mutex.

@@ -22,32 +22,24 @@
  *   along with this project. If not, see the license at < https://eupl.eu/ >.                                         *
  **********************************************************************************************************************/
 
+/** ********************************************************************************************************************
+ * @file utils.h
+ * @brief This file contains the implementation of several utilities for the project development.
+ * @author Degoras Project Team
+ * @copyright EUPL License
+ * @version 2309.1
+***********************************************************************************************************************/
 
-
+// C++ INCLUDES
+// =====================================================================================================================
 #include <iomanip>
-#ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <windows.h>
-#else
-#include <sys/socket.h>
-#include <ifaddrs.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#endif
-
 #include <sstream>
-#include <iphlpapi.h>
+// =====================================================================================================================
 
+// ZMQUTILS INCLUDES
+// =====================================================================================================================
 #include "LibZMQUtils/Utilities/utils.h"
-
-#ifndef _WIN32_WINNT
-#define _WIN32_WINNT 0x0600
-#elif _WIN32_WINNT < 0x0600
-#undef _WIN32_WINNT
-#define _WIN32_WINNT 0x0600
-#endif
+// =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
@@ -60,98 +52,6 @@ using std::chrono::duration;
 using std::chrono::duration_cast;
 using std::chrono::time_point_cast;
 // =====================================================================================================================
-
-std::vector<NetworkAdapterInfo> getHostIPsWithInterfaces()
-{
-    // Result container.
-    std::vector<NetworkAdapterInfo> adapters;
-
-#ifdef _WIN32
-
-    // Buffer size.
-    ULONG  buff_size = 0;
-
-    if (GetAdaptersAddresses(AF_INET, GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_DNS_SERVER,
-                             nullptr, nullptr, &buff_size) != ERROR_BUFFER_OVERFLOW)
-    {
-        return adapters;
-    }
-
-    std::vector<char> buffer(buff_size);
-
-    PIP_ADAPTER_ADDRESSES adapter_addrs = reinterpret_cast<PIP_ADAPTER_ADDRESSES>(&buffer[0]);
-
-    if (GetAdaptersAddresses(AF_INET, GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_DNS_SERVER,
-                             nullptr, adapter_addrs, &buff_size) != NO_ERROR)
-    {
-        return adapters;
-    }
-
-    while (adapter_addrs != nullptr)
-    {
-        if (adapter_addrs->OperStatus == IfOperStatusUp)
-        {
-            PIP_ADAPTER_UNICAST_ADDRESS unicast_addrs = adapter_addrs->FirstUnicastAddress;
-            while (unicast_addrs != nullptr)
-            {
-                sockaddr_in* sockaddr = reinterpret_cast<sockaddr_in*>(unicast_addrs->Address.lpSockaddr);
-                char* ip = inet_ntoa(sockaddr->sin_addr);
-                char f_name_ch[260];
-                char desc_ch[260];
-                char df_char = ' ';
-
-                WideCharToMultiByte(CP_ACP,0,adapter_addrs->FriendlyName,-1, f_name_ch,260, &df_char, nullptr);
-                WideCharToMultiByte(CP_ACP,0,adapter_addrs->Description,-1, desc_ch,260, &df_char, nullptr);
-
-                NetworkAdapterInfo adaptr;
-                adaptr.id = std::string(adapter_addrs->AdapterName);
-                adaptr.name = std::string(f_name_ch);
-                adaptr.descr = std::string(desc_ch);
-                adaptr.ip = std::string(ip);
-                adapters.push_back(adaptr);
-                unicast_addrs = unicast_addrs->Next;
-            }
-        }
-
-        adapter_addrs = adapter_addrs->Next;
-    }
-#else
-  // TODO
-#endif
-
-    // Return the ip interface maps.
-    return adapters;
-}
-
-std::string getHostname()
-{
-    std::string name;
-
-#ifdef _WIN32
-
-    WSADATA wsaData;
-
-    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
-        return "";
-
-    char buffer[256];
-    if (gethostname(buffer, sizeof(buffer)) != 0)
-        WSACleanup();
-
-    // Clear.
-    WSACleanup();
-
-    // Store the data.
-    name = std::string(buffer);
-
-#else
-    // TODO
-#endif
-
-    // Return the hostname.
-    return name;
-}
-
 
 std::string timePointToString(const TimePointStd &tp, const std::string &format, bool add_ms, bool add_ns, bool utc)
 {
@@ -192,18 +92,6 @@ std::string currentISO8601Date(bool add_ms, bool add_ns, bool utc)
 {
     auto now = TimePointStd::clock::now();
     return timePointToIso8601(now, add_ms, add_ns, utc);
-}
-
-unsigned getCurrentPID()
-{
-#if defined(_WIN32)
-    return GetCurrentProcessId();
-#elif defined(__unix__) || defined(__APPLE__) || defined(__linux__)
-    return getpid();
-#else
-// Unsupported or unknown platform
-    return 0;
-#endif
 }
 
 }} // END NAMESPACES.

@@ -27,7 +27,7 @@
  * @brief This file contains the implementation of the UUIDGenerator class.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2308.2
+ * @version 2309.1
 ***********************************************************************************************************************/
 
 // C++ INCLUDES
@@ -74,6 +74,13 @@ UUIDGenerator::UUIDGenerator()
     }
     else
         this->gen_ = std::mt19937_64(rd_());
+}
+
+UUIDGenerator &UUIDGenerator::getInstance()
+{
+    // Guaranteed to be destroyed, instantiated on first use.
+    static UUIDGenerator instance;
+    return instance;
 }
 
 UUID UUIDGenerator::generateUUIDv4()

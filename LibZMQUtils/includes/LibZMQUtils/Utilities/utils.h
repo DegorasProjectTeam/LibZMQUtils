@@ -27,7 +27,7 @@
  * @brief This file contains the declaration of several utilities for the project development.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2308.2
+ * @version 2309.1
 ***********************************************************************************************************************/
 
 // =====================================================================================================================
@@ -76,20 +76,6 @@ using TimePointStd = std::chrono::system_clock::time_point;
 using SCTimePointStd =  std::chrono::steady_clock::time_point;
 // =====================================================================================================================
 
-struct NetworkAdapterInfo
-{
-    std::string id;
-    std::string name;
-    std::string descr;
-    std::string ip;
-};
-
-LIBZMQUTILS_EXPORT std::vector<NetworkAdapterInfo> getHostIPsWithInterfaces();
-
-LIBZMQUTILS_EXPORT std::string getHostname();
-
-LIBZMQUTILS_EXPORT unsigned getCurrentPID();
-
 LIBZMQUTILS_EXPORT std::string timePointToString(const TimePointStd& tp,
                                                  const std::string& format = "%Y-%m-%dT%H:%M:%S",
                                                  bool add_ms = true, bool add_ns = false, bool utc = true);
@@ -112,8 +98,6 @@ std::string getEnumString(Enum value, const std::array<const char*, N>& str_arra
 
     return "Unknown value.";
 }
-
-
 
 namespace internal
 {

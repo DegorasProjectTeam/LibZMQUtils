@@ -27,7 +27,7 @@
  * @brief This file contains common elements for the whole library.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2308.2
+ * @version 2309.1
 ***********************************************************************************************************************/
 
 // =====================================================================================================================
@@ -84,7 +84,7 @@ using ResultType = std::int32_t;    ///< Type used for the BaseServerResult enum
  * @brief Enumerates the possible commands of a base command server. They can be extended in a subclass.
  * @warning Commands -1 to 30 ids must not be used for custom commands, they are special and reserved.
  * @warning Only positive commands ids will be acepted by the server.
- * @warning Messages with the command 0, sentinel value or a reserved commands are considered invalid.
+ * @warning Messages with the command -1, sentinel value or a reserved commands are considered invalid.
  */
 enum class ServerCommand : CommandType
 {

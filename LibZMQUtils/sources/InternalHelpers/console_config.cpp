@@ -23,72 +23,114 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file zmq_context_handler.cpp
- * @brief This file contains the implementation of the global ZMQContextHandler class.
+ * @file console_config.h
+ *
+ * @brief This file contains the implementation of the utility functions and classes for console interactions.
+ *
+ * The utilities of this module are used for creating examples demonstrating the use of the library. They provide
+ * convenient ways to interact with the console. Please note that these utilities are specifically designed for
+ * illustrative purposes and are not intended for real-world, production use. They may not have the robustness,
+ * security, or optimizations necessary for production environments.
+ *
  * @author Degoras Project Team
  * @copyright EUPL License
  * @version 2309.1
 ***********************************************************************************************************************/
 
-// C++ INCLUDES
+// LIBDPSLR INCLUDES
 // =====================================================================================================================
-#include <iostream>
-#include <vector>
-#include <functional>
-#include <mutex>
-#include <zmq/zmq.hpp>
-#include <zmq/zmq_addon.hpp>
-// =====================================================================================================================
-
-// ZMQUTILS INCLUDES
-// =====================================================================================================================
-#include "LibZMQUtils/Global/zmq_context_handler.h"
+#include <LibZMQUtils/InternalHelpers/console_config.h>
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
+namespace internal_helpers{
 
-ZMQContextHandler::ZMQContextHandler()
+#ifdef _WIN32
+
+ConsoleConfig::ConsoleConfig(bool apply_ctrl_handler, bool hide_cursor, bool input_proc)
 {
-    // For the first instance, create the context.
-    if (ZMQContextHandler::instances_.empty())
-        ZMQContextHandler::context_ = std::make_unique<zmq::context_t>(1);
+    // Set the global close flag to false.
+    ConsoleConfig::gCloseFlag = false;
 
-    // Register this instance.
-    ZMQContextHandler::instances_.push_back(std::ref(*this));
+    GetConsoleCursorInfo(hStdout_, &originalCursorInfo_);
+    GetConsoleMode(hStdin_, &originalInputMode_);
+
+    // Add the console control handler.
+    // Note: The handler will work async.
+    if(apply_ctrl_handler)
+        SetConsoleCtrlHandler(consoleCtrlHandler, TRUE);
+
+    // Disable the input proccesing.
+    if(input_proc)
+    {
+        DWORD mode = originalInputMode_ & ~static_cast<DWORD>(ENABLE_LINE_INPUT);
+        SetConsoleMode(hStdin_, mode);
+    }
+
+    // Hide the console cursor.
+    if(hide_cursor)
+    {
+        CONSOLE_CURSOR_INFO cursorInfo = originalCursorInfo_;
+        cursorInfo.bVisible = false;
+        SetConsoleCursorInfo(hStdout_, &cursorInfo);
+    }
 }
 
-ZMQContextHandler &ZMQContextHandler::getInstance()
+void ConsoleConfig::setExitCallback(const ExitConsoleCallback &exit_callback)
 {
-    static ZMQContextHandler instance;
-    return instance;
+    ConsoleConfig::exit_callback_ = exit_callback;
 }
 
-ZMQContextHandler::~ZMQContextHandler()
+ConsoleConfig::~ConsoleConfig()
 {
-
-    // Safety mutex.
-    std::lock_guard<std::mutex> lock(ZMQContextHandler::mtx_);
-
-    // Unregister this instance.
-    ZMQContextHandler::instances_.erase(
-        std::remove_if(ZMQContextHandler::instances_.begin(), ZMQContextHandler::instances_.end(),
-                       [this](const ContextHandlerReference& ref)
-                       { return &ref.get() == this; }),
-        ZMQContextHandler::instances_.end());
-
-    // Destroy the context if no instances left.
-    if (ZMQContextHandler::instances_.empty())
-        ZMQContextHandler::context_.reset();
+    restoreConsole();
 }
 
-const std::unique_ptr<zmq::context_t>& ZMQContextHandler::getContext()
+void ConsoleConfig::restoreConsole()
 {
-    return ZMQContextHandler::context_;
+    // Restore original input and output modes
+    SetConsoleMode(hStdin_, originalInputMode_);
+    SetConsoleCursorInfo(hStdout_, &originalCursorInfo_);
 }
+
+BOOL ConsoleConfig::consoleCtrlHandler(DWORD dw_ctrl_t)
+{
+    WSADATA wsa_data;
+    WSAStartup(MAKEWORD(2,2), &wsa_data);
+
+    std::lock_guard<std::mutex> lock(ConsoleConfig::gMtx);
+    if (dw_ctrl_t == CTRL_C_EVENT || dw_ctrl_t == CTRL_BREAK_EVENT || dw_ctrl_t == CTRL_CLOSE_EVENT)
+    {
+        // Update the closing flag.
+        ConsoleConfig::gCloseFlag = true;
+
+        // Call the exit callback
+        if(ConsoleConfig::exit_callback_)
+            ConsoleConfig::exit_callback_();
+
+        // Notify with the cv and return.
+        ConsoleConfig::gCloseCv.notify_all();
+
+        return TRUE;
+    }
+    return FALSE;
+}
+
+void ConsoleConfig::waitForClose()
+{
+    std::unique_lock<std::mutex> lock(ConsoleConfig::gMtx);
+    ConsoleConfig::gCloseCv.wait(lock, []{ return ConsoleConfig::gCloseFlag.load(); });
+}
+
+#else
+
+// TODO
+
+#endif
 
 // =====================================================================================================================
 
-} // END NAMESPACES.
+}} // END NAMESPACES.
 // =====================================================================================================================
