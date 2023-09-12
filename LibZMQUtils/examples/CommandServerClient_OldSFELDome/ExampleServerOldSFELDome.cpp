@@ -51,6 +51,7 @@ int main(int, char**)
     console_cfg.configureConsole(true, false, false);
 
     // [...]
+    // Nuevo
 
     // Restore the console.
     console_cfg.restoreConsole();
