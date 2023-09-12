@@ -80,11 +80,12 @@ public:
             this->home_pos_ = pos;
         }
 
-        // Do things in the hardware.
-        // Changues in PLC.
+        // Do things in the hardware (PLC) or FPGA.
+        // WARNING: Remember use async if the tasks are computationally demanding.
+        // [...]
 
         // Log.
-        std::string cmd_str = ControllerErrorStr[static_cast<int>(error)];
+        std::string cmd_str = ControllerErrorStr[static_cast<size_t>(error)];
         std::cout << std::string(100, '-') << std::endl;
         std::cout<<"<AMELAS CONTROLLER>"<<std::endl;
         std::cout<<"-> SET_HOME_POSITION"<<std::endl;

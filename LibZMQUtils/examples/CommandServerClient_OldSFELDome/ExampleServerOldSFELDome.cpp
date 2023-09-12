@@ -22,23 +22,14 @@
  *   along with this project. If not, see the license at < https://eupl.eu/ >.                                         *
  **********************************************************************************************************************/
 
-
 // C++ INCLUDES
 // =====================================================================================================================
-#ifdef _WIN32
-#include <Windows.h>
-#endif
 #include <iostream>
-#include <chrono>
-#include <thread>
-#include <csignal>
-#include <limits>
-#include <any>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/Helpers>
+#include <LibZMQUtils/Utils>
 // =====================================================================================================================
 
 // PROJECT INCLUDES
@@ -48,20 +39,21 @@
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-
 // ---------------------------------------------------------------------------------------------------------------------
 
-
+/**
+ * @brief Main entry point of the program `ExampleServerOldSFELDome`.
+ */
 int main(int, char**)
 {
     // Configure the console.
-    zmqutils::internal_helpers::ConsoleConfig cmd_config(true, true, true);
+    zmqutils::utils::ConsoleConfig& console_cfg = zmqutils::utils::ConsoleConfig::getInstance();
+    console_cfg.configureConsole(true, false, false);
 
-
-
+    // [...]
 
     // Restore the console.
-    cmd_config.restoreConsole();
+    console_cfg.restoreConsole();
 
     // Return.
 	return 0;

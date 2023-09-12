@@ -98,8 +98,6 @@ public:
 
     LIBZMQUTILS_EXPORT ClientResult sendCommand(const RequestData&, CommandReply&);
 
-    LIBZMQUTILS_EXPORT bool waitForClose(std::chrono::milliseconds timeout = std::chrono::milliseconds::zero());
-
     /**
      * @brief Virtual destructor.
      * This destructor is virtual to ensure proper cleanup when the derived class is destroyed.
@@ -159,7 +157,7 @@ private:
     zmq::socket_t *req_close_socket_;    ///< ZMQ auxiliar socket for receiving the close request.
 
     // Condition variables with associated flags.
-    std::condition_variable client_close_cv_;
+    std::condition_variable stopped_done_cv_;
     std::atomic_bool flag_client_closed_;
 
     // Mutex.

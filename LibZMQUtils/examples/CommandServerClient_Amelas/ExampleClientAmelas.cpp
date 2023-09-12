@@ -1,12 +1,47 @@
+/***********************************************************************************************************************
+ *   LibZMQUtils (ZMQ Utilitites Library): A libre library with ZMQ related useful utilities.                          *
+ *                                                                                                                     *
+ *   Copyright (C) 2023 Degoras Project Team                                                                           *
+ *                      < Ángel Vera Herrera, avera@roa.es - angeldelaveracruz@gmail.com >                             *
+ *                      < Jesús Relinque Madroñal >                                                                    *
+ *                                                                                                                     *
+ *   This file is part of LibZMQUtils.                                                                                 *
+ *                                                                                                                     *
+ *   Licensed under the European Union Public License (EUPL), Version 1.2 or subsequent versions of the EUPL license   *
+ *   as soon they will be approved by the European Commission (IDABC).                                                 *
+ *                                                                                                                     *
+ *   This project is free software: you can redistribute it and/or modify it under the terms of the EUPL license as    *
+ *   published by the IDABC, either Version 1.2 or, at your option, any later version.                                 *
+ *                                                                                                                     *
+ *   This project is distributed in the hope that it will be useful. Unless required by applicable law or agreed to in *
+ *   writing, it is distributed on an "AS IS" basis, WITHOUT ANY WARRANTY OR CONDITIONS OF ANY KIND; without even the  *
+ *   implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the EUPL license to check specific   *
+ *   language governing permissions and limitations and more details.                                                  *
+ *                                                                                                                     *
+ *   You should use this project in compliance with the EUPL license. You should have received a copy of the license   *
+ *   along with this project. If not, see the license at < https://eupl.eu/ >.                                         *
+ **********************************************************************************************************************/
 
+/** ********************************************************************************************************************
+ * @example ExampleClientAmelas.cpp
+ *
+ * @brief This file serves as a program example of how to use the `AmelasClient` class.
+ *
+ * This program initializes an instance of the `AmelasClient` class to interact with an `AmelasServer`.
+ *
+ * @author Degoras Project Team
+ * @copyright EUPL License
+ * @version 2309.1
+***********************************************************************************************************************/
 
+// C++ INCLUDES
+// =====================================================================================================================
 #include <iostream>
 #include <cstring>
-
+// =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/Helpers>
 #include <LibZMQUtils/Utils>
 // =====================================================================================================================
 
@@ -249,11 +284,14 @@ void parseCommand(CommandClientBase &client, const std::string &command)
     delete[] command_str;
 }
 
-
+/**
+ * @brief Main entry point of the program `ExampleClientAmelas`.
+ */
 int main(int, char**)
 {
     // Configure the console.
-    zmqutils::internal_helpers::ConsoleConfig cmd_config(true, false, false);
+    zmqutils::utils::ConsoleConfig& console_cfg = zmqutils::utils::ConsoleConfig::getInstance();
+    console_cfg.configureConsole(true, false, false);
 
     // Configuration variables.
     unsigned port = 9999;
@@ -267,8 +305,13 @@ int main(int, char**)
     client.setAliveCallbacksEnabled(false);
 
     // Set the exit callback to the console handler for safety.
-    zmqutils::internal_helpers::ConsoleConfig::setExitCallback(
-        [&client](){client.stopClient();});
+    console_cfg.setExitCallback(
+            [&client]()
+            {
+                std::cout << std::endl;
+                std::cout << "Stopping the client..." << std::endl;
+                client.stopClient();
+            });
 
     bool started = client.startClient();
 
@@ -282,7 +325,7 @@ int main(int, char**)
     std::string command;
 
     // Infinite loop for test.
-    while(!zmqutils::internal_helpers::ConsoleConfig::gCloseFlag)
+    while(!console_cfg.closeStatus())
     {
         // Get the command and parameters.
         std::cout<<"------------------------------------------------------"<<std::endl;
@@ -335,10 +378,9 @@ int main(int, char**)
         }
 
         // Break if we want to close the example program.
-        if(zmqutils::internal_helpers::ConsoleConfig::gCloseFlag || std::cin.eof())
+        if(console_cfg.closeStatus() || std::cin.eof())
         {
-            std::cout << std::endl;
-            std::cout << "Stopping the client..." << std::endl;
+            console_cfg.waitForClose();
             break;
         }
 
@@ -346,15 +388,13 @@ int main(int, char**)
         parseCommand(client, command);
     }
 
-    // Wait for closing.
-    // Neccesary due to the command handler for this example works in other thread.
-    client.waitForClose();
-
     // Final log.
     std::cout << "Client stoped. All ok!!" << std::endl;
 
     // Restore the console.
-    cmd_config.restoreConsole();
+    console_cfg.restoreConsole();
 
 	return 0;
 }
+
+// ---------------------------------------------------------------------------------------------------------------------

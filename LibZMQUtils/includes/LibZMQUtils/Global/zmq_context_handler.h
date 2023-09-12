@@ -57,31 +57,28 @@ namespace zmqutils{
 class ZMQContextHandler
 {
 
-public:
-
-    // Aliases.
-    using ContextHandlerReference = std::reference_wrapper<ZMQContextHandler>;
-
-    LIBZMQUTILS_EXPORT static ZMQContextHandler& getInstance();
-
-    LIBZMQUTILS_EXPORT virtual ~ZMQContextHandler();
-
 protected:
 
     ZMQContextHandler();
 
-    ZMQContextHandler(const ZMQContextHandler&) = delete;
+    // Aliases.
+    using ContextHandlerReference = std::reference_wrapper<ZMQContextHandler>;
 
-    ZMQContextHandler& operator=(const ZMQContextHandler&) = delete;
+    virtual ~ZMQContextHandler();
 
     const std::unique_ptr<zmq::context_t>& getContext();
+    static ZMQContextHandler& getInstance();
 
 private:
 
+    // Delete constructors.
+    ZMQContextHandler(const ZMQContextHandler&) = delete;
+    ZMQContextHandler& operator=(const ZMQContextHandler&) = delete;
+
     // Internal variables and containers.
-    inline static std::mutex mtx_;                                    ///< Safety mutex.
-    inline static std::unique_ptr<zmq::context_t> context_;           ///< ZMQ global context.
-    inline static std::vector<ContextHandlerReference> instances_;    ///< Instances of the ContextHandler.
+    inline static std::mutex mtx_;                                  ///< Safety mutex.
+    inline static std::unique_ptr<zmq::context_t> context_;         ///< ZMQ global context.
+    inline static std::vector<ContextHandlerReference> instances_;  ///< Instances of the ContextHandler.
 };
 
 } // END NAMESPACES.

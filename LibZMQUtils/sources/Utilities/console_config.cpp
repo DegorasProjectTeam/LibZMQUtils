@@ -39,79 +39,108 @@
 
 // LIBDPSLR INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/InternalHelpers/console_config.h>
+#include <LibZMQUtils/Utilities/console_config.h>
+#include <iostream>
+#include <ostream>
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
-namespace internal_helpers{
+namespace utils{
 
 #ifdef _WIN32
 
-ConsoleConfig::ConsoleConfig(bool apply_ctrl_handler, bool hide_cursor, bool input_proc)
-{
-    // Set the global close flag to false.
-    ConsoleConfig::gCloseFlag = false;
+ConsoleConfig::ConsoleConfig() :
+    exit_callback_(nullptr),
+    close_flag_(false),
+    handle_stdin_(GetStdHandle(STD_INPUT_HANDLE)),
+    handle_stdout_(GetStdHandle(STD_OUTPUT_HANDLE))
+{}
 
-    GetConsoleCursorInfo(hStdout_, &originalCursorInfo_);
-    GetConsoleMode(hStdin_, &originalInputMode_);
+WINBOOL ConsoleConfig::StaticConsoleCtrlHandler(DWORD dwCtrlType)
+{
+    return ConsoleConfig::getInstance().consoleCtrlHandler(dwCtrlType);
+}
+
+ConsoleConfig &ConsoleConfig::getInstance()
+{
+    // Guaranteed to be destroyed, instantiated on first use.
+    static ConsoleConfig instance;
+    return instance;
+}
+
+void ConsoleConfig::configureConsole(bool apply_ctrl_handler, bool hide_cursor, bool input_proc)
+{
+    // Safe lock.
+    std::lock_guard<std::mutex> lock(this->mtx_);
+
+    GetConsoleCursorInfo(handle_stdout_, &this->orig_cursor_info_);
+    GetConsoleMode(handle_stdin_, &this->orig_in_mode_);
 
     // Add the console control handler.
     // Note: The handler will work async.
     if(apply_ctrl_handler)
-        SetConsoleCtrlHandler(consoleCtrlHandler, TRUE);
+        SetConsoleCtrlHandler(StaticConsoleCtrlHandler, TRUE);
 
     // Disable the input proccesing.
     if(input_proc)
     {
-        DWORD mode = originalInputMode_ & ~static_cast<DWORD>(ENABLE_LINE_INPUT);
-        SetConsoleMode(hStdin_, mode);
+        DWORD mode = this->orig_in_mode_ & ~static_cast<DWORD>(ENABLE_LINE_INPUT);
+        SetConsoleMode(this->handle_stdin_, mode);
     }
 
     // Hide the console cursor.
     if(hide_cursor)
     {
-        CONSOLE_CURSOR_INFO cursorInfo = originalCursorInfo_;
+        CONSOLE_CURSOR_INFO cursorInfo = orig_cursor_info_;
         cursorInfo.bVisible = false;
-        SetConsoleCursorInfo(hStdout_, &cursorInfo);
+        SetConsoleCursorInfo(this->handle_stdout_, &cursorInfo);
     }
 }
 
 void ConsoleConfig::setExitCallback(const ExitConsoleCallback &exit_callback)
 {
-    ConsoleConfig::exit_callback_ = exit_callback;
+    // Safe lock.
+    std::lock_guard<std::mutex> lock(this->mtx_);
+
+    this->exit_callback_ = exit_callback;
 }
 
 ConsoleConfig::~ConsoleConfig()
 {
-    restoreConsole();
+    this->restoreConsole();
 }
 
 void ConsoleConfig::restoreConsole()
 {
+    // Safe lock.
+    std::lock_guard<std::mutex> lock(this->mtx_);
+
     // Restore original input and output modes
-    SetConsoleMode(hStdin_, originalInputMode_);
-    SetConsoleCursorInfo(hStdout_, &originalCursorInfo_);
+    SetConsoleMode(this->handle_stdin_, this->orig_in_mode_);
+    SetConsoleCursorInfo(this->handle_stdout_, &this->orig_cursor_info_);
 }
 
 BOOL ConsoleConfig::consoleCtrlHandler(DWORD dw_ctrl_t)
 {
+    // Safe lock.
+    std::lock_guard<std::mutex> lock(this->mtx_);
+
     WSADATA wsa_data;
     WSAStartup(MAKEWORD(2,2), &wsa_data);
 
-    std::lock_guard<std::mutex> lock(ConsoleConfig::gMtx);
     if (dw_ctrl_t == CTRL_C_EVENT || dw_ctrl_t == CTRL_BREAK_EVENT || dw_ctrl_t == CTRL_CLOSE_EVENT)
     {
         // Update the closing flag.
-        ConsoleConfig::gCloseFlag = true;
+        ConsoleConfig::close_flag_ = true;
 
         // Call the exit callback
-        if(ConsoleConfig::exit_callback_)
-            ConsoleConfig::exit_callback_();
+        if(this->exit_callback_)
+            this->exit_callback_();
 
         // Notify with the cv and return.
-        ConsoleConfig::gCloseCv.notify_all();
+        this->close_cv_.notify_all();
 
         return TRUE;
     }
@@ -120,8 +149,14 @@ BOOL ConsoleConfig::consoleCtrlHandler(DWORD dw_ctrl_t)
 
 void ConsoleConfig::waitForClose()
 {
-    std::unique_lock<std::mutex> lock(ConsoleConfig::gMtx);
-    ConsoleConfig::gCloseCv.wait(lock, []{ return ConsoleConfig::gCloseFlag.load(); });
+    // Safe lock.
+    std::unique_lock<std::mutex> lock(this->cv_mtx_);
+    this->close_cv_.wait(lock, [this]{ return this->close_flag_.load(); });
+}
+
+bool ConsoleConfig::closeStatus()
+{
+    return ConsoleConfig::close_flag_;
 }
 
 #else

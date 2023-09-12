@@ -114,8 +114,6 @@ CommandClientBase::CommandClientBase(const std::string& server_endpoint,
 
 CommandClientBase::~CommandClientBase()
 {
-    // TODO stop autoalive.
-
     // Force the stop client execution.
     // Warning: In this case the onClientStop callback can't be executed.
     this->internalStopClient();
@@ -146,17 +144,16 @@ void CommandClientBase::stopClient()
     if (!this->flag_client_working_)
         return;
 
+    // Safe mutex.
+    std::unique_lock<std::mutex> lock(this->client_close_mtx_);
+
     // Call to the internal stop.
     this->internalStopClient();
 
     // Call to the internal callback.
     this->onClientStop();
 
-    // Update the close flag.
-    this->flag_client_closed_ = true;
-
-    std::unique_lock<std::mutex> lock(client_close_mtx_);
-    this->client_close_cv_.notify_all();
+   // this->client_close_cv_.notify_all();
 }
 
 bool CommandClientBase::resetClient()
@@ -333,7 +330,9 @@ ClientResult CommandClientBase::sendCommand(const RequestData& request, CommandR
 
     // Check if the client stopped.
     if (result == ClientResult::CLIENT_STOPPED)
+    {
         return result;
+    }
 
     // Check if was a timeout.
     if (result == ClientResult::TIMEOUT_REACHED)
@@ -360,18 +359,10 @@ ClientResult CommandClientBase::sendCommand(const RequestData& request, CommandR
     return result;
 }
 
-bool CommandClientBase::waitForClose(std::chrono::milliseconds timeout)
-{
-    std::unique_lock<std::mutex> lock(client_close_mtx_);
-    if (timeout == std::chrono::milliseconds::zero()) {
-        client_close_cv_.wait(lock, [this]{ return this->flag_client_closed_.load(); });
-        return true;
-    } else {
-        return client_close_cv_.wait_for(lock, timeout, [this]{ return this->flag_client_closed_.load(); });
-    }
-}
 
-ClientResult CommandClientBase::recvFromSocket(CommandReply& reply, zmq::socket_t* recv_socket,
+
+ClientResult CommandClientBase::recvFromSocket(CommandReply& reply,
+                                               zmq::socket_t* recv_socket,
                                                zmq::socket_t *close_socket)
 {
     // Prepare the poller.
@@ -461,7 +452,6 @@ ClientResult CommandClientBase::recvFromSocket(CommandReply& reply, zmq::socket_
     }
 }
 
-
 void CommandClientBase::deleteSockets()
 {
     // Delete the pointers.
@@ -502,15 +492,16 @@ void CommandClientBase::internalStopClient()
 
     // If autoalive is enabled stop it.
     if(this->flag_autoalive_enabled_)
-    {
-        this->disableAutoAlive();
-    }
-
-    // Safe mutex lock
-    std::unique_lock<std::mutex> lock(this->mtx_);
+        this->stopAutoAlive();
 
     // Delete the sockets.
     this->deleteSockets();
+
+    // Update the close flag.
+    this->flag_client_closed_ = true;
+
+    // Safe sleep.
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
 }
 
 void CommandClientBase::aliveWorker()

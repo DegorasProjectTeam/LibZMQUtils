@@ -56,10 +56,9 @@ namespace zmqutils{
 namespace utils{
 // =====================================================================================================================
 
-std::mt19937_64 UUIDGenerator::gen_ = std::mt19937_64{std::random_device{}()};
-std::random_device UUIDGenerator::rd_ = std::random_device();
-
-UUIDGenerator::UUIDGenerator()
+UUIDGenerator::UUIDGenerator() :
+    rd_(std::random_device()),
+    gen_(std::mt19937_64{std::random_device{}()})
 {
     // Safe mutex lock.
     std::unique_lock<std::mutex> lock(this->mtx_);
@@ -73,7 +72,7 @@ UUIDGenerator::UUIDGenerator()
         this->gen_ = std::mt19937_64(seed);
     }
     else
-        this->gen_ = std::mt19937_64(rd_());
+        this->gen_ = std::mt19937_64(this->rd_());
 }
 
 UUIDGenerator &UUIDGenerator::getInstance()
@@ -95,7 +94,7 @@ UUID UUIDGenerator::generateUUIDv4()
     {
         // Random generation.
         for(auto& byte : bytes)
-            byte = static_cast<std::byte>(distrib(UUIDGenerator::gen_));
+            byte = static_cast<std::byte>(distrib(this->gen_));
 
         // Set the version to 4 (random)
         bytes[6] = static_cast<std::byte>((static_cast<std::uint8_t>(bytes[6]) & 0x0F) | 0x40);
@@ -109,7 +108,7 @@ UUID UUIDGenerator::generateUUIDv4()
     } while(generated_uuids_.find(uuid) != generated_uuids_.end());
 
     // Safe mutex lock.
-    std::unique_lock<std::mutex> lock(UUIDGenerator::mtx_);
+    std::unique_lock<std::mutex> lock(this->mtx_);
 
     // Insert the generated uuid.
     generated_uuids_.insert(uuid);

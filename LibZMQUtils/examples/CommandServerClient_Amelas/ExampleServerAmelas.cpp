@@ -53,7 +53,7 @@
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/Helpers>
+#include <LibZMQUtils/Utils>
 // =====================================================================================================================
 
 // PROJECT INCLUDES
@@ -81,7 +81,8 @@ int main(int, char**)
     using amelas::controller::AmelasController;
 
     // Configure the console.
-    zmqutils::internal_helpers::ConsoleConfig cmd_config(true, true, true);
+    zmqutils::utils::ConsoleConfig& console_cfg = zmqutils::utils::ConsoleConfig::getInstance();
+    console_cfg.configureConsole(true, true, true);
 
     // Configuration variables.
     unsigned port = 9999;
@@ -124,7 +125,7 @@ int main(int, char**)
     }
 
     // Wait for closing as an infinite loop until ctrl-c.
-    zmqutils::internal_helpers::ConsoleConfig::waitForClose();
+    console_cfg.waitForClose();
 
     // Log.
     std::cout << "Stopping the server..." << std::endl;
@@ -136,7 +137,7 @@ int main(int, char**)
     std::cout << "Server stoped. All ok!!" << std::endl;
 
     // Restore the console.
-    cmd_config.restoreConsole();
+    console_cfg.restoreConsole();
 
     // Return.
 	return 0;
