@@ -22,36 +22,95 @@
  *   along with this project. If not, see the license at < https://eupl.eu/ >.                                         *
  **********************************************************************************************************************/
 
+/** ********************************************************************************************************************
+ * @file common.h
+ * @brief EXAMPLE FILE - This file contains common elements for the example SdomeController module.
+ * @author Degoras Project Team
+ * @copyright EUPL License
+ * @version 2309.1
+***********************************************************************************************************************/
+
+// =====================================================================================================================
+#pragma once
+// =====================================================================================================================
+
 // C++ INCLUDES
 // =====================================================================================================================
-#include <iostream>
+#include <string>
+#include <map>
+#include <vector>
+#include <variant>
+#include <functional>
 // =====================================================================================================================
 
-// ZMQUTILS INCLUDES
-// =====================================================================================================================
 #include <LibZMQUtils/Utils>
+
+// SDOME NAMESPACES
+// =====================================================================================================================
+namespace sdome{
+namespace controller{
 // =====================================================================================================================
 
-// PROJECT INCLUDES
+// CONSTANTS
+// =====================================================================================================================
 // =====================================================================================================================
 
+// CONVENIENT ALIAS, ENUMERATIONS AND CONSTEXPR
 // =====================================================================================================================
 
-/**
- * @brief Main entry point of the program `ExampleClientOldSFELDome`.
- */
-int main(int, char**)
+class SdomeController;
+
+enum class ControllerError : std::int32_t
 {
-    // Configure the console.
-    zmqutils::utils::ConsoleConfig& console_cfg = zmqutils::utils::ConsoleConfig::getInstance();
-    console_cfg.configureConsole(true, false, false);
+    INVALID_ERROR = -1,
+    SUCCESS = 0,
+    INVALID_POSITION = 1,
+    UNSAFE_POSITION = 2
+};
 
-    // [...]
+static constexpr std::array<const char*, 21>  ControllerErrorStr
+{
+    "SUCCESS - Controller process success",
+    "INVALID_POSITION - The provided position (az/alt) is invalid.",
+    "UNSAFE_POSITION - The provided position (az/alt) is unsafe."
+};
 
-    // Restore the console.
-    console_cfg.restoreConsole();
+struct AltAzPos : public zmqutils::utils::Serializable
+{
+    inline AltAzPos(double az, double el):
+        az(az), el(el){}
 
-	return 0;
-}
+    inline AltAzPos(): az(-1), el(-1){}
 
-// ---------------------------------------------------------------------------------------------------------------------
+    double az;
+    double el;
+
+    size_t serialize(zmqutils::utils::BinarySerializer& serializer) const final
+    {
+        return serializer.write(az, el);
+    }
+
+    void deserialize(zmqutils::utils::BinarySerializer& serializer) final
+    {
+        serializer.read(az, el);
+    }
+
+    size_t serializedSize() const final
+    {
+        return (2*sizeof(uint64_t) + sizeof(double)*2);
+    }
+};
+
+// Generic callback.
+template<typename... Args>
+using SdomeControllerCallback = controller::ControllerError(SdomeController::*)(Args...);
+
+// Callback function type aliases
+using SetHomePositionCallback = std::function<ControllerError(const AltAzPos&)>;
+using GetHomePositionCallback = std::function<ControllerError(AltAzPos&)>;
+using GetDatetimeCallback = std::function<ControllerError(std::string&)>;
+
+// =====================================================================================================================
+
+}} // END NAMESPACES.
+// =====================================================================================================================

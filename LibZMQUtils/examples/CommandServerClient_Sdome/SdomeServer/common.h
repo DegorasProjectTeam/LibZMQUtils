@@ -22,42 +22,73 @@
  *   along with this project. If not, see the license at < https://eupl.eu/ >.                                         *
  **********************************************************************************************************************/
 
-// C++ INCLUDES
+/** ********************************************************************************************************************
+ * @file common.h
+ * @brief EXAMPLE FILE - This file contains common elements for the example SdomeServer module.
+ * @author Degoras Project Team
+ * @copyright EUPL License
+ * @version 2309.1
+***********************************************************************************************************************/
+
 // =====================================================================================================================
-#include <iostream>
+#pragma once
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/Utils>
+#include <LibZMQUtils/CommandServer>
 // =====================================================================================================================
 
-// PROJECT INCLUDES
+// SDOME NAMESPACES
+// =====================================================================================================================
+namespace sdome{
+namespace communication{
+namespace common{
 // =====================================================================================================================
 
-// =====================================================================================================================
-
-// ---------------------------------------------------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------------------------------------------------
-
-/**
- * @brief Main entry point of the program `ExampleServerOldSFELDome`.
- */
-int main(int, char**)
+// Specific subclass commands (0 to 20 are reserved for the base server).
+// WARNING: In our approach, the server commands must be always in order.
+enum class SdomeServerCommand : zmqutils::common::CommandType
 {
-    // Configure the console.
-    zmqutils::utils::ConsoleConfig& console_cfg = zmqutils::utils::ConsoleConfig::getInstance();
-    console_cfg.configureConsole(true, false, false);
+    REQ_SET_DATETIME      = 31,
+    REQ_GET_DATETIME      = 32,
+    REQ_SET_HOME_POSITION = 33,
+    REQ_GET_HOME_POSITION = 34,
+    END_IMPL_COMMANDS     = 35,
+    END_SDOME_COMMANDS   = 50
+};
 
-    // [...]
-    // Nuevo
+// Specific subclass errors (0 to 30 are reserved for the base server).
+enum class SdomeServerResult : zmqutils::common::ResultType
+{
+    EMPTY_CALLBACK = 31,
+    INVALID_CALLBACK = 32
+};
 
-    // Restore the console.
-    console_cfg.restoreConsole();
+// Extend the base command strings with those of the subclass.
+static constexpr auto SdomeServerCommandStr = zmqutils::utils::joinArraysConstexpr(
+    zmqutils::common::ServerCommandStr,
+    std::array<const char*, 5>
+    {
+        "REQ_SET_DATETIME",
+        "REQ_GET_DATETIME",
+        "REQ_SET_HOME_POSITION",
+        "REQ_GET_HOME_POSITION",
+        "END_DRGG_COMMANDS"
+    });
 
-    // Return.
-	return 0;
-}
+// Extend the base result strings with those of the subclass.
+static constexpr auto SdomeServerResultStr = zmqutils::utils::joinArraysConstexpr(
+    zmqutils::common::ServerResultStr,
+    std::array<const char*, 2>
+    {
+        "EMPTY_CALLBACK - The external callback for the command is empty.",
+        "INVALID_CALLBACK - The external callback for the command is invalid."
+    });
 
-// ---------------------------------------------------------------------------------------------------------------------
+// Usefull const expressions.
+constexpr int kMinCmdId = static_cast<int>(zmqutils::common::ServerCommand::END_BASE_COMMANDS) + 1;
+constexpr int kMaxCmdId = static_cast<int>(SdomeServerCommand::END_SDOME_COMMANDS) - 1;
+
+}}} // END NAMESPACES.
+// =====================================================================================================================
