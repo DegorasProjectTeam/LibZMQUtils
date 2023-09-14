@@ -68,6 +68,9 @@ void AmelasServer::processSetHomePosition(const CommandRequest& request, Command
     controller::ControllerError ctrl_err;
     double az, el;
 
+    // Position struct.
+    controller::AltAzPos pos;
+
     // Check the request parameters size.
     if (request.params_size == 0 || !request.params)
     {
@@ -78,7 +81,7 @@ void AmelasServer::processSetHomePosition(const CommandRequest& request, Command
     // Try to read the parameters data.
     try
     {
-        BinarySerializer::fastDeserialization(request.params.get(), request.params_size, az, el);
+        BinarySerializer::fastDeserialization(request.params.get(), request.params_size, pos);
     }
     catch(...)
     {
@@ -86,8 +89,7 @@ void AmelasServer::processSetHomePosition(const CommandRequest& request, Command
         return;
     }
 
-    // Position struct.
-    controller::AltAzPos pos = {az, el};
+
 
     // Now we will process the command in the controller.
     ctrl_err = this->invokeCallback<controller::SetHomePositionCallback>(request, reply, pos);
@@ -192,6 +194,9 @@ void AmelasServer::onWaitingCommand()
 
 void AmelasServer::onDeadClient(const HostInfo& client)
 {
+    // Callback del controller.
+    // Apagar.
+
     // Log.
     std::cout << std::string(100, '-') << std::endl;
     std::cout<<"<AMELAS SERVER>"<<std::endl;

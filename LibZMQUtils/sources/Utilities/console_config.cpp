@@ -58,7 +58,7 @@ ConsoleConfig::ConsoleConfig() :
     handle_stdout_(GetStdHandle(STD_OUTPUT_HANDLE))
 {}
 
-WINBOOL ConsoleConfig::StaticConsoleCtrlHandler(DWORD dwCtrlType)
+BOOL WINAPI ConsoleConfig::StaticConsoleCtrlHandler(DWORD dwCtrlType)
 {
     return ConsoleConfig::getInstance().consoleCtrlHandler(dwCtrlType);
 }

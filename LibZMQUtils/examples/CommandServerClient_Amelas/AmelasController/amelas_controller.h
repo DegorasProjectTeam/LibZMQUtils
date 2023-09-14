@@ -81,6 +81,7 @@ public:
         }
 
         // Do things in the hardware (PLC) or FPGA.
+        // this->doPLCSetHomePosition(isdhfkljsdhilfhlisd)
         // WARNING: Remember use async if the tasks are computationally demanding.
         // [...]
 
