@@ -69,8 +69,8 @@ class CommandClientBase : public ZMQContextHandler
 public:
     
     LIBZMQUTILS_EXPORT CommandClientBase(const std::string& server_endpoint,
-                      const std::string& client_name = "",
-                      const std::string& interf_name = "");
+                                         const std::string& client_name = "",
+                                         const std::string& interf_name = "");
     
     LIBZMQUTILS_EXPORT bool startClient();
 
@@ -99,8 +99,8 @@ public:
     LIBZMQUTILS_EXPORT ClientResult sendCommand(const RequestData&, CommandReply&);
 
     /**
-     * @brief Virtual destructor.
-     * This destructor is virtual to ensure proper cleanup when the derived class is destroyed.
+     * @brief Virtual destructor to ensure proper cleanup when the derived class is destroyed.
+     * @warning The client will stop if is running but in this case the `onClientStop` callback can't be executed.
      */
     LIBZMQUTILS_EXPORT virtual ~CommandClientBase() override;
 
@@ -148,10 +148,8 @@ private:
     common::HostInfo client_info_;       ///< External client information for identification.
     std::string client_name_;            ///< Internal client name. Will not be use as id.
 
-    // Server endpoint.
+    // ZMQ sockets and endpoint.
     std::string server_endpoint_;        ///< Server endpoint.
-
-    // ZMQ sockets.
     zmq::socket_t *client_socket_;       ///< ZMQ client socket.
     zmq::socket_t *recv_close_socket_;   ///< ZMQ auxiliar socket for requesting to close.
     zmq::socket_t *req_close_socket_;    ///< ZMQ auxiliar socket for receiving the close request.

@@ -55,12 +55,14 @@ CommandServerBase::CommandServerBase(unsigned port,
                                      const std::string& local_addr,
                                      const std::string &server_name) :
     server_socket_(nullptr),
-    server_endpoint_("tcp://" + local_addr + ":" + std::to_string(port)),
     server_port_(port),
+    server_endpoint_("tcp://" + local_addr + ":" + std::to_string(port)),
     server_name_(server_name),
     flag_server_working_(false),
     flag_check_clients_alive_(true),
-    flag_alive_callbacks_(true)
+    flag_alive_callbacks_(true),
+    client_alive_timeout_(common::kDefaultClientAliveTimeoutMsec),
+    server_reconn_attempts_(common::kServerReconnAttempts)
 {
     // Get the adapters.
     std::vector<NetworkAdapterInfo> interfcs = internal_helpers::network::getHostIPsWithInterfaces();
@@ -88,6 +90,18 @@ const std::map<UUID, HostInfo> &CommandServerBase::getConnectedClients() const
 
 bool CommandServerBase::isWorking() const{return this->flag_server_working_;}
 
+void CommandServerBase::setClientAliveTimeout(unsigned timeout_ms)
+{
+    this->client_alive_timeout_ = static_cast<int>(timeout_ms);
+    if(timeout_ms == 0)
+        this->setClientStatusCheck(false);
+}
+
+void CommandServerBase::setReconectionAttempts(unsigned attempts)
+{
+    this->server_reconn_attempts_ = static_cast<int>(attempts);
+}
+
 void CommandServerBase::setClientStatusCheck(bool enable)
 {
     // Safe mutex lock
@@ -99,7 +113,7 @@ void CommandServerBase::setClientStatusCheck(bool enable)
         if(!enable)
             this->server_socket_->set(zmq::sockopt::rcvtimeo, -1);
         else
-            this->server_socket_->set(zmq::sockopt::rcvtimeo, static_cast<int>(common::kDefaultClientAliveTimeoutMsec));
+            this->server_socket_->set(zmq::sockopt::rcvtimeo, static_cast<int>(this->client_alive_timeout_));
     }
 }
 
@@ -567,7 +581,7 @@ void CommandServerBase::checkClientsAliveStatus()
 
     // Auxiliar containers.
     std::vector<UUID> dead_clients;
-    std::chrono::milliseconds timeout(common::kDefaultClientAliveTimeoutMsec);
+    std::chrono::milliseconds timeout(this->client_alive_timeout_);
     std::chrono::milliseconds min_remaining_time = timeout;
 
     // Get the current time.
@@ -635,7 +649,7 @@ void CommandServerBase::updateServerTimeout()
 
     if (min_timeout != this->connected_clients_.end())
     {
-        auto remain_time = common::kDefaultClientAliveTimeoutMsec -
+        auto remain_time = this->client_alive_timeout_ -
                            std::chrono::duration_cast<std::chrono::milliseconds>(
                                        std::chrono::steady_clock::now() - min_timeout->second.last_seen).count();
         this->server_socket_->set(zmq::sockopt::rcvtimeo, std::max(0, static_cast<int>(remain_time)));
@@ -651,7 +665,7 @@ void CommandServerBase::resetSocket()
     // Auxiliar variables.
     int last_error_code = 0;
     const zmq::error_t* last_error;
-    unsigned reconnect_count = common::kServerReconnTimes;
+    int reconnect_count = this->server_reconn_attempts_;
 
     // Stop the socket.
     this->internalStopServer();

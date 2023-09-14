@@ -61,11 +61,11 @@ namespace common{
 
 // CONSTANTS
 // =====================================================================================================================
-constexpr int kDefaultClientAliveTimeoutMsec = 10000;    ///< Default timeout for consider a client dead.
-constexpr int kDefaultServerAliveTimeoutMsec = 10000;    ///< Default timeout for consider a server dead.
-constexpr unsigned kServerReconnTimes = 10;              ///< Server reconnection default number of attempts.
-constexpr unsigned kClientAlivePeriodMsec = 5000;        ///< Default period for sending alive commands.
-constexpr int kZmqEFSMError = 156384765;                 ///< ZMQ EFSM error.
+constexpr unsigned  kDefaultClientAliveTimeoutMsec = 10000;   ///< Default timeout for consider a client dead (msec).
+constexpr unsigned kDefaultServerAliveTimeoutMsec = 10000;    ///< Default timeout for consider a server dead (msec).
+constexpr unsigned kServerReconnAttempts = 5;                 ///< Server reconnection default number of attempts.
+constexpr unsigned kClientAlivePeriodMsec = 5000;             ///< Default period for sending alive commands.
+constexpr int kZmqEFSMError = 156384765;                      ///< ZMQ EFSM error.
 // =====================================================================================================================
 
 // CONVENIENT ALIAS, ENUMERATIONS AND CONSTEXPR

@@ -304,7 +304,7 @@ public:
      *
      * @return A const reference to the map of connected clients.
      */
-    LIBZMQUTILS_EXPORT const std::map<UUID, HostInfo> &getConnectedClients() const;
+    LIBZMQUTILS_EXPORT const std::map<UUID, HostInfo>& getConnectedClients() const;
 
     /**
      * @brief Check if the server is currently working.
@@ -316,6 +316,32 @@ public:
      * @return True if the server is working, false otherwise.
      */
     LIBZMQUTILS_EXPORT bool isWorking() const;
+
+    /**
+     * @brief Sets the client alive timeout.
+     *
+     * This function sets the timeout value (in milliseconds) for client keep-alive checks. If a client connection
+     * remains inactive for longer than this timeout, it will be considered dead. This can be useful for managing idle
+     * client connections.
+     *
+     * @param timeout_ms The timeout value in milliseconds.
+     *
+     * @note A value of 0 automatically disables the client alive checks, but for enable the alive checking, you must
+     * always use the function `setClientStatusCheck`.
+     */
+    LIBZMQUTILS_EXPORT void setClientAliveTimeout(unsigned timeout_ms);
+
+    /**
+     * @brief Sets the number of reconnection attempts.
+     *
+     * This function sets the number of attempts to reconnect when a connection is lost or fails. When a connection
+     * attempt fails, the server will retry the connection until the specified number of attempts is reached.
+     *
+     * @param attempts The number of reconnection attempts.
+     *
+     * @note A value of 0 means no reconnection attempts will be made.
+     */
+    LIBZMQUTILS_EXPORT void setReconectionAttempts(unsigned attempts);
 
     /**
      * @brief Enables or disables the client's alive status checking.
@@ -623,9 +649,9 @@ private:
     zmq::socket_t* server_socket_;    ///< ZMQ server socket.
 
     // Endpoint data and server info.
-    std::string server_endpoint_;                       ///< Final server endpoint.
     std::vector<NetworkAdapterInfo> server_adapters_;   ///< Listen server adapters.
     unsigned server_port_;                              ///< Server port.
+    std::string server_endpoint_;                       ///< Final server endpoint.
     std::string server_name_;                           ///< Server name. Will not be use as id.
     std::string server_info_;                           ///< Detailed server information.
     std::string server_vers_;                           ///< Server version.
@@ -648,6 +674,10 @@ private:
     std::atomic_bool flag_server_working_;       ///< Flag for check the server working status.
     std::atomic_bool flag_check_clients_alive_;  ///< Flag that enables and disables the client status checking.
     std::atomic_bool flag_alive_callbacks_;      ///< Flag that enables and disables the callbacks for alive messages.
+
+    // Server confg parameters.
+    std::atomic_int client_alive_timeout_;      ///< Tiemout for consider a client dead (in msec).
+    std::atomic_int server_reconn_attempts_;    ///< Server reconnection number of attempts.
 };
 
 } // END NAMESPACES.
