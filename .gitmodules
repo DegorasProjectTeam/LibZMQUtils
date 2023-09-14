@@ -1,0 +1,6 @@
+[submodule "SerialPort"]
+	path = SerialPort
+	url = https://github.com/manashmandal/SerialPort
+[submodule "LibZMQUtils/SerialPort"]
+	path = LibZMQUtils/SerialPort
+	url = https://github.com/manashmandal/SerialPort
