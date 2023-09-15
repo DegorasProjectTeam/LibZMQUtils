@@ -52,7 +52,7 @@
 // =====================================================================================================================
 #include "AmelasController/amelas_controller.h"
 #include "AmelasController/common.h"
-#include "AmelasServer/common.h"
+#include "AmelasControllerServer/common.h"
 // =====================================================================================================================
 
 // AMELAS NAMESPACES
@@ -72,11 +72,11 @@ using zmqutils::utils::CallbackHandler;
 // ---------------------------------------------------------------------------------------------------------------------
 
 // Example of creating a command server from the base.
-class AmelasServer : public zmqutils::ClbkCommandServerBase
+class AmelasControllerServer : public zmqutils::ClbkCommandServerBase
 {
 public:
 
-    AmelasServer(unsigned port, const std::string& local_addr = "*");
+    AmelasControllerServer(unsigned port, const std::string& local_addr = "*");
 
     // Register callback function helper.
     template<typename... Args>
@@ -92,7 +92,7 @@ private:
     // -----------------------------------------------------------------------------------------------------------------
     using CommandServerBase::registerRequestProcFunc;
     using CallbackHandler::registerCallback;
-    using AmelasRequestProcFunc = void(AmelasServer::*)(const CommandRequest&, CommandReply&);
+    using AmelasRequestProcFunc = void(AmelasControllerServer::*)(const CommandRequest&, CommandReply&);
     // -----------------------------------------------------------------------------------------------------------------
 
     // Process functions for all the specific commands.
@@ -104,10 +104,10 @@ private:
 
     // Subclass invoke callback helper.
     template <typename ClbkT, typename... Args>
-    controller::ControllerError invokeCallback(const CommandRequest& request, CommandReply& reply, Args&&... args)
+    controller::AmelasError invokeCallback(const CommandRequest& request, CommandReply& reply, Args&&... args)
     {
         return ClbkCommandServerBase::invokeCallback<ClbkT>(request, reply,
-                                                            controller::ControllerError::INVALID_ERROR,
+                                                            controller::AmelasError::INVALID_ERROR,
                                                             std::forward<Args>(args)...);
     }
 

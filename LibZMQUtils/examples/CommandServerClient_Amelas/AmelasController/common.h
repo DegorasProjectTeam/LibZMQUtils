@@ -60,7 +60,7 @@ namespace controller{
 
 class AmelasController;
 
-enum class ControllerError : std::int32_t
+enum class AmelasError : std::int32_t
 {
     INVALID_ERROR = -1,
     SUCCESS = 0,
@@ -103,12 +103,12 @@ struct AltAzPos : public zmqutils::utils::Serializable
 
 // Generic callback.
 template<typename... Args>
-using AmelasControllerCallback = controller::ControllerError(AmelasController::*)(Args...);
+using AmelasControllerCallback = controller::AmelasError(AmelasController::*)(Args...);
 
 // Callback function type aliases
-using SetHomePositionCallback = std::function<ControllerError(const AltAzPos&)>;
-using GetHomePositionCallback = std::function<ControllerError(AltAzPos&)>;
-using GetDatetimeCallback = std::function<ControllerError(std::string&)>;
+using SetHomePositionCallback = std::function<AmelasError(const AltAzPos&)>;
+using GetHomePositionCallback = std::function<AmelasError(AltAzPos&)>;
+using GetDatetimeCallback = std::function<AmelasError(std::string&)>;
 
 // =====================================================================================================================
 

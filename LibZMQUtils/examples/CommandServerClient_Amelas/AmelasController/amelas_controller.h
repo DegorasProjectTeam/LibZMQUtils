@@ -65,15 +65,15 @@ public:
         home_pos_({-1,-1})
     {}
 
-    ControllerError setHomePosition(const AltAzPos& pos)
+    AmelasError setHomePosition(const AltAzPos& pos)
     {
         // Auxiliar result.
-        ControllerError error = ControllerError::SUCCESS;
+        AmelasError error = AmelasError::SUCCESS;
 
         // Check the provided values.
         if (pos.az >= 360.0 ||  pos.az < 0.0 || pos.el >= 90. || pos.el < 0.)
         {
-            error = ControllerError::INVALID_POSITION;
+            error = AmelasError::INVALID_POSITION;
         }
         else
         {
@@ -99,7 +99,7 @@ public:
         return error;
     }
 
-    ControllerError getHomePosition(AltAzPos& pos)
+    AmelasError getHomePosition(AltAzPos& pos)
     {
         pos = this->home_pos_;
 
@@ -109,12 +109,12 @@ public:
         std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
         std::cout << std::string(100, '-') << std::endl;
 
-        return ControllerError::SUCCESS;
+        return AmelasError::SUCCESS;
     }
 
-    ControllerError getDatetime(std::string&)
+    AmelasError getDatetime(std::string&)
     {
-        return ControllerError::SUCCESS;
+        return AmelasError::SUCCESS;
     }
 
 private:

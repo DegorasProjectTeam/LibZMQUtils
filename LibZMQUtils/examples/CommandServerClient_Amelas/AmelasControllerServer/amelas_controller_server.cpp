@@ -32,7 +32,7 @@
 
 // PROJECT INCLUDES
 // =====================================================================================================================
-#include "amelas_server.h"
+#include "amelas_controller_server.h"
 // =====================================================================================================================
 
 // AMELAS NAMESPACES
@@ -48,24 +48,24 @@ using zmqutils::common::ResultType;
 using zmqutils::utils::BinarySerializer;
 // ---------------------------------------------------------------------------------------------------------------------
 
-AmelasServer::AmelasServer(unsigned int port, const std::string &local_addr) :
+AmelasControllerServer::AmelasControllerServer(unsigned int port, const std::string &local_addr) :
     ClbkCommandServerBase(port, local_addr)
 {
     // Register each internal specific process function in the base server.
 
     // REQ_SET_HOME_POSITION
     this->registerRequestProcFunc(AmelasServerCommand::REQ_SET_HOME_POSITION,
-                                  &AmelasServer::processSetHomePosition);
+                                  &AmelasControllerServer::processSetHomePosition);
 
     // REQ_GET_HOME_POSITION.
     this->registerRequestProcFunc(AmelasServerCommand::REQ_GET_HOME_POSITION,
-                                  &AmelasServer::processGetHomePosition);
+                                  &AmelasControllerServer::processGetHomePosition);
 }
 
-void AmelasServer::processSetHomePosition(const CommandRequest& request, CommandReply& reply)
+void AmelasControllerServer::processSetHomePosition(const CommandRequest& request, CommandReply& reply)
 {
     // Auxiliar variables and containers.
-    controller::ControllerError ctrl_err;
+    controller::AmelasError ctrl_err;
 
     // Position struct.
     controller::AltAzPos pos;
@@ -98,10 +98,10 @@ void AmelasServer::processSetHomePosition(const CommandRequest& request, Command
         reply.params_size = BinarySerializer::fastSerialization(reply.params, ctrl_err);
 }
 
-void AmelasServer::processGetHomePosition(const CommandRequest& request, CommandReply &reply)
+void AmelasControllerServer::processGetHomePosition(const CommandRequest& request, CommandReply &reply)
 {
     // Auxiliar variables and containers.
-    controller::ControllerError ctrl_err;
+    controller::AmelasError ctrl_err;
     controller::AltAzPos pos;
 
     // Now we will process the command in the controller.
@@ -112,12 +112,12 @@ void AmelasServer::processGetHomePosition(const CommandRequest& request, Command
         reply.params_size = BinarySerializer::fastSerialization(reply.params, ctrl_err, pos.az, pos.el);
 }
 
-void AmelasServer::registerRequestProcFunc(AmelasServerCommand command, AmelasRequestProcFunc func)
+void AmelasControllerServer::registerRequestProcFunc(AmelasServerCommand command, AmelasRequestProcFunc func)
 {
     CommandServerBase::registerRequestProcFunc(static_cast<ServerCommand>(command), this, func);
 }
 
-bool AmelasServer::validateCustomCommand(ServerCommand command)
+bool AmelasControllerServer::validateCustomCommand(ServerCommand command)
 {
     // Auxiliar variables.
     bool result = false;
@@ -128,7 +128,7 @@ bool AmelasServer::validateCustomCommand(ServerCommand command)
     return result;
 }
 
-void AmelasServer::onCustomCommandReceived(const CommandRequest& request, CommandReply& reply)
+void AmelasControllerServer::onCustomCommandReceived(const CommandRequest& request, CommandReply& reply)
 {
     // Get the command string.
     std::string cmd_str;
@@ -147,7 +147,7 @@ void AmelasServer::onCustomCommandReceived(const CommandRequest& request, Comman
     CommandServerBase::onCustomCommandReceived(request, reply);
 }
 
-void AmelasServer::onServerStart()
+void AmelasControllerServer::onServerStart()
 {
     // Ips.
     std::string ips;
@@ -171,7 +171,7 @@ void AmelasServer::onServerStart()
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void AmelasServer::onServerStop()
+void AmelasControllerServer::onServerStop()
 {
     // Log.
     std::cout << std::string(100, '-') << std::endl;
@@ -181,7 +181,7 @@ void AmelasServer::onServerStop()
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void AmelasServer::onWaitingCommand()
+void AmelasControllerServer::onWaitingCommand()
 {
     // Log.
     std::cout << std::string(100, '-') << std::endl;
@@ -191,7 +191,7 @@ void AmelasServer::onWaitingCommand()
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void AmelasServer::onDeadClient(const HostInfo& client)
+void AmelasControllerServer::onDeadClient(const HostInfo& client)
 {
     // Log.
     std::cout << std::string(100, '-') << std::endl;
@@ -206,7 +206,7 @@ void AmelasServer::onDeadClient(const HostInfo& client)
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void AmelasServer::onConnected(const HostInfo& client)
+void AmelasControllerServer::onConnected(const HostInfo& client)
 {
     // Log.
     std::cout << std::string(100, '-') << std::endl;
@@ -222,7 +222,7 @@ void AmelasServer::onConnected(const HostInfo& client)
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void AmelasServer::onDisconnected(const HostInfo& client)
+void AmelasControllerServer::onDisconnected(const HostInfo& client)
 {
     // Log.
     std::cout << std::string(100, '-') << std::endl;
@@ -238,7 +238,7 @@ void AmelasServer::onDisconnected(const HostInfo& client)
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void AmelasServer::onServerError(const zmq::error_t &error, const std::string &ext_info)
+void AmelasControllerServer::onServerError(const zmq::error_t &error, const std::string &ext_info)
 {
     // Log.
     std::cout << std::string(100, '-') << std::endl;
@@ -251,7 +251,7 @@ void AmelasServer::onServerError(const zmq::error_t &error, const std::string &e
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void AmelasServer::onCommandReceived(const CommandRequest &request)
+void AmelasControllerServer::onCommandReceived(const CommandRequest &request)
 {
     // Get the command string.
     std::string cmd_str;
@@ -270,7 +270,7 @@ void AmelasServer::onCommandReceived(const CommandRequest &request)
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void AmelasServer::onInvalidMsgReceived(const CommandRequest &request)
+void AmelasControllerServer::onInvalidMsgReceived(const CommandRequest &request)
 {
     // Log.
     BinarySerializer serializer(request.params.get(), request.params_size);
@@ -285,7 +285,7 @@ void AmelasServer::onInvalidMsgReceived(const CommandRequest &request)
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void AmelasServer::onSendingResponse(const CommandReply &reply)
+void AmelasControllerServer::onSendingResponse(const CommandReply &reply)
 {
     // Log.
     BinarySerializer serializer(reply.params.get(), reply.params_size);

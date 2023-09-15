@@ -58,7 +58,7 @@
 
 // PROJECT INCLUDES
 // =====================================================================================================================
-#include "AmelasServer/amelas_server.h"
+#include "AmelasControllerServer/amelas_controller_server.h"
 #include "AmelasController/amelas_controller.h"
 // =====================================================================================================================
 
@@ -76,7 +76,7 @@
 int main(int, char**)
 {
     // Nampesaces.
-    using amelas::communication::AmelasServer;
+    using amelas::communication::AmelasControllerServer;
     using amelas::communication::AmelasServerCommand;
     using amelas::controller::AmelasController;
 
@@ -92,7 +92,7 @@ int main(int, char**)
     AmelasController amelas_controller;
 
     // Instantiate the server.
-    AmelasServer amelas_server(port);
+    AmelasControllerServer amelas_server(port);
 
     // Disable or enables the client status checking.
     amelas_server.setClientStatusCheck(client_status_check);

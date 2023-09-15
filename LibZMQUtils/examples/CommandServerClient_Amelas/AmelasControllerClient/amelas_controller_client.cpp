@@ -1,4 +1,4 @@
-#include "amelas_client.h"
+#include "amelas_controller_client.h"
 
 // AMELAS NAMESPACES
 // =====================================================================================================================
@@ -16,13 +16,13 @@ using zmqutils::common::ResultType;
 using zmqutils::common::CommandType;
 using zmqutils::utils::BinarySerializer;
 
-AmelasClient::AmelasClient(const std::string& server_endpoint,
+AmelasControllerClient::AmelasControllerClient(const std::string& server_endpoint,
                            const std::string& client_name,
                            const std::string interf_name) :
     zmqutils::CommandClientBase(server_endpoint, client_name, interf_name)
 {}
 
-void AmelasClient::onClientStart()
+void AmelasControllerClient::onClientStart()
 {
     // Log.
     std::cout << std::string(100, '-') << std::endl;
@@ -38,7 +38,7 @@ void AmelasClient::onClientStart()
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void AmelasClient::onClientStop()
+void AmelasControllerClient::onClientStop()
 {
     // Log.
     std::cout << std::string(100, '-') << std::endl;
@@ -48,7 +48,7 @@ void AmelasClient::onClientStop()
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void AmelasClient::onWaitingReply()
+void AmelasControllerClient::onWaitingReply()
 {
     // Log.
     std::cout << std::string(100, '-') << std::endl;
@@ -58,7 +58,7 @@ void AmelasClient::onWaitingReply()
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void AmelasClient::onDeadServer()
+void AmelasControllerClient::onDeadServer()
 {
     // Log.
     std::cout << std::string(100, '-') << std::endl;
@@ -68,7 +68,7 @@ void AmelasClient::onDeadServer()
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void AmelasClient::onConnected()
+void AmelasControllerClient::onConnected()
 {
     // TODO In base get server info when connected.
     // Log.
@@ -83,7 +83,7 @@ void AmelasClient::onConnected()
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void AmelasClient::onDisconnected()
+void AmelasControllerClient::onDisconnected()
 {
     // Log.
     std::cout << std::string(100, '-') << std::endl;
@@ -93,7 +93,7 @@ void AmelasClient::onDisconnected()
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void AmelasClient::onReplyReceived(const CommandReply &reply)
+void AmelasControllerClient::onReplyReceived(const CommandReply &reply)
 {
     // Auxiliar.
     BinarySerializer serializer(reply.params.get(), reply.params_size);
@@ -110,7 +110,7 @@ void AmelasClient::onReplyReceived(const CommandReply &reply)
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void AmelasClient::onSendingCommand(const RequestData &req)
+void AmelasControllerClient::onSendingCommand(const RequestData &req)
 {
     BinarySerializer serializer(req.params.get(), req.params_size);
     CommandType command = static_cast<CommandType>(req.command);
@@ -126,7 +126,7 @@ void AmelasClient::onSendingCommand(const RequestData &req)
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void AmelasClient::onClientError(const zmq::error_t& error, const std::string& ext_info)
+void AmelasControllerClient::onClientError(const zmq::error_t& error, const std::string& ext_info)
 {
     // Log.
     std::cout << std::string(100, '-') << std::endl;

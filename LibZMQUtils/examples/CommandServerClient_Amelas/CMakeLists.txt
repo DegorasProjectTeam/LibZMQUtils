@@ -16,12 +16,12 @@ if (UNIX)
     link_directories(${CMAKE_CURRENT_BINARY_DIR}/../lib)
 endif (UNIX)
 
-FILE(GLOB_RECURSE SOURCES AmelasServer/*.cpp AmelasController/*.cpp ExampleServerAmelas.cpp)
-FILE(GLOB_RECURSE HEADERS AmelasServer/*.h AmelasController/*.h)
+FILE(GLOB_RECURSE SOURCES AmelasControllerServer/*.cpp AmelasController/*.cpp ExampleServerAmelas.cpp)
+FILE(GLOB_RECURSE HEADERS AmelasControllerServer/*.h AmelasController/*.h)
 
 macro_setup_launcher(${APP_NAME_SERVER})
 
-FILE(GLOB_RECURSE SOURCES AmelasClient/*.cpp ExampleClientAmelas.cpp)
-FILE(GLOB_RECURSE HEADERS AmelasClient/*.h )
+FILE(GLOB_RECURSE SOURCES AmelasControllerClient/*.cpp ExampleClientAmelas.cpp)
+FILE(GLOB_RECURSE HEADERS AmelasControllerClient/*.h )
 
 macro_setup_launcher(${APP_NAME_CLIENT})

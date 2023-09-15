@@ -48,8 +48,8 @@
 // PROJECT INCLUDES
 // =====================================================================================================================
 #include "AmelasController/common.h"
-#include "AmelasServer/common.h"
-#include "AmelasClient/amelas_client.h"
+#include "AmelasControllerServer/common.h"
+#include "AmelasControllerClient/amelas_controller_client.h"
 // =====================================================================================================================
 
 
@@ -219,8 +219,7 @@ void parseCommand(CommandClientBase &client, const std::string &command)
             }
             else
             {
-                constexpr std::size_t res_sz = sizeof(amelas::controller::ControllerError);
-                constexpr std::size_t double_sz = sizeof(double);
+
 
                 std::cout<<"Server result: "<<static_cast<int>(reply.result)<<std::endl;
 
@@ -235,7 +234,7 @@ void parseCommand(CommandClientBase &client, const std::string &command)
 
                 if(command_id > static_cast<CommandType>(ServerCommand::END_BASE_COMMANDS))
                 {
-                    ControllerError error;
+                    AmelasError error;
 
                     BinarySerializer ser(reply.params.get(), reply.params_size);
                     std::cout<<ser.toJsonString()<<std::endl;
@@ -249,7 +248,7 @@ void parseCommand(CommandClientBase &client, const std::string &command)
                 {
                     try
                     {
-                        ControllerError error;   // Trash. The controller error must be checked.
+                        AmelasError error;   // Trash. The controller error must be checked.
                         double az;
                         double el;
 
@@ -298,8 +297,8 @@ int main(int, char**)
     std::string ip = "127.0.0.1";
 
     std::string endpoint = "tcp://" + ip + ":" + std::to_string(port);
-
-    AmelasClient client(endpoint, "AMELAS EXAMPLE CLIENT");
+    
+    AmelasControllerClient client(endpoint, "AMELAS EXAMPLE CLIENT");
 
     // Configure the client.
     client.setAliveCallbacksEnabled(false);

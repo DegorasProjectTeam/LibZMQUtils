@@ -16,8 +16,8 @@
 
 // AMELAS INCLUDES
 // =====================================================================================================================
-#include <AmelasServer/amelas_server.h>
-#include <AmelasServer/common.h>
+#include <AmelasControllerServer/amelas_controller_server.h>
+#include <AmelasControllerServer/common.h>
 // =====================================================================================================================
 
 // PROJECT INCLUDES
@@ -34,13 +34,13 @@ using namespace amelas::communication::common;
 using zmqutils::common::RequestData;
 
 
-class AmelasClient : public zmqutils::CommandClientBase
+class AmelasControllerClient : public zmqutils::CommandClientBase
 {
 public:
 
-    AmelasClient(const std::string& server_endpoint,
-                 const std::string& client_name = "",
-                 const std::string interf_name = "");
+    AmelasControllerClient(const std::string& server_endpoint,
+                           const std::string& client_name = "",
+                           const std::string interf_name = "");
 
     // TODO
     //virtual void prepareRequest() = 0;
