@@ -24,7 +24,7 @@
 
 /** ********************************************************************************************************************
  * @file callback_handler.h
- * @brief This file contains the implementation of the CallbackHandler class.
+ * @brief This file contains the declaration and template implementation of the `CallbackHandler` class.
  * @author Degoras Project Team
  * @copyright EUPL License
  * @version 2309.1
@@ -131,31 +131,19 @@ public:
      * @brief Remove a callback using its id.
      * @param id - The id of the callback to be removed.
      */
-    LIBZMQUTILS_EXPORT void removeCallback(CallbackId id)
-    {
-        std::lock_guard<std::mutex> lock(this->mtx_);
-        this->callback_map_.erase(id);
-    }
+    LIBZMQUTILS_EXPORT void removeCallback(CallbackId id);
 
     /**
      * @brief Check if a callback with the given id exists.
      * @param id - The id of the callback to be checked.
      * @return bool - true if callback exists, false otherwise.
      */
-    LIBZMQUTILS_EXPORT bool hasCallback(CallbackId id) const
-    {
-        std::lock_guard<std::mutex> lock(this->mtx_);
-        return this->callback_map_.find(id) != this->callback_map_.end();
-    }
+    LIBZMQUTILS_EXPORT bool hasCallback(CallbackId id) const;
 
     /**
      * @brief Remove all registered callbacks.
      */
-    LIBZMQUTILS_EXPORT void clearCallbacks()
-    {
-        std::lock_guard<std::mutex> lock(this->mtx_);
-        this->callback_map_.clear();
-    }
+    LIBZMQUTILS_EXPORT void clearCallbacks();
 
     /**
      * @brief Invoke a registered callback with the given id.
@@ -166,6 +154,7 @@ public:
      * @param args - Arguments to be passed to the callback.
      * @return RetT - The return value of the callback.
      * @throw std::invalid_argument - if the callback with the given id does not exist or has incorrect type.
+     * @throw std::runtime_error - if the callback is null and other exceptions.
      */
     template <typename CallbackType, typename RetT, typename... Args>
     RetT invokeCallback(CallbackId id, Args&&... args)

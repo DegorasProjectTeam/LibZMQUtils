@@ -66,7 +66,6 @@ void AmelasServer::processSetHomePosition(const CommandRequest& request, Command
 {
     // Auxiliar variables and containers.
     controller::ControllerError ctrl_err;
-    double az, el;
 
     // Position struct.
     controller::AltAzPos pos;
@@ -194,9 +193,6 @@ void AmelasServer::onWaitingCommand()
 
 void AmelasServer::onDeadClient(const HostInfo& client)
 {
-    // Callback del controller.
-    // Apagar.
-
     // Log.
     std::cout << std::string(100, '-') << std::endl;
     std::cout<<"<AMELAS SERVER>"<<std::endl;
@@ -293,7 +289,7 @@ void AmelasServer::onSendingResponse(const CommandReply &reply)
 {
     // Log.
     BinarySerializer serializer(reply.params.get(), reply.params_size);
-    int result = static_cast<int>(reply.result);
+    size_t result = static_cast<size_t>(reply.result);
     std::cout << std::string(100, '-') << std::endl;
     std::cout<<"<AMELAS SERVER>"<<std::endl;
     std::cout<<"-> ON SENDING RESPONSE: "<<std::endl;

@@ -23,97 +23,48 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file clbk_command_server_base.h
- * @brief This file contains the declaration of the ClbkCommandServerBase class and related.
+ * @file callback_handler.h
+ * @brief This file contains the implementation of the `CallbackHandler` class.
  * @author Degoras Project Team
  * @copyright EUPL License
  * @version 2309.1
 ***********************************************************************************************************************/
 
-// =====================================================================================================================
-#pragma once
-// =====================================================================================================================
-
 // C++ INCLUDES
 // =====================================================================================================================
-#include <unordered_map>
-#include <string>
-#include <any>
-#include <variant>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/Global/libzmqutils_global.h"
-#include "LibZMQUtils/CommandServerClient/common.h"
-#include "LibZMQUtils/CommandServerClient/command_server_base.h"
 #include "LibZMQUtils/Utilities/callback_handler.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
-// =====================================================================================================================
+namespace utils{
 
-// =====================================================================================================================
-using common::ServerCommand;
-using utils::CallbackHandler;
-// =====================================================================================================================
-
-class ClbkCommandServerBase : public CommandServerBase,
-                              public CallbackHandler
+void CallbackHandler::removeCallback(CallbackId id)
 {
-public:
+    std::lock_guard<std::mutex> lock(this->mtx_);
+    this->callback_map_.erase(id);
+}
 
-    LIBZMQUTILS_EXPORT ClbkCommandServerBase(unsigned port, const std::string& local_addr = "*");
+bool CallbackHandler::hasCallback(CallbackId id) const
+{
+    std::lock_guard<std::mutex> lock(this->mtx_);
+    return this->callback_map_.find(id) != this->callback_map_.end();
+}
 
-    template<typename ClassT, typename RetT = void, typename... Args>
-    void registerCallback(ServerCommand command, ClassT* object, RetT(ClassT::*callback)(Args...))
-    {
-        CallbackHandler::registerCallback(static_cast<CallbackHandler::CallbackId>(command), object, callback);
-    }
+void CallbackHandler::clearCallbacks()
+{
+    std::lock_guard<std::mutex> lock(this->mtx_);
+    this->callback_map_.clear();
+}
 
-    LIBZMQUTILS_EXPORT void removeCallback(ServerCommand command);
+// =====================================================================================================================
 
-    LIBZMQUTILS_EXPORT bool hasCallback(ServerCommand command);
 
-    LIBZMQUTILS_EXPORT virtual ~ClbkCommandServerBase() override;
 
-protected:
-
-    template <typename CallbackType, typename RetT = void,  typename... Args>
-    RetT invokeCallback(const CommandRequest& request, CommandReply& reply, const RetT& err_ret, Args&&... args)
-    {
-        // Get the command.
-        ServerCommand cmd = static_cast<ServerCommand>(request.command);
-
-        // Check the callback.
-        if(!this->hasCallback(cmd))
-        {
-            reply.result = ServerResult::EMPTY_EXT_CALLBACK;
-            return err_ret;
-        }
-
-        //Invoke the callback.
-        try
-        {
-            return CallbackHandler::invokeCallback<CallbackType, RetT>(
-                static_cast<CallbackHandler::CallbackId>(cmd), std::forward<Args>(args)...);
-        }
-        catch(...)
-        {
-            reply.result = ServerResult::INVALID_EXT_CALLBACK;
-            return err_ret;
-        }
-    }
-
-private:
-
-    // Hide the base functions.
-    using CallbackHandler::invokeCallback;
-    using CallbackHandler::removeCallback;
-    using CallbackHandler::hasCallback;
-};
-
-} // END NAMESPACES.
+}} // END NAMESPACES.
 // =====================================================================================================================
