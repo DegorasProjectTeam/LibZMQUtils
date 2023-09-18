@@ -55,7 +55,7 @@ M_DECLARE_UNIT_TEST(BinarySerializer, TrivialIntensive)
 // Implementations.
 
 M_DEFINE_UNIT_TEST(BinarySerializer, Trivial)
-{
+{    
     // Serializer.
     BinarySerializer serializer;
 

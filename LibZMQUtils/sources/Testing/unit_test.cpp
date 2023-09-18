@@ -176,7 +176,7 @@ void TestSummary::makeSummary(bool show, const std::string& storage_path) const
     std::stringstream title;
     std::stringstream border;
     std::string s_name = "= Session:  " + this->session_;
-    std::string date = "= Datetime: " + utils::currentISO8601Date();
+    std::string date = "= Datetime: " + utils::currentISO8601Date(true, false, true);
     std::string keys_str = "= Modules:  " + internal_helpers::strings::join(keys, " - ");
     std::string filename = this->session_;
     std::string date_file = utils::timePointToString(utils::TimePointStd::clock::now(),

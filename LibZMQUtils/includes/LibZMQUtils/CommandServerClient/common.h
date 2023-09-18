@@ -88,12 +88,13 @@ using ResultType = std::int32_t;    ///< Type used for the BaseServerResult enum
  */
 enum class ServerCommand : CommandType
 {
-    INVALID_COMMAND   = -1, ///< Invalid command.
-    REQ_CONNECT       = 0,  ///< Request to connect to the server.
-    REQ_DISCONNECT    = 1,  ///< Request to disconnect from the server.
-    REQ_ALIVE         = 2,  ///< Request to check if the server is alive and for notify that the client is alive too.
-    RESERVED_COMMANDS = 3,  ///< Sentinel value indicating the start of the reserved commands (not is as a valid msg).
-    END_BASE_COMMANDS = 30  ///< Sentinel value indicating the end of the base commands (not is as a valid msg).
+    INVALID_COMMAND     = -1, ///< Invalid command.
+    REQ_CONNECT         = 0,  ///< Request to connect to the server.
+    REQ_DISCONNECT      = 1,  ///< Request to disconnect from the server.
+    REQ_ALIVE           = 2,  ///< Request to check if the server is alive and for notify that the client is alive too.
+    REQ_GET_SERVER_TIME = 3,  ///< Request to get the server current time (uses the UTC operating system time).
+    RESERVED_COMMANDS   = 4,  ///< Sentinel value indicating the start of the reserved commands (invalid command).
+    END_BASE_COMMANDS   = 30  ///< Sentinel value indicating the end of the base commands (invalid command).
 };
 
 /**
