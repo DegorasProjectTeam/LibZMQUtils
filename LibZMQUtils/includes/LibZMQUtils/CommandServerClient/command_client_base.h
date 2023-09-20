@@ -96,6 +96,8 @@ public:
 
     LIBZMQUTILS_EXPORT ClientResult doAlive();
 
+    LIBZMQUTILS_EXPORT ClientResult doGetServerTime(std::string& datetime);
+
     LIBZMQUTILS_EXPORT ClientResult sendCommand(const RequestData&, CommandReply&);
 
     /**

@@ -96,25 +96,19 @@ void parseCommand(CommandClientBase &client, const std::string &command)
 
         if (command_id == static_cast<CommandType>(ServerCommand::REQ_CONNECT))
         {
-            std::cout << "Sending connect message" << std::endl;
+            std::cout << "Sending REQ_CONNECT command." << std::endl;
         }
         else if (command_id == static_cast<CommandType>(ServerCommand::REQ_DISCONNECT))
         {
-            std::cout << "Sending disconnect message" << std::endl;
+            std::cout << "Sending REQ_DISCONNECT command" << std::endl;
         }
         else if (command_id == static_cast<CommandType>(ServerCommand::REQ_ALIVE))
         {
-            std::cout << "Sending keepalive command." << std::endl;
+            std::cout << "Sending REQ_ALIVE command." << std::endl;
         }
-        else if (command_id == static_cast<CommandType>(AmelasServerCommand::REQ_GET_DATETIME))
+        else if (command_id == static_cast<CommandType>(ServerCommand::REQ_GET_SERVER_TIME))
         {
-            std::cout << "Get datetime command not implemented yet." << std::endl;
-            valid = false;
-        }
-        else if (command_id == static_cast<CommandType>(AmelasServerCommand::REQ_SET_DATETIME))
-        {
-            std::cout << "Set datetime command not implemented yet." << std::endl;
-            valid = false;
+            std::cout << "Sending REQ_GET_SERVER_TIME command." << std::endl;
         }
         else if (command_id == static_cast<CommandType>(AmelasServerCommand::REQ_GET_HOME_POSITION))
         {
@@ -207,6 +201,20 @@ void parseCommand(CommandClientBase &client, const std::string &command)
                     return;
                 }
 
+
+            }
+            else if(command_msg.command == ServerCommand::REQ_GET_SERVER_TIME)
+            {
+                std::string datetime;
+                client_result = client.doGetServerTime(datetime);
+
+                if (client_result == ClientResult::COMMAND_OK)
+                {
+                    std::cout<<"Server time: "<<datetime<<std::endl;
+
+                    delete[] command_str;
+                    return;
+                }
 
             }
             else
@@ -329,9 +337,10 @@ int main(int, char**)
         // Get the command and parameters.
         std::cout<<"------------------------------------------------------"<<std::endl;
         std::cout<<"-- Commands --"<<std::endl;
-        std::cout<<"- REQ_CONNECT:    0"<<std::endl;
-        std::cout<<"- REQ_DISCONNECT: 1"<<std::endl;
-        std::cout<<"- REQ_ALIVE:      2"<<std::endl;
+        std::cout<<"- REQ_CONNECT:          0"<<std::endl;
+        std::cout<<"- REQ_DISCONNECT:       1"<<std::endl;
+        std::cout<<"- REQ_ALIVE:            2"<<std::endl;
+        std::cout<<"- REQ_GET_SERVER_TIME:  3"<<std::endl;
         std::cout<<"- CUSTOM:         cmd param1 param2 ..."<<std::endl;
         std::cout<<"-- Other --"<<std::endl;
         std::cout<<"- Client exit:             exit"<<std::endl;

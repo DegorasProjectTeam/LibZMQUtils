@@ -50,8 +50,6 @@ namespace common{
 // WARNING: In our approach, the server commands must be always in order.
 enum class AmelasServerCommand : zmqutils::common::CommandType
 {
-    REQ_SET_DATETIME      = 31,
-    REQ_GET_DATETIME      = 32,
     REQ_SET_HOME_POSITION = 33,
     REQ_GET_HOME_POSITION = 34,
     END_IMPL_COMMANDS     = 35,
@@ -70,8 +68,8 @@ static constexpr auto AmelasServerCommandStr = zmqutils::utils::joinArraysConste
     zmqutils::common::ServerCommandStr,
     std::array<const char*, 5>
     {
-        "REQ_SET_DATETIME",
-        "REQ_GET_DATETIME",
+        "FUTURE_EXAMPLE",
+        "FUTURE_EXAMPLE",
         "REQ_SET_HOME_POSITION",
         "REQ_GET_HOME_POSITION",
         "END_DRGG_COMMANDS"

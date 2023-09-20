@@ -89,15 +89,18 @@ std::string timePointToIso8601(const TimePointStd &tp, bool add_ms, bool add_ns,
 
     if (!utc)
     {
+        // Get the offsets.
         std::ostringstream ss;
         TimePointStd::duration dur = tp.time_since_epoch();
         const time_t secs = duration_cast<std::chrono::seconds>(dur).count();
         const std::tm *tm_local = std::localtime(&secs);
+        if(!tm_local)
+            return std::string();
         const int hh_local = tm_local->tm_hour;
         const int mm_local = tm_local->tm_min;
-
         const std::tm *tm_utc = std::gmtime(&secs);
-
+        if(!tm_utc)
+            return std::string();
         int offset_hours = hh_local - tm_utc->tm_hour;
         int offset_minutes = mm_local - tm_utc->tm_min;
 
@@ -108,8 +111,6 @@ std::string timePointToIso8601(const TimePointStd &tp, bool add_ms, bool add_ns,
         offset_ss << std::setw(2) << std::abs(offset_hours);
         offset_ss << ':';
         offset_ss << std::setw(2) << std::abs(offset_minutes);
-
-        std::cout<<"HERE "<<offset_ss.str();
 
         // Append the UTC offset to the ISO 8601 datetime.
         iso8601_datetime += offset_ss.str();

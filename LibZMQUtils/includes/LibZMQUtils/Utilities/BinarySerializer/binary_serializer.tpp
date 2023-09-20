@@ -177,12 +177,21 @@ void BinarySerializer::readRecursive(T& value, Args&... args)
 }
 
 template<typename... Args>
-BinarySerializer::SizeUnit BinarySerializer::fastSerialization(std::unique_ptr<std::byte>& out, const Args&... args)
+BinarySerializer::SizeUnit BinarySerializer::fastSerialization(BytesSmartPtr& out, const Args&... args)
 {
     // Do the serialization
     BinarySerializer serializer;
     const SizeUnit size = serializer.write(std::forward<const Args&>(args)...);
-    out = serializer.moveUnique();
+    std::cout<<"Fast internal: "<<serializer.getDataHexString()<<std::endl;
+    serializer.moveUnique(out);
+    std::stringstream ss;
+    for(size_t i = 0; i < size; i++)
+    {
+        ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned int>(out[i]);
+        if (i < size - 1)
+            ss << " ";
+    }
+    std::cout<<"Fast internal 2: "<<ss.str()<<std::endl;
     return size;
 }
 
@@ -191,6 +200,16 @@ void BinarySerializer::fastDeserialization(void* src, SizeUnit size, Args&... ar
 {
     // Do the deserialization.
     BinarySerializer serializer(src, size);
+    serializer.read(std::forward<Args&>(args)...);
+    if(!serializer.allReaded())
+        throw std::out_of_range("BinarySerializer: Not all data was deserialized.");
+}
+
+template<typename... Args>
+void BinarySerializer::fastDeserialization(BytesSmartPtr&& src, SizeUnit size, Args&... args)
+{
+    // Do the deserialization.
+    BinarySerializer serializer(std::move(src), size);
     serializer.read(std::forward<Args&>(args)...);
     if(!serializer.allReaded())
         throw std::out_of_range("BinarySerializer: Not all data was deserialized.");

@@ -571,7 +571,7 @@ protected:
      *          to avoid blocking the server's main thread. Consider using separate threads or
      *          asynchronous mechanisms to handle time-consuming tasks.
      */
-    LIBZMQUTILS_EXPORT virtual void onCustomCommandReceived(const CommandRequest&, CommandReply&);
+    LIBZMQUTILS_EXPORT virtual void onCustomCommandReceived(CommandRequest&, CommandReply&);
 
     /**
      * @brief Base server error callback. Subclasses must override this function.
@@ -619,10 +619,10 @@ private:
     void serverWorker();
 
     // Process base command.
-    void processCommand(const CommandRequest&, CommandReply&);
+    void processCommand(CommandRequest&, CommandReply&);
 
     // Process custom command.
-    void processCustomCommand(const CommandRequest& request, CommandReply& reply);
+    void processCustomCommand(CommandRequest& request, CommandReply& reply);
 
     // Client status checker.
     void checkClientsAliveStatus();
@@ -633,17 +633,24 @@ private:
     // Update the server timeout.
     void updateServerTimeout();
 
-    // Internal connect execution process.
-    ServerResult execReqConnect(const CommandRequest&);
-
-    // Internal disconnect execution process.
-    ServerResult execReqDisconnect(const CommandRequest&);
-
     // Function for receive data from the client.
     ServerResult recvFromSocket(CommandRequest&);
 
     // Function for reset the socket.
     void resetSocket();
+
+    // INTERNAL COMMANDS.
+
+    // Internal connect execution process.
+    ServerResult execReqConnect(CommandRequest&);
+
+    // Internal disconnect execution process.
+    ServerResult execReqDisconnect(const CommandRequest&);
+
+    // Internal disconnect execution process.
+    ServerResult execReqGetServerTime(CommandReply& reply);
+
+    // -----------------------------------------------------
 
     // ZMQ socket.
     zmq::socket_t* server_socket_;    ///< ZMQ server socket.

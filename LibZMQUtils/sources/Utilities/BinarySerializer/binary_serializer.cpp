@@ -76,12 +76,20 @@ BinarySerializer::BinarySerializer(void *src, SizeUnit size) :
     this->loadData(src, size);
 }
 
+BinarySerializer::BinarySerializer(BytesSmartPtr&& src, SizeUnit size) :
+    data_(std::move(src)),
+    size_(size),
+    capacity_(size),
+    offset_(0),
+    endianess_(this->determineEndianess())
+{}
+
 void BinarySerializer::reserve(SizeUnit size)
 {
     if (size > this->capacity_)
     {
         std::lock_guard<std::mutex> lock(this->mtx_);
-        std::unique_ptr<std::byte[]> new_data(new std::byte[size]);
+        BytesSmartPtr new_data(new std::byte[size]);
         if (this->data_)
             std::memcpy(new_data.get(), data_.get(), size_);
         this->data_ = std::move(new_data);
@@ -115,20 +123,49 @@ void BinarySerializer::resetReading()
     this->offset_ = 0;
 }
 
-std::unique_ptr<std::byte> BinarySerializer::moveUnique()
+BinarySerializer::SizeUnit BinarySerializer::moveUnique(BinarySerializer::BytesSmartPtr& out)
 {
     std::lock_guard<std::mutex> lock(this->mtx_);
+
+    std::stringstream ss;
+    for(size_t i = 0; i < size_; i++)
+    {
+        ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned int>(data_[i]);
+        if (i < size_ - 1)
+            ss << " ";
+    }
+    std::cout<<"Fast internal 3: "<<ss.str()<<std::endl;
+
+    BinarySerializer::SizeUnit size = this->size_;
     this->size_ = 0;
     this->capacity_ = 0;
     this->offset_ = 0;
-    return std::unique_ptr<std::byte>(this->data_.release());
+
+    out = BinarySerializer::BytesSmartPtr(this->data_.release());
+
+    // Create a new BytesSmartPtr with the existing data.
+    //BinarySerializer::BytesSmartPtr new_data = std::make_unique<std::byte[]>(aux);
+
+    // Copy the data from the existing data_ to new_data.
+    //std::copy(this->data_.get(), this->data_.get() + aux, new_data.get());
+
+    std::stringstream new_ss;
+    for(size_t i = 0; i < size; i++)
+    {
+        new_ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned int>(out[i]);
+        if (i < size - 1)
+            new_ss << " ";
+    }
+    std::cout<<"Fast internal 4: "<<new_ss.str()<<std::endl;
+
+    return size;
 }
 
-std::unique_ptr<std::byte> BinarySerializer::moveUnique(SizeUnit& size)
-{
-    size = this->size_;
-    return this->moveUnique();
-}
+//BinarySerializer::BytesSmartPtr BinarySerializer::moveUnique(SizeUnit& size)
+//{
+//    size = this->size_;
+//    return this->moveUnique();
+//}
 
 std::byte* BinarySerializer::release()
 {

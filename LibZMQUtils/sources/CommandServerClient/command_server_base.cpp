@@ -213,7 +213,7 @@ CommandServerBase::~CommandServerBase()
     this->internalStopServer();
 }
 
-ServerResult CommandServerBase::execReqConnect(const CommandRequest& cmd_req)
+ServerResult CommandServerBase::execReqConnect(CommandRequest& cmd_req)
 {
     // Auxiliar containers.
     std::string ip;
@@ -222,7 +222,7 @@ ServerResult CommandServerBase::execReqConnect(const CommandRequest& cmd_req)
     std::string name;
 
     // Prepare the serializer.
-    utils::BinarySerializer serializer(cmd_req.params.get(), cmd_req.params_size);
+    utils::BinarySerializer serializer(std::move(cmd_req.params), cmd_req.params_size);
 
     // Check the parameters.
     if(cmd_req.params_size == 0)
@@ -279,6 +279,21 @@ ServerResult CommandServerBase::execReqDisconnect(const CommandRequest& cmd_req)
     // Update the timeout of the main socket.
     if(this->flag_check_clients_alive_)
         this->updateServerTimeout();
+
+    // All ok.
+    return ServerResult::COMMAND_OK;
+}
+
+ServerResult CommandServerBase::execReqGetServerTime(CommandReply& reply)
+{
+    // Get the UTC time.
+    const std::string date = utils::currentISO8601Date(true, false, true);
+
+    if(date.empty())
+        return ServerResult::COMMAND_FAILED;
+
+    // Serialize the date.
+    reply.params_size = utils::BinarySerializer::fastSerialization(reply.params, date);
 
     // All ok.
     return ServerResult::COMMAND_OK;
@@ -492,7 +507,7 @@ ServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
             {
                 // Get and store the parameters data.
                 utils::BinarySerializer serializer(message_params.data(), message_params.size());
-                request.params = serializer.moveUnique(request.params_size);
+                request.params_size = serializer.moveUnique(request.params);
             }
             else
                 return ServerResult::EMPTY_PARAMS;
@@ -519,7 +534,7 @@ bool CommandServerBase::validateCommand(int raw_command)
     return result;
 }
 
-void CommandServerBase::processCommand(const CommandRequest& request, CommandReply& reply)
+void CommandServerBase::processCommand(CommandRequest& request, CommandReply& reply)
 {
     // First of all, call to the internal callback.
     this->onCommandReceived(request);
@@ -545,6 +560,10 @@ void CommandServerBase::processCommand(const CommandRequest& request, CommandRep
     {
         reply.result = ServerResult::COMMAND_OK;
     }
+    else if(ServerCommand::REQ_GET_SERVER_TIME == request.command)
+    {
+        reply.result = this->execReqGetServerTime(reply);
+    }
     else
     {
         // Validate the custom command.
@@ -559,7 +578,7 @@ void CommandServerBase::processCommand(const CommandRequest& request, CommandRep
     }
 }
 
-void CommandServerBase::processCustomCommand(const CommandRequest &request, CommandReply &reply)
+void CommandServerBase::processCustomCommand(CommandRequest& request, CommandReply &reply)
 {
     auto iter = process_fnc_map_.find(request.command);
     if(iter != process_fnc_map_.end())
@@ -710,7 +729,7 @@ void CommandServerBase::resetSocket()
     } while (reconnect_count > 0 && !this->flag_server_working_);
 }
 
-void CommandServerBase::onCustomCommandReceived(const CommandRequest& req, CommandReply& rep)
+void CommandServerBase::onCustomCommandReceived(CommandRequest& req, CommandReply& rep)
 {
     CommandServerBase::processCustomCommand(req, rep);
 }

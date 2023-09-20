@@ -430,8 +430,12 @@ ClientResult CommandClientBase::recvFromSocket(CommandReply& reply,
 
                     // Get and store the parameters data.
                     utils::BinarySerializer serializer(msg_params.data(), msg_params.size());
-                    reply.params = serializer.moveUnique(reply.params_size);
+                    reply.params_size = serializer.moveUnique(reply.params);
                 }
+
+
+                // TODO Actualizar aqui el client result según el server result?
+
 
                 // All ok.
                 return ClientResult::COMMAND_OK;
@@ -675,7 +679,7 @@ ClientResult CommandClientBase::doConnect(bool auto_alive)
 
     // Update the request.
     request.command = common::ServerCommand::REQ_CONNECT;
-    request.params = serializer.moveUnique(request.params_size);
+    request.params_size = serializer.moveUnique(request.params);
 
     // Send the command.
     result = this->sendCommand(request, reply);
@@ -720,6 +724,37 @@ ClientResult CommandClientBase::doAlive()
 
     // Send the command.
     return this->sendCommand(request, reply);
+}
+
+ClientResult CommandClientBase::doGetServerTime(std::string &datetime)
+{
+    // Safe mutex lock
+    std::unique_lock<std::mutex> lock(this->mtx_);
+
+    // Containers.
+    RequestData request;
+    CommandReply reply;
+    ClientResult result;
+
+    // Update the request.
+    request.command = common::ServerCommand::REQ_GET_SERVER_TIME;
+
+    // Send the command.
+    result = this->sendCommand(request, reply);
+
+    // Check the result.
+    if(result != ClientResult::COMMAND_OK)
+        return result;
+
+    // Check the server result.
+    if(reply.result != ServerResult::COMMAND_OK)
+        return ClientResult::COMMAND_FAILED;
+
+    // Get the ISO 8601 datetime string.
+    utils::BinarySerializer::fastDeserialization(std::move(reply.params), reply.params_size, datetime);
+
+    // Return the result.
+    return result;
 }
 
 zmq::multipart_t CommandClientBase::prepareMessage(const RequestData &request)

@@ -40,6 +40,7 @@
 #include <vector>
 #include <atomic>
 #include <memory>
+#include <cstddef>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
@@ -198,7 +199,8 @@ class BinarySerializer
 {
 public:
 
-    using SizeUnit = std::uint64_t;
+    using SizeUnit = std::uint64_t;                      ///< Alias for the size unit.
+    using BytesSmartPtr = std::unique_ptr<std::byte[]>;  ///< Alias for the bytes storage smart pointer.
 
     /// Enumeration representing the byte order (endianness) of data.
     enum class Endianess
@@ -218,12 +220,17 @@ public:
      * @param src Pointer to the data source to load.
      * @param size Size of the data to load.
      * @warning The @a src parameter is a void pointer, so be careful.
+     * @warning This constructor implies deep copy.
      */
     LIBZMQUTILS_EXPORT BinarySerializer(void* src, SizeUnit size);
+
+    LIBZMQUTILS_EXPORT BinarySerializer(BytesSmartPtr&& src, SizeUnit size);
+
 
     /**
      * @brief Reserve memory for the serializer.
      * @param size The size of memory to reserve.
+     * @warning This function implies deep copy if the class has data.
      */
     LIBZMQUTILS_EXPORT void reserve(SizeUnit size);
 
@@ -232,8 +239,11 @@ public:
      * @param data Pointer to the data to load.
      * @param size Size of the data to load.
      * @warning The @a data parameter is a void pointer, so be careful.
+     * @warning This function implies deep copy.
      */
     LIBZMQUTILS_EXPORT void loadData(void *src, SizeUnit size);
+
+
 
     /**
      * @brief Clear the data held by the serializer.
@@ -260,16 +270,10 @@ public:
 
     /**
      * @brief Move the unique pointer to the data held by the serializer and return it.
-     * @return Unique pointer to the data.
+     * @param[out] out The smart pointer with the data.
+     * @return The current size of the data.
      */
-    LIBZMQUTILS_EXPORT std::unique_ptr<std::byte> moveUnique();
-
-    /**
-     * @brief Move the unique pointer to the data held by the serializer, return it, and set the size variable.
-     * @param[out] size The size of the data.
-     * @return Unique pointer to the data.
-     */
-    LIBZMQUTILS_EXPORT std::unique_ptr<std::byte> moveUnique(SizeUnit& size);
+    LIBZMQUTILS_EXPORT SizeUnit moveUnique(BinarySerializer::BytesSmartPtr& out);
 
     /**
      * @brief Get the current size of the data held by the serializer.
@@ -318,22 +322,13 @@ public:
      * data in the provided unique pointer. It first checks that all input data types are both trivially copyable and
      * trivial, then serializes each data item in order, consolidating the binary data.
      *
-     * Usage Example:
-     *
-     * @code{.cpp}
-     *   int x = 42;
-     *   double y = 3.14;
-     *   std::unique_ptr<std::byte> serializedData;
-     *   SizeUnit size = BinarySerializer::fastSerialization(serializedData, x, y);
-     * @endcode
-     *
      * @tparam Args Variadic template argument for types.
      * @param[out] out The unique pointer where the serialized data will be stored. The pointer will be allocated within the function.
      * @param[in] args The input data items to be serialized.
      * @return The size of the serialized data.
      */
     template<typename... Args>
-    static SizeUnit fastSerialization(std::unique_ptr<std::byte>& out, const Args&... args);
+    static SizeUnit fastSerialization(BytesSmartPtr& out, const Args&... args);
 
     /**
      * @brief A static function that deserializes binary data into its original data items.
@@ -363,11 +358,14 @@ public:
      * @throw std::out_of_range If you read beyond the size of the stored data.
 
      * @warning The @a src parameter is a void pointer, so be careful.
-     *
+     * @warning This function implies deep copy.
      * @note This function must always read all the data of the buffer.
      */
     template<typename... Args>
     static void fastDeserialization(void* src, SizeUnit size, Args&... args);
+
+    template<typename... Args>
+    static void fastDeserialization(BytesSmartPtr&& src, SizeUnit size, Args&... args);
 
     /**
      * @brief Serializes the given values into the binary stream.
@@ -589,7 +587,7 @@ protected:
     // -----------------------------------------------------------------------------------------------------------------
 
     // Internal containers and variables.
-    std::unique_ptr<std::byte[]> data_;   ///< Internal data pointer.
+    BytesSmartPtr data_;                  ///< Internal data pointer.
     std::atomic<SizeUnit> size_;          ///< Current size of the data.
     std::atomic<SizeUnit> capacity_;      ///< Current capacity.
     std::atomic<SizeUnit> offset_;        ///< Offset when reading.

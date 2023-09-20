@@ -92,7 +92,7 @@ enum class ServerCommand : CommandType
     REQ_CONNECT         = 0,  ///< Request to connect to the server.
     REQ_DISCONNECT      = 1,  ///< Request to disconnect from the server.
     REQ_ALIVE           = 2,  ///< Request to check if the server is alive and for notify that the client is alive too.
-    REQ_GET_SERVER_TIME = 3,  ///< Request to get the server current time (uses the UTC operating system time).
+    REQ_GET_SERVER_TIME = 3,  ///< Request to get the server ISO 8601 UTC datetime (uses the system clock).
     RESERVED_COMMANDS   = 4,  ///< Sentinel value indicating the start of the reserved commands (invalid command).
     END_BASE_COMMANDS   = 30  ///< Sentinel value indicating the end of the base commands (invalid command).
 };
@@ -117,7 +117,7 @@ enum class ServerResult : ResultType
     CLIENT_NOT_CONNECTED   = 11, ///< Not connected to the target.
     ALREADY_CONNECTED      = 12, ///< Already connected to the target.
     BAD_PARAMETERS         = 13, ///< The provided parameters are invalid.
-    COMMAND_FAILED         = 14, ///< The command execution failed.
+    COMMAND_FAILED         = 14, ///< The command execution failed in the server (internal error).
     NOT_IMPLEMENTED        = 15, ///< The command is not implemented.
     BAD_NO_PARAMETERS      = 16, ///< The provided number of parameters are invalid.
     EMPTY_EXT_CALLBACK     = 17, ///< The associated external callback is empty. Used in ClbkCommandServerBase.
@@ -137,8 +137,9 @@ enum class ClientResult : ResultType
     TIMEOUT_REACHED        = 7,   ///< The operation timed out, the server could be dead.
     INVALID_PARTS          = 8,   ///< The command has invalid parts.
     INVALID_MSG            = 10,  ///< The message is invalid.
+    COMMAND_FAILED         = 14,  ///< The command execution failed in the server (internal error).
     CLIENT_STOPPED         = 17,  ///< The client is stopped.
-    END_BASE_RESULTS       = 30   ///< Sentinel value indicating the end of the base client resutls (not is a valid result).
+    END_BASE_RESULTS       = 30   ///< Sentinel value indicating the end of the base client results.
 
 };
 
@@ -151,7 +152,7 @@ static constexpr std::array<const char*, 31>  ServerCommandStr
     "REQ_CONNECT",
     "REQ_DISCONNECT",
     "REQ_ALIVE",
-    "RESERVED_BASE_COMMAND",
+    "REQ_GET_SERVER_TIME",
     "RESERVED_BASE_COMMAND",
     "RESERVED_BASE_COMMAND",
     "RESERVED_BASE_COMMAND",
@@ -197,8 +198,8 @@ static constexpr std::array<const char*, 31>  ServerResultStr
     "NOT_CONNECTED - Not connected to the server.",
     "ALREADY_CONNECTED - Already connected to the server.",
     "BAD_PARAMETERS - Provided parameters are invalid.",
-    "COMMAND_FAILED - Command execution failed.",
-    "NOT_IMPLEMENTED - Command is not implemented.",
+    "COMMAND_FAILED - Command execution failed in the server (internal server error).",
+    "NOT_IMPLEMENTED - Command is not implemented and registered in server.",
     "BAD_NO_PARAMETERS - The provided number of parameters are invalid.",
     "EMPTY_EXT_CALLBACK - The associated external callback for the command is empty.",
     "INVALID_EXT_CALLBACK - The associated external callback for the command is invalid.",
@@ -282,7 +283,7 @@ struct CommandRequest
 
     utils::UUID client_uuid;
     ServerCommand command;
-    std::unique_ptr<std::byte> params;
+    std::unique_ptr<std::byte[]> params;
     size_t params_size;
 };
 
@@ -290,9 +291,9 @@ struct CommandReply
 {
     LIBZMQUTILS_EXPORT CommandReply();
 
-    std::unique_ptr<std::byte> params;   ///< Serialized parameters of the command.
-    size_t params_size;                  ///< Total serialized parameters size.
-    ServerResult result;                 ///< Reply result from the server.
+    std::unique_ptr<std::byte[]> params;  ///< Serialized parameters of the command.
+    size_t params_size;                   ///< Total serialized parameters size.
+    ServerResult result;                  ///< Reply result from the server.
 };
 
 struct RequestData
@@ -302,7 +303,7 @@ struct RequestData
     LIBZMQUTILS_EXPORT RequestData();
 
     ServerCommand command;                   ///< Command to be sent.
-    std::unique_ptr<std::byte> params;       ///< Serialized parameters of the command.
+    std::unique_ptr<std::byte[]> params;       ///< Serialized parameters of the command.
     size_t params_size;                      ///< Total serialized parameters size.
 };
 

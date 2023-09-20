@@ -72,6 +72,17 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Trivial)
     int r3;
     unsigned r4;
 
+//    serializer.write(n1, n2, n3, n4);
+//    std::cout<<serializer.getDataHexString()<<std::endl;
+
+//    BinarySerializer::BytesSmartPtr data;
+//    BinarySerializer::SizeUnit sz = BinarySerializer::fastSerialization(data, n1, n2, n3, n4);
+//    BinarySerializer serializer_direct_2(&data, sz);
+
+//    std::cout<<serializer_direct_2.getDataHexString()<<std::endl;
+
+
+
     // Write, read.
     serializer.write(n1, n2, n3);
     serializer.write(n4);
@@ -98,11 +109,45 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Trivial)
     // Fast deserialization test.
     serializer.write(n1, n2, n3);
     serializer.write(n4);
+
     std::size_t size;
     std::byte* bytes = serializer.release(size);
     BinarySerializer::fastDeserialization(bytes, size, r1, r2, r3, r4);
 
     // Checking.
+    M_EXPECTED_EQ(r1, n1)
+    M_EXPECTED_EQ(r2, n2)
+    M_EXPECTED_EQ(r3, n3)
+    M_EXPECTED_EQ(r4, n4)
+
+    // Clear out variables.
+    r1 = r2 = 0.0L;
+    r3 = r4 = 0;
+
+    // Fast serialization test and other tests.
+    serializer.clearData();
+    std::unique_ptr<std::byte[]> data;
+    BinarySerializer::SizeUnit sz = BinarySerializer::fastSerialization(data, n1, n2, n3, n4);
+
+    std::stringstream ss;
+    for(size_t i = 0; i < sz; i++)
+    {
+        ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned int>(data[i]);
+        if (i < sz - 1)
+            ss << " ";
+    }
+    std::cout<<"External 1: "<<ss.str()<<std::endl;
+
+    BinarySerializer serializer_direct(std::move(data), sz);
+
+
+
+    std::cout<<serializer_direct.getDataHexString()<<std::endl;
+    serializer_direct.read(r1, r2, r3, r4);
+
+    // Checking.
+    M_EXPECTED_EQ(serializer.getSize(), 0ULL)
+    M_EXPECTED_EQ(serializer.allReaded(), true)
     M_EXPECTED_EQ(r1, n1)
     M_EXPECTED_EQ(r2, n2)
     M_EXPECTED_EQ(r3, n3)
@@ -156,6 +201,22 @@ M_DEFINE_UNIT_TEST(BinarySerializer, String)
     M_EXPECTED_EQ(in2, out2)
     M_EXPECTED_EQ(in3, out3)
     M_EXPECTED_EQ(in4, out4)
+
+    // ISO 8601 test.
+    serializer.clearData();
+    std::string iso8601_res;
+    std::string iso8601_time = "2023-09-19T13:29:12.473Z";
+    serializer.write(iso8601_time);
+
+    BinarySerializer::BytesSmartPtr data;
+    BinarySerializer::SizeUnit sz = BinarySerializer::fastSerialization(data, iso8601_time);
+
+    BinarySerializer::fastDeserialization(std::move(data), sz, iso8601_res);
+
+    std::cout<<iso8601_res<<std::endl;
+
+    std::cout<<iso8601_time <<std::endl;
+
 }
 
 M_DEFINE_UNIT_TEST(BinarySerializer, ArrayTrivial)
@@ -326,8 +387,6 @@ M_DEFINE_UNIT_TEST(BinarySerializer, File)
     output.close();
     remove(filename.c_str());
 }
-
-
 
 M_DEFINE_UNIT_TEST(BinarySerializer, TrivialIntensive)
 {

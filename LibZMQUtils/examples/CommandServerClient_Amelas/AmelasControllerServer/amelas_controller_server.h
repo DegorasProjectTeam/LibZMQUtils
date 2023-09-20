@@ -115,7 +115,7 @@ private:
     virtual bool validateCustomCommand(ServerCommand command) final;
 
     // Internal overrided custom command received callback.
-    virtual void onCustomCommandReceived(const CommandRequest&, CommandReply&) final;
+    virtual void onCustomCommandReceived(CommandRequest&, CommandReply&) final;
 
     // Internal overrided start callback.
     virtual void onServerStart() final;

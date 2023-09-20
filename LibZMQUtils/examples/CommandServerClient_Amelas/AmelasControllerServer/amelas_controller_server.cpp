@@ -88,8 +88,6 @@ void AmelasControllerServer::processSetHomePosition(const CommandRequest& reques
         return;
     }
 
-
-
     // Now we will process the command in the controller.
     ctrl_err = this->invokeCallback<controller::SetHomePositionCallback>(request, reply, pos);
 
@@ -128,7 +126,7 @@ bool AmelasControllerServer::validateCustomCommand(ServerCommand command)
     return result;
 }
 
-void AmelasControllerServer::onCustomCommandReceived(const CommandRequest& request, CommandReply& reply)
+void AmelasControllerServer::onCustomCommandReceived(CommandRequest& request, CommandReply& reply)
 {
     // Get the command string.
     std::string cmd_str;
