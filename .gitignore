@@ -1,9 +1,10 @@
 # Folders.
 *build*/
+product/
 
+# Docs.
 LibZMQUtils-GeneratingDocs/
 ../LibZMQUtils-GeneratingDocs/
-
 
 # User config
 CMakeLists.txt.user
