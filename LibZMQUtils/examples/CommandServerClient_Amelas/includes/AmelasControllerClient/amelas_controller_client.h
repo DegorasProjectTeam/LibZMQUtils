@@ -23,124 +23,80 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @example ExampleServerAmelas.cpp
- *
- * @brief This file serves as a program example of how to use the AmelasServer and AmelasController classes.
- *
- * This program initializes an instance of the AmelasServer class and sets it up to interact with an instance of
- * the AmelasController class. The server is set up to respond to client requests by invoking callback methods on the
- * controller. The program will run indefinitely until the user hits ctrl-c.
- *
+ * @file amelas_controller_client.h
+ * @brief EXAMPLE FILE - This file contains the declaration of the AmelasControllerClient example class.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2309.1
+ * @version 2309.5
 ***********************************************************************************************************************/
+
+// =====================================================================================================================
+#pragma once
+// =====================================================================================================================
 
 // C++ INCLUDES
 // =====================================================================================================================
-#ifdef _WIN32
-#define NOMINMAX
-#include <Windows.h>
-#endif
-#include <iostream>
-#include <chrono>
-#include <thread>
-#include <csignal>
-#include <limits>
-#include <any>
-#include <sstream>
+#include <string>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
+#include <LibZMQUtils/CommandClient>
 #include <LibZMQUtils/Utils>
+// =====================================================================================================================
+
+// AMELAS INCLUDES
+// =====================================================================================================================
+#include "includes/AmelasControllerServer/common.h"
 // =====================================================================================================================
 
 // PROJECT INCLUDES
 // =====================================================================================================================
-#include "AmelasControllerServer/amelas_controller_server.h"
-#include "AmelasController/amelas_controller.h"
 // =====================================================================================================================
 
-// ---------------------------------------------------------------------------------------------------------------------
+// AMELAS NAMESPACES
+// =====================================================================================================================
+namespace amelas{
+namespace communication{
+// =====================================================================================================================
 
+using namespace amelas::communication::common;
+using zmqutils::common::RequestData;
+using zmqutils::common::CommandReply;
 
-// ---------------------------------------------------------------------------------------------------------------------
-
-/**
- * @brief Main entry point of the program ExampleServerAmelas.
- *
- * Initializes an AmelasController and AmelasServer, then enters an infinite loop where it listens for client requests
- * and processes them using the server. If the user hits ctrl-c, the server is shut down and the program exits.
- */
-int main(int, char**)
+class AmelasControllerClient : public zmqutils::CommandClientBase
 {
-    // Nampesaces.
-    using amelas::communication::AmelasControllerServer;
-    using amelas::communication::AmelasServerCommand;
-    using amelas::controller::AmelasController;
+public:
 
-    // Configure the console.
-    zmqutils::utils::ConsoleConfig& console_cfg = zmqutils::utils::ConsoleConfig::getInstance();
-    console_cfg.configureConsole(true, true, true);
+    AmelasControllerClient(const std::string& server_endpoint,
+                           const std::string& client_name = "",
+                           const std::string interf_name = "");
 
-    // Configuration variables.
-    unsigned port = 9999;
-    bool client_status_check = true;
+    // TODO
+    //virtual void prepareRequest() = 0;
 
-    // Instantiate the Amelas controller.
-    AmelasController amelas_controller;
+private:
 
-    // Instantiate the server.
-    AmelasControllerServer amelas_server(port);
+    virtual void onClientStart() final;
 
-    // Disable or enables the client status checking.
-    amelas_server.setClientStatusCheck(client_status_check);
+    virtual void onClientStop() final;
 
-    // ---------------------------------------
+    virtual void onWaitingReply() final;
 
-    // Set the controller callbacks in the server.
+    virtual void onDeadServer() final;
 
-    amelas_server.registerControllerCallback(AmelasServerCommand::REQ_SET_HOME_POSITION,
-                                             &amelas_controller,
-                                             &AmelasController::setHomePosition);
+    virtual void onConnected() final;
 
-    amelas_server.registerControllerCallback(AmelasServerCommand::REQ_GET_HOME_POSITION,
-                                             &amelas_controller,
-                                             &AmelasController::getHomePosition);
+    virtual void onDisconnected() final;
 
-    // ---------------------------------------
+    virtual void onInvalidMsgReceived(const CommandReply&) final;
 
-    // Start the server.
-    bool started = amelas_server.startServer();
+    virtual void onReplyReceived(const CommandReply& reply) final;
 
-    // Check if the server starts ok.
-    if(!started)
-    {
-        // Log.
-        std::cout << "Server start failed!! Press Enter to exit!" << std::endl;
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.clear();
-        return 1;
-    }
+    virtual void onSendingCommand(const RequestData&) final;
 
-    // Wait for closing as an infinite loop until ctrl-c.
-    console_cfg.waitForClose();
+    virtual void onClientError(const zmq::error_t&, const std::string& ext_info) final;
+};
 
-    // Log.
-    std::cout << "Stopping the server..." << std::endl;
-
-    // Stop the server.
-    amelas_server.stopServer();
-
-    // Final log.
-    std::cout << "Server stoped. All ok!!" << std::endl;
-
-    // Restore the console.
-    console_cfg.restoreConsole();
-
-    // Return.
-	return 0;
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
+}} // END NAMESPACES.
+// =====================================================================================================================

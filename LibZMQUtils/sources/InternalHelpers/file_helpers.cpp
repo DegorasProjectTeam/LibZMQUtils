@@ -27,7 +27,7 @@
  * @brief This file contains the implementation of several helper tools related with files and directories.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2309.1
+ * @version 2309.5
 ***********************************************************************************************************************/
 
 // =====================================================================================================================

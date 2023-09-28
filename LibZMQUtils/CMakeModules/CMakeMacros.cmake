@@ -114,7 +114,7 @@ MACRO(macro_setup_launcher LAUNCHER_NAME)
         link_directories(${CMAKE_CURRENT_BINARY_DIR}/../lib)
     endif()
 
-    add_executable(${LAUNCHER_NAME} ${SOURCES} ${HEADERS} ${RESOURCES})
+    add_executable(${LAUNCHER_NAME} ${SOURCES} ${HEADERS} ${TEMPLTS} ${ALIAS} ${EXTERN} ${RESOURCES})
 
     if(LIBRARIES)
         message(STATUS "${Green}  Linking general libraries for the executable. ${ColourReset}")

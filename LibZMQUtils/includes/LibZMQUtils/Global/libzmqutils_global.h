@@ -31,7 +31,7 @@
 // Library Version
 #define LIBZMQUTILS_VERSION_MAJOR 1
 #define LIBZMQUTILS_VERSION_MINOR 2
-#define LIBZMQUTILS_VERSION_PATCH 3
+#define LIBZMQUTILS_VERSION_PATCH 4
 
 // Windows DLL export/import directives
 #if ((defined __WIN32__) || (defined _WIN32)) && (!defined LIBZMQUTILS_STATIC)

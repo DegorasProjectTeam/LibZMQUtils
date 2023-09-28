@@ -74,7 +74,7 @@ set(ZMQ_DIR ${CMAKE_SOURCE_DIR}/external/zmq/)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_COLOR_MAKEFILE ON)
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
-set(SHOW_EXTERNALS FALSE)
+set(SHOW_EXTERNALS TRUE)
 set(LIB_DEPS_SET ${LIB_FULL_NAME}_deps)
 
 # Define the install directory for each compiler and operating system.
@@ -89,20 +89,21 @@ file(GLOB_RECURSE HEADERS ${CMAKE_SOURCE_DIR}/includes/${LIB_FULL_NAME}/*.h)
 file(GLOB_RECURSE TEMPLTS ${CMAKE_SOURCE_DIR}/includes/${LIB_FULL_NAME}/*.tpp)
 file(GLOB_RECURSE SOURCES ${CMAKE_SOURCE_DIR}/sources/*.cpp)
 if(SHOW_EXTERNALS)
-    file(GLOB_RECURSE EXTERN1 ${ZMQ_DIR}/includes/zmq/*.h)
+    file(GLOB_RECURSE EXTERN ${ZMQ_DIR}/includes/zmq/*.h)
 endif()
 
 # Get the include aliases files.
 macro_get_files_without_extension(ALIAS ${CMAKE_SOURCE_DIR}/includes/${LIB_FULL_NAME}/*)
 
-# Create a custom group for the templates and aliases.
+# Create a custom group for the templates, aliases and externals.
 source_group("Alias Files" FILES ${ALIAS})
 source_group("Header Files" FILES ${TEMPLTS})
+source_group("External Libs" FILES ${EXTERN})
 
 # Add definitions and the library.
 string(TOUPPER ${LIB_FULL_NAME} LIB_FULL_NAME_UPPER)
 add_definitions(-D${LIB_FULL_NAME_UPPER}_LIBRARY)
-add_library(${LIB_FULL_NAME} SHARED ${SOURCES} ${HEADERS} ${EXTERN1} ${TEMPLTS} ${ALIAS})
+add_library(${LIB_FULL_NAME} SHARED ${SOURCES} ${HEADERS} ${EXTERN} ${TEMPLTS} ${ALIAS})
 target_compile_definitions(${LIB_FULL_NAME} PRIVATE -D${LIB_FULL_NAME_UPPER}_LIBRARY)
 
 # Add the includes.

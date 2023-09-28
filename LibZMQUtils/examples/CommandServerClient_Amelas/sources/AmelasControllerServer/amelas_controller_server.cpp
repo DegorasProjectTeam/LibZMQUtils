@@ -27,12 +27,12 @@
  * @brief EXAMPLE FILE - This file contains the implementation of the AmelasServer example class.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2309.1
+ * @version 2309.5
 ***********************************************************************************************************************/
 
 // PROJECT INCLUDES
 // =====================================================================================================================
-#include "amelas_controller_server.h"
+#include "includes/AmelasControllerServer/amelas_controller_server.h"
 // =====================================================================================================================
 
 // AMELAS NAMESPACES

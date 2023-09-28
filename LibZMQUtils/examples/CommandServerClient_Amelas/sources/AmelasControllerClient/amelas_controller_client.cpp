@@ -1,4 +1,4 @@
-#include "amelas_controller_client.h"
+#include "includes/AmelasControllerClient/amelas_controller_client.h"
 
 // AMELAS NAMESPACES
 // =====================================================================================================================
@@ -138,6 +138,8 @@ void AmelasControllerClient::onClientError(const zmq::error_t& error, const std:
     std::cout<<"Info: "<<ext_info<<std::endl;
     std::cout << std::string(100, '-') << std::endl;
 }
+
+void amelas::communication::AmelasControllerClient::onInvalidMsgReceived(const CommandReply &) {}
 
 
 

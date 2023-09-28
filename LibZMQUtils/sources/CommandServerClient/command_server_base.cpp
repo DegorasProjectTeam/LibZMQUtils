@@ -27,7 +27,7 @@
  * @brief This file contains the implementation of the CommandServerBase class and related.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2309.1
+ * @version 2309.5
 ***********************************************************************************************************************/
 
 // C++ INCLUDES

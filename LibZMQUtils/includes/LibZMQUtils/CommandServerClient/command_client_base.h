@@ -27,7 +27,7 @@
  * @brief This file contains the declaration of the CommandClientBase class and related.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2309.1
+ * @version 2309.5
 ***********************************************************************************************************************/
 
 // =====================================================================================================================

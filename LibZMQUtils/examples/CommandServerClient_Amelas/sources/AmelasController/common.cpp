@@ -23,43 +23,41 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file callback_handler.h
- * @brief This file contains the implementation of the `CallbackHandler` class.
+ * @file common.cpp
+ * @brief EXAMPLE FILE - This file contains the implementation of common elements for the AmelasController module.
  * @author Degoras Project Team
  * @copyright EUPL License
  * @version 2309.5
 ***********************************************************************************************************************/
 
-// C++ INCLUDES
+// PROJECT INCLUDES
 // =====================================================================================================================
-// =====================================================================================================================
-
-// ZMQUTILS INCLUDES
-// =====================================================================================================================
-#include "LibZMQUtils/Utilities/callback_handler.h"
+#include "includes/AmelasController/common.h"
 // =====================================================================================================================
 
-// ZMQUTILS NAMESPACES
+// AMELAS NAMESPACES
 // =====================================================================================================================
-namespace zmqutils{
-namespace utils{
+namespace amelas{
+namespace controller{
 
-void CallbackHandler::removeCallback(CallbackId id)
+AltAzPos::AltAzPos(double az, double el):
+    az(az), el(el){}
+
+AltAzPos::AltAzPos(): az(-1), el(-1){}
+
+size_t AltAzPos::serialize(zmqutils::utils::BinarySerializer &serializer) const
 {
-    std::lock_guard<std::mutex> lock(this->mtx_);
-    this->callback_map_.erase(id);
+    return serializer.write(az, el);
 }
 
-bool CallbackHandler::hasCallback(CallbackId id) const
+void AltAzPos::deserialize(zmqutils::utils::BinarySerializer &serializer)
 {
-    std::lock_guard<std::mutex> lock(this->mtx_);
-    return this->callback_map_.find(id) != this->callback_map_.end();
+    serializer.read(az, el);
 }
 
-void CallbackHandler::clearCallbacks()
+size_t AltAzPos::serializedSize() const
 {
-    std::lock_guard<std::mutex> lock(this->mtx_);
-    this->callback_map_.clear();
+    return (2*sizeof(uint64_t) + sizeof(double)*2);
 }
 
 // =====================================================================================================================

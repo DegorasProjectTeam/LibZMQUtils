@@ -27,7 +27,7 @@
  * @brief This file contains part of the implementation of the BinarySerializer class.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2309.1
+ * @version 2309.5
 ***********************************************************************************************************************/
 
 // C++ INCLUDES

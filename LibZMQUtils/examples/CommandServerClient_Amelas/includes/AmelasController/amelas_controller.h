@@ -23,11 +23,11 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file common.h
- * @brief EXAMPLE FILE - This file contains common elements for the example AmelasController module.
+ * @file amelas_controller.h
+ * @brief EXAMPLE FILE - This file contains the declaration of the AmelasController example class.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2309.1
+ * @version 2309.5
 ***********************************************************************************************************************/
 
 // =====================================================================================================================
@@ -36,14 +36,20 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
-#include <string>
 #include <map>
-#include <vector>
-#include <variant>
-#include <functional>
+#include <string>
 // =====================================================================================================================
 
+// ZMQUTILS INCLUDES
+// =====================================================================================================================
+#include <LibZMQUtils/CommandServer>
 #include <LibZMQUtils/Utils>
+// =====================================================================================================================
+
+// PROJECT INCLUDES
+// =====================================================================================================================
+#include "common.h"
+// =====================================================================================================================
 
 // AMELAS NAMESPACES
 // =====================================================================================================================
@@ -51,66 +57,23 @@ namespace amelas{
 namespace controller{
 // =====================================================================================================================
 
-// CONSTANTS
-// =====================================================================================================================
-// =====================================================================================================================
-
-// CONVENIENT ALIAS, ENUMERATIONS AND CONSTEXPR
-// =====================================================================================================================
-
-class AmelasController;
-
-enum class AmelasError : std::int32_t
+class AmelasController
 {
-    INVALID_ERROR = -1,
-    SUCCESS = 0,
-    INVALID_POSITION = 1,
-    UNSAFE_POSITION = 2
+public:
+
+    AmelasController();
+
+    AmelasError setHomePosition(const AltAzPos& pos);
+
+    AmelasError getHomePosition(AltAzPos& pos);
+
+    AmelasError getDatetime(std::string&);
+
+private:
+
+    AltAzPos home_pos_;
+
 };
-
-static constexpr std::array<const char*, 21>  ControllerErrorStr
-{
-    "SUCCESS - Controller process success",
-    "INVALID_POSITION - The provided position (az/alt) is invalid.",
-    "UNSAFE_POSITION - The provided position (az/alt) is unsafe."
-};
-
-struct AltAzPos : public zmqutils::utils::Serializable
-{
-    inline AltAzPos(double az, double el):
-        az(az), el(el){}
-
-    inline AltAzPos(): az(-1), el(-1){}
-
-    double az;
-    double el;
-
-    size_t serialize(zmqutils::utils::BinarySerializer& serializer) const final
-    {
-        return serializer.write(az, el);
-    }
-
-    void deserialize(zmqutils::utils::BinarySerializer& serializer) final
-    {
-        serializer.read(az, el);
-    }
-
-    size_t serializedSize() const final
-    {
-        return (2*sizeof(uint64_t) + sizeof(double)*2);
-    }
-};
-
-// Generic callback.
-template<typename... Args>
-using AmelasControllerCallback = controller::AmelasError(AmelasController::*)(Args...);
-
-// Callback function type aliases
-using SetHomePositionCallback = std::function<AmelasError(const AltAzPos&)>;
-using GetHomePositionCallback = std::function<AmelasError(AltAzPos&)>;
-using GetDatetimeCallback = std::function<AmelasError(std::string&)>;
-
-// =====================================================================================================================
 
 }} // END NAMESPACES.
 // =====================================================================================================================

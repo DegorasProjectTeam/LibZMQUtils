@@ -23,11 +23,11 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file amelas_server.h
+ * @file amelas_controller_server.h
  * @brief EXAMPLE FILE - This file contains the declaration of the AmelasServer example class.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2309.1
+ * @version 2309.5
 ***********************************************************************************************************************/
 
 // =====================================================================================================================
@@ -50,9 +50,9 @@
 
 // PROJECT INCLUDES
 // =====================================================================================================================
-#include "AmelasController/amelas_controller.h"
-#include "AmelasController/common.h"
-#include "AmelasControllerServer/common.h"
+#include "includes/AmelasController/amelas_controller.h"
+#include "includes/AmelasController/common.h"
+#include "includes/AmelasControllerServer/common.h"
 // =====================================================================================================================
 
 // AMELAS NAMESPACES

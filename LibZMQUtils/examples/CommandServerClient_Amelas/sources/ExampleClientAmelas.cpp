@@ -31,7 +31,7 @@
  *
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2309.1
+ * @version 2309.5
 ***********************************************************************************************************************/
 
 // C++ INCLUDES
@@ -47,9 +47,9 @@
 
 // PROJECT INCLUDES
 // =====================================================================================================================
-#include "AmelasController/common.h"
-#include "AmelasControllerServer/common.h"
-#include "AmelasControllerClient/amelas_controller_client.h"
+#include "includes/AmelasController/common.h"
+#include "includes/AmelasControllerServer/common.h"
+#include "includes/AmelasControllerClient/amelas_controller_client.h"
 // =====================================================================================================================
 
 

@@ -27,7 +27,7 @@
  * @brief This file contains the function implementations related with the string helper tools.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2309.1
+ * @version 2309.5
 ***********************************************************************************************************************/
 
 // ========== C++ INCLUDES =============================================================================================

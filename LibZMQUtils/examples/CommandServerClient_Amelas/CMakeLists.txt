@@ -26,15 +26,21 @@
 # Updated 27/09/2023
 # **********************************************************************************************************************
 
+# **********************************************************************************************************************
+
 # Check external variables.
 if (NOT DEFINED LIB_ZMQ_UTILS AND NOT DEFINED LIB_DEPS_SET AND NOT DEFINED INSTALL_BIN)
     message(FATAL_ERROR "Variables definition missing.")
 endif()
 
 # Configure names and build path.
+set(INTERFACE_SERVER "AmelasServerInterface")
 set(APP_SERVER "Example_CommandServer_Amelas")
 set(APP_CLIENT "Example_CommandClient_Amelas")
 set(APP_BUILD_FOLDER ${CMAKE_BINARY_DIR}/bin/Examples/CommandServerClient_Amelas)
+
+# **********************************************************************************************************************
+# AMELAS SERVER
 
 # Setup the libraries.
 set(LIBRARIES ${LIB_ZMQ_UTILS})
@@ -47,18 +53,64 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${APP_BUILD_FOLDER})
 # Include directories.
 include_directories(${CMAKE_SOURCE_DIR}/examples/CommandServerClient_Amelas)
 
-# Get the headers, sources and template files for server.
-file(GLOB_RECURSE SOURCES AmelasControllerServer/*.cpp AmelasController/*.cpp ExampleServerAmelas.cpp)
-file(GLOB_RECURSE HEADERS AmelasControllerServer/*.h AmelasController/*.h)
+# Get the header files for the server.
+file(GLOB_RECURSE HEADERS
+    includes/AmelasController/*.h
+    includes/AmelasControllerServer/*.h)
+
+# Get the template files for server.
+file(GLOB_RECURSE TEMPLTS
+    includes/AmelasController/*.tpp
+    includes/AmelasControllerServer/*.tpp)
+
+# Get the source files for server.
+file(GLOB_RECURSE SOURCES
+    sources/ExampleServerAmelas.cpp
+    sources/AmelasController/*.cpp
+    sources/AmelasControllerServer/*.cpp)
+
+# Create a custom group for the templates.
+source_group("Header Files" FILES ${TEMPLTS})
 
 # Setup the server launcher.
 macro_setup_deploy_launcher("${APP_SERVER}" "${INSTALL_BIN}" "${LIB_DEPS_SET}")
 
-# Get the headers, sources and template files for client.
-file(GLOB_RECURSE SOURCES AmelasControllerClient/*.cpp ExampleClientAmelas.cpp)
-file(GLOB_RECURSE HEADERS AmelasControllerClient/*.h )
+# Auxiliar interface library.
+add_library(${INTERFACE_SERVER} INTERFACE)
+target_sources(${INTERFACE_SERVER} INTERFACE
+               sources/AmelasController/common.cpp)
+target_include_directories(${INTERFACE_SERVER} INTERFACE
+                           includes/AmelasController
+                           includes/AmelasControllerServer)
+
+# **********************************************************************************************************************
+# AMELAS CLIENT
+
+# Setup the libraries.
+set(LIBRARIES ${LIB_ZMQ_UTILS} ${INTERFACE_SERVER})
+
+# Get the header files for the client.
+file(GLOB_RECURSE HEADERS
+    includes/AmelasControllerClient/*.h)
+
+# Get the template files for client.
+file(GLOB_RECURSE TEMPLTS
+    includes/AmelasControllerClient/*.tpp)
+
+# Get the source files for client.
+file(GLOB_RECURSE SOURCES
+    sources/ExampleClientAmelas.cpp
+    sources/AmelasControllerClient/*.cpp)
+
+# Create a custom group for the templates and external.
+source_group("Header Files" FILES ${TEMPLTS})
 
 # Setup the client launcher.
 macro_setup_deploy_launcher("${APP_CLIENT}" "${INSTALL_BIN}" "${LIB_DEPS_SET}")
+
+# Include the server common dirs.
+target_include_directories(${APP_CLIENT} PRIVATE
+                           includes/AmelasControllerServer
+                           includes/AmelasController)
 
 # **********************************************************************************************************************

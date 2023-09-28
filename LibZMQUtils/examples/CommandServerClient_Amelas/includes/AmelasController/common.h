@@ -23,48 +23,87 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file callback_handler.h
- * @brief This file contains the implementation of the `CallbackHandler` class.
+ * @file common.h
+ * @brief EXAMPLE FILE - This file contains the declaration of common elements for the AmelasController module.
  * @author Degoras Project Team
  * @copyright EUPL License
  * @version 2309.5
 ***********************************************************************************************************************/
 
+// =====================================================================================================================
+#pragma once
+// =====================================================================================================================
+
 // C++ INCLUDES
 // =====================================================================================================================
+#include <string>
+#include <map>
+#include <vector>
+#include <variant>
+#include <functional>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/Utilities/callback_handler.h"
+#include <LibZMQUtils/Utils>
 // =====================================================================================================================
 
-// ZMQUTILS NAMESPACES
+// AMELAS NAMESPACES
 // =====================================================================================================================
-namespace zmqutils{
-namespace utils{
-
-void CallbackHandler::removeCallback(CallbackId id)
-{
-    std::lock_guard<std::mutex> lock(this->mtx_);
-    this->callback_map_.erase(id);
-}
-
-bool CallbackHandler::hasCallback(CallbackId id) const
-{
-    std::lock_guard<std::mutex> lock(this->mtx_);
-    return this->callback_map_.find(id) != this->callback_map_.end();
-}
-
-void CallbackHandler::clearCallbacks()
-{
-    std::lock_guard<std::mutex> lock(this->mtx_);
-    this->callback_map_.clear();
-}
-
+namespace amelas{
+namespace controller{
 // =====================================================================================================================
 
+// CONSTANTS
+// =====================================================================================================================
+// =====================================================================================================================
 
+// CONVENIENT ALIAS, ENUMERATIONS AND CONSTEXPR
+// =====================================================================================================================
+
+class AmelasController;
+
+enum class AmelasError : std::int32_t
+{
+    INVALID_ERROR = -1,
+    SUCCESS = 0,
+    INVALID_POSITION = 1,
+    UNSAFE_POSITION = 2
+};
+
+static constexpr std::array<const char*, 3>  ControllerErrorStr
+{
+    "SUCCESS - Controller process success",
+    "INVALID_POSITION - The provided position (az/alt) is invalid.",
+    "UNSAFE_POSITION - The provided position (az/alt) is unsafe."
+};
+
+struct AltAzPos : public zmqutils::utils::Serializable
+{
+    AltAzPos(double az, double el);
+
+    AltAzPos();
+
+    size_t serialize(zmqutils::utils::BinarySerializer& serializer) const final;
+
+    void deserialize(zmqutils::utils::BinarySerializer& serializer) final;
+
+    size_t serializedSize() const final;
+
+    double az;
+    double el;
+};
+
+// Generic callback.
+template<typename... Args>
+using AmelasControllerCallback = controller::AmelasError(AmelasController::*)(Args...);
+
+// Callback function type aliases
+using SetHomePositionCallback = std::function<AmelasError(const AltAzPos&)>;
+using GetHomePositionCallback = std::function<AmelasError(AltAzPos&)>;
+using GetDatetimeCallback = std::function<AmelasError(std::string&)>;
+
+// =====================================================================================================================
 
 }} // END NAMESPACES.
 // =====================================================================================================================
