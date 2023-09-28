@@ -445,7 +445,7 @@ protected:
      *
      * @return Returns true if the command is valid; false otherwise.
      */
-    virtual bool validateCustomCommand(ServerCommand) = 0;
+    LIBZMQUTILS_EXPORT virtual  bool validateCustomCommand(ServerCommand) = 0;
 
     /**
      * @brief Base server start callback. Subclasses must override this function.
@@ -456,7 +456,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onServerStart() = 0;
+    LIBZMQUTILS_EXPORT virtual void onServerStart() = 0;
 
     /**
      * @brief Base server stop callback. Subclasses must override this function.
@@ -467,7 +467,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onServerStop() = 0;
+    LIBZMQUTILS_EXPORT virtual void onServerStop() = 0;
 
     /**
      * @brief Base waiting command callback. Subclasses must override this function.
@@ -482,7 +482,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onWaitingCommand() = 0;
+    LIBZMQUTILS_EXPORT virtual void onWaitingCommand() = 0;
 
     /**
      * @brief Base connected callback. Subclasses must override this function.
@@ -495,7 +495,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onConnected(const HostInfo&) = 0;
+    LIBZMQUTILS_EXPORT virtual void onConnected(const HostInfo&) = 0;
 
     /**
      * @brief Base disconnected callback. Subclasses must override this function.
@@ -508,7 +508,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onDisconnected(const HostInfo&) = 0;
+    LIBZMQUTILS_EXPORT virtual void onDisconnected(const HostInfo&) = 0;
 
     /**
      * @brief Base dead client callback. Subclasses must override this function.
@@ -521,7 +521,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onDeadClient(const HostInfo&) = 0;
+    LIBZMQUTILS_EXPORT virtual void onDeadClient(const HostInfo&) = 0;
 
     /**
      * @brief Base invalid message received callback. Subclasses must override this function.
@@ -534,7 +534,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onInvalidMsgReceived(const CommandRequest&) = 0;
+    LIBZMQUTILS_EXPORT virtual void onInvalidMsgReceived(const CommandRequest&) = 0;
 
     /**
      * @brief Base command received callback. Subclasses must override this function.
@@ -550,7 +550,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onCommandReceived(const CommandRequest&) = 0;
+    LIBZMQUTILS_EXPORT virtual void onCommandReceived(const CommandRequest&) = 0;
 
     /**
      * @brief Base custom command received callback. Subclasses must override this function.
@@ -592,7 +592,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onServerError(const zmq::error_t &error, const std::string& ext_info = "") = 0;
+    LIBZMQUTILS_EXPORT virtual void onServerError(const zmq::error_t &error, const std::string& ext_info = "") = 0;
 
     /**
      * @brief Base sending response callback. Subclasses must override this function.
@@ -605,7 +605,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onSendingResponse(const CommandReply&) = 0;
+    LIBZMQUTILS_EXPORT virtual void onSendingResponse(const CommandReply&) = 0;
 
 private:
 

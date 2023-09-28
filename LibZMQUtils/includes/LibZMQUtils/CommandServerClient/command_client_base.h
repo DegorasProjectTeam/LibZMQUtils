@@ -108,25 +108,25 @@ public:
 
 protected:
 
-    virtual void onClientStart() = 0;
+    LIBZMQUTILS_EXPORT virtual void onClientStart() = 0;
 
-    virtual void onClientStop() = 0;
+    LIBZMQUTILS_EXPORT virtual void onClientStop() = 0;
 
-    virtual void onWaitingReply() = 0;
+    LIBZMQUTILS_EXPORT virtual void onWaitingReply() = 0;
 
-    virtual void onDeadServer() = 0;
+    LIBZMQUTILS_EXPORT virtual void onDeadServer() = 0;
 
-    virtual void onConnected() = 0;
+    LIBZMQUTILS_EXPORT virtual void onConnected() = 0;
 
-    virtual void onDisconnected() = 0;
+    LIBZMQUTILS_EXPORT virtual void onDisconnected() = 0;
 
-    virtual void onInvalidMsgReceived(const CommandReply&) = 0;
+    LIBZMQUTILS_EXPORT virtual void onInvalidMsgReceived(const CommandReply&) = 0;
 
-    virtual void onReplyReceived(const CommandReply&) = 0;
+    LIBZMQUTILS_EXPORT virtual void onReplyReceived(const CommandReply&) = 0;
 
-    virtual void onSendingCommand(const RequestData&) = 0;
+    LIBZMQUTILS_EXPORT virtual void onSendingCommand(const RequestData&) = 0;
 
-    virtual void onClientError(const zmq::error_t&, const std::string& ext_info) = 0;
+    LIBZMQUTILS_EXPORT virtual void onClientError(const zmq::error_t&, const std::string& ext_info) = 0;
 
 private:
 
