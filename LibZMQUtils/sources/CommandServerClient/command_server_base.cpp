@@ -36,6 +36,8 @@
 #include <stdio.h>
 #include <zmq/zmq_addon.hpp>
 #include <zmq/zmq.h>
+#include <thread>
+#include <chrono>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
