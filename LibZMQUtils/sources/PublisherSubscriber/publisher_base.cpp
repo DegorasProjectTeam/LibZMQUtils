@@ -66,9 +66,6 @@ PublisherBase::PublisherBase(std::string endpoint,
                              std::string name) :
     endpoint_(std::move(endpoint)),
     socket_(nullptr),
-    recv_close_socket_(nullptr),
-    req_close_socket_(nullptr),
-    flag_closed_(true),
     flag_working_(false)
 {
     // Generate a unique UUID (v4) for the client.
@@ -157,51 +154,6 @@ bool PublisherBase::resetPublisher()
     return this->internalResetPublisher();
 }
 
-bool PublisherBase::internalResetPublisher()
-{
-    // Close the previous sockets to flush.
-    this->deleteSockets();
-
-    // Create the ZMQ socket.
-    try
-    {
-        // Zmq client socket.
-        this->socket_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::req);
-        this->socket_->connect(this->endpoint_);
-        this->socket_->set(zmq::sockopt::linger, 0);
-
-        // Bind the PUSH close socket to an internal endpoint.
-        recv_close_socket_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::pull);
-        recv_close_socket_->bind("inproc://close"+this->pub_info_.uuid.toRFC4122String());
-        recv_close_socket_->set(zmq::sockopt::linger, 0);
-
-        // Connect the PULL close socket to the same internal endpoint.
-        req_close_socket_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::push);
-        req_close_socket_->connect("inproc://close"+this->pub_info_.uuid.toRFC4122String());
-        req_close_socket_->set(zmq::sockopt::linger, 0);
-
-        // Update the working flag.
-        this->flag_working_ = true;
-        this->flag_closed_ = false;
-    }
-    catch (const zmq::error_t &error)
-    {
-        // Delete the sockets.
-        this->deleteSockets();
-
-        // Update the working flag.
-        this->flag_working_ = false;
-        this->flag_closed_ = true;
-
-        // Call to the internal callback.
-        this->onPublisherError(error, "PublisherBase: Error while creating the publisher.");
-        return false;
-    }
-
-    // All ok
-    return true;
-}
-
 const std::string &PublisherBase::getEndpoint() const
 {
     // NOTE: Mutex is not neccesary here.
@@ -215,8 +167,6 @@ const std::string &PublisherBase::getName() const
 }
 
 bool PublisherBase::isWorking() const{return this->flag_working_;}
-
-
 
 ClientResult PublisherBase::sendMsg(const common::PubSubData& request)
 {
@@ -251,6 +201,43 @@ ClientResult PublisherBase::sendMsg(const common::PubSubData& request)
     return result;
 }
 
+const std::vector<NetworkAdapterInfo> &PublisherBase::getBoundInterfaces() const
+{
+    return this->bound_ifaces_;
+}
+
+bool PublisherBase::internalResetPublisher()
+{
+    // Close the previous sockets to flush.
+    this->deleteSockets();
+
+    // Create the ZMQ socket.
+    try
+    {
+        // Zmq publisher socket.
+        this->socket_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::pub);
+        this->socket_->connect(this->endpoint_);
+        this->socket_->set(zmq::sockopt::linger, 0);
+
+        // Update the working flag.
+        this->flag_working_ = true;
+    }
+    catch (const zmq::error_t &error)
+    {
+        // Delete the sockets.
+        this->deleteSockets();
+
+        // Update the working flag.
+        this->flag_working_ = false;
+
+        // Call to the internal callback.
+        this->onPublisherError(error, "PublisherBase: Error while creating the publisher.");
+        return false;
+    }
+
+    // All ok
+    return true;
+}
 
 void PublisherBase::deleteSockets()
 {
@@ -259,16 +246,6 @@ void PublisherBase::deleteSockets()
     {
         delete this->socket_;
         this->socket_ = nullptr;
-    }
-    if(this->req_close_socket_)
-    {
-        delete this->req_close_socket_;
-        this->req_close_socket_ = nullptr;
-    }
-    if(this->recv_close_socket_)
-    {
-        delete this->recv_close_socket_;
-        this->recv_close_socket_ = nullptr;
     }
 }
 
@@ -283,9 +260,6 @@ void PublisherBase::internalStopPublisher()
 
     // Delete the sockets.
     this->deleteSockets();
-
-    // Update the close flag.
-    this->flag_closed_ = true;
 
     // Safe sleep.
     std::this_thread::sleep_for(std::chrono::milliseconds(20));

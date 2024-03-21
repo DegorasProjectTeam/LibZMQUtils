@@ -243,13 +243,8 @@ public:
      * @warning When specifying the `local_addr`, ensure it is a valid IP address present on the system.
      *          Incorrect or unavailable addresses may result in connection failures.
      */
-    LIBZMQUTILS_EXPORT SubscriberBase(const std::string& subscriber_name = "");
+    LIBZMQUTILS_EXPORT SubscriberBase();
 
-    /**
-     * @brief Get the server name.
-     * @return A const reference to the name of the server.
-     */
-    LIBZMQUTILS_EXPORT const std::string& getSubscriberName() const;
 
     LIBZMQUTILS_EXPORT const std::string& getTopicFilter() const;
 
@@ -263,7 +258,7 @@ public:
      *
      * @return A const reference to the server's worker thread future.
      */
-    LIBZMQUTILS_EXPORT const std::future<void>& getServerWorkerFuture() const;
+    LIBZMQUTILS_EXPORT const std::future<void>& getWorkerFuture() const;
 
     /**
      * @brief Get a const reference to the map of connected clients.
@@ -307,7 +302,7 @@ public:
 
     void subscribe(const std::string &pub_endpoint);
 
-    void unSubscribe(const UUID &pub_uuid);
+    void unsubscribe(const UUID &pub_uuid);
 
     void setTopicFilter(const std::string &filter);
 
@@ -414,7 +409,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    LIBZMQUTILS_EXPORT virtual void onDesubscribe(const common::PublisherInfo &pub_info) = 0;
+    LIBZMQUTILS_EXPORT virtual void onUnsubscribe(const common::PublisherInfo &pub_info) = 0;
 
     /**
      * @brief Base invalid message received callback. Subclasses must override this function.
@@ -469,7 +464,7 @@ protected:
 private:
 
     // Internal helper for stop the server.
-    void internalStopServer();
+    void internalStopSubscriber();
 
     // Server worker (will be executed asynchronously).
     void serverWorker();
@@ -484,14 +479,18 @@ private:
     // -----------------------------------------------------
 
     // ZMQ socket.
-    zmq::socket_t* server_socket_;    ///< ZMQ server socket.
+    zmq::socket_t* socket_;    ///< ZMQ server socket.
+    zmq::socket_t* socket_pub_close_;
+
+    // Subscruiber uuid
+    UUID sub_uuid_;
 
     // Mutex.
     mutable std::mutex mtx_;        ///< Safety mutex.
     mutable std::mutex depl_mtx_;   ///< Server deploy mutex.
 
     // Future and condition variable for the server worker.
-    std::future<void> fut_server_worker_;     ///< Future that stores the server worker status.
+    std::future<void> fut_worker_;     ///< Future that stores the server worker status.
     std::condition_variable cv_server_depl_;  ///< Condition variable to notify the deployment status of the server.
 
     // Clients container.
@@ -501,7 +500,7 @@ private:
     ProcessFunctionsMap process_fnc_map_;        ///< Container with the internal factory process function.
 
     // Useful flags.
-    std::atomic_bool flag_server_working_;       ///< Flag for check the server working status.
+    std::atomic_bool flag_working_;       ///< Flag for check the server working status.
 
 };
 

@@ -54,24 +54,22 @@
 namespace zmqutils{
 // =====================================================================================================================
 
-SubscriberBase::SubscriberBase(const std::string &name) :
-    server_socket_(nullptr),
-    flag_server_working_(false),
+SubscriberBase::SubscriberBase() :
+    socket_(nullptr),
+    socket_pub_close_(nullptr),
+    sub_uuid_(utils::UUIDGenerator::getInstance().generateUUIDv4()),
+    flag_working_(false)
 
 {
 
 }
 
-const std::future<void> &SubscriberBase::getServerWorkerFuture() const {return this->fut_server_worker_;}
+const std::future<void> &SubscriberBase::getWorkerFuture() const {return this->fut_worker_;}
 
 const std::map<UUID, common::PublisherInfo> &SubscriberBase::getSubscribedPublishers() const
 {return this->subscribed_publishers_;}
 
-bool SubscriberBase::isWorking() const{return this->flag_server_working_;}
-
-
-const std::string &SubscriberBase::getSubscriberName() const{return this->name_;}
-
+bool SubscriberBase::isWorking() const{return this->flag_working_;}
 
 bool SubscriberBase::startSubscriber()
 {
@@ -79,18 +77,18 @@ bool SubscriberBase::startSubscriber()
     std::unique_lock<std::mutex> lock(this->mtx_);
 
     // If server is already started, do nothing
-    if (this->flag_server_working_)
+    if (this->flag_working_)
         return true;
 
     // Launch server worker in other thread.
-    this->fut_server_worker_ = std::async(std::launch::async, &SubscriberBase::serverWorker, this);
+    this->fut_worker_ = std::async(std::launch::async, &SubscriberBase::serverWorker, this);
 
     // Wait for the server deployment.
     std::unique_lock<std::mutex> depl_lock(this->depl_mtx_);
     this->cv_server_depl_.wait(depl_lock);
 
     // Return the server status.
-    return this->flag_server_working_;
+    return this->flag_working_;
 }
 
 void SubscriberBase::stopSubscriber()
@@ -99,61 +97,56 @@ void SubscriberBase::stopSubscriber()
     std::unique_lock<std::mutex> lock(this->mtx_);
 
     // Call to the internal stop.
-    this->internalStopServer();
+    this->internalStopSubscriber();
 }
 
-void SubscriberBase::internalStopServer()
+void SubscriberBase::internalStopSubscriber()
 {
     // If server is already stopped, do nothing.
-    if (!this->flag_server_working_)
+    if (!this->flag_working_)
         return;
 
     // Set the shared working flag to false (is atomic).
-    this->flag_server_working_ = false;
+    this->flag_working_ = false;
 
     // If the server is working.
-    if(this->fut_server_worker_.valid() &&
-        this->fut_server_worker_.wait_for(std::chrono::seconds(0)) == std::future_status::timeout)
+    if(this->fut_worker_.valid() &&
+        this->fut_worker_.wait_for(std::chrono::seconds(0)) == std::future_status::timeout)
     {
-        // Auxiliar endpoint.
-        std::string endpoint = this->server_endpoint_;
-        std::size_t found = endpoint.find("*");
-        if (found != std::string::npos)
-            endpoint.replace(found, 1, "127.0.0.1");
-
-        // Auxiliar socket for closing.
-        zmq::socket_t* sock = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::req);
-        sock->connect(endpoint);
-        sock->set(zmq::sockopt::linger, 0);
 
         // Message for closing.
-        sock->send(zmq::message_t(), zmq::send_flags::none);
+        zmq::multipart_t msg;
+        msg.addstr("quit");
+        msg.send(*this->socket_pub_close_);
 
         // Wait the future.
-        this->fut_server_worker_.wait();
-
-        // Delete the auxiliar socket.
-        delete sock;
+        this->fut_worker_.wait();
     }
 
-    // Delete the socket.
-    if(this->server_socket_)
+    // Delete the sockets.
+    if(this->socket_)
     {
-        delete this->server_socket_;
-        this->server_socket_ = nullptr;
+        delete this->socket_;
+        this->socket_ = nullptr;
+    }
+
+    if (this->socket_pub_close_)
+    {
+        delete this->socket_pub_close_;
+        this->socket_pub_close_ = nullptr;
     }
 
     // Safe sleep.
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
 
     // Clean the clients.
-    this->connected_clients_.clear();
+    this->subscribed_publishers_.clear();
 }
 
 SubscriberBase::~SubscriberBase()
 {
     // Stop the server.
-    this->internalStopServer();
+    this->internalStopSubscriber();
 }
 
 
@@ -161,8 +154,6 @@ void SubscriberBase::serverWorker()
 {
     // Containers.
     ServerResult result;
-    CommandRequest request;
-    CommandReply reply;
 
     // Start server socket
     this->resetSocket();
@@ -171,7 +162,7 @@ void SubscriberBase::serverWorker()
     // If there is no client connected wait for a client to connect or for an exit message. If there
     // is a client connected set timeout, so if no command comes in time, check the last time connection
     // for each client. The loop can be stopped (in a safe way) if using the stopServer() function.
-    while(this->server_socket_ && this->flag_server_working_)
+    while(this->socket_ && this->flag_working_)
     {
         // Call to the internal waiting command callback (check first the last request).
         if (request.command != ServerCommand::REQ_ALIVE || this->flag_alive_callbacks_)
@@ -184,12 +175,8 @@ void SubscriberBase::serverWorker()
         // Receive the data.
         result = this->recvFromSocket(request);
 
-        // Check all the clients status.
-        if(result == ServerResult::COMMAND_OK && this->flag_server_working_ && this->flag_check_clients_alive_ )
-            this->checkClientsAliveStatus();
-
         // Process the data.
-        if(result == ServerResult::COMMAND_OK && !this->flag_server_working_)
+        if(result == ServerResult::COMMAND_OK && !this->flag_working_)
         {
             // In this case, we will close the server. Call to the internal callback.
             this->onServerStop();
@@ -217,13 +204,13 @@ void SubscriberBase::serverWorker()
             // Send the response.
             try
             {
-                this->server_socket_->send(buffer_res, zmq::send_flags::none);
+                this->socket_->send(buffer_res, zmq::send_flags::none);
             }
             catch (const zmq::error_t &error)
             {
                 // Check if we want to close the server.
                 // The error code is for ZMQ EFSM error.
-                if(!(error.num() == common::kZmqEFSMError && !this->flag_server_working_))
+                if(!(error.num() == common::kZmqEFSMError && !this->flag_working_))
                     this->onServerError(error, "SubscriberBase: Error while sending a response.");
             }
         }
@@ -257,13 +244,13 @@ void SubscriberBase::serverWorker()
             // Send the message.
             try
             {
-                multipart_msg.send(*this->server_socket_);
+                multipart_msg.send(*this->socket_);
             }
             catch (const zmq::error_t &error)
             {
                 // Check if we want to close the server.
                 // The error code is for ZMQ EFSM error.
-                if(!(error.num() == common::kZmqEFSMError && !this->flag_server_working_))
+                if(!(error.num() == common::kZmqEFSMError && !this->flag_working_))
                     this->onServerError(error, "SubscriberBase: Error while sending a response.");
             }
         }
@@ -284,13 +271,13 @@ ServerResult SubscriberBase::recvFromSocket(CommandRequest& request)
     try
     {
         // Wait the command.
-        recv_result = multipart_msg.recv(*(this->server_socket_));
+        recv_result = multipart_msg.recv(*(this->socket_));
     }
     catch(zmq::error_t& error)
     {
         // Check if we want to close the server.
         // The error code is for ZMQ EFSM error.
-        if(error.num() == common::kZmqEFSMError && !this->flag_server_working_)
+        if(error.num() == common::kZmqEFSMError && !this->flag_working_)
             return ServerResult::COMMAND_OK;
 
         // Else, call to error callback.
@@ -299,7 +286,7 @@ ServerResult SubscriberBase::recvFromSocket(CommandRequest& request)
     }
 
     // Check if we want to close the server.
-    if(recv_result && multipart_msg.size() == 1 && multipart_msg.begin()->empty() && !this->flag_server_working_)
+    if(recv_result && multipart_msg.size() == 1 && multipart_msg.begin()->empty() && !this->flag_working_)
         return ServerResult::COMMAND_OK;
 
     // Check for empty msg or timeout reached.
@@ -383,51 +370,55 @@ ServerResult SubscriberBase::recvFromSocket(CommandRequest& request)
 void SubscriberBase::resetSocket()
 {
     // Auxiliar variables.
-    int last_error_code = 0;
     const zmq::error_t* last_error;
-    int reconnect_count = this->server_reconn_attempts_;
 
     // Stop the socket.
-    this->internalStopServer();
+    this->internalStopSubscriber();
 
     // Try creating a new socket.
-    do
+    try
     {
-        try
-        {
-            // Create the ZMQ rep socket.
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
-            this->server_socket_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::rep);
-            this->server_socket_->bind(this->server_endpoint_);
-            this->server_socket_->set(zmq::sockopt::linger, 0);
+        // Create the ZMQ sub socket.
+        auto close_endpoint = "inproc://" + this->sub_uuid_.toRFC4122String();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        this->socket_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::sub);
+        this->socket_->set(zmq::sockopt::linger, 0);
+        this->socket_->connect(close_endpoint);
+        this->socket_->set(zmq::sockopt::subscribe, "quit");
 
-            // Update the working flag and calls to the callback.
-            this->onServerStart();
-            this->flag_server_working_ = true;
-            this->cv_server_depl_.notify_all();
-        }
-        catch (const zmq::error_t& error)
-        {
-            // Delete the socket and store the last error.
-            if (this->server_socket_)
-            {
-                delete this->server_socket_;
-                this->server_socket_ = nullptr;
-            }
-            last_error = &error;
-            last_error_code = error.num();
-            reconnect_count--;
+        this->socket_pub_close_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::pub);
+        this->socket_pub_close_->bind(close_endpoint);
+        this->socket_pub_close_->set(zmq::sockopt::linger, 0);
 
-            if (reconnect_count <= 0 || last_error_code != EADDRINUSE)
-            {
-                // Update the working flag and calls to the callback.
-                this->onServerError(*last_error, "Error during socket creation.");
-                this->flag_server_working_ = false;
-                this->cv_server_depl_.notify_all();
-                return;
-            }
+        // Update the working flag and calls to the callback.
+        this->onSubscriberStart();
+        this->flag_working_ = true;
+        this->cv_server_depl_.notify_all();
+    }
+    catch (const zmq::error_t& error)
+    {
+        // Delete the sockets and store the last error.
+        if (this->socket_)
+        {
+            delete this->socket_;
+            this->socket_ = nullptr;
         }
-    } while (reconnect_count > 0 && !this->flag_server_working_);
+
+        if (this->socket_pub_close_)
+        {
+            delete this->socket_pub_close_;
+            this->socket_pub_close_ = nullptr;
+        }
+        last_error = &error;
+
+        // Update the working flag and calls to the callback.
+        this->onSubscriberError(*last_error, "Error during socket creation.");
+        this->flag_working_ = false;
+        this->cv_server_depl_.notify_all();
+        return;
+
+    }
+
 }
 
 

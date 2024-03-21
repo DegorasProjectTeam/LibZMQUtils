@@ -91,7 +91,7 @@ public:
      *
      * @return A const reference to a vector of NetworkAdapterInfo objects.
      */
-    LIBZMQUTILS_EXPORT const std::vector<internal_helpers::network::NetworkAdapterInfo> &getServerAddresses() const;
+    LIBZMQUTILS_EXPORT const std::vector<internal_helpers::network::NetworkAdapterInfo> &getBoundInterfaces() const;
 
     /**
      * @brief Virtual destructor to ensure proper cleanup when the derived class is destroyed.
@@ -101,14 +101,14 @@ public:
 
 protected:
 
-    LIBZMQUTILS_EXPORT virtual void onPublisherStart() = 0;
+    LIBZMQUTILS_EXPORT virtual void onPublisherStart() {}
 
-    LIBZMQUTILS_EXPORT virtual void onPublisherStop() = 0;
+    LIBZMQUTILS_EXPORT virtual void onPublisherStop() {}
 
 
-    LIBZMQUTILS_EXPORT virtual void onSendingMsg(const common::PubSubData&) = 0;
+    LIBZMQUTILS_EXPORT virtual void onSendingMsg(const common::PubSubData&) {}
 
-    LIBZMQUTILS_EXPORT virtual void onPublisherError(const zmq::error_t&, const std::string& ext_info) = 0;
+    LIBZMQUTILS_EXPORT virtual void onPublisherError(const zmq::error_t&, const std::string&) {}
 
 private:
 
@@ -124,14 +124,9 @@ private:
     common::PublisherInfo pub_info_;
 
     // ZMQ sockets and endpoint.
-    std::string endpoint_;        ///< Server endpoint.
-    zmq::socket_t *socket_;       ///< ZMQ client socket.
-    zmq::socket_t *recv_close_socket_;   ///< ZMQ auxiliar socket for requesting to close.
-    zmq::socket_t *req_close_socket_;    ///< ZMQ auxiliar socket for receiving the close request.
+    std::string endpoint_;        ///< Publisher endpoint.
+    zmq::socket_t *socket_;       ///< ZMQ publisher socket.
 
-    // Condition variables with associated flags.
-    std::condition_variable stopped_done_cv_;
-    std::atomic_bool flag_closed_;
 
     // Mutex.
     mutable std::mutex mtx_;                    ///< Safety mutex.
