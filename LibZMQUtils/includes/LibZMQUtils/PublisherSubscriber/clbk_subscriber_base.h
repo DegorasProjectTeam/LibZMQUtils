@@ -23,8 +23,8 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file clbk_command_server_base.h
- * @brief This file contains the declaration of the ClbkCommandServerBase class and related.
+ * @file clbk_subscriber_base.h
+ * @brief This file contains the declaration of the ClbkSubscriberBase class and related.
  * @author Degoras Project Team
  * @copyright EUPL License
  * @version 2309.5
@@ -45,8 +45,8 @@
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/Global/libzmqutils_global.h"
-#include "LibZMQUtils/CommandServerClient/common.h"
-#include "LibZMQUtils/CommandServerClient/command_server_base.h"
+#include "LibZMQUtils/PublisherSubscriber/common.h"
+#include "LibZMQUtils/PublisherSubscriber/subscriber_base.h"
 #include "LibZMQUtils/Utilities/callback_handler.h"
 // =====================================================================================================================
 
@@ -60,12 +60,11 @@ using common::ServerCommand;
 using utils::CallbackHandler;
 // =====================================================================================================================
 
-class ClbkCommandServerBase : public CommandServerBase,
-                              public CallbackHandler
+class ClbkSubscriberBase : public SubscriberBase, public CallbackHandler
 {
 public:
 
-    LIBZMQUTILS_EXPORT ClbkCommandServerBase(unsigned port, const std::string& local_addr = "*");
+    LIBZMQUTILS_EXPORT ClbkSubscriberBase(unsigned port, const std::string& local_addr = "*");
 
     template<typename ClassT, typename RetT = void, typename... Args>
     void registerCallback(ServerCommand command, ClassT* object, RetT(ClassT::*callback)(Args...))
@@ -77,7 +76,7 @@ public:
 
     LIBZMQUTILS_EXPORT bool hasCallback(ServerCommand command);
 
-    LIBZMQUTILS_EXPORT virtual ~ClbkCommandServerBase() override;
+    LIBZMQUTILS_EXPORT virtual ~ClbkSubscriberBase() override;
 
 protected:
 

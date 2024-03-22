@@ -75,26 +75,20 @@ using ResultType = std::int32_t;    ///< Type used for the BaseServerResult enum
  * @warning Results 0 to 30 ids must not be used for custom results, they are special and reserved.
  * @warning Only positive results ids are allowed.
  */
-enum class ServerResult : ResultType
+enum class SubscriberResult : ResultType
 {
-    COMMAND_OK             = 0,  ///< The command was executed successfully.
+    MSG_OK                 = 0,  ///< The msg received is OK.
     INTERNAL_ZMQ_ERROR     = 1,  ///< An internal ZeroMQ error occurred.
     EMPTY_MSG              = 2,  ///< The message is empty.
-    INVALID_CLIENT_IP      = 3,  ///< The client IP is invalid. TODO
     EMPTY_PARAMS           = 6,  ///< The command parameters are missing or empty.
-    TIMEOUT_REACHED        = 7,  ///< The operation timed out, the client could be dead.
     INVALID_PARTS          = 8,  ///< The message has invalid parts.
     UNKNOWN_COMMAND        = 9,  ///< The command is not recognized.
     INVALID_MSG            = 10, ///< The message is invalid.
-    CLIENT_NOT_CONNECTED   = 11, ///< Not connected to the target.
-    ALREADY_CONNECTED      = 12, ///< Already connected to the target.
     BAD_PARAMETERS         = 13, ///< The provided parameters are invalid.
-    COMMAND_FAILED         = 14, ///< The command execution failed in the server (internal error).
-    NOT_IMPLEMENTED        = 15, ///< The command is not implemented.
     BAD_NO_PARAMETERS      = 16, ///< The provided number of parameters are invalid.
     EMPTY_EXT_CALLBACK     = 17, ///< The associated external callback is empty. Used in ClbkCommandServerBase.
     INVALID_EXT_CALLBACK   = 18, ///< The associated external callback is invalid. Used in ClbkCommandServerBase.
-    INVALID_CLIENT_UUID    = 19, ///< The client UUID is invalid (could be invalid, missing or empty).
+    INVALID_PUB_UUID       = 19, ///< The publisher UUID is invalid (could be invalid, missing or empty).
     END_BASE_RESULTS       = 30  ///< Sentinel value indicating the end of the base server results.
 };
 

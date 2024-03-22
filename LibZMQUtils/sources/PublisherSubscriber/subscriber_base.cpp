@@ -49,6 +49,10 @@
 #include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
 // =====================================================================================================================
 
+// =====================================================================================================================
+using zmqutils::common::PubSubMsg;
+// =====================================================================================================================
+
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
@@ -100,6 +104,15 @@ void SubscriberBase::stopSubscriber()
     this->internalStopSubscriber();
 }
 
+void SubscriberBase::subscribe(const std::string &pub_endpoint)
+{
+    this->socket_->connect(pub_endpoint);
+}
+
+void SubscriberBase::unsubscribe(const UUID &pub_uuid)
+{
+}
+
 void SubscriberBase::internalStopSubscriber()
 {
     // If server is already stopped, do nothing.
@@ -117,6 +130,8 @@ void SubscriberBase::internalStopSubscriber()
         // Message for closing.
         zmq::multipart_t msg;
         msg.addstr("quit");
+        msg.addstr("close");
+        msg.addstr(this->socket_close_uuid_.toRFC4122String());
         msg.send(*this->socket_pub_close_);
 
         // Wait the future.
@@ -153,7 +168,8 @@ SubscriberBase::~SubscriberBase()
 void SubscriberBase::serverWorker()
 {
     // Containers.
-    ServerResult result;
+    SubscriberResult result;
+    PubSubMsg msg;
 
     // Start server socket
     this->resetSocket();
@@ -164,104 +180,33 @@ void SubscriberBase::serverWorker()
     // for each client. The loop can be stopped (in a safe way) if using the stopServer() function.
     while(this->socket_ && this->flag_working_)
     {
-        // Call to the internal waiting command callback (check first the last request).
-        if (request.command != ServerCommand::REQ_ALIVE || this->flag_alive_callbacks_)
-            this->onWaitingCommand();
-
-        // Clean the containers.
-        request = CommandRequest();
-        reply = CommandReply();
-
         // Receive the data.
-        result = this->recvFromSocket(request);
+        result = this->recvFromSocket(msg);
 
         // Process the data.
-        if(result == ServerResult::COMMAND_OK && !this->flag_working_)
+        if(result == SubscriberResult::MSG_OK && !this->flag_working_)
         {
             // In this case, we will close the server. Call to the internal callback.
-            this->onServerStop();
+            this->onSubscriberStop();
         }
-        else if(result == ServerResult::TIMEOUT_REACHED && this->flag_check_clients_alive_)
-        {
-            this->checkClientsAliveStatus();
-        }
-        else if (result != ServerResult::COMMAND_OK)
+        else if (result != SubscriberResult::MSG_OK)
         {
             // Internal callback.
-            this->onInvalidMsgReceived(request);
-
-            // Store the reply result..
-            reply.result = result;
-
-            // Send response callback.
-            this->onSendingResponse(reply);
-
-            // Prepare the message.
-            utils::BinarySerializer serializer;
-            size_t size_res = serializer.write(result);
-            zmq::const_buffer buffer_res(serializer.release(), size_res);
-
-            // Send the response.
-            try
-            {
-                this->socket_->send(buffer_res, zmq::send_flags::none);
-            }
-            catch (const zmq::error_t &error)
-            {
-                // Check if we want to close the server.
-                // The error code is for ZMQ EFSM error.
-                if(!(error.num() == common::kZmqEFSMError && !this->flag_working_))
-                    this->onServerError(error, "SubscriberBase: Error while sending a response.");
-            }
+            this->onInvalidMsgReceived(msg);
         }
-        else if (result == ServerResult::COMMAND_OK)
+        else if (result == SubscriberResult::MSG_OK)
         {
-            // Execute the command.
-            this->processCommand(request, reply);
-
-            // Binary serializer.
-            utils::BinarySerializer serializer;
-
-            // Prepare the multipart msg.
-            zmq::multipart_t multipart_msg;
-
-            // Prepare the command result.
-            size_t size = serializer.write(reply.result);
-            multipart_msg.addmem(serializer.release(), size);
-
-            // Specific data.
-            if(reply.result == ServerResult::COMMAND_OK && reply.params_size != 0)
-            {
-                // Prepare the custom response.
-                zmq::message_t message_rep_custom(reply.params.get(), reply.params_size);
-                multipart_msg.add(std::move(message_rep_custom));
-            }
-
-            // Sending callback.
-            if (request.command != ServerCommand::REQ_ALIVE || this->flag_alive_callbacks_)
-                this->onSendingResponse(reply);
-
-            // Send the message.
-            try
-            {
-                multipart_msg.send(*this->socket_);
-            }
-            catch (const zmq::error_t &error)
-            {
-                // Check if we want to close the server.
-                // The error code is for ZMQ EFSM error.
-                if(!(error.num() == common::kZmqEFSMError && !this->flag_working_))
-                    this->onServerError(error, "SubscriberBase: Error while sending a response.");
-            }
+            // Call callback for msg received.
+            this->onMsgReceived(msg);
         }
     }
     // Finish the worker.
 }
 
-ServerResult SubscriberBase::recvFromSocket(CommandRequest& request)
+SubscriberResult SubscriberBase::recvFromSocket(PubSubMsg& msg)
 {
     // Result variable.
-    ServerResult result = ServerResult::COMMAND_OK;
+    SubscriberResult result = SubscriberResult::MSG_OK;
 
     // Containers.
     bool recv_result;
@@ -278,88 +223,71 @@ ServerResult SubscriberBase::recvFromSocket(CommandRequest& request)
         // Check if we want to close the server.
         // The error code is for ZMQ EFSM error.
         if(error.num() == common::kZmqEFSMError && !this->flag_working_)
-            return ServerResult::COMMAND_OK;
+            return SubscriberResult::MSG_OK;
 
         // Else, call to error callback.
-        this->onServerError(error, "SubscriberBase: Error while receiving a request.");
-        return ServerResult::INTERNAL_ZMQ_ERROR;
+        this->onSubscriberError(error, "SubscriberBase: Error while receiving a request.");
+        return SubscriberResult::INTERNAL_ZMQ_ERROR;
     }
 
     // Check if we want to close the server.
     if(recv_result && multipart_msg.size() == 1 && multipart_msg.begin()->empty() && !this->flag_working_)
-        return ServerResult::COMMAND_OK;
+        return SubscriberResult::MSG_OK;
 
     // Check for empty msg or timeout reached.
-    if (multipart_msg.empty() && !recv_result)
-        return ServerResult::TIMEOUT_REACHED;
-    else if (multipart_msg.empty())
-        return ServerResult::EMPTY_MSG;
+    if (multipart_msg.empty())
+        return SubscriberResult::EMPTY_MSG;
 
     // Check the multipart msg size.
-    if (multipart_msg.size() == 2 || multipart_msg.size() == 3)
+    if (multipart_msg.size() == 3 || multipart_msg.size() == 4)
     {
         // Get the multipart data.
+        zmq::message_t msg_topic = multipart_msg.pop();
+        zmq::message_t msg_pub_name = multipart_msg.pop();
         zmq::message_t msg_uuid = multipart_msg.pop();
-        zmq::message_t msg_command = multipart_msg.pop();
 
-        // First get the uuid data.
+        // Get the topic.
+        msg.data.topic.resize(msg_topic.size() + 1);
+        utils::BinarySerializer::fastDeserialization(
+            msg_topic.data(), msg_topic.size(), msg.data.topic);
+        msg.data.topic.push_back('\0');
+
+        // Get the publisher name.
+        msg.pub_info.name.resize(msg_pub_name.size() + 1);
+        utils::BinarySerializer::fastDeserialization(
+            msg_pub_name.data(), msg_pub_name.size(), msg.pub_info.name);
+        msg.pub_info.name.push_back('\0');
+
+        // Get the publisher uuid data.
         if (msg_uuid.size() == UUID::kUUIDSize + sizeof(utils::BinarySerializer::SizeUnit)*2)
         {
             std::array<std::byte, 16> uuid_bytes;
             utils::BinarySerializer::fastDeserialization(msg_uuid.data(), msg_uuid.size(), uuid_bytes);
-            request.client_uuid = UUID(uuid_bytes);
+            msg.pub_info.uuid = UUID(uuid_bytes);
         }
         else
-            return ServerResult::INVALID_CLIENT_UUID;
+            return SubscriberResult::INVALID_PUB_UUID;
 
-        // Update the last connection if the client is connected.
-        this->updateClientLastConnection(request.client_uuid);
 
-        // Get the command.
-        if (msg_command.size() == sizeof(utils::BinarySerializer::SizeUnit) + sizeof(CommandType))
-        {
-            // Auxiliar command container.
-            std::int32_t raw_command;
-
-            // Deserialize.
-            utils::BinarySerializer::fastDeserialization(msg_command.data(), msg_command.size(), raw_command);
-
-            // Validate the base command or the external command.
-            if(SubscriberBase::validateCommand(raw_command))
-            {
-                request.command = static_cast<ServerCommand>(raw_command);
-            }
-            else
-            {
-                request.command = ServerCommand::INVALID_COMMAND;
-                return ServerResult::INVALID_MSG;
-            }
-        }
-        else
-        {
-            request.command = ServerCommand::INVALID_COMMAND;
-            return ServerResult::INVALID_MSG;
-        }
-
-        // If there is still one more part, they are the parameters.
+        // If there is still one more part, it is the message data.
         if (multipart_msg.size() == 1)
         {
             // Get the message and the size.
-            zmq::message_t message_params = multipart_msg.pop();
+            zmq::message_t message_data = multipart_msg.pop();
 
             // Check the parameters.
-            if(message_params.size() > 0)
+            if(message_data.size() > 0)
             {
                 // Get and store the parameters data.
-                utils::BinarySerializer serializer(message_params.data(), message_params.size());
-                request.params_size = serializer.moveUnique(request.params);
+                utils::BinarySerializer serializer(message_data.data(), message_data.size());
+                msg.data.data_size = serializer.moveUnique(msg.data.data);
             }
             else
-                return ServerResult::EMPTY_PARAMS;
+                return SubscriberResult::EMPTY_PARAMS;
         }
     }
     else
-        return ServerResult::INVALID_PARTS;
+        return SubscriberResult::INVALID_PARTS;
 
     // Return the result.
     return result;
@@ -389,6 +317,8 @@ void SubscriberBase::resetSocket()
         this->socket_pub_close_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::pub);
         this->socket_pub_close_->bind(close_endpoint);
         this->socket_pub_close_->set(zmq::sockopt::linger, 0);
+
+        this->socket_close_uuid_ = utils::UUIDGenerator::getInstance().generateUUIDv4();
 
         // Update the working flag and calls to the callback.
         this->onSubscriberStart();

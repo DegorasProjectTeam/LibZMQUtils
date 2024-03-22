@@ -59,7 +59,7 @@ namespace zmqutils{
 
 // =====================================================================================================================
 using common::ServerResultStr;
-using common::ServerResult;
+using common::SubscriberResult;
 using internal_helpers::network::NetworkAdapterInfo;
 using utils::UUID;
 // =====================================================================================================================
@@ -304,7 +304,11 @@ public:
 
     void unsubscribe(const UUID &pub_uuid);
 
-    void setTopicFilter(const std::string &filter);
+    void addTopicFilter(const std::string &filter);
+
+    void removeTopicFilter(const std::string &filter);
+
+
 
     /**
      * @brief Virtual destructor.
@@ -470,7 +474,7 @@ private:
     void serverWorker();
 
     // Function for receive data from the client.
-    ServerResult recvFromSocket(common::PubSubMsg&);
+    SubscriberResult recvFromSocket(common::PubSubMsg&);
 
     // Function for reset the socket.
     void resetSocket();
@@ -481,6 +485,7 @@ private:
     // ZMQ socket.
     zmq::socket_t* socket_;    ///< ZMQ server socket.
     zmq::socket_t* socket_pub_close_;
+    UUID socket_close_uuid_;
 
     // Subscruiber uuid
     UUID sub_uuid_;

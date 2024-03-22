@@ -23,8 +23,8 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file clbk_command_server_base.cpp
- * @brief This file contains the implementation of the ClbkCommandServerBase class and related.
+ * @file clbk_subscriber_base.cpp
+ * @brief This file contains the implementation of the ClbkSubscriberBase class and related.
  * @author Degoras Project Team
  * @copyright EUPL License
  * @version 2309.5
@@ -40,29 +40,29 @@
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/CommandServerClient/clbk_command_server_base.h"
+#include "LibZMQUtils/PublisherSubscriber/clbk_subscriber_base.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
 
-ClbkCommandServerBase::ClbkCommandServerBase(unsigned int port, const std::string &local_addr) :
+ClbkSubscriberBase::ClbkSubscriberBase(unsigned int port, const std::string &local_addr) :
     CommandServerBase(port, local_addr),
     CallbackHandler()
 {}
 
-void ClbkCommandServerBase::removeCallback(ServerCommand command)
+void ClbkSubscriberBase::removeCallback(ServerCommand command)
 {
     CallbackHandler::removeCallback(static_cast<CallbackHandler::CallbackId>(command));
 }
 
-bool ClbkCommandServerBase::hasCallback(ServerCommand command)
+bool ClbkSubscriberBase::hasCallback(ServerCommand command)
 {
     return CallbackHandler::hasCallback(static_cast<CallbackHandler::CallbackId>(command));
 }
 
-ClbkCommandServerBase::~ClbkCommandServerBase() { }
+ClbkSubscriberBase::~ClbkSubscriberBase() { }
 
 // =====================================================================================================================
 
