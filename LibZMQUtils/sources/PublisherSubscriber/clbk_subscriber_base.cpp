@@ -48,7 +48,7 @@
 namespace zmqutils{
 
 ClbkSubscriberBase::ClbkSubscriberBase(unsigned int port, const std::string &local_addr) :
-    CommandServerBase(port, local_addr),
+    ClbkSubscriberBase(port, local_addr),
     CallbackHandler()
 {}
 

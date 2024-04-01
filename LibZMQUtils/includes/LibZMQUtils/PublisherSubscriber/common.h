@@ -189,14 +189,16 @@ struct PublisherInfo
 {
     LIBZMQUTILS_EXPORT PublisherInfo() = default;
     
-    LIBZMQUTILS_EXPORT PublisherInfo(const utils::UUID& uuid, const std::string& name = "");
+    LIBZMQUTILS_EXPORT PublisherInfo(utils::UUID uuid, std::string endpoint, std::string name = "");
 
     LIBZMQUTILS_EXPORT std::string toJsonString() const;
 
     // Identifier.
-    utils::UUID uuid;                  ///< Unique client host UUID.
+    utils::UUID uuid;                  ///< Unique publisher host UUID.
     // Basic information
-    std::string name;                  ///< Client name, optional.
+    std::string endpoint;              ///< Publisher endpoint.
+    std::string name;                  ///< Publisher name, optional.
+
 };
 
 struct PubSubData

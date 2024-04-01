@@ -57,6 +57,11 @@
 namespace zmqutils{
 // =====================================================================================================================
 
+// SUBSCRIBER CONSTANTS
+// =====================================================================================================================
+constexpr std::string_view kReservedExitTopic = "quit";
+// =====================================================================================================================
+
 // =====================================================================================================================
 using common::ServerResultStr;
 using common::SubscriberResult;
@@ -246,7 +251,7 @@ public:
     LIBZMQUTILS_EXPORT SubscriberBase();
 
 
-    LIBZMQUTILS_EXPORT const std::string& getTopicFilter() const;
+    LIBZMQUTILS_EXPORT const std::set<std::string>& getTopicFilters() const;
 
 
     /**
@@ -302,7 +307,7 @@ public:
 
     void subscribe(const std::string &pub_endpoint);
 
-    void unsubscribe(const UUID &pub_uuid);
+    void unsubscribe(const std::string &pub_endpoint);
 
     void addTopicFilter(const std::string &filter);
 
@@ -500,6 +505,8 @@ private:
 
     // Clients container.
     std::map<UUID, common::PublisherInfo> subscribed_publishers_;   ///< Dictionary with the connected clients.
+
+    std::set<std::string> topic_filters_; ///< Set of topics allowed on this publisher.
 
     // Process functions container.
     ProcessFunctionsMap process_fnc_map_;        ///< Container with the internal factory process function.

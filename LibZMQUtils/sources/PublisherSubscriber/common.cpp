@@ -32,10 +32,12 @@
 #include "LibZMQUtils/PublisherSubscriber/common.h"
 
 
-zmqutils::common::PublisherInfo::PublisherInfo(const utils::UUID& uuid,
-                                               const std::string& name ):
-    uuid(uuid),
-    name(name)
+zmqutils::common::PublisherInfo::PublisherInfo(utils::UUID uuid,
+                                               std::string endpoint,
+                                               std::string name):
+    uuid(std::move(uuid)),
+    endpoint(std::move(endpoint)),
+    name(std::move(name))
 {}
 
 std::string zmqutils::common::PublisherInfo::toJsonString() const

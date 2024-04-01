@@ -32,7 +32,6 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
-#include <stdio.h>
 #include <thread>
 #include <chrono>
 // =====================================================================================================================
@@ -68,12 +67,25 @@ SubscriberBase::SubscriberBase() :
 
 }
 
-const std::future<void> &SubscriberBase::getWorkerFuture() const {return this->fut_worker_;}
+const std::set<std::string> &SubscriberBase::getTopicFilters() const
+{
+    return this->topic_filters_;
+}
+
+const std::future<void> &SubscriberBase::getWorkerFuture() const
+{
+    return this->fut_worker_;
+}
 
 const std::map<UUID, common::PublisherInfo> &SubscriberBase::getSubscribedPublishers() const
-{return this->subscribed_publishers_;}
+{
+    return this->subscribed_publishers_;
+}
 
-bool SubscriberBase::isWorking() const{return this->flag_working_;}
+bool SubscriberBase::isWorking() const
+{
+    return this->flag_working_;
+}
 
 bool SubscriberBase::startSubscriber()
 {
@@ -106,11 +118,67 @@ void SubscriberBase::stopSubscriber()
 
 void SubscriberBase::subscribe(const std::string &pub_endpoint)
 {
-    this->socket_->connect(pub_endpoint);
+    // Check if endpoint is already subscribed
+    auto it = std::find_if(this->subscribed_publishers_.begin(), this->subscribed_publishers_.end(),
+                          [&pub_endpoint](const auto& pair)
+    {
+        return pair.second.endpoint == pub_endpoint;
+    });
+    if (it == this->subscribed_publishers_.end())
+    {
+        // If endpoint is not subscribed, then store information.
+        common::PublisherInfo pub_info(utils::UUIDGenerator::getInstance().generateUUIDv4(), pub_endpoint);
+        this->subscribed_publishers_.insert({pub_info.uuid, pub_info});
+        // If socket is started, then reset to apply the change.
+        if (this->flag_working_)
+            this->resetSocket();
+    }
+
 }
 
-void SubscriberBase::unsubscribe(const UUID &pub_uuid)
+void SubscriberBase::unsubscribe(const std::string &pub_endpoint)
 {
+    // This function finds values that matches the desired one and moves them to the end of the container, so then
+    // you can delete later all of them. If there is no match, end will be returned.
+    auto it = std::remove_if(this->subscribed_publishers_.begin(), this->subscribed_publishers_.end(),
+                            [&pub_endpoint](const auto& pair)
+    {
+        return pair.second.endpoint == pub_endpoint;
+    });
+
+    if (it != this->subscribed_publishers_.end())
+    {
+        // Erase endpoints.
+        this->subscribed_publishers_.erase(it, this->subscribed_publishers_.end());
+        // Reset socket to apply changes.
+        this->resetSocket();
+    }
+
+}
+
+void SubscriberBase::addTopicFilter(const std::string &filter)
+{
+    // Avoid reserved topic
+    if (filter != kReservedExitTopic)
+    {
+        auto res = this->topic_filters_.insert(filter);
+        // If filter was applied, reset socket to apply the change if it is working.
+        if (res.second && this->flag_working_)
+            this->resetSocket();
+    }
+}
+
+void SubscriberBase::removeTopicFilter(const std::string &filter)
+{
+    // Avoid reserved topic
+    if (filter != kReservedExitTopic)
+    {
+        auto res = this->topic_filters_.erase(filter);
+        // If filter was applied, reset socket to apply the change if it is working.
+        if (res > 0 && this->flag_working_)
+            this->resetSocket();
+    }
+
 }
 
 void SubscriberBase::internalStopSubscriber()
@@ -130,7 +198,6 @@ void SubscriberBase::internalStopSubscriber()
         // Message for closing.
         zmq::multipart_t msg;
         msg.addstr("quit");
-        msg.addstr("close");
         msg.addstr(this->socket_close_uuid_.toRFC4122String());
         msg.send(*this->socket_pub_close_);
 
@@ -230,16 +297,20 @@ SubscriberResult SubscriberBase::recvFromSocket(PubSubMsg& msg)
         return SubscriberResult::INTERNAL_ZMQ_ERROR;
     }
 
+    // TODO: handle quit message
     // Check if we want to close the server.
-    if(recv_result && multipart_msg.size() == 1 && multipart_msg.begin()->empty() && !this->flag_working_)
+    if(recv_result && multipart_msg.size() == 2)
+    {
+
         return SubscriberResult::MSG_OK;
+    }
 
     // Check for empty msg or timeout reached.
     if (multipart_msg.empty())
         return SubscriberResult::EMPTY_MSG;
 
     // Check the multipart msg size.
-    if (multipart_msg.size() == 3 || multipart_msg.size() == 4)
+    if (recv_result && (multipart_msg.size() == 3 || multipart_msg.size() == 4))
     {
         // Get the multipart data.
         zmq::message_t msg_topic = multipart_msg.pop();
@@ -313,6 +384,16 @@ void SubscriberBase::resetSocket()
         this->socket_->set(zmq::sockopt::linger, 0);
         this->socket_->connect(close_endpoint);
         this->socket_->set(zmq::sockopt::subscribe, "quit");
+        // Set all topic filters
+        for (const auto& topic: this->topic_filters_)
+        {
+            this->socket_->set(zmq::sockopt::subscribe, topic);
+        }
+        // Connect to subscribed publishers
+        for (const auto& publishers : this->subscribed_publishers_)
+        {
+            this->socket_->connect(publishers.second.endpoint);
+        }
 
         this->socket_pub_close_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::pub);
         this->socket_pub_close_->bind(close_endpoint);
