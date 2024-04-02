@@ -32,10 +32,6 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
-#include <unordered_map>
-#include <string>
-#include <any>
-#include <variant>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
@@ -47,19 +43,16 @@
 // =====================================================================================================================
 namespace zmqutils{
 
-ClbkSubscriberBase::ClbkSubscriberBase(unsigned int port, const std::string &local_addr) :
-    ClbkSubscriberBase(port, local_addr),
-    CallbackHandler()
-{}
+ClbkSubscriberBase::ClbkSubscriberBase() {}
 
-void ClbkSubscriberBase::removeCallback(ServerCommand command)
+void ClbkSubscriberBase::removeCallback(const common::TopicType &topic)
 {
-    CallbackHandler::removeCallback(static_cast<CallbackHandler::CallbackId>(command));
+    CallbackHandler::removeCallback(std::hash<common::TopicType>{}(topic));
 }
 
-bool ClbkSubscriberBase::hasCallback(ServerCommand command)
+bool ClbkSubscriberBase::hasCallback(const common::TopicType &topic)
 {
-    return CallbackHandler::hasCallback(static_cast<CallbackHandler::CallbackId>(command));
+    return CallbackHandler::hasCallback(std::hash<common::TopicType>{}(topic));
 }
 
 ClbkSubscriberBase::~ClbkSubscriberBase() { }

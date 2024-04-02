@@ -68,6 +68,7 @@ constexpr int kZmqEFSMError = 156384765;                      ///< ZMQ EFSM erro
 // =====================================================================================================================
 
 using ResultType = std::int32_t;    ///< Type used for the BaseServerResult enumeration.
+using TopicType = std::string;
 
 /**
  * @enum ServerResult
@@ -205,7 +206,7 @@ struct PubSubData
 {
     LIBZMQUTILS_EXPORT PubSubData();
 
-    std::string topic;
+    TopicType topic;
     std::unique_ptr<std::byte[]> data;
     size_t data_size;
 };

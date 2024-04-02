@@ -67,7 +67,7 @@ SubscriberBase::SubscriberBase() :
 
 }
 
-const std::set<std::string> &SubscriberBase::getTopicFilters() const
+const std::set<common::TopicType> &SubscriberBase::getTopicFilters() const
 {
     return this->topic_filters_;
 }
@@ -92,18 +92,18 @@ bool SubscriberBase::startSubscriber()
     // Safe mutex lock
     std::unique_lock<std::mutex> lock(this->mtx_);
 
-    // If server is already started, do nothing
+    // If worker is already started, do nothing
     if (this->flag_working_)
         return true;
 
-    // Launch server worker in other thread.
-    this->fut_worker_ = std::async(std::launch::async, &SubscriberBase::serverWorker, this);
+    // Launch worker in other thread.
+    this->fut_worker_ = std::async(std::launch::async, &SubscriberBase::startWorker, this);
 
-    // Wait for the server deployment.
+    // Wait for the worker deployment.
     std::unique_lock<std::mutex> depl_lock(this->depl_mtx_);
-    this->cv_server_depl_.wait(depl_lock);
+    this->cv_worker_depl_.wait(depl_lock);
 
-    // Return the server status.
+    // Return the worker status.
     return this->flag_working_;
 }
 
@@ -114,6 +114,12 @@ void SubscriberBase::stopSubscriber()
 
     // Call to the internal stop.
     this->internalStopSubscriber();
+
+    // Clean the subscribers.
+    this->subscribed_publishers_.clear();
+
+    // Clean the topics.
+    this->topic_filters_.clear();
 }
 
 void SubscriberBase::subscribe(const std::string &pub_endpoint)
@@ -151,12 +157,13 @@ void SubscriberBase::unsubscribe(const std::string &pub_endpoint)
         // Erase endpoints.
         this->subscribed_publishers_.erase(it, this->subscribed_publishers_.end());
         // Reset socket to apply changes.
-        this->resetSocket();
+        if (this->flag_working_)
+            this->resetSocket();
     }
 
 }
 
-void SubscriberBase::addTopicFilter(const std::string &filter)
+void SubscriberBase::addTopicFilter(const common::TopicType &filter)
 {
     // Avoid reserved topic
     if (filter != kReservedExitTopic)
@@ -168,7 +175,7 @@ void SubscriberBase::addTopicFilter(const std::string &filter)
     }
 }
 
-void SubscriberBase::removeTopicFilter(const std::string &filter)
+void SubscriberBase::removeTopicFilter(const common::TopicType &filter)
 {
     // Avoid reserved topic
     if (filter != kReservedExitTopic)
@@ -183,21 +190,22 @@ void SubscriberBase::removeTopicFilter(const std::string &filter)
 
 void SubscriberBase::internalStopSubscriber()
 {
-    // If server is already stopped, do nothing.
+    // If worker is already stopped, do nothing.
     if (!this->flag_working_)
         return;
 
     // Set the shared working flag to false (is atomic).
     this->flag_working_ = false;
 
-    // If the server is working.
+    // If the worker is active.
     if(this->fut_worker_.valid() &&
         this->fut_worker_.wait_for(std::chrono::seconds(0)) == std::future_status::timeout)
     {
 
         // Message for closing.
         zmq::multipart_t msg;
-        msg.addstr("quit");
+        msg.addstr(common::TopicType(kReservedExitTopic));
+        msg.addstr("close_pub");
         msg.addstr(this->socket_close_uuid_.toRFC4122String());
         msg.send(*this->socket_pub_close_);
 
@@ -221,30 +229,24 @@ void SubscriberBase::internalStopSubscriber()
     // Safe sleep.
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
 
-    // Clean the clients.
-    this->subscribed_publishers_.clear();
 }
 
 SubscriberBase::~SubscriberBase()
 {
-    // Stop the server.
     this->internalStopSubscriber();
 }
 
 
-void SubscriberBase::serverWorker()
+void SubscriberBase::startWorker()
 {
     // Containers.
     SubscriberResult result;
     PubSubMsg msg;
 
-    // Start server socket
+    // Start subscriber socket
     this->resetSocket();
 
-    // Server worker loop.
-    // If there is no client connected wait for a client to connect or for an exit message. If there
-    // is a client connected set timeout, so if no command comes in time, check the last time connection
-    // for each client. The loop can be stopped (in a safe way) if using the stopServer() function.
+    // Worker loop.
     while(this->socket_ && this->flag_working_)
     {
         // Receive the data.
@@ -253,7 +255,7 @@ void SubscriberBase::serverWorker()
         // Process the data.
         if(result == SubscriberResult::MSG_OK && !this->flag_working_)
         {
-            // In this case, we will close the server. Call to the internal callback.
+            // In this case, we will close the subscriber. Call to the internal callback.
             this->onSubscriberStop();
         }
         else if (result != SubscriberResult::MSG_OK)
@@ -287,7 +289,7 @@ SubscriberResult SubscriberBase::recvFromSocket(PubSubMsg& msg)
     }
     catch(zmq::error_t& error)
     {
-        // Check if we want to close the server.
+        // Check if we want to close the subscriber.
         // The error code is for ZMQ EFSM error.
         if(error.num() == common::kZmqEFSMError && !this->flag_working_)
             return SubscriberResult::MSG_OK;
@@ -295,14 +297,6 @@ SubscriberResult SubscriberBase::recvFromSocket(PubSubMsg& msg)
         // Else, call to error callback.
         this->onSubscriberError(error, "SubscriberBase: Error while receiving a request.");
         return SubscriberResult::INTERNAL_ZMQ_ERROR;
-    }
-
-    // TODO: handle quit message
-    // Check if we want to close the server.
-    if(recv_result && multipart_msg.size() == 2)
-    {
-
-        return SubscriberResult::MSG_OK;
     }
 
     // Check for empty msg or timeout reached.
@@ -338,6 +332,15 @@ SubscriberResult SubscriberBase::recvFromSocket(PubSubMsg& msg)
         }
         else
             return SubscriberResult::INVALID_PUB_UUID;
+
+        // If exit topic was issued, check if uuid matches the close publisher.
+        if (kReservedExitTopic == msg.data.topic)
+        {
+            if (this->socket_close_uuid_ == msg.pub_info.uuid)
+                return SubscriberResult::MSG_OK;
+            else
+                return SubscriberResult::INVALID_PARTS;
+        }
 
 
         // If there is still one more part, it is the message data.
@@ -383,7 +386,7 @@ void SubscriberBase::resetSocket()
         this->socket_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::sub);
         this->socket_->set(zmq::sockopt::linger, 0);
         this->socket_->connect(close_endpoint);
-        this->socket_->set(zmq::sockopt::subscribe, "quit");
+        this->socket_->set(zmq::sockopt::subscribe, kReservedExitTopic);
         // Set all topic filters
         for (const auto& topic: this->topic_filters_)
         {
@@ -404,7 +407,7 @@ void SubscriberBase::resetSocket()
         // Update the working flag and calls to the callback.
         this->onSubscriberStart();
         this->flag_working_ = true;
-        this->cv_server_depl_.notify_all();
+        this->cv_worker_depl_.notify_all();
     }
     catch (const zmq::error_t& error)
     {
@@ -425,7 +428,7 @@ void SubscriberBase::resetSocket()
         // Update the working flag and calls to the callback.
         this->onSubscriberError(*last_error, "Error during socket creation.");
         this->flag_working_ = false;
-        this->cv_server_depl_.notify_all();
+        this->cv_worker_depl_.notify_all();
         return;
 
     }

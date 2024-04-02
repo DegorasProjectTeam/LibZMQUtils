@@ -55,54 +55,48 @@
 namespace zmqutils{
 // =====================================================================================================================
 
-// =====================================================================================================================
-using common::ServerCommand;
-using utils::CallbackHandler;
-// =====================================================================================================================
-
-class ClbkSubscriberBase : public SubscriberBase, public CallbackHandler
+class ClbkSubscriberBase : public SubscriberBase, public utils::CallbackHandler
 {
+
 public:
 
-    LIBZMQUTILS_EXPORT ClbkSubscriberBase(unsigned port, const std::string& local_addr = "*");
+    LIBZMQUTILS_EXPORT ClbkSubscriberBase();
 
     template<typename ClassT, typename RetT = void, typename... Args>
-    void registerCallback(ServerCommand command, ClassT* object, RetT(ClassT::*callback)(Args...))
+    void registerCallback(const common::TopicType &topic, ClassT* object, RetT(ClassT::*callback)(Args...))
     {
-        CallbackHandler::registerCallback(static_cast<CallbackHandler::CallbackId>(command), object, callback);
+        CallbackHandler::registerCallback(std::hash<common::TopicType>{}(topic), object, callback);
     }
 
-    LIBZMQUTILS_EXPORT void removeCallback(ServerCommand command);
+    LIBZMQUTILS_EXPORT void removeCallback(const common::TopicType &topic);
 
-    LIBZMQUTILS_EXPORT bool hasCallback(ServerCommand command);
+    LIBZMQUTILS_EXPORT bool hasCallback(const common::TopicType &topic);
 
     LIBZMQUTILS_EXPORT virtual ~ClbkSubscriberBase() override;
 
 protected:
 
     template <typename CallbackType, typename RetT = void,  typename... Args>
-    RetT invokeCallback(const CommandRequest& request, CommandReply& reply, const RetT& err_ret, Args&&... args)
+    RetT invokeCallback(const common::PubSubMsg& msg, Args&&... args)
     {
         // Get the command.
-        ServerCommand cmd = static_cast<ServerCommand>(request.command);
+        common::TopicType topic = msg.data.topic;
 
         // Check the callback.
-        if(!this->hasCallback(cmd))
+        if(!this->hasCallback(topic))
         {
-            reply.result = ServerResult::EMPTY_EXT_CALLBACK;
-            return err_ret;
+            return common::SubscriberResult::EMPTY_EXT_CALLBACK;
         }
 
         //Invoke the callback.
         try
         {
             return CallbackHandler::invokeCallback<CallbackType, RetT>(
-                static_cast<CallbackHandler::CallbackId>(cmd), std::forward<Args>(args)...);
+                std::hash<common::TopicType>{}(topic), std::forward<Args>(args)...);
         }
         catch(...)
         {
-            reply.result = ServerResult::INVALID_EXT_CALLBACK;
-            return err_ret;
+            return common::SubscriberResult::INVALID_EXT_CALLBACK;
         }
     }
 

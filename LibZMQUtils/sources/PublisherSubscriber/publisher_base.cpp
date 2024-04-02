@@ -68,7 +68,7 @@ PublisherBase::PublisherBase(std::string endpoint,
     socket_(nullptr),
     flag_working_(false)
 {
-    // Generate a unique UUID (v4) for the client.
+    // Generate a unique UUID (v4) for the publisher.
     utils::UUID uuid = utils::UUIDGenerator::getInstance().generateUUIDv4();
 
     this->pub_info_.name = std::move(name);
@@ -103,13 +103,13 @@ PublisherBase::PublisherBase(std::string endpoint,
 
     // Check for valid configuration.
     if(this->bound_ifaces_.empty())
-        throw std::invalid_argument("CommandServerBase: No interfaces found for address <" + local_addr + ">.");
+        throw std::invalid_argument("PublisherBase: No interfaces found for address <" + local_addr + ">.");
 }
 
 PublisherBase::~PublisherBase()
 {
-    // Force the stop client execution.
-    // Warning: In this case the onClientStop callback can't be executed.
+    // Stop the publisher.
+    // Warning: In this case the onPublisher callback can't be executed.
     this->internalStopPublisher();
 }
 
@@ -133,16 +133,14 @@ void PublisherBase::stopPublisher()
     if (!this->flag_working_)
         return;
 
-    // Safe mutex.
-    std::unique_lock<std::mutex> lock(this->client_close_mtx_);
+    // Safe mutex lock
+    std::unique_lock<std::mutex> lock(this->mtx_);
 
     // Call to the internal stop.
     this->internalStopPublisher();
 
     // Call to the internal callback.
     this->onPublisherStop();
-
-   // this->client_close_cv_.notify_all();
 }
 
 bool PublisherBase::resetPublisher()
@@ -166,7 +164,10 @@ const std::string &PublisherBase::getName() const
     return this->pub_info_.name;
 }
 
-bool PublisherBase::isWorking() const{return this->flag_working_;}
+bool PublisherBase::isWorking() const
+{
+    return this->flag_working_;
+}
 
 ClientResult PublisherBase::sendMsg(const common::PubSubData& request)
 {
@@ -191,8 +192,8 @@ ClientResult PublisherBase::sendMsg(const common::PubSubData& request)
     }
     catch (const zmq::error_t &error)
     {
-        // Call to the error callback and stop the client for safety.
-        this->onPublisherError(error, "PublisherBase: Error while sending a request. Stopping the client.");
+        // Call to the error callback and stop the publisher for safety.
+        this->onPublisherError(error, "PublisherBase: Error while sending a request. Stopping the publisher.");
         this->internalStopPublisher();
         return ClientResult::INTERNAL_ZMQ_ERROR;
     }

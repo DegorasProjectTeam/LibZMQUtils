@@ -75,6 +75,12 @@ public:
      */
     LIBZMQUTILS_EXPORT UUID() = default;
 
+    UUID(const UUID&) = delete;
+    LIBZMQUTILS_EXPORT UUID(UUID&&) = default;
+
+    UUID& operator=(const UUID&) = delete;
+    LIBZMQUTILS_EXPORT UUID& operator=(UUID&&) = default;
+
     /**
      * @brief Returns string representation of the UUID
      *

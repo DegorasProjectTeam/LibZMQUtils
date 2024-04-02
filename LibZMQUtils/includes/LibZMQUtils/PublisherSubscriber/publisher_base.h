@@ -38,7 +38,6 @@
 // =====================================================================================================================
 #include <string>
 #include <atomic>
-#include <condition_variable>
 #include <zmq/zmq.hpp>
 #include <zmq/zmq_addon.hpp>
 // =====================================================================================================================
@@ -61,33 +60,72 @@ using common::SubscriberResult;
 using common::ClientResult;
 // =====================================================================================================================
 
+/**
+ * @brief The PublisherBase class represents a base publisher that binds to and endpoint and can send PubSubMsg messages.
+ *
+ * This base class can be used without specialization or it can be inherited to provide callbacks for start, stop,
+ * message sending and error handling.
+ */
 class PublisherBase : public ZMQContextHandler
 {
 
 public:
     
+    /**
+     * @brief PublisherBase constructor.
+     * @param endpoint, the endpoint to bind the publisher to.
+     * @param name, optional name of the publisher. It will be sent on messages.
+     */
     LIBZMQUTILS_EXPORT PublisherBase(std::string endpoint,
                                      std::string name = "");
     
+    /**
+     * @brief Start the publisher so it can send messages. It must be started before sending messages.
+     * @return true if it was started successfully. False otherwise.
+     */
     LIBZMQUTILS_EXPORT bool startPublisher();
 
+    /**
+     * @brief Stops the publisher and cleans the socket. Messages cannot be sent until publisher is started again.
+     */
     LIBZMQUTILS_EXPORT void stopPublisher();
 
+    /**
+     * @brief Restarts the publisher.
+     * @return true if reset was successful, false otherwise.
+     */
     LIBZMQUTILS_EXPORT bool resetPublisher();
 
+    /**
+     * @brief Get the endpoint that this publisher is bound to.
+     * @return the URL of the endpoint that this publisher is bound to.
+     */
     LIBZMQUTILS_EXPORT const std::string& getEndpoint() const;
 
+    /**
+     * @brief Get the name of this publisher.
+     * @return the name of the publisher.
+     */
     LIBZMQUTILS_EXPORT const std::string& getName() const;
 
+    /**
+     * @brief Check if the publisher is working, i.e., it was successfully started.
+     * @return true if publisher is working, false otherwise.
+     */
     LIBZMQUTILS_EXPORT bool isWorking() const;
 
-    LIBZMQUTILS_EXPORT ClientResult sendMsg(const common::PubSubData &);
+    /**
+     * @brief Sends a PubSubMsg.
+     * @param data, the data that will be sent in the msg.
+     * @return the result of sending operation.
+     */
+    LIBZMQUTILS_EXPORT ClientResult sendMsg(const common::PubSubData &data);
 
     /**
-     * @brief Get the network adapter addresses used by the server.
+     * @brief Get the network adapter information of interfaces that this publisher is bound to.
      *
      * This function returns a const reference to a vector of NetworkAdapterInfo objects. Each `NetworkAdapterInfo`
-     * object contains information about a network adapter used by the server for communication.
+     * object contains information about a network adapter used by the publisher for communication.
      *
      * @return A const reference to a vector of NetworkAdapterInfo objects.
      */
@@ -95,19 +133,30 @@ public:
 
     /**
      * @brief Virtual destructor to ensure proper cleanup when the derived class is destroyed.
-     * @warning The client will stop if is running but in this case the `onClientStop` callback can't be executed.
+     * @warning The publisher will stop if is running but in this case the `onPublisherStop` callback can't be executed.
      */
     LIBZMQUTILS_EXPORT virtual ~PublisherBase() override;
 
 protected:
 
+    /**
+     * @brief Base publisher start callback. Subclasses can override this function.
+     */
     LIBZMQUTILS_EXPORT virtual void onPublisherStart() {}
 
+    /**
+     * @brief Base publisher stop callback. Subclasses can override this function.
+     */
     LIBZMQUTILS_EXPORT virtual void onPublisherStop() {}
 
-
+    /**
+     * @brief Base publisher sending message callback. Subclasses can override this function.
+     */
     LIBZMQUTILS_EXPORT virtual void onSendingMsg(const common::PubSubData&) {}
 
+    /**
+     * @brief Base publisher error callback. Subclasses can override this function.
+     */
     LIBZMQUTILS_EXPORT virtual void onPublisherError(const zmq::error_t&, const std::string&) {}
 
 private:
@@ -120,7 +169,7 @@ private:
 
     zmq::multipart_t prepareMessage(const common::PubSubData &data);
 
-    // Internal client identification.
+    // Internal publisher identification.
     common::PublisherInfo pub_info_;
 
     // ZMQ sockets and endpoint.
@@ -129,11 +178,10 @@ private:
 
 
     // Mutex.
-    mutable std::mutex mtx_;                    ///< Safety mutex.
-    mutable std::mutex client_close_mtx_;       ///< Safety mutex for closing client.
+    mutable std::mutex mtx_;      ///< Safety mutex.
 
     // Bound interfaces
-    std::vector<internal_helpers::network::NetworkAdapterInfo> bound_ifaces_;
+    std::vector<internal_helpers::network::NetworkAdapterInfo> bound_ifaces_;  ///< Interfaces bound by publisher.
 
 
     // Usefull flags.
