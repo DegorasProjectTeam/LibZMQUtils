@@ -37,9 +37,6 @@
 // C++ INCLUDES
 // =====================================================================================================================
 #include <string>
-#include <iostream>
-#include <map>
-#include <vector>
 #include <cstring>
 #include <memory>
 #include <zmq/zmq.hpp>
@@ -49,7 +46,6 @@
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/Global/libzmqutils_global.h"
-#include "LibZMQUtils/Utilities/utils.h"
 #include "LibZMQUtils/Utilities/uuid_generator.h"
 // =====================================================================================================================
 
@@ -71,8 +67,8 @@ using ResultType = std::int32_t;    ///< Type used for the BaseServerResult enum
 using TopicType = std::string;
 
 /**
- * @enum ServerResult
- * @brief Enumerates the possible results of a base command operation. They can be extended in a subclass.
+ * @enum SubscriberResult
+ * @brief Enumerates the possible results of a base message receive operation. They can be extended in a subclass.
  * @warning Results 0 to 30 ids must not be used for custom results, they are special and reserved.
  * @warning Only positive results ids are allowed.
  */
@@ -83,56 +79,54 @@ enum class SubscriberResult : ResultType
     EMPTY_MSG              = 2,  ///< The message is empty.
     EMPTY_PARAMS           = 6,  ///< The command parameters are missing or empty.
     INVALID_PARTS          = 8,  ///< The message has invalid parts.
-    UNKNOWN_COMMAND        = 9,  ///< The command is not recognized.
     INVALID_MSG            = 10, ///< The message is invalid.
-    BAD_PARAMETERS         = 13, ///< The provided parameters are invalid.
-    BAD_NO_PARAMETERS      = 16, ///< The provided number of parameters are invalid.
     EMPTY_EXT_CALLBACK     = 17, ///< The associated external callback is empty. Used in ClbkCommandServerBase.
     INVALID_EXT_CALLBACK   = 18, ///< The associated external callback is invalid. Used in ClbkCommandServerBase.
     INVALID_PUB_UUID       = 19, ///< The publisher UUID is invalid (could be invalid, missing or empty).
     END_BASE_RESULTS       = 30  ///< Sentinel value indicating the end of the base server results.
 };
 
-
-// TODO MORE CASES RELATED TO THE CLIENT
-enum class ClientResult : ResultType
+/**
+ * @enum PublisherResult
+ * @brief Enumerates the possible results of a base send message operation. They can be extended in a subclass.
+ * @warning Results 0 to 30 ids must not be used for custom results, they are special and reserved.
+ * @warning Only positive results ids are allowed.
+ */
+enum class PublisherResult : ResultType
 {
-    COMMAND_OK = 0,               ///< The command was executed successfully.
+    MSG_OK = 0,               ///< The command was executed successfully.
     INTERNAL_ZMQ_ERROR     = 1,   ///< An internal ZeroMQ error occurred.
     EMPTY_MSG              = 2,   ///< The message is empty.
-    EMPTY_PARAMS           = 6,   ///< The result parameters are missing or empty.
-    TIMEOUT_REACHED        = 7,   ///< The operation timed out, the server could be dead.
     INVALID_PARTS          = 8,   ///< The command has invalid parts.
     INVALID_MSG            = 10,  ///< The message is invalid.
-    COMMAND_FAILED         = 14,  ///< The command execution failed in the server (internal error).
-    CLIENT_STOPPED         = 17,  ///< The client is stopped.
-    END_BASE_RESULTS       = 30   ///< Sentinel value indicating the end of the base client results.
+    PUBLISHER_STOPPED      = 17,  ///< The publisher is stopped.
+    END_BASE_RESULTS       = 30   ///< Sentinel value indicating the end of the base publisher results.
 
 };
 
-
-static constexpr std::array<const char*, 31>  ServerResultStr
+/**
+ * @brief String description of values contained in SubscriberResult enum.
+ */
+static constexpr std::array<const char*, 31>  SubscriberResultStr
 {
-    "COMMAND_OK - Command executed.",
+    "MSG_OK - Message succesfully received.",
     "INTERNAL_ZMQ_ERROR - Internal ZeroMQ error.",
     "EMPTY_MSG - Message is empty.",
-    "INVALID_CLIENT_IP - Client IP missing or empty.",
+    "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
     "EMPTY_PARAMS - Command parameters missing or empty.",
-    "TIMEOUT_REACHED - Operation timed out.",
     "INVALID_PARTS - Command has invalid parts.",
-    "UNKNOWN_COMMAND - Command is not recognized.",
+    "RESERVED_BASE_RESULT",
     "INVALID_MSG - The message is invalid.",
-    "NOT_CONNECTED - Not connected to the server.",
-    "ALREADY_CONNECTED - Already connected to the server.",
-    "BAD_PARAMETERS - Provided parameters are invalid.",
-    "COMMAND_FAILED - Command execution failed in the server (internal server error).",
-    "NOT_IMPLEMENTED - Command is not implemented and registered in server.",
-    "BAD_NO_PARAMETERS - The provided number of parameters are invalid.",
-    "EMPTY_EXT_CALLBACK - The associated external callback for the command is empty.",
-    "INVALID_EXT_CALLBACK - The associated external callback for the command is invalid.",
-    "INVALID_CLIENT_UUID - The client UUID is invalid (could be invalid, missing or empty).",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "EMPTY_EXT_CALLBACK - The associated external callback for the message is empty.",
+    "INVALID_EXT_CALLBACK - The associated external callback for the message is invalid.",
+    "INVALID_PUBLISHER_UUID - The publisher UUID is invalid (could be invalid, missing or empty).",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
@@ -146,17 +140,20 @@ static constexpr std::array<const char*, 31>  ServerResultStr
     "RESERVED_BASE_RESULT"
 };
 
-static constexpr std::array<const char*, 31>  ClientResultStr
+/**
+ * @brief String description of values contained in PublisherResult enum.
+ */
+static constexpr std::array<const char*, 31>  PublisherResultStr
 {
-    "COMMAND_OK - Command executed.",
+    "MSG_OK - Message succesfully received.",
     "INTERNAL_ZMQ_ERROR - Internal ZeroMQ error.",
     "EMPTY_MSG - Message is empty.",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
-    "TIMEOUT_REACHED - Operation timed out.",
-    "INVALID_PARTS - Command has invalid parts.",
+    "RESERVED_BASE_RESULT",
+    "INVALID_PARTS - Message has invalid parts.",
     "RESERVED_BASE_RESULT",
     "INVALID_MSG - The message is invalid.",
     "RESERVED_BASE_RESULT",
@@ -165,7 +162,7 @@ static constexpr std::array<const char*, 31>  ClientResultStr
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
-    "CLIENT_STOPPED - The client is stopped.",
+    "PUBLISHER_STOPPED - The publisher is stopped.",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
@@ -186,12 +183,31 @@ static constexpr std::array<const char*, 31>  ClientResultStr
 // COMMON STRUCTS
 // =====================================================================================================================
 
+/**
+ * @brief The PublisherInfo struct holds the information of a specific publisher.
+ */
 struct PublisherInfo
 {
-    LIBZMQUTILS_EXPORT PublisherInfo() = default;
-    
+
+    /**
+     * @brief PublisherInfo constructor.
+     * @param uuid
+     * @param endpoint
+     * @param name
+     */
     LIBZMQUTILS_EXPORT PublisherInfo(utils::UUID uuid, std::string endpoint, std::string name = "");
 
+    // Default constructor, copy and move
+    LIBZMQUTILS_EXPORT PublisherInfo() = default;
+    LIBZMQUTILS_EXPORT PublisherInfo(const PublisherInfo&) = default;
+    LIBZMQUTILS_EXPORT PublisherInfo(PublisherInfo&&) = default;
+    LIBZMQUTILS_EXPORT PublisherInfo& operator=(const PublisherInfo&) = default;
+    LIBZMQUTILS_EXPORT PublisherInfo& operator=(PublisherInfo&&) = default;
+
+    /**
+     * @brief Converts publisher info into a Json string.
+     * @return a Json string representing the publisher info.
+     */
     LIBZMQUTILS_EXPORT std::string toJsonString() const;
 
     // Identifier.
@@ -202,6 +218,9 @@ struct PublisherInfo
 
 };
 
+/**
+ * @brief The PubSubData struct contains the data of a message exchanged between publisher and subscribers.
+ */
 struct PubSubData
 {
     LIBZMQUTILS_EXPORT PubSubData();
@@ -211,10 +230,16 @@ struct PubSubData
     size_t data_size;
 };
 
+/**
+ * @brief The PubSubMsg struct represents a message exchanged between publisher and subscribers. It includes data and
+ * publisher info.
+ */
 struct PubSubMsg
 {
-    LIBZMQUTILS_EXPORT PubSubMsg() = default;
+
     LIBZMQUTILS_EXPORT PubSubMsg(const PublisherInfo &pub_info);
+
+    LIBZMQUTILS_EXPORT PubSubMsg() = default;
 
     PublisherInfo pub_info;
     PubSubData data;

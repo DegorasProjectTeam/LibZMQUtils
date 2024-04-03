@@ -144,19 +144,18 @@ void SubscriberBase::subscribe(const std::string &pub_endpoint)
 
 void SubscriberBase::unsubscribe(const std::string &pub_endpoint)
 {
-    // This function finds values that matches the desired one and moves them to the end of the container, so then
-    // you can delete later all of them. If there is no match, end will be returned.
-    auto it = std::remove_if(this->subscribed_publishers_.begin(), this->subscribed_publishers_.end(),
-                            [&pub_endpoint](const auto& pair)
+    // Check if endpoint is subscribed
+    auto it = std::find_if(this->subscribed_publishers_.begin(), this->subscribed_publishers_.end(),
+    [&pub_endpoint](const auto& pair)
     {
         return pair.second.endpoint == pub_endpoint;
     });
 
     if (it != this->subscribed_publishers_.end())
     {
-        // Erase endpoints.
-        this->subscribed_publishers_.erase(it, this->subscribed_publishers_.end());
-        // Reset socket to apply changes.
+        // If endpoint is subscribed, erase it.
+        this->subscribed_publishers_.erase(it);
+        // If socket is started, then reset to apply the change.
         if (this->flag_working_)
             this->resetSocket();
     }

@@ -63,7 +63,7 @@ constexpr std::string_view kReservedExitTopic = "quit";
 // =====================================================================================================================
 
 // =====================================================================================================================
-using common::ServerResultStr;
+using common::SubscriberResultStr;
 using common::SubscriberResult;
 using internal_helpers::network::NetworkAdapterInfo;
 using utils::UUID;

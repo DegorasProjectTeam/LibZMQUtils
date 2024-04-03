@@ -23,169 +23,80 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file uuid_generator.cpp
- * @brief This file contains the implementation of the UUIDGenerator class.
+ * @file amelas_controller_client.h
+ * @brief EXAMPLE FILE - This file contains the declaration of the AmelasControllerClient example class.
  * @author Degoras Project Team
  * @copyright EUPL License
  * @version 2309.5
 ***********************************************************************************************************************/
 
+// =====================================================================================================================
+#pragma once
+// =====================================================================================================================
+
 // C++ INCLUDES
 // =====================================================================================================================
-#include <cstddef>
-#include <iostream>
-#include <mutex>
-#include <random>
-#include <sstream>
-#include <iomanip>
-#include <array>
-#include <memory>
-#include <set>
-#include <chrono>
-#include <thread>
+#include <string>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/Utilities/uuid_generator.h"
+#include <LibZMQUtils/CommandClient>
+#include <LibZMQUtils/Utils>
 // =====================================================================================================================
 
-// ZMQUTILS NAMESPACES
+// AMELAS INCLUDES
 // =====================================================================================================================
-namespace zmqutils{
-namespace utils{
+#include "includes/AmelasControllerServer/common.h"
 // =====================================================================================================================
 
-UUIDGenerator::UUIDGenerator() :
-    rd_(std::random_device()),
-    gen_(std::mt19937_64{std::random_device{}()})
+// PROJECT INCLUDES
+// =====================================================================================================================
+// =====================================================================================================================
+
+// AMELAS NAMESPACES
+// =====================================================================================================================
+namespace amelas{
+namespace communication{
+// =====================================================================================================================
+
+using namespace amelas::communication::common;
+using zmqutils::common::RequestData;
+using zmqutils::common::CommandReply;
+
+class AmelasControllerClient : public zmqutils::CommandClientBase
 {
-    // Safe mutex lock.
-    std::unique_lock<std::mutex> lock(this->mtx_);
+public:
 
-    // Check the entropy.
-    if(this->rd_.entropy() == 0.0)
-    {
-        auto now = std::chrono::high_resolution_clock::now();
-        auto now_int = std::chrono::time_point_cast<std::chrono::nanoseconds>(now).time_since_epoch().count();
-        std::uint_fast64_t seed = std::hash<decltype(now_int)>{}(now_int);
-        this->gen_ = std::mt19937_64(seed);
-    }
-    else
-        this->gen_ = std::mt19937_64(this->rd_());
-}
+    AmelasControllerClient(const std::string& server_endpoint,
+                           const std::string& client_name = "",
+                           const std::string interf_name = "");
 
-UUIDGenerator &UUIDGenerator::getInstance()
-{
-    // Guaranteed to be destroyed, instantiated on first use.
-    static UUIDGenerator instance;
-    return instance;
-}
+    // TODO
+    //virtual void prepareRequest() = 0;
 
-UUID UUIDGenerator::generateUUIDv4()
-{
-    // Auxiliar containers.
-    std::array<std::byte, 16> bytes;
-    std::uniform_int_distribution<> distrib(0, 255);
-    UUID uuid;
+private:
 
-    // Generate the uuid.
-    do
-    {
-        // Random generation.
-        for(auto& byte : bytes)
-            byte = static_cast<std::byte>(distrib(this->gen_));
+    virtual void onClientStart() final;
 
-        // Set the version to 4 (random)
-        bytes[6] = static_cast<std::byte>((static_cast<std::uint8_t>(bytes[6]) & 0x0F) | 0x40);
+    virtual void onClientStop() final;
 
-        // Set the variant to 1 (RFC4122)
-        bytes[8] = static_cast<std::byte>((static_cast<std::uint8_t>(bytes[8]) & 0x3F) | 0x80);
+    virtual void onWaitingReply() final;
 
-        // Generate the UUID.
-        uuid = UUID(bytes);
+    virtual void onDeadServer() final;
 
-    } while(generated_uuids_.find(uuid) != generated_uuids_.end());
+    virtual void onConnected() final;
 
-    // Safe mutex lock.
-    std::unique_lock<std::mutex> lock(this->mtx_);
+    virtual void onDisconnected() final;
 
-    // Insert the generated uuid.
-    generated_uuids_.insert(uuid);
+    virtual void onInvalidMsgReceived(const CommandReply&) final;
 
-    // Return the generated uuid.
-    return uuid;
-}
+    virtual void onReplyReceived(const CommandReply& reply) final;
 
-UUID::UUID(const std::array<std::byte, 16> &bytes):
-    bytes_(bytes)
-{}
+    virtual void onSendingCommand(const RequestData&) final;
 
-std::string UUID::toRFC4122String() const
-{
-    std::stringstream ss;
-    ss << std::hex << std::setfill('0');
-
-    // time-low
-    for (size_t i = 0; i < 4; i++)
-        ss << std::setw(2) << static_cast<int>(this->bytes_[i]);
-    ss << '-';
-
-    // time-mid
-    for (size_t i = 4; i < 6; i++)
-        ss << std::setw(2) << static_cast<int>(this->bytes_[i]);
-    ss << '-';
-
-    // time-high-and-version
-    for (size_t i = 6; i < 8; i++)
-        ss << std::setw(2) << static_cast<int>(this->bytes_[i]);
-    ss << '-';
-
-    // clock-seq-and-reserved and clock-seq-low
-    for (size_t i = 8; i < 10; i++)
-        ss << std::setw(2) << static_cast<int>(this->bytes_[i]);
-    ss << '-';
-
-    // node
-    for (size_t i = 10; i < 16; i++)
-        ss << std::setw(2) << static_cast<int>(this->bytes_[i]);
-
-    return ss.str();
-}
-
-const std::array<std::byte, 16> &UUID::getBytes() const {return this->bytes_;}
-
-
-bool operator<(const UUID &a, const UUID &b)
-{
-    return a.getBytes() < b.getBytes();
-}
-
-bool operator>(const UUID &a, const UUID &b)
-{
-    return a.getBytes() > b.getBytes();
-}
-
-bool operator<=(const UUID &a, const UUID &b)
-{
-    return a.getBytes() <= b.getBytes();
-}
-
-bool operator>=(const UUID &a, const UUID &b)
-{
-    return a.getBytes() >= b.getBytes();
-}
-
-bool operator==(const UUID &a, const UUID &b)
-{
-    return a.getBytes() == b.getBytes();
-}
-
-bool operator!=(const UUID &a, const UUID &b)
-{
-    return a.getBytes() != b.getBytes();
-}
-
+    virtual void onClientError(const zmq::error_t&, const std::string& ext_info) final;
+};
 
 }} // END NAMESPACES.
 // =====================================================================================================================

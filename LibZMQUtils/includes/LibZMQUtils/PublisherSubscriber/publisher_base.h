@@ -57,7 +57,7 @@ namespace zmqutils{
 
 // =====================================================================================================================
 using common::SubscriberResult;
-using common::ClientResult;
+using common::PublisherResult;
 // =====================================================================================================================
 
 /**
@@ -119,7 +119,7 @@ public:
      * @param data, the data that will be sent in the msg.
      * @return the result of sending operation.
      */
-    LIBZMQUTILS_EXPORT ClientResult sendMsg(const common::PubSubData &data);
+    LIBZMQUTILS_EXPORT PublisherResult sendMsg(const common::PubSubData &data);
 
     /**
      * @brief Get the network adapter information of interfaces that this publisher is bound to.

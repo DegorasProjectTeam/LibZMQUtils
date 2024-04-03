@@ -169,14 +169,14 @@ bool PublisherBase::isWorking() const
     return this->flag_working_;
 }
 
-ClientResult PublisherBase::sendMsg(const common::PubSubData& request)
+PublisherResult PublisherBase::sendMsg(const common::PubSubData& request)
 {
     // Result.
-    ClientResult result = ClientResult::COMMAND_OK;
+    PublisherResult result = PublisherResult::MSG_OK;
 
     // Check if we started the publisher.
     if (!this->socket_)
-        return ClientResult::CLIENT_STOPPED;
+        return PublisherResult::PUBLISHER_STOPPED;
 
     // Send the msg.
     try
@@ -195,7 +195,7 @@ ClientResult PublisherBase::sendMsg(const common::PubSubData& request)
         // Call to the error callback and stop the publisher for safety.
         this->onPublisherError(error, "PublisherBase: Error while sending a request. Stopping the publisher.");
         this->internalStopPublisher();
-        return ClientResult::INTERNAL_ZMQ_ERROR;
+        return PublisherResult::INTERNAL_ZMQ_ERROR;
     }
 
     // Return the result.

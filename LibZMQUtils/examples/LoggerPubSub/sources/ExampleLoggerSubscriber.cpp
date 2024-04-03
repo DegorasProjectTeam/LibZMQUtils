@@ -23,8 +23,14 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file uuid_generator.cpp
- * @brief This file contains the implementation of the UUIDGenerator class.
+ * @example ExampleServerAmelas.cpp
+ *
+ * @brief This file serves as a program example of how to use the AmelasServer and AmelasController classes.
+ *
+ * This program initializes an instance of the AmelasServer class and sets it up to interact with an instance of
+ * the AmelasController class. The server is set up to respond to client requests by invoking callback methods on the
+ * controller. The program will run indefinitely until the user hits ctrl-c.
+ *
  * @author Degoras Project Team
  * @copyright EUPL License
  * @version 2309.5
@@ -32,160 +38,104 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
-#include <cstddef>
+#ifdef _WIN32
+#define NOMINMAX
+#include <Windows.h>
+#endif
 #include <iostream>
-#include <mutex>
-#include <random>
-#include <sstream>
-#include <iomanip>
-#include <array>
-#include <memory>
-#include <set>
 #include <chrono>
 #include <thread>
+#include <csignal>
+#include <limits>
+#include <any>
+#include <sstream>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/Utilities/uuid_generator.h"
+#include <LibZMQUtils/Utils>
 // =====================================================================================================================
 
-// ZMQUTILS NAMESPACES
+// PROJECT INCLUDES
 // =====================================================================================================================
-namespace zmqutils{
-namespace utils{
+#include "includes/AmelasControllerServer/amelas_controller_server.h"
+#include "includes/AmelasController/amelas_controller.h"
 // =====================================================================================================================
 
-UUIDGenerator::UUIDGenerator() :
-    rd_(std::random_device()),
-    gen_(std::mt19937_64{std::random_device{}()})
+/**
+ * @brief Main entry point of the program ExampleServerAmelas.
+ *
+ * Initializes an AmelasController and AmelasServer, then enters an infinite loop where it listens for client requests
+ * and processes them using the server. If the user hits ctrl-c, the server is shut down and the program exits.
+ */
+int main(int, char**)
 {
-    // Safe mutex lock.
-    std::unique_lock<std::mutex> lock(this->mtx_);
+    // Nampesaces.
+    using amelas::communication::AmelasControllerServer;
+    using amelas::communication::AmelasServerCommand;
+    using amelas::controller::AmelasController;
 
-    // Check the entropy.
-    if(this->rd_.entropy() == 0.0)
+    // Configure the console.
+    zmqutils::utils::ConsoleConfig& console_cfg = zmqutils::utils::ConsoleConfig::getInstance();
+    console_cfg.configureConsole(true, true, true);
+
+    // Configuration variables.
+    unsigned port = 9999;
+    bool client_status_check = true;
+
+    // Instantiate the Amelas controller.
+    AmelasController amelas_controller;
+
+    // Instantiate the server.
+    AmelasControllerServer amelas_server(port);
+
+    // Disable or enables the client status checking.
+    amelas_server.setClientStatusCheck(client_status_check);
+
+    // ---------------------------------------
+
+    // Set the controller callbacks in the server.
+
+    amelas_server.registerControllerCallback(AmelasServerCommand::REQ_SET_HOME_POSITION,
+                                             &amelas_controller,
+                                             &AmelasController::setHomePosition);
+
+    amelas_server.registerControllerCallback(AmelasServerCommand::REQ_GET_HOME_POSITION,
+                                             &amelas_controller,
+                                             &AmelasController::getHomePosition);
+
+    // ---------------------------------------
+
+    // Start the server.
+    bool started = amelas_server.startServer();
+
+    // Check if the server starts ok.
+    if(!started)
     {
-        auto now = std::chrono::high_resolution_clock::now();
-        auto now_int = std::chrono::time_point_cast<std::chrono::nanoseconds>(now).time_since_epoch().count();
-        std::uint_fast64_t seed = std::hash<decltype(now_int)>{}(now_int);
-        this->gen_ = std::mt19937_64(seed);
+        // Log.
+        std::cout << "Server start failed!! Press Enter to exit!" << std::endl;
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        std::cin.clear();
+        return 1;
     }
-    else
-        this->gen_ = std::mt19937_64(this->rd_());
+
+    // Wait for closing as an infinite loop until ctrl-c.
+    console_cfg.waitForClose();
+
+    // Log.
+    std::cout << "Stopping the server..." << std::endl;
+
+    // Stop the server.
+    amelas_server.stopServer();
+
+    // Final log.
+    std::cout << "Server stoped. All ok!!" << std::endl;
+
+    // Restore the console.
+    console_cfg.restoreConsole();
+
+    // Return.
+	return 0;
 }
 
-UUIDGenerator &UUIDGenerator::getInstance()
-{
-    // Guaranteed to be destroyed, instantiated on first use.
-    static UUIDGenerator instance;
-    return instance;
-}
-
-UUID UUIDGenerator::generateUUIDv4()
-{
-    // Auxiliar containers.
-    std::array<std::byte, 16> bytes;
-    std::uniform_int_distribution<> distrib(0, 255);
-    UUID uuid;
-
-    // Generate the uuid.
-    do
-    {
-        // Random generation.
-        for(auto& byte : bytes)
-            byte = static_cast<std::byte>(distrib(this->gen_));
-
-        // Set the version to 4 (random)
-        bytes[6] = static_cast<std::byte>((static_cast<std::uint8_t>(bytes[6]) & 0x0F) | 0x40);
-
-        // Set the variant to 1 (RFC4122)
-        bytes[8] = static_cast<std::byte>((static_cast<std::uint8_t>(bytes[8]) & 0x3F) | 0x80);
-
-        // Generate the UUID.
-        uuid = UUID(bytes);
-
-    } while(generated_uuids_.find(uuid) != generated_uuids_.end());
-
-    // Safe mutex lock.
-    std::unique_lock<std::mutex> lock(this->mtx_);
-
-    // Insert the generated uuid.
-    generated_uuids_.insert(uuid);
-
-    // Return the generated uuid.
-    return uuid;
-}
-
-UUID::UUID(const std::array<std::byte, 16> &bytes):
-    bytes_(bytes)
-{}
-
-std::string UUID::toRFC4122String() const
-{
-    std::stringstream ss;
-    ss << std::hex << std::setfill('0');
-
-    // time-low
-    for (size_t i = 0; i < 4; i++)
-        ss << std::setw(2) << static_cast<int>(this->bytes_[i]);
-    ss << '-';
-
-    // time-mid
-    for (size_t i = 4; i < 6; i++)
-        ss << std::setw(2) << static_cast<int>(this->bytes_[i]);
-    ss << '-';
-
-    // time-high-and-version
-    for (size_t i = 6; i < 8; i++)
-        ss << std::setw(2) << static_cast<int>(this->bytes_[i]);
-    ss << '-';
-
-    // clock-seq-and-reserved and clock-seq-low
-    for (size_t i = 8; i < 10; i++)
-        ss << std::setw(2) << static_cast<int>(this->bytes_[i]);
-    ss << '-';
-
-    // node
-    for (size_t i = 10; i < 16; i++)
-        ss << std::setw(2) << static_cast<int>(this->bytes_[i]);
-
-    return ss.str();
-}
-
-const std::array<std::byte, 16> &UUID::getBytes() const {return this->bytes_;}
-
-
-bool operator<(const UUID &a, const UUID &b)
-{
-    return a.getBytes() < b.getBytes();
-}
-
-bool operator>(const UUID &a, const UUID &b)
-{
-    return a.getBytes() > b.getBytes();
-}
-
-bool operator<=(const UUID &a, const UUID &b)
-{
-    return a.getBytes() <= b.getBytes();
-}
-
-bool operator>=(const UUID &a, const UUID &b)
-{
-    return a.getBytes() >= b.getBytes();
-}
-
-bool operator==(const UUID &a, const UUID &b)
-{
-    return a.getBytes() == b.getBytes();
-}
-
-bool operator!=(const UUID &a, const UUID &b)
-{
-    return a.getBytes() != b.getBytes();
-}
-
-
-}} // END NAMESPACES.
-// =====================================================================================================================
+// ---------------------------------------------------------------------------------------------------------------------
