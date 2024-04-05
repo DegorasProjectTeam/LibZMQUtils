@@ -80,6 +80,7 @@ enum class SubscriberResult : ResultType
     EMPTY_PARAMS           = 6,  ///< The command parameters are missing or empty.
     INVALID_PARTS          = 8,  ///< The message has invalid parts.
     INVALID_MSG            = 10, ///< The message is invalid.
+    NOT_IMPLEMENTED        = 15, ///< The message process function is not implemented.
     EMPTY_EXT_CALLBACK     = 17, ///< The associated external callback is empty. Used in ClbkCommandServerBase.
     INVALID_EXT_CALLBACK   = 18, ///< The associated external callback is invalid. Used in ClbkCommandServerBase.
     INVALID_PUB_UUID       = 19, ///< The publisher UUID is invalid (could be invalid, missing or empty).
@@ -122,7 +123,7 @@ static constexpr std::array<const char*, 31>  SubscriberResultStr
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
+    "NOT_IMPLEMENTED - Message process function is not implemented and registered in subscriber.",
     "RESERVED_BASE_RESULT",
     "EMPTY_EXT_CALLBACK - The associated external callback for the message is empty.",
     "INVALID_EXT_CALLBACK - The associated external callback for the message is invalid.",

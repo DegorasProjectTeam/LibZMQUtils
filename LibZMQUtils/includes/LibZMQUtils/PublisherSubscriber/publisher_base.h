@@ -109,6 +109,12 @@ public:
     LIBZMQUTILS_EXPORT const std::string& getName() const;
 
     /**
+     * @brief Get the UUID of this publisher.
+     * @return the UUID of the publisher.
+     */
+    LIBZMQUTILS_EXPORT const utils::UUID& getUUID() const;
+
+    /**
      * @brief Check if the publisher is working, i.e., it was successfully started.
      * @return true if publisher is working, false otherwise.
      */

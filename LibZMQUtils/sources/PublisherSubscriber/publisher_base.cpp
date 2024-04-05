@@ -164,6 +164,11 @@ const std::string &PublisherBase::getName() const
     return this->pub_info_.name;
 }
 
+const utils::UUID &PublisherBase::getUUID() const
+{
+    return this->pub_info_.uuid;
+}
+
 bool PublisherBase::isWorking() const
 {
     return this->flag_working_;

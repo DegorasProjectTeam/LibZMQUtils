@@ -23,8 +23,8 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file amelas_controller_server.h
- * @brief EXAMPLE FILE - This file contains the declaration of the AmelasServer example class.
+ * @file logger_subscriber.h
+ * @brief EXAMPLE FILE - This file contains the declaration of the LoggerSubscriber example class.
  * @author Degoras Project Team
  * @copyright EUPL License
  * @version 2309.5
@@ -36,117 +36,55 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
-#include <unordered_map>
 #include <string>
-#include <any>
-#include <variant>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/CallbackCommandServer>
+#include <LibZMQUtils/CallbackSubscriber>
 #include <LibZMQUtils/Utils>
-// =====================================================================================================================
-
-// PROJECT INCLUDES
-// =====================================================================================================================
-#include "includes/AmelasController/amelas_controller.h"
-#include "includes/AmelasController/common.h"
-#include "includes/AmelasControllerServer/common.h"
 // =====================================================================================================================
 
 // AMELAS NAMESPACES
 // =====================================================================================================================
-namespace amelas{
-namespace communication{
+namespace logger {
 // =====================================================================================================================
 
-// ---------------------------------------------------------------------------------------------------------------------
-using namespace amelas::communication::common;
-using zmqutils::common::CommandReply;
-using zmqutils::common::CommandRequest;
-using zmqutils::common::ServerResult;
-using zmqutils::common::ServerCommand;
-using zmqutils::common::HostInfo;
-using zmqutils::utils::CallbackHandler;
-// ---------------------------------------------------------------------------------------------------------------------
-
 // Example of creating a command server from the base.
-class AmelasControllerServer : public zmqutils::ClbkCommandServerBase
+class LoggerSubscriber : public zmqutils::ClbkSubscriberBase
 {
 public:
 
-    AmelasControllerServer(unsigned port, const std::string& local_addr = "*");
+    LoggerSubscriber();
 
-    // Register callback function helper.
-    template<typename... Args>
-    void registerControllerCallback(AmelasServerCommand command,
-                                    controller::AmelasController* object,
-                                    controller::AmelasControllerCallback<Args...> callback)
-    {
-        CallbackHandler::registerCallback(static_cast<CallbackHandler::CallbackId>(command), object, callback);
-    }
+    using zmqutils::ClbkSubscriberBase::registerCallback;
 
 private:
 
     // -----------------------------------------------------------------------------------------------------------------
-    using CommandServerBase::registerRequestProcFunc;
+    using SubscriberBase::registerRequestProcFunc;
     using CallbackHandler::registerCallback;
-    using AmelasRequestProcFunc = void(AmelasControllerServer::*)(const CommandRequest&, CommandReply&);
     // -----------------------------------------------------------------------------------------------------------------
 
-    // Process functions for all the specific commands.
-    void processSetHomePosition(const CommandRequest&, CommandReply&);
-    void processGetHomePosition(const CommandRequest&, CommandReply&);
-
-    // Subclass register process function helper.
-    void registerRequestProcFunc(AmelasServerCommand command, AmelasRequestProcFunc func);
-
-    // Subclass invoke callback helper.
-    template <typename ClbkT, typename... Args>
-    controller::AmelasError invokeCallback(const CommandRequest& request, CommandReply& reply, Args&&... args)
-    {
-        return ClbkCommandServerBase::invokeCallback<ClbkT>(request, reply,
-                                                            controller::AmelasError::INVALID_ERROR,
-                                                            std::forward<Args>(args)...);
-    }
-
-    // Internal overrided command validation function.
-    virtual bool validateCustomCommand(ServerCommand command) final;
-
-    // Internal overrided custom command received callback.
-    virtual void onCustomCommandReceived(CommandRequest&, CommandReply&) final;
+    zmqutils::SubscriberResult processLogInfo(const zmqutils::common::PubSubMsg&);
+    zmqutils::SubscriberResult processLogWarning(const zmqutils::common::PubSubMsg&);
+    zmqutils::SubscriberResult processLogError(const zmqutils::common::PubSubMsg&);
 
     // Internal overrided start callback.
-    virtual void onServerStart() final;
+    virtual void onSubscriberStart() override final;
 
     // Internal overrided close callback.
-    virtual void onServerStop() final;
-
-    // Internal waiting command callback.
-    virtual void onWaitingCommand() final;
-
-    // Internal dead client callback.
-    virtual void onDeadClient(const HostInfo&) final;
-
-    // Internal overrided connect callback.
-    virtual void onConnected(const HostInfo&) final;
-
-    // Internal overrided disconnect callback.
-    virtual void onDisconnected(const HostInfo&) final;
+    virtual void onSubscriberStop() override final;
 
     // Internal overrided command received callback.
-    virtual void onCommandReceived(const CommandRequest&) final;
+    virtual zmqutils::SubscriberResult onMsgReceived(const zmqutils::common::PubSubMsg&) override final;
 
     // Internal overrided bad command received callback.
-    virtual void onInvalidMsgReceived(const CommandRequest&) final;
-
-    // Internal overrided sending response callback.
-    virtual void onSendingResponse(const CommandReply&) final;
+    virtual void onInvalidMsgReceived(const zmqutils::common::PubSubMsg&, zmqutils::SubscriberResult) override final;
 
     // Internal overrided server error callback.
-    virtual void onServerError(const zmq::error_t&, const std::string& ext_info) final;
+    virtual void onSubscriberError(const zmq::error_t&, const std::string& ext_info) override final;
 };
 
-}} // END NAMESPACES.
+} // END NAMESPACES.
 // =====================================================================================================================

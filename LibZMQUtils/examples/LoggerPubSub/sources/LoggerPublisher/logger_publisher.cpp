@@ -23,100 +23,75 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @example ExampleLoggerSubscriber.cpp
- *
- * @brief This file serves as a program example of how to use the subscriber.
- *
+ * @file logger_publisher.cpp
+ * @brief EXAMPLE FILE - This file contains the definition of the LoggerPublisher example class.
  * @author Degoras Project Team
  * @copyright EUPL License
  * @version 2309.5
 ***********************************************************************************************************************/
 
-// C++ INCLUDES
+#include "includes/LoggerPublisher/logger_publisher.h"
+
+// NAMESPACES
 // =====================================================================================================================
-#ifdef _WIN32
-#define NOMINMAX
-#include <Windows.h>
-#endif
-#include <iostream>
-#include <limits>
+namespace logger {
 // =====================================================================================================================
 
-// ZMQUTILS INCLUDES
-// =====================================================================================================================
-#include <LibZMQUtils/Utils>
-// =====================================================================================================================
+LoggerPublisher::LoggerPublisher(std::string endpoint,
+                                 std::string name) :
+    PublisherBase(std::move(endpoint), std::move(name))
+{}
 
-// PROJECT INCLUDES
-// =====================================================================================================================
-#include "includes/LoggerSubscriber/logger_subscriber.h"
-// =====================================================================================================================
-
-class Logger
+void LoggerPublisher::onPublisherStart()
 {
-public:
-    void processLogInfo(const std::string &msg) {std::cout << "[INFO] - " << msg << std::endl;}
-    void processLogWarning(const std::string &msg) {std::cout << "[INFO] - " << msg << std::endl;}
-    void processLogError(const std::string &msg) {std::cout << "[INFO] - " << msg << std::endl;}
-};
-
-
-int main(int, char**)
-{
-
-    // Configure the console.
-    zmqutils::utils::ConsoleConfig& console_cfg = zmqutils::utils::ConsoleConfig::getInstance();
-    console_cfg.configureConsole(true, true, true);
-
-    Logger log;
-
-
-    // Instantiate and configure subscriber.
-    logger::LoggerSubscriber subscriber;
-    subscriber.subscribe("tcp://127.0.0.1:9999");
-    subscriber.addTopicFilter("LOG_INFO");
-    subscriber.addTopicFilter("LOG_WARNING");
-    subscriber.addTopicFilter("LOG_ERROR");
-
-
-    // ---------------------------------------
-    // Set the callbacks in the subscriber.
-    // ---------------------------------------
-    subscriber.registerCallback("LOG_INFO", &log, &Logger::processLogInfo);
-    subscriber.registerCallback("LOG_WARNING", &log, &Logger::processLogWarning);
-    subscriber.registerCallback("LOG_ERROR", &log, &Logger::processLogError);
-
-
-    // Start the subscriber.
-    bool started = subscriber.startSubscriber();
-
-    // Check if the subscriber starts ok.
-    if(!started)
-    {
-        // Log.
-        std::cout << "Subscriber start failed!! Press Enter to exit!" << std::endl;
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.clear();
-        return 1;
-    }
-
-    // Wait for closing as an infinite loop until ctrl-c.
-    console_cfg.waitForClose();
-
     // Log.
-    std::cout << "Stopping the subscriber..." << std::endl;
-
-    // Stop the subscriber.
-    subscriber.stopSubscriber();
-
-    // Final log.
-    std::cout << "Subscriber stoped. All ok!!" << std::endl;
-
-    // Restore the console.
-    console_cfg.restoreConsole();
-
-    // Return.
-	return 0;
+    std::cout << std::string(100, '-') << std::endl;
+    std::cout << "<"<<this->getName() << ">" <<std::endl;
+    std::cout << "-> ON PUBLISHER START: " << std::endl;
+    std::cout << "Time: " << zmqutils::utils::currentISO8601Date()<<std::endl;
+    std::cout << "Endpoint: " << this->getEndpoint() << std::endl;
+    std::cout << "Name: " << this->getName() << std::endl;
+    std::cout << "UUID: " << this->getUUID().toRFC4122String() << std::endl;
+    std::cout << std::string(100, '-') << std::endl;
 }
 
-// ---------------------------------------------------------------------------------------------------------------------
+void LoggerPublisher::onPublisherStop()
+{
+    // Log.
+    std::cout << std::string(100, '-') << std::endl;
+    std::cout<<"<"<<this->getName()<<">"<<std::endl;
+    std::cout<<"-> ON PUBLISHER STOP: "<<std::endl;
+    std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
+    std::cout << std::string(100, '-') << std::endl;
+}
+
+void LoggerPublisher::onSendingMsg(const zmqutils::common::PubSubData &req)
+{
+    zmqutils::utils::BinarySerializer serializer(req.data.get(), req.data_size);
+    // Log.
+    std::cout << std::string(100, '-') << std::endl;
+    std::cout << "<"<<this->getName() << ">" << std::endl;
+    std::cout << "-> ON PUBLISHER SEND COMMAND: " << std::endl;
+    std::cout << "Time: " << zmqutils::utils::currentISO8601Date() << std::endl;
+    std::cout << "Topic: " << req.topic << std::endl;
+    std::cout << "Params size: " << req.data_size <<std::endl;
+    std::cout << "Params Hex: " << serializer.getDataHexString() << std::endl;
+    std::cout << std::string(100, '-') << std::endl;
+}
+
+void LoggerPublisher::onPublisherError(const zmq::error_t& error, const std::string& ext_info)
+{
+    // Log.
+    std::cout << std::string(100, '-') << std::endl;
+    std::cout<<"<"<<this->getName()<<">"<<std::endl;
+    std::cout<<"-> ON PUBLISHER ERROR: "<<std::endl;
+    std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
+    std::cout<<"Code: "<<error.num()<<std::endl;
+    std::cout<<"Error: "<<error.what()<<std::endl;
+    std::cout<<"Info: "<<ext_info<<std::endl;
+    std::cout << std::string(100, '-') << std::endl;
+}
+
+}  // END NAMESPACES.
+// =====================================================================================================================
+

@@ -183,7 +183,7 @@ public:
 protected:
 
     // -----------------------------------------------------------------------------------------------------------------
-    using ProcessFunction = std::function<void(const common::PubSubMsg&)>;         ///< Process function alias.
+    using ProcessFunction = std::function<SubscriberResult(const common::PubSubMsg&)>;   ///< Process function alias.
     using ProcessFunctionsMap = std::unordered_map<common::TopicType, ProcessFunction>;  ///< Process function map alias.
     // -----------------------------------------------------------------------------------------------------------------
 
@@ -199,11 +199,11 @@ protected:
      */
     template <typename ClassT>
     void registerRequestProcFunc(const common::TopicType &topic, ClassT* obj,
-                                 void(ClassT::*func)(const common::PubSubMsg&))
+                                 SubscriberResult(ClassT::*func)(const common::PubSubMsg&))
     {
         this->process_fnc_map_[topic] = [obj, func](const common::PubSubMsg& msg)
         {
-            (obj->*func)(msg);
+            return (obj->*func)(msg);
         };
     }
 
@@ -240,10 +240,10 @@ protected:
      *          perform them asynchronously to avoid blocking the subscriber's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    LIBZMQUTILS_EXPORT virtual void onInvalidMsgReceived(const common::PubSubMsg&) = 0;
+    LIBZMQUTILS_EXPORT virtual void onInvalidMsgReceived(const common::PubSubMsg&, SubscriberResult) = 0;
 
     /**
-     * @brief Base message received callback. Subclasses must override this function.
+     * @brief Base message received callback. Subclasses may override this function.
      *
      * @param The PubSubMsg object representing the msg received.
      *
@@ -253,7 +253,7 @@ protected:
      *          perform them asynchronously to avoid blocking the subscriber's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    LIBZMQUTILS_EXPORT virtual void onMsgReceived(const common::PubSubMsg&) = 0;
+    LIBZMQUTILS_EXPORT virtual SubscriberResult onMsgReceived(const common::PubSubMsg&);
 
     /**
      * @brief Base subscriber error callback. Subclasses must override this function.

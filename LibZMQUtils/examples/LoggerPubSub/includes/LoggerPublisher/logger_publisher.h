@@ -23,8 +23,8 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file amelas_controller_client.h
- * @brief EXAMPLE FILE - This file contains the declaration of the AmelasControllerClient example class.
+ * @file logger_publisher.h
+ * @brief EXAMPLE FILE - This file contains the declaration of the LoggerPublisher example class.
  * @author Degoras Project Team
  * @copyright EUPL License
  * @version 2309.5
@@ -41,62 +41,36 @@
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/CommandClient>
+#include <LibZMQUtils/Publisher>
 #include <LibZMQUtils/Utils>
 // =====================================================================================================================
 
-// AMELAS INCLUDES
+
+// NAMESPACES
 // =====================================================================================================================
-#include "includes/AmelasControllerServer/common.h"
+namespace logger{
 // =====================================================================================================================
 
-// PROJECT INCLUDES
-// =====================================================================================================================
-// =====================================================================================================================
-
-// AMELAS NAMESPACES
-// =====================================================================================================================
-namespace amelas{
-namespace communication{
-// =====================================================================================================================
-
-using namespace amelas::communication::common;
-using zmqutils::common::RequestData;
-using zmqutils::common::CommandReply;
-
-class AmelasControllerClient : public zmqutils::CommandClientBase
+class LoggerPublisher : public zmqutils::PublisherBase
 {
 public:
 
-    AmelasControllerClient(const std::string& server_endpoint,
-                           const std::string& client_name = "",
-                           const std::string interf_name = "");
+    LoggerPublisher(std::string endpoint,
+                    std::string name = "");
 
     // TODO
     //virtual void prepareRequest() = 0;
 
 private:
 
-    virtual void onClientStart() final;
+    virtual void onPublisherStart() override final;
 
-    virtual void onClientStop() final;
+    virtual void onPublisherStop() override final;
 
-    virtual void onWaitingReply() final;
+    virtual void onSendingMsg(const zmqutils::common::PubSubData&) override final;
 
-    virtual void onDeadServer() final;
-
-    virtual void onConnected() final;
-
-    virtual void onDisconnected() final;
-
-    virtual void onInvalidMsgReceived(const CommandReply&) final;
-
-    virtual void onReplyReceived(const CommandReply& reply) final;
-
-    virtual void onSendingCommand(const RequestData&) final;
-
-    virtual void onClientError(const zmq::error_t&, const std::string& ext_info) final;
+    virtual void onPublisherError(const zmq::error_t&, const std::string& ext_info) override final;
 };
 
-}} // END NAMESPACES.
+}  // END NAMESPACES.
 // =====================================================================================================================
