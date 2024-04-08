@@ -405,15 +405,15 @@ void SubscriberBase::resetSocket()
         this->socket_->set(zmq::sockopt::linger, 0);
         this->socket_->connect(close_endpoint);
         this->socket_->set(zmq::sockopt::subscribe, kReservedExitTopic);
-        // Set all topic filters
-        for (const auto& topic: this->topic_filters_)
-        {
-            this->socket_->set(zmq::sockopt::subscribe, topic);
-        }
         // Connect to subscribed publishers
         for (const auto& publishers : this->subscribed_publishers_)
         {
             this->socket_->connect(publishers.second.endpoint);
+        }
+        // Set all topic filters
+        for (const auto& topic: this->topic_filters_)
+        {
+            this->socket_->set(zmq::sockopt::subscribe, topic);
         }
 
         this->socket_pub_close_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::pub);

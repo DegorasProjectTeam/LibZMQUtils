@@ -23,11 +23,11 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @example ExampleClientAmelas.cpp
+ * @example ExampleLoggerPublisher.cpp
  *
- * @brief This file serves as a program example of how to use the `AmelasClient` class.
+ * @brief This file serves as a program example of how to use the `LoggerPublisher` class.
  *
- * This program initializes an instance of the `AmelasClient` class to interact with an `AmelasServer`.
+ * This program initializes an instance of the `LoggerPublisher` class to interact with an `LoggerSubscriber`.
  *
  * @author Degoras Project Team
  * @copyright EUPL License
@@ -47,28 +47,16 @@
 
 // PROJECT INCLUDES
 // =====================================================================================================================
-#include "includes/AmelasController/common.h"
-#include "includes/AmelasControllerServer/common.h"
-#include "includes/AmelasControllerClient/amelas_controller_client.h"
+#include "includes/LoggerPublisher/logger_publisher.h"
 // =====================================================================================================================
 
 
 // TODO Remove
 using namespace zmqutils;
-using namespace amelas;
-using namespace amelas::communication;
-using namespace amelas::communication::common;
-using namespace amelas::controller;
-
-
-using zmqutils::common::CommandType;
-using zmqutils::common::CommandReply;
-using zmqutils::common::ServerCommand;
 using zmqutils::utils::BinarySerializer;
 
-void parseCommand(CommandClientBase &client, const std::string &command)
+void parseCommand(logger::LoggerPublisher &pub, const std::string &command)
 {
-    zmqutils::common::ClientResult client_result = ClientResult::COMMAND_OK;
 
     char *command_str = new char[command.size()];
     std::copy(command.begin(), command.end(), command_str);
@@ -77,210 +65,46 @@ void parseCommand(CommandClientBase &client, const std::string &command)
 
     if (token)
     {
-        CommandType command_id;
-
-        try
+        std::string token_command(token);
+        if (token_command != "info" && token_command != "warning" && token_command != "error")
         {
-            command_id = static_cast<CommandType>(std::stoi(token));
-        }
-        catch (...)
-        {
-            std::cerr << "Failed at sending command." << std::endl;
+            std::cerr << "Failed at sending log message. Unknown type." << std::endl;
             delete[] command_str;
             return;
         }
 
-        RequestData command_msg(static_cast<ServerCommand>(command_id));
+        token = std::strtok(nullptr, "");
 
-        bool valid = true;
-
-        if (command_id == static_cast<CommandType>(ServerCommand::REQ_CONNECT))
+        if (!token)
         {
-            std::cout << "Sending REQ_CONNECT command." << std::endl;
-        }
-        else if (command_id == static_cast<CommandType>(ServerCommand::REQ_DISCONNECT))
-        {
-            std::cout << "Sending REQ_DISCONNECT command" << std::endl;
-        }
-        else if (command_id == static_cast<CommandType>(ServerCommand::REQ_ALIVE))
-        {
-            std::cout << "Sending REQ_ALIVE command." << std::endl;
-        }
-        else if (command_id == static_cast<CommandType>(ServerCommand::REQ_GET_SERVER_TIME))
-        {
-            std::cout << "Sending REQ_GET_SERVER_TIME command." << std::endl;
-        }
-        else if (command_id == static_cast<CommandType>(AmelasServerCommand::REQ_GET_HOME_POSITION))
-        {
-            std::cout << "Sending get home position command." << std::endl;
-        }
-        else if (command_id == static_cast<CommandType>(AmelasServerCommand::REQ_SET_HOME_POSITION))
-        {
-            std::cout << "Sending set home position command." << std::endl;
-
-            bool valid_params = true;
-            double az = 0., el = 0.;
-            char *param_token = std::strtok(nullptr, " ");
-
-            try
-            {
-                az = std::stod(param_token);
-            }
-            catch (...)
-            {
-                std::cerr << "Bad parameter azimuth issued.";
-                valid_params = false;
-            }
-
-            if (valid_params)
-            {
-                param_token = std::strtok(nullptr, " ");
-
-                try
-                {
-                    el = std::stod(param_token);
-                }
-                catch (...)
-                {
-                    std::cerr << "Bad parameter elevation issued.";
-                    valid_params = false;
-                }
-            }
-
-            if (valid_params)
-            {
-                std::cout<<"Sending: " << az <<" "<<el<<std::endl;
-
-                AltAzPos pos(az, el);
-
-                BinarySerializer serializer;
-
-                serializer.write(pos);
-
-                std::cout<<serializer.toJsonString();
-
-                command_msg.params_size = BinarySerializer::fastSerialization(command_msg.params, pos);
-
-                std::cout<<std::endl;
-            }
-            else
-            {
-                std::cout<<"Sending invalid command: "<<std::endl;
-                command_msg.params_size = BinarySerializer::fastSerialization(command_msg.params, az);
-
-                valid_params = true;
-            }
-
-            valid = valid_params;
-
-        }
-        else
-        {
-            valid = false;
+            std::cerr << "There is no message to send" << std::endl;
+            delete[] command_str;
+            return;
         }
 
-        // TODO MOVE ALL OF THIS TO A SUBCLASS IN A PURE VIRTUAL. THE FUNCTION WILL RETURN ClientResult
-        // TODO THE ERROR CONTROL MUST BE IN THE BASE CLIENT. THE SUBCLASS MUST CONTROL THE OUTPUT DATA AND CUSTOM ERRORS ONLY.
-        // TODO DISABLE SEND WITH THIS WAY THE RESERVED COMMANDS.
-        // TODO CREATE doConnect, doDisconnect, checkServerAlive
-        // TODO CREATE IN THE CLIENT THE INTERNAL CALLBACKS LIKE THE SERVER.
-        // TODO MOVE THE PROCESSING OF EACH COMPLEX RESPONSE TO A FUNCTION.
+        std::string token_msg(token);
+        PublisherResult res = PublisherResult::INVALID_MSG;
 
-        if (valid)
+        if (token_command == "info")
         {
-            // TODO MOVE ALL
-            CommandReply reply;
-
-            if(command_msg.command == ServerCommand::REQ_CONNECT)
-            {
-                client_result = client.doConnect();
-
-                if (client_result == ClientResult::CLIENT_STOPPED)
-                {
-                    delete[] command_str;
-                    return;
-                }
-
-
-            }
-            else if(command_msg.command == ServerCommand::REQ_GET_SERVER_TIME)
-            {
-                std::string datetime;
-                client_result = client.doGetServerTime(datetime);
-
-                if (client_result == ClientResult::COMMAND_OK)
-                {
-                    std::cout<<"Server time: "<<datetime<<std::endl;
-
-                    delete[] command_str;
-                    return;
-                }
-
-            }
-            else
-                client_result = client.sendCommand(command_msg, reply);
-
-            std::cerr << "Client Result: " << static_cast<int>(client_result)<<std::endl;
-
-            if (client_result != ClientResult::COMMAND_OK)
-            {
-            }
-            else
-            {
-
-
-                std::cout<<"Server result: "<<static_cast<int>(reply.result)<<std::endl;
-
-                if(reply.result != ServerResult::COMMAND_OK)
-                {
-                    delete[] command_str;
-                    return;
-                }
-
-                // Get the controller result.
-                // TODO ERROR CONTROL
-
-                if(command_id > static_cast<CommandType>(ServerCommand::END_BASE_COMMANDS))
-                {
-                    AmelasError error;
-
-                    BinarySerializer ser(reply.params.get(), reply.params_size);
-                    std::cout<<ser.toJsonString()<<std::endl;
-
-                    ser.read(error);
-
-                    std::cout<<"Controller error: "<<static_cast<int>(error)<<std::endl;
-                }
-
-                if (command_id == static_cast<CommandType>(AmelasServerCommand::REQ_GET_HOME_POSITION))
-                {
-                    try
-                    {
-                        AmelasError error;   // Trash. The controller error must be checked.
-                        double az;
-                        double el;
-
-                        // Deserialize the parameters.
-                        BinarySerializer::fastDeserialization(reply.params.get(), reply.params_size, error, az, el);
-
-                        // Generate the struct.
-                        std::cout<<"Az: "<<az<<std::endl;
-                        std::cout<<"El: "<<el<<std::endl;
-                    }
-                    catch(...)
-                    {
-                        std::cout<<"BAD PARAMS"<<std::endl;
-                        // RETURN BAD PARAMS
-                        //result = ClientResult::
-                    }
-                }
-            }
+            std::cout << "Sending info log with msg: " << token_msg << " " <<token_msg.size() <<  std::endl;
+            res = pub.sendInfoLog(token_msg);
         }
-        else
+        else if (token_command == "warning")
         {
-            std::cerr << "Command is not implemented or valid" << std::endl;
+            std::cout << "Sending warning log with msg: " << token_msg << std::endl;
+            res = pub.sendWarningLog(token_msg);
+        }
+        else if (token_command == "error")
+        {
+            std::cout << "Sending error log with msg: " << token_msg << std::endl;
+            res = pub.sendErrorLog(token_msg);
         }
 
+        if (res != PublisherResult::MSG_OK)
+        {
+            std::cerr << "Error at sending log message. Error reason: " << static_cast<int>(res) << std::endl;
+        }
     }
     else
     {
@@ -292,7 +116,7 @@ void parseCommand(CommandClientBase &client, const std::string &command)
 }
 
 /**
- * @brief Main entry point of the program `ExampleClientAmelas`.
+ * @brief Main entry point of the program `ExampleLoggerPublisher`.
  */
 int main(int, char**)
 {
@@ -302,29 +126,27 @@ int main(int, char**)
 
     // Configuration variables.
     unsigned port = 9999;
-    std::string ip = "127.0.0.1";
+    //std::string ip = "127.0.0.1";
+    std::string ip = "*";
 
     std::string endpoint = "tcp://" + ip + ":" + std::to_string(port);
     
-    AmelasControllerClient client(endpoint, "AMELAS EXAMPLE CLIENT");
-
-    // Configure the client.
-    client.setAliveCallbacksEnabled(false);
+    logger::LoggerPublisher pub(endpoint, "Log Publisher");
 
     // Set the exit callback to the console handler for safety.
     console_cfg.setExitCallback(
-            [&client]()
+            [&pub]()
             {
                 std::cout << std::endl;
-                std::cout << "Stopping the client..." << std::endl;
-                client.stopClient();
+                std::cout << "Stopping the publisher..." << std::endl;
+                pub.stopPublisher();
             });
 
-    bool started = client.startClient();
+    bool started = pub.startPublisher();
 
     if(!started)
     {
-        std::cout<<"Unable to start the client.";
+        std::cout<<"Unable to start the publisher.";
         return 1;
     }
 
@@ -337,17 +159,11 @@ int main(int, char**)
         // Get the command and parameters.
         std::cout<<"------------------------------------------------------"<<std::endl;
         std::cout<<"-- Commands --"<<std::endl;
-        std::cout<<"- REQ_CONNECT:          0"<<std::endl;
-        std::cout<<"- REQ_DISCONNECT:       1"<<std::endl;
-        std::cout<<"- REQ_ALIVE:            2"<<std::endl;
-        std::cout<<"- REQ_GET_SERVER_TIME:  3"<<std::endl;
-        std::cout<<"- CUSTOM:         cmd param1 param2 ..."<<std::endl;
+        std::cout<<"- info:          Send info msg."<<std::endl;
+        std::cout<<"- warning:       Send warning msg."<<std::endl;
+        std::cout<<"- error:         Send error msg"<<std::endl;
         std::cout<<"-- Other --"<<std::endl;
-        std::cout<<"- Client exit:             exit"<<std::endl;
-        std::cout<<"- Enable auto-alive:       auto_alive_en"<<std::endl;
-        std::cout<<"- Disable auto-alive:      auto_alive_ds"<<std::endl;
-        std::cout<<"- Enable auto-alive clbk:  auto_alive_clbk_en"<<std::endl;
-        std::cout<<"- Disable auto-alive clbk: auto_alive_clbk_ds"<<std::endl;
+        std::cout<<"- Exit:             exit"<<std::endl;
         std::cout<<"------------------------------------------------------"<<std::endl;
         std::cout<<"Write a command: ";
         std::getline(std::cin, command);
@@ -355,35 +171,13 @@ int main(int, char**)
         // Check for other commands.
         if(command == "exit")
         {
-            std::cout << "Stopping the client..." << std::endl;
-            client.stopClient();
+            std::cout << "Stopping the publisher..." << std::endl;
+            pub.stopPublisher();
             break;
         }
-        else if(command == "auto_alive_en")
-        {
-            std::cout << "Enabling auto-alive..." << std::endl;
-            client.doDisconnect();
-            client.doConnect(true);
-            continue;
-        }
-        else if(command == "auto_alive_ds")
-        {
-            std::cout << "Disabling auto-alive..." << std::endl;
-            client.disableAutoAlive();
-            continue;
-        }
-        else if(command == "auto_alive_clbk_en")
-        {
-            std::cout << "Enabling auto-alive clbk..." << std::endl;
-            client.setAliveCallbacksEnabled(true);
-            continue;
-        }
-        else if(command == "auto_alive_clbk_ds")
-        {
-            std::cout << "Disabling auto-alive clbk..." << std::endl;
-            client.setAliveCallbacksEnabled(false);
-            continue;
-        }
+        else
+            parseCommand(pub, command);
+
 
         // Break if we want to close the example program.
         if(console_cfg.closeStatus() || std::cin.eof())
@@ -392,12 +186,10 @@ int main(int, char**)
             break;
         }
 
-        // Parse the command.
-        parseCommand(client, command);
     }
 
     // Final log.
-    std::cout << "Client stoped. All ok!!" << std::endl;
+    std::cout << "Publisher stoped. All ok!!" << std::endl;
 
     // Restore the console.
     console_cfg.restoreConsole();

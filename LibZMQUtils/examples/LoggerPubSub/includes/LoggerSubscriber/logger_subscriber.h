@@ -59,6 +59,8 @@ public:
 
     using zmqutils::ClbkSubscriberBase::registerCallback;
 
+    using LogMsgCallback = std::function<zmqutils::common::SubscriberResult(const std::string&)>;
+
 private:
 
     // -----------------------------------------------------------------------------------------------------------------
@@ -66,9 +68,7 @@ private:
     using CallbackHandler::registerCallback;
     // -----------------------------------------------------------------------------------------------------------------
 
-    zmqutils::SubscriberResult processLogInfo(const zmqutils::common::PubSubMsg&);
-    zmqutils::SubscriberResult processLogWarning(const zmqutils::common::PubSubMsg&);
-    zmqutils::SubscriberResult processLogError(const zmqutils::common::PubSubMsg&);
+    zmqutils::SubscriberResult processLogMsg(const zmqutils::common::PubSubMsg&);
 
     // Internal overrided start callback.
     virtual void onSubscriberStart() override final;

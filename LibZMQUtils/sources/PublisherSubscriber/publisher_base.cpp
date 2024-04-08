@@ -193,7 +193,12 @@ PublisherResult PublisherBase::sendMsg(const common::PubSubData& request)
         this->onSendingMsg(request);
 
         // Send the msg.
-        multipart_msg.send(*this->socket_);
+        bool res = multipart_msg.send(*this->socket_);
+        if (!res)
+        {
+            return PublisherResult::INTERNAL_ZMQ_ERROR;
+        }
+
     }
     catch (const zmq::error_t &error)
     {
@@ -222,7 +227,7 @@ bool PublisherBase::internalResetPublisher()
     {
         // Zmq publisher socket.
         this->socket_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::pub);
-        this->socket_->connect(this->endpoint_);
+        this->socket_->bind(this->endpoint_);
         this->socket_->set(zmq::sockopt::linger, 0);
 
         // Update the working flag.
@@ -291,9 +296,13 @@ zmq::multipart_t PublisherBase::prepareMessage(const common::PubSubData &data)
 
     // Prepare the multipart msg.
     zmq::multipart_t multipart_msg;
-    multipart_msg.add(std::move(msg_topic));
-    multipart_msg.add(std::move(msg_name));
-    multipart_msg.add(std::move(msg_uuid));
+    // multipart_msg.add(std::move(msg_topic));
+    // multipart_msg.add(std::move(msg_name));
+    // multipart_msg.add(std::move(msg_uuid));
+
+    multipart_msg.addstr(data.topic);
+    multipart_msg.addstr(this->pub_info_.name);
+    multipart_msg.addstr(this->pub_info_.uuid.toRFC4122String());
 
 
     // Add command parameters if they exist

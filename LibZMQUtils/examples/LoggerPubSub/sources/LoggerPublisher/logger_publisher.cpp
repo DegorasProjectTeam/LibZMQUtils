@@ -42,6 +42,31 @@ LoggerPublisher::LoggerPublisher(std::string endpoint,
     PublisherBase(std::move(endpoint), std::move(name))
 {}
 
+zmqutils::PublisherResult LoggerPublisher::sendInfoLog(const std::string &msg)
+{
+    return this->sendMsg(this->prepareData("LOG_INFO", msg));
+}
+
+zmqutils::PublisherResult LoggerPublisher::sendWarningLog(const std::string &msg)
+{
+    return this->sendMsg(this->prepareData("LOG_WARNING", msg));
+}
+
+zmqutils::PublisherResult LoggerPublisher::sendErrorLog(const std::string &msg)
+{
+    return this->sendMsg(this->prepareData("LOG_ERROR", msg));
+}
+
+zmqutils::common::PubSubData LoggerPublisher::prepareData(const std::string &topic, const std::string &msg_string)
+{
+    zmqutils::common::PubSubData data;
+
+    data.topic = topic;
+    data.data_size = zmqutils::utils::BinarySerializer::fastSerialization(data.data, msg_string);
+
+    return data;
+}
+
 void LoggerPublisher::onPublisherStart()
 {
     // Log.

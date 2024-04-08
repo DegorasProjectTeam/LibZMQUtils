@@ -46,53 +46,43 @@ LoggerSubscriber::LoggerSubscriber()
 
     // Process log info
     this->registerRequestProcFunc("LOG_INFO", this,
-                                  &LoggerSubscriber::processLogInfo);
+                                  &LoggerSubscriber::processLogMsg);
 
     // Process log info
     this->registerRequestProcFunc("LOG_WARNING", this,
-                                  &LoggerSubscriber::processLogWarning);
+                                  &LoggerSubscriber::processLogMsg);
 
     // Process log info
     this->registerRequestProcFunc("LOG_ERROR", this,
-                                  &LoggerSubscriber::processLogError);
+                                  &LoggerSubscriber::processLogMsg);
 
 }
 
-zmqutils::SubscriberResult LoggerSubscriber::processLogInfo(const zmqutils::common::PubSubMsg& msg)
+zmqutils::SubscriberResult LoggerSubscriber::processLogMsg(const zmqutils::common::PubSubMsg& msg)
 {
-    std::string message;
+    std::string message_str;
 
     // Check the request parameters size.
     if (msg.data.data_size == 0 || !msg.data.data)
     {
-        reply.result = ServerResult::EMPTY_PARAMS;
-        return;
+        return zmqutils::SubscriberResult::EMPTY_PARAMS;
     }
 
     // Try to read the parameters data.
     try
     {
-        BinarySerializer::fastDeserialization(request.params.get(), request.params_size, pos);
+        zmqutils::utils::BinarySerializer::fastDeserialization(msg.data.data.get(), msg.data.data_size, message_str);
     }
     catch(...)
     {
-        reply.result = ServerResult::BAD_PARAMETERS;
-        return;
+        return zmqutils::SubscriberResult::INVALID_MSG;
     }
 
     // Now we will process the command in the controller.
-    ctrl_err = this->invokeCallback<controller::SetHomePositionCallback>(request, reply, pos);
+    return this->invokeCallback<LogMsgCallback, zmqutils::common::SubscriberResult>(msg, message_str);
 }
 
-zmqutils::SubscriberResult LoggerSubscriber::processLogWarning(const zmqutils::common::PubSubMsg&)
-{
 
-}
-
-zmqutils::SubscriberResult LoggerSubscriber::processLogError(const zmqutils::common::PubSubMsg&)
-{
-
-}
 
 void LoggerSubscriber::onSubscriberStart()
 {

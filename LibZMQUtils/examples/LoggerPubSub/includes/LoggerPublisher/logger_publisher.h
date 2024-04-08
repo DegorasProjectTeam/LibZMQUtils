@@ -58,10 +58,13 @@ public:
     LoggerPublisher(std::string endpoint,
                     std::string name = "");
 
-    // TODO
-    //virtual void prepareRequest() = 0;
+    zmqutils::PublisherResult sendInfoLog(const std::string &msg);
+    zmqutils::PublisherResult sendWarningLog(const std::string &msg);
+    zmqutils::PublisherResult sendErrorLog(const std::string &msg);
 
 private:
+
+    zmqutils::common::PubSubData prepareData(const std::string &topic, const std::string &msg_string);
 
     virtual void onPublisherStart() override final;
 
