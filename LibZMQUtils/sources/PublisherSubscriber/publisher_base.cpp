@@ -282,9 +282,8 @@ zmq::multipart_t PublisherBase::prepareMessage(const common::PubSubData &data)
     // Serializer.
     utils::BinarySerializer serializer;
 
-    // Prepare the topic
-    size_t topic_size = serializer.write(data.topic);
-    zmq::message_t msg_topic(serializer.release(), topic_size);
+    // Prepare the topic. This must come plain, since it is used by ZMQ topic filtering.
+    zmq::message_t msg_topic(data.topic);
 
     // Prepare the name message.
     size_t name_size = serializer.write(this->pub_info_.name);
@@ -296,14 +295,9 @@ zmq::multipart_t PublisherBase::prepareMessage(const common::PubSubData &data)
 
     // Prepare the multipart msg.
     zmq::multipart_t multipart_msg;
-    // multipart_msg.add(std::move(msg_topic));
-    // multipart_msg.add(std::move(msg_name));
-    // multipart_msg.add(std::move(msg_uuid));
-
-    multipart_msg.addstr(data.topic);
-    multipart_msg.addstr(this->pub_info_.name);
-    multipart_msg.addstr(this->pub_info_.uuid.toRFC4122String());
-
+    multipart_msg.add(std::move(msg_topic));
+    multipart_msg.add(std::move(msg_name));
+    multipart_msg.add(std::move(msg_uuid));
 
     // Add command parameters if they exist
     if (data.data_size > 0)

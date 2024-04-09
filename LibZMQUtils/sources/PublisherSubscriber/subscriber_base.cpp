@@ -329,17 +329,12 @@ SubscriberResult SubscriberBase::recvFromSocket(PubSubMsg& msg)
         zmq::message_t msg_pub_name = multipart_msg.pop();
         zmq::message_t msg_uuid = multipart_msg.pop();
 
-        // Get the topic.
-        msg.data.topic.resize(msg_topic.size() + 1);
-        utils::BinarySerializer::fastDeserialization(
-            msg_topic.data(), msg_topic.size(), msg.data.topic);
-        msg.data.topic.push_back('\0');
+        // Get the topic. Topic is not serialized using BinarySerializer, since it must come plain.
+        msg.data.topic = msg_topic.to_string();
 
         // Get the publisher name.
-        msg.pub_info.name.resize(msg_pub_name.size() + 1);
         utils::BinarySerializer::fastDeserialization(
             msg_pub_name.data(), msg_pub_name.size(), msg.pub_info.name);
-        msg.pub_info.name.push_back('\0');
 
         // Get the publisher uuid data.
         if (msg_uuid.size() == UUID::kUUIDSize + sizeof(utils::BinarySerializer::SizeUnit)*2)
@@ -400,15 +395,17 @@ void SubscriberBase::resetSocket()
     {
         // Create the ZMQ sub socket.
         auto close_endpoint = "inproc://" + this->sub_uuid_.toRFC4122String();
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
         this->socket_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::sub);
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
         this->socket_->set(zmq::sockopt::linger, 0);
         this->socket_->connect(close_endpoint);
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
         this->socket_->set(zmq::sockopt::subscribe, kReservedExitTopic);
         // Connect to subscribed publishers
         for (const auto& publishers : this->subscribed_publishers_)
         {
             this->socket_->connect(publishers.second.endpoint);
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
         // Set all topic filters
         for (const auto& topic: this->topic_filters_)

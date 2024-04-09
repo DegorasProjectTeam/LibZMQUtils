@@ -58,8 +58,9 @@ using zmqutils::utils::BinarySerializer;
 void parseCommand(logger::LoggerPublisher &pub, const std::string &command)
 {
 
-    char *command_str = new char[command.size()];
+    char *command_str = new char[command.size() + 1];
     std::copy(command.begin(), command.end(), command_str);
+    command_str[command.size()] = '\0';
 
     char *token = std::strtok(command_str, " ");
 
@@ -87,7 +88,7 @@ void parseCommand(logger::LoggerPublisher &pub, const std::string &command)
 
         if (token_command == "info")
         {
-            std::cout << "Sending info log with msg: " << token_msg << " " <<token_msg.size() <<  std::endl;
+            std::cout << "Sending info log with msg: " << token_msg << std::endl;
             res = pub.sendInfoLog(token_msg);
         }
         else if (token_command == "warning")
@@ -126,8 +127,7 @@ int main(int, char**)
 
     // Configuration variables.
     unsigned port = 9999;
-    //std::string ip = "127.0.0.1";
-    std::string ip = "*";
+    std::string ip = "127.0.0.1";
 
     std::string endpoint = "tcp://" + ip + ":" + std::to_string(port);
     
