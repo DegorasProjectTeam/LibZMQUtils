@@ -24,7 +24,7 @@
 
 /** ********************************************************************************************************************
  * @file common.h
- * @brief This file contains common elements for the whole library.
+ * @brief This file contains common elements for the Command Server Client module.
  * @author Degoras Project Team
  * @copyright EUPL License
  * @version 2309.5
@@ -37,9 +37,6 @@
 // C++ INCLUDES
 // =====================================================================================================================
 #include <string>
-#include <iostream>
-#include <map>
-#include <vector>
 #include <cstring>
 #include <memory>
 #include <zmq/zmq.hpp>
@@ -56,7 +53,7 @@
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
-namespace common{
+namespace serverclient{
 // =====================================================================================================================
 
 // CONSTANTS
@@ -65,7 +62,6 @@ constexpr unsigned  kDefaultClientAliveTimeoutMsec = 10000;   ///< Default timeo
 constexpr unsigned kDefaultServerAliveTimeoutMsec = 10000;    ///< Default timeout for consider a server dead (msec).
 constexpr unsigned kServerReconnAttempts = 5;                 ///< Server reconnection default number of attempts.
 constexpr unsigned kClientAlivePeriodMsec = 5000;             ///< Default period for sending alive commands.
-constexpr int kZmqEFSMError = 156384765;                      ///< ZMQ EFSM error.
 // =====================================================================================================================
 
 // CONVENIENT ALIAS, ENUMERATIONS AND CONSTEXPR

@@ -55,20 +55,20 @@
 class Logger
 {
 public:
-    zmqutils::common::SubscriberResult processLogInfo(const std::string &msg)
+    zmqutils::pubsub::SubscriberResult processLogInfo(const std::string &msg)
     {
         std::cout << "[INFO] - " << msg << std::endl;
-        return zmqutils::SubscriberResult::MSG_OK;
+        return zmqutils::pubsub::SubscriberResult::MSG_OK;
     }
-    zmqutils::common::SubscriberResult processLogWarning(const std::string &msg)
+    zmqutils::pubsub::SubscriberResult processLogWarning(const std::string &msg)
     {
         std::cout << "[WARNING] - " << msg << std::endl;
-        return zmqutils::SubscriberResult::MSG_OK;
+        return zmqutils::pubsub::SubscriberResult::MSG_OK;
     }
-    zmqutils::common::SubscriberResult processLogError(const std::string &msg)
+    zmqutils::pubsub::SubscriberResult processLogError(const std::string &msg)
     {
         std::cout << "[ERROR] - " << msg << std::endl;
-        return zmqutils::SubscriberResult::MSG_OK;
+        return zmqutils::pubsub::SubscriberResult::MSG_OK;
     }
 };
 

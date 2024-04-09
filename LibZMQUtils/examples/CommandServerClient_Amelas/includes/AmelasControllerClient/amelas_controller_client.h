@@ -45,11 +45,6 @@
 #include <LibZMQUtils/Utils>
 // =====================================================================================================================
 
-// AMELAS INCLUDES
-// =====================================================================================================================
-#include "includes/AmelasControllerServer/common.h"
-// =====================================================================================================================
-
 // PROJECT INCLUDES
 // =====================================================================================================================
 // =====================================================================================================================
@@ -60,11 +55,7 @@ namespace amelas{
 namespace communication{
 // =====================================================================================================================
 
-using namespace amelas::communication::common;
-using zmqutils::common::RequestData;
-using zmqutils::common::CommandReply;
-
-class AmelasControllerClient : public zmqutils::CommandClientBase
+class AmelasControllerClient : public zmqutils::serverclient::CommandClientBase
 {
 public:
 
@@ -89,11 +80,11 @@ private:
 
     virtual void onDisconnected() final;
 
-    virtual void onInvalidMsgReceived(const CommandReply&) final;
+    virtual void onInvalidMsgReceived(const zmqutils::serverclient::CommandReply&) final;
 
-    virtual void onReplyReceived(const CommandReply& reply) final;
+    virtual void onReplyReceived(const zmqutils::serverclient::CommandReply& reply) final;
 
-    virtual void onSendingCommand(const RequestData&) final;
+    virtual void onSendingCommand(const zmqutils::serverclient::RequestData&) final;
 
     virtual void onClientError(const zmq::error_t&, const std::string& ext_info) final;
 };

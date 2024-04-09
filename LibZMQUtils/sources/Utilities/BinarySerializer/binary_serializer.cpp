@@ -134,7 +134,6 @@ BinarySerializer::SizeUnit BinarySerializer::moveUnique(BinarySerializer::BytesS
         if (i < size_ - 1)
             ss << " ";
     }
-    std::cout<<"Fast internal 3: "<<ss.str()<<std::endl;
 
     BinarySerializer::SizeUnit size = this->size_;
     this->size_ = 0;
@@ -156,7 +155,6 @@ BinarySerializer::SizeUnit BinarySerializer::moveUnique(BinarySerializer::BytesS
         if (i < size - 1)
             new_ss << " ";
     }
-    std::cout<<"Fast internal 4: "<<new_ss.str()<<std::endl;
 
     return size;
 }

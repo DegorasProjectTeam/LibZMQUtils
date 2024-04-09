@@ -51,15 +51,15 @@ namespace logger {
 // =====================================================================================================================
 
 // Example of creating a command server from the base.
-class LoggerSubscriber : public zmqutils::ClbkSubscriberBase
+class LoggerSubscriber : public zmqutils::pubsub::ClbkSubscriberBase
 {
 public:
 
     LoggerSubscriber();
 
-    using zmqutils::ClbkSubscriberBase::registerCallback;
+    using zmqutils::pubsub::ClbkSubscriberBase::registerCallback;
 
-    using LogMsgCallback = std::function<zmqutils::common::SubscriberResult(const std::string&)>;
+    using LogMsgCallback = std::function<zmqutils::pubsub::SubscriberResult(const std::string&)>;
 
 private:
 
@@ -68,7 +68,7 @@ private:
     using CallbackHandler::registerCallback;
     // -----------------------------------------------------------------------------------------------------------------
 
-    zmqutils::SubscriberResult processLogMsg(const zmqutils::common::PubSubMsg&);
+    zmqutils::pubsub::SubscriberResult processLogMsg(const zmqutils::pubsub::PubSubMsg&);
 
     // Internal overrided start callback.
     virtual void onSubscriberStart() override final;
@@ -77,10 +77,11 @@ private:
     virtual void onSubscriberStop() override final;
 
     // Internal overrided command received callback.
-    virtual zmqutils::SubscriberResult onMsgReceived(const zmqutils::common::PubSubMsg&) override final;
+    virtual zmqutils::pubsub::SubscriberResult onMsgReceived(const zmqutils::pubsub::PubSubMsg&) override final;
 
     // Internal overrided bad command received callback.
-    virtual void onInvalidMsgReceived(const zmqutils::common::PubSubMsg&, zmqutils::SubscriberResult) override final;
+    virtual void onInvalidMsgReceived(const zmqutils::pubsub::PubSubMsg&,
+                                      zmqutils::pubsub::SubscriberResult) override final;
 
     // Internal overrided server error callback.
     virtual void onSubscriberError(const zmq::error_t&, const std::string& ext_info) override final;

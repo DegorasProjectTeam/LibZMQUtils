@@ -45,16 +45,14 @@
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/PublisherSubscriber/subscriber_base.h"
+#include "LibZMQUtils/Global/constants.h"
 #include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
-// =====================================================================================================================
-
-// =====================================================================================================================
-using zmqutils::common::PubSubMsg;
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
+namespace pubsub{
 // =====================================================================================================================
 
 SubscriberBase::SubscriberBase() :
@@ -67,7 +65,7 @@ SubscriberBase::SubscriberBase() :
 
 }
 
-const std::set<common::TopicType> &SubscriberBase::getTopicFilters() const
+const std::set<TopicType> &SubscriberBase::getTopicFilters() const
 {
     return this->topic_filters_;
 }
@@ -77,7 +75,7 @@ const std::future<void> &SubscriberBase::getWorkerFuture() const
     return this->fut_worker_;
 }
 
-const std::map<UUID, common::PublisherInfo> &SubscriberBase::getSubscribedPublishers() const
+const std::map<utils::UUID, PublisherInfo> &SubscriberBase::getSubscribedPublishers() const
 {
     return this->subscribed_publishers_;
 }
@@ -133,7 +131,7 @@ void SubscriberBase::subscribe(const std::string &pub_endpoint)
     if (it == this->subscribed_publishers_.end())
     {
         // If endpoint is not subscribed, then store information.
-        common::PublisherInfo pub_info(utils::UUIDGenerator::getInstance().generateUUIDv4(), pub_endpoint);
+        PublisherInfo pub_info(utils::UUIDGenerator::getInstance().generateUUIDv4(), pub_endpoint);
         this->subscribed_publishers_.insert({pub_info.uuid, pub_info});
         // If socket is started, then reset to apply the change.
         if (this->flag_working_)
@@ -162,7 +160,7 @@ void SubscriberBase::unsubscribe(const std::string &pub_endpoint)
 
 }
 
-void SubscriberBase::addTopicFilter(const common::TopicType &filter)
+void SubscriberBase::addTopicFilter(const TopicType &filter)
 {
     // Avoid reserved topic
     if (filter != kReservedExitTopic)
@@ -174,7 +172,7 @@ void SubscriberBase::addTopicFilter(const common::TopicType &filter)
     }
 }
 
-void SubscriberBase::removeTopicFilter(const common::TopicType &filter)
+void SubscriberBase::removeTopicFilter(const TopicType &filter)
 {
     // Avoid reserved topic
     if (filter != kReservedExitTopic)
@@ -203,7 +201,7 @@ void SubscriberBase::internalStopSubscriber()
 
         // Message for closing.
         zmq::multipart_t msg;
-        msg.addstr(common::TopicType(kReservedExitTopic));
+        msg.addstr(TopicType(kReservedExitTopic));
         msg.addstr("close_pub");
         msg.addstr(this->socket_close_uuid_.toRFC4122String());
         msg.send(*this->socket_pub_close_);
@@ -235,7 +233,7 @@ SubscriberBase::~SubscriberBase()
     this->internalStopSubscriber();
 }
 
-SubscriberResult SubscriberBase::onMsgReceived(const common::PubSubMsg &msg)
+SubscriberResult SubscriberBase::onMsgReceived(const PubSubMsg &msg)
 {
     auto iter = process_fnc_map_.find(msg.data.topic);
     if(iter != process_fnc_map_.end())
@@ -309,7 +307,7 @@ SubscriberResult SubscriberBase::recvFromSocket(PubSubMsg& msg)
     {
         // Check if we want to close the subscriber.
         // The error code is for ZMQ EFSM error.
-        if(error.num() == common::kZmqEFSMError && !this->flag_working_)
+        if(error.num() == kZmqEFSMError && !this->flag_working_)
             return SubscriberResult::MSG_OK;
 
         // Else, call to error callback.
@@ -337,11 +335,11 @@ SubscriberResult SubscriberBase::recvFromSocket(PubSubMsg& msg)
             msg_pub_name.data(), msg_pub_name.size(), msg.pub_info.name);
 
         // Get the publisher uuid data.
-        if (msg_uuid.size() == UUID::kUUIDSize + sizeof(utils::BinarySerializer::SizeUnit)*2)
+        if (msg_uuid.size() == utils::UUID::kUUIDSize + sizeof(utils::BinarySerializer::SizeUnit)*2)
         {
             std::array<std::byte, 16> uuid_bytes;
             utils::BinarySerializer::fastDeserialization(msg_uuid.data(), msg_uuid.size(), uuid_bytes);
-            msg.pub_info.uuid = UUID(uuid_bytes);
+            msg.pub_info.uuid = utils::UUID(uuid_bytes);
         }
         else
             return SubscriberResult::INVALID_PUB_UUID;
@@ -451,5 +449,5 @@ void SubscriberBase::resetSocket()
 }
 
 
-} // END NAMESPACES.
+}} // END NAMESPACES.
 // =====================================================================================================================

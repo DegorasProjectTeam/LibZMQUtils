@@ -52,52 +52,111 @@
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
+namespace serverclient{
 // =====================================================================================================================
 
-// =====================================================================================================================
-using common::ServerCommand;
-using common::ServerResult;
-using common::ClientResult;
-using common::CommandReply;
-using common::CommandType;
-using common::RequestData;
-// =====================================================================================================================
-
+/**
+ * @brief The CommandClientBase class implements a base class for a Command Client.
+ */
 class CommandClientBase : public ZMQContextHandler
 {
 
 public:
     
+    /**
+     * @brief CommandClientBase constructor.
+     * @param server_endpoint, the URL endpoint of the server
+     * @param client_name, this client name.
+     * @param interf_name, this name of the interface to output commands. If empty, this class will look for the best one.
+     */
     LIBZMQUTILS_EXPORT CommandClientBase(const std::string& server_endpoint,
                                          const std::string& client_name = "",
                                          const std::string& interf_name = "");
     
-    LIBZMQUTILS_EXPORT bool startClient();
+    /**
+     * @brief Get the client info.
+     * @return the client info.
+     */
+    LIBZMQUTILS_EXPORT const HostInfo& getClientInfo() const;
 
-    LIBZMQUTILS_EXPORT void stopClient();
-
-    LIBZMQUTILS_EXPORT bool resetClient();
-
-    LIBZMQUTILS_EXPORT void setAliveCallbacksEnabled(bool);
-
-    LIBZMQUTILS_EXPORT void disableAutoAlive();
-
-    LIBZMQUTILS_EXPORT const common::HostInfo& getClientInfo() const;
-
+    /**
+     * @brief Get the server endpoint.
+     * @return the server endpoint.
+     */
     LIBZMQUTILS_EXPORT const std::string& getServerEndpoint() const;
 
+    /**
+     * @brief Get the client name.
+     * @return the client name.
+     */
     LIBZMQUTILS_EXPORT const std::string& getClientName() const;
 
+    /**
+     * @brief Check if client is working, i.e., it was started successfully.
+     * @return true if it is currently working, otherwise false.
+     */
     LIBZMQUTILS_EXPORT bool isWorking() const;
 
+    /**
+     * @brief Start the client. It must be called before sending commands.
+     * @return true if client was started successfully. False otherwise.
+     */
+    LIBZMQUTILS_EXPORT bool startClient();
+
+    /**
+     * @brief Stop the client.
+     */
+    LIBZMQUTILS_EXPORT void stopClient();
+
+    /**
+     * @brief Reset the client.
+     * @return true if client was reset successfully. Otherwise false.
+     */
+    LIBZMQUTILS_EXPORT bool resetClient();
+
+    /**
+     * @brief Enable or disable calling alive callbacks. These callbacks include onSendingCommand, onWaitingReply and
+     * onReplyReceived.
+     * @param enabled, true to enable the calling, false to disable.
+     */
+    LIBZMQUTILS_EXPORT void setAliveCallbacksEnabled(bool enabled);
+
+    /**
+     * @brief If auto alive sending was enabled when connecting, stop the process.
+     * @warning For enabling the process again, it is necessary to disconnect and connect again.
+     */
+    LIBZMQUTILS_EXPORT void disableAutoAlive();
+
+    /**
+     * @brief Try to connect to the Command Server.
+     * @param auto_alive, true to enable the auto alive sending, false to disable.
+     * @return the ClientResult of the operation.
+     */
     LIBZMQUTILS_EXPORT ClientResult doConnect(bool auto_alive = false);
 
+    /**
+     * @brief Try to Disconnect from CommandServer.
+     * @return the ClientResult of the operation.
+     */
     LIBZMQUTILS_EXPORT ClientResult doDisconnect();
 
+    /**
+     * @brief Try to send a keep alive message to the Command Server
+     * @return the ClientResult of the operation.
+     */
     LIBZMQUTILS_EXPORT ClientResult doAlive();
 
+    /**
+     * @brief Request the time from a Command Server.
+     * @param datetime, the resulting datetime obtained from the Command Server.
+     * @return the ClientResult of the operation.
+     */
     LIBZMQUTILS_EXPORT ClientResult doGetServerTime(std::string& datetime);
 
+    /**
+     * @brief Send a command to the Command Server.
+     * @return the ClientResult of the operation.
+     */
     LIBZMQUTILS_EXPORT ClientResult sendCommand(const RequestData&, CommandReply&);
 
     /**
@@ -108,25 +167,60 @@ public:
 
 protected:
 
+    /**
+     * @brief onClientStart will be called when the client starts. Must be overriden.
+     */
     LIBZMQUTILS_EXPORT virtual void onClientStart() = 0;
 
+    /**
+     * @brief onClientStop will be called when the client stops. Must be overriden.
+     */
     LIBZMQUTILS_EXPORT virtual void onClientStop() = 0;
 
+    /**
+     * @brief onWaitingReply will be called when the client sends a command and it is waiting for reply. Must be overriden.
+     */
     LIBZMQUTILS_EXPORT virtual void onWaitingReply() = 0;
 
+    /**
+     * @brief onDeadServer will be called when the server response timeout is exceeded. Must be overriden.
+     */
     LIBZMQUTILS_EXPORT virtual void onDeadServer() = 0;
 
+    /**
+     * @brief onConnected will be called when the client is connected to a server. Must be overriden.
+     */
     LIBZMQUTILS_EXPORT virtual void onConnected() = 0;
 
+    /**
+     * @brief onDisconnected will be called when the client is disconnected from a server. Must be overriden.
+     */
     LIBZMQUTILS_EXPORT virtual void onDisconnected() = 0;
 
-    LIBZMQUTILS_EXPORT virtual void onInvalidMsgReceived(const CommandReply&) = 0;
+    /**
+     * @brief onInvalidMsgReceived will be called when an invalid message is received as reply. Must be overriden.
+     * @param rep, the faulty reply received.
+     */
+    LIBZMQUTILS_EXPORT virtual void onInvalidMsgReceived(const CommandReply& rep) = 0;
 
-    LIBZMQUTILS_EXPORT virtual void onReplyReceived(const CommandReply&) = 0;
+    /**
+     * @brief onReplyReceived will be called when a reply is received. Must be overriden.
+     * @param rep, the reply received.
+     */
+    LIBZMQUTILS_EXPORT virtual void onReplyReceived(const CommandReply& rep) = 0;
 
-    LIBZMQUTILS_EXPORT virtual void onSendingCommand(const RequestData&) = 0;
+    /**
+     * @brief onSendingCommand will be called when the client is sending a command. Must be overriden.
+     * @param data, the request data sent.
+     */
+    LIBZMQUTILS_EXPORT virtual void onSendingCommand(const RequestData& data) = 0;
 
-    LIBZMQUTILS_EXPORT virtual void onClientError(const zmq::error_t&, const std::string& ext_info) = 0;
+    /**
+     * @brief onClientError will be called whenever there is an error on the client. Must be overriden.
+     * @param error, the generated error.
+     * @param ext_info, a string with a description of the error.
+     */
+    LIBZMQUTILS_EXPORT virtual void onClientError(const zmq::error_t& error, const std::string& ext_info) = 0;
 
 private:
 
@@ -147,7 +241,7 @@ private:
     zmq::multipart_t prepareMessage(const RequestData &msg);
 
     // Internal client identification.
-    common::HostInfo client_info_;       ///< External client information for identification.
+    HostInfo client_info_;       ///< External client information for identification.
     std::string client_name_;            ///< Internal client name. Will not be use as id.
 
     // ZMQ sockets and endpoint.
@@ -165,8 +259,8 @@ private:
     mutable std::mutex client_close_mtx_;       ///< Safety mutex for closing client.
 
     // Futures for receiving response from send command and auto alive
-    std::future<common::ClientResult> fut_recv_send_;   ///< Future that stores the client recv status for send command.
-    std::future<common::ClientResult> fut_recv_alive_;  ///< Future that stores the client recv status for auto alive.
+    std::future<ClientResult> fut_recv_send_;   ///< Future that stores the client recv status for send command.
+    std::future<ClientResult> fut_recv_alive_;  ///< Future that stores the client recv status for auto alive.
 
     // Auto alive functionality.
     std::future<void> auto_alive_future_;
@@ -178,5 +272,5 @@ private:
     std::atomic_bool flag_alive_callbacks_;   ///< Flag for enables or disables the callbacks for alive messages.
 };
 
-} // END NAMESPACES.
+}} // END NAMESPACES.
 // =====================================================================================================================

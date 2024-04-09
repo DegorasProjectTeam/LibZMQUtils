@@ -50,9 +50,7 @@
 #include "includes/LoggerPublisher/logger_publisher.h"
 // =====================================================================================================================
 
-
-// TODO Remove
-using namespace zmqutils;
+using zmqutils::pubsub::PublisherResult;
 using zmqutils::utils::BinarySerializer;
 
 void parseCommand(logger::LoggerPublisher &pub, const std::string &command)

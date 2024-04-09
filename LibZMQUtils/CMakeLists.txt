@@ -103,7 +103,8 @@ source_group("External Libs" FILES ${EXTERN})
 # Add definitions and the library.
 string(TOUPPER ${LIB_FULL_NAME} LIB_FULL_NAME_UPPER)
 add_definitions(-D${LIB_FULL_NAME_UPPER}_LIBRARY)
-add_library(${LIB_FULL_NAME} SHARED ${SOURCES} ${HEADERS} ${EXTERN} ${TEMPLTS} ${ALIAS})
+add_library(${LIB_FULL_NAME} SHARED ${SOURCES} ${HEADERS} ${EXTERN} ${TEMPLTS} ${ALIAS}
+    includes/LibZMQUtils/Global/constants.h)
 target_compile_definitions(${LIB_FULL_NAME} PRIVATE -D${LIB_FULL_NAME_UPPER}_LIBRARY)
 
 # Add the includes.

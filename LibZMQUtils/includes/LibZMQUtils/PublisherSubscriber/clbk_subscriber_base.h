@@ -34,14 +34,9 @@
 #pragma once
 // =====================================================================================================================
 
-// C++ INCLUDES
-// =====================================================================================================================
-// =====================================================================================================================
-
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/Global/libzmqutils_global.h"
-#include "LibZMQUtils/PublisherSubscriber/common.h"
 #include "LibZMQUtils/PublisherSubscriber/subscriber_base.h"
 #include "LibZMQUtils/Utilities/callback_handler.h"
 // =====================================================================================================================
@@ -49,50 +44,81 @@
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
+namespace pubsub{
 // =====================================================================================================================
 
+/**
+ * @brief The ClbkSubscriberBase class implements a Subscriber that includes callback handling for each topic.
+ */
 class ClbkSubscriberBase : public SubscriberBase, public utils::CallbackHandler
 {
 
 public:
 
+    /**
+     * @brief ClbkSubscriberBase default constructor.
+     */
     LIBZMQUTILS_EXPORT ClbkSubscriberBase();
 
+    /**
+     * @brief Template function for registering a callback. This callback will be registered for a specific topic.
+     * @param topic, the topic the callback is applied to.
+     * @param object, a parametric object whose method will be called.
+     * @param callback, the callback method that will be called.
+     */
     template<typename ClassT, typename RetT = void, typename... Args>
-    void registerCallback(const common::TopicType &topic, ClassT* object, RetT(ClassT::*callback)(Args...))
+    void registerCallback(const TopicType &topic, ClassT* object, RetT(ClassT::*callback)(Args...))
     {
-        CallbackHandler::registerCallback(std::hash<common::TopicType>{}(topic), object, callback);
+        CallbackHandler::registerCallback(std::hash<TopicType>{}(topic), object, callback);
     }
 
-    LIBZMQUTILS_EXPORT void removeCallback(const common::TopicType &topic);
+    /**
+     * @brief Remove the registered callback for a specific topic.
+     * @param topic, the topic whose callback will be erased.
+     */
+    LIBZMQUTILS_EXPORT void removeCallback(const TopicType &topic);
 
-    LIBZMQUTILS_EXPORT bool hasCallback(const common::TopicType &topic);
+    /**
+     * @brief Check if there is a registered callback for a specific topic.
+     * @param topic, the topic whose callback existence will be checked.
+     * @return
+     */
+    LIBZMQUTILS_EXPORT bool hasCallback(const TopicType &topic);
 
+    /**
+     * @brief Virtual destructor.
+     */
     LIBZMQUTILS_EXPORT virtual ~ClbkSubscriberBase() override;
 
 protected:
 
+    /**
+     * @brief Parametric method for invoking a registed callback. If no callback is registered, an error is returned.
+     * @param msg, the received message.
+     * @param args, the args passed to the callback.
+     * @return the result of the callback inovocation.
+     */
     template <typename CallbackType, typename RetT = void,  typename... Args>
-    RetT invokeCallback(const common::PubSubMsg& msg, Args&&... args)
+    RetT invokeCallback(const PubSubMsg& msg, Args&&... args)
     {
         // Get the command.
-        common::TopicType topic = msg.data.topic;
+        TopicType topic = msg.data.topic;
 
         // Check the callback.
         if(!this->hasCallback(topic))
         {
-            return common::SubscriberResult::EMPTY_EXT_CALLBACK;
+            return SubscriberResult::EMPTY_EXT_CALLBACK;
         }
 
         //Invoke the callback.
         try
         {
             return CallbackHandler::invokeCallback<CallbackType, RetT>(
-                std::hash<common::TopicType>{}(topic), std::forward<Args>(args)...);
+                std::hash<TopicType>{}(topic), std::forward<Args>(args)...);
         }
         catch(...)
         {
-            return common::SubscriberResult::INVALID_EXT_CALLBACK;
+            return SubscriberResult::INVALID_EXT_CALLBACK;
         }
     }
 
@@ -104,5 +130,5 @@ private:
     using CallbackHandler::hasCallback;
 };
 
-} // END NAMESPACES.
+}} // END NAMESPACES.
 // =====================================================================================================================

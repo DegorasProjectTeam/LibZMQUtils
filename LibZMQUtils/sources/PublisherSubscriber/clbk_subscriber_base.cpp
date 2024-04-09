@@ -42,22 +42,23 @@
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
+namespace pubsub{
 
 ClbkSubscriberBase::ClbkSubscriberBase() {}
 
-void ClbkSubscriberBase::removeCallback(const common::TopicType &topic)
+void ClbkSubscriberBase::removeCallback(const TopicType &topic)
 {
-    CallbackHandler::removeCallback(std::hash<common::TopicType>{}(topic));
+    CallbackHandler::removeCallback(std::hash<TopicType>{}(topic));
 }
 
-bool ClbkSubscriberBase::hasCallback(const common::TopicType &topic)
+bool ClbkSubscriberBase::hasCallback(const TopicType &topic)
 {
-    return CallbackHandler::hasCallback(std::hash<common::TopicType>{}(topic));
+    return CallbackHandler::hasCallback(std::hash<TopicType>{}(topic));
 }
 
 ClbkSubscriberBase::~ClbkSubscriberBase() { }
 
 // =====================================================================================================================
 
-} // END NAMESPACES.
+}} // END NAMESPACES.
 // =====================================================================================================================

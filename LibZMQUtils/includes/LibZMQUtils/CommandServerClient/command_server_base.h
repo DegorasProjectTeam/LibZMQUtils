@@ -55,18 +55,7 @@
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
-// =====================================================================================================================
-
-// =====================================================================================================================
-using common::ServerResultStr;
-using common::CommandReply;
-using common::CommandRequest;
-using common::ServerCommand;
-using common::ServerResult;
-using common::HostInfo;
-using common::CommandType;
-using internal_helpers::network::NetworkAdapterInfo;
-using utils::UUID;
+namespace serverclient{
 // =====================================================================================================================
 
 /**
@@ -272,7 +261,7 @@ public:
      *
      * @return A const reference to a vector of NetworkAdapterInfo objects.
      */
-    LIBZMQUTILS_EXPORT const std::vector<NetworkAdapterInfo> &getServerAddresses() const;
+    LIBZMQUTILS_EXPORT const std::vector<internal_helpers::network::NetworkAdapterInfo> &getServerAddresses() const;
 
     /**
      * @brief Get the endpoint of the server.
@@ -304,7 +293,7 @@ public:
      *
      * @return A const reference to the map of connected clients.
      */
-    LIBZMQUTILS_EXPORT const std::map<UUID, HostInfo>& getConnectedClients() const;
+    LIBZMQUTILS_EXPORT const std::map<utils::UUID, HostInfo>& getConnectedClients() const;
 
     /**
      * @brief Check if the server is currently working.
@@ -628,7 +617,7 @@ private:
     void checkClientsAliveStatus();
 
     // Update client last connection.
-    void updateClientLastConnection(const UUID &id);
+    void updateClientLastConnection(const utils::UUID &id);
 
     // Update the server timeout.
     void updateServerTimeout();
@@ -656,7 +645,7 @@ private:
     zmq::socket_t* server_socket_;    ///< ZMQ server socket.
 
     // Endpoint data and server info.
-    std::vector<NetworkAdapterInfo> server_adapters_;   ///< Listen server adapters.
+    std::vector<internal_helpers::network::NetworkAdapterInfo> server_adapters_;   ///< Listen server adapters.
     unsigned server_port_;                              ///< Server port.
     std::string server_endpoint_;                       ///< Final server endpoint.
     std::string server_name_;                           ///< Server name. Will not be use as id.
@@ -672,7 +661,7 @@ private:
     std::condition_variable cv_server_depl_;  ///< Condition variable to notify the deployment status of the server.
 
     // Clients container.
-    std::map<UUID, HostInfo> connected_clients_;   ///< Dictionary with the connected clients.
+    std::map<utils::UUID, HostInfo> connected_clients_;   ///< Dictionary with the connected clients.
 
     // Process functions container.
     ProcessFunctionsMap process_fnc_map_;        ///< Container with the internal factory process function.
@@ -687,5 +676,5 @@ private:
     std::atomic_int server_reconn_attempts_;    ///< Server reconnection number of attempts.
 };
 
-} // END NAMESPACES.
+}} // END NAMESPACES.
 // =====================================================================================================================

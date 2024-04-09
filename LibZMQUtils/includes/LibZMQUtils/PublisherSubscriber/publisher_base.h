@@ -53,11 +53,7 @@
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
-// =====================================================================================================================
-
-// =====================================================================================================================
-using common::SubscriberResult;
-using common::PublisherResult;
+namespace pubsub{
 // =====================================================================================================================
 
 /**
@@ -125,7 +121,7 @@ public:
      * @param data, the data that will be sent in the msg.
      * @return the result of sending operation.
      */
-    LIBZMQUTILS_EXPORT PublisherResult sendMsg(const common::PubSubData &data);
+    LIBZMQUTILS_EXPORT PublisherResult sendMsg(const PubSubData &data);
 
     /**
      * @brief Get the network adapter information of interfaces that this publisher is bound to.
@@ -158,7 +154,7 @@ protected:
     /**
      * @brief Base publisher sending message callback. Subclasses can override this function.
      */
-    LIBZMQUTILS_EXPORT virtual void onSendingMsg(const common::PubSubData&) {}
+    LIBZMQUTILS_EXPORT virtual void onSendingMsg(const PubSubData&) {}
 
     /**
      * @brief Base publisher error callback. Subclasses can override this function.
@@ -173,10 +169,10 @@ private:
 
     bool internalResetPublisher();
 
-    zmq::multipart_t prepareMessage(const common::PubSubData &data);
+    zmq::multipart_t prepareMessage(const PubSubData &data);
 
     // Internal publisher identification.
-    common::PublisherInfo pub_info_;
+    PublisherInfo pub_info_;
 
     // ZMQ sockets and endpoint.
     std::string endpoint_;        ///< Publisher endpoint.
@@ -194,5 +190,5 @@ private:
     std::atomic_bool flag_working_;           ///< Flag for check the working status.
 };
 
-} // END NAMESPACES.
+}} // END NAMESPACES.
 // =====================================================================================================================

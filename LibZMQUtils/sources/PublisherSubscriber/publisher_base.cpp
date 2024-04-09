@@ -58,8 +58,8 @@ using zmqutils::internal_helpers::network::NetworkAdapterInfo;
 
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
-namespace zmqutils
-{
+namespace zmqutils{
+namespace pubsub{
 // =====================================================================================================================
 
 PublisherBase::PublisherBase(std::string endpoint,
@@ -174,7 +174,7 @@ bool PublisherBase::isWorking() const
     return this->flag_working_;
 }
 
-PublisherResult PublisherBase::sendMsg(const common::PubSubData& request)
+PublisherResult PublisherBase::sendMsg(const PubSubData& request)
 {
     // Result.
     PublisherResult result = PublisherResult::MSG_OK;
@@ -277,7 +277,7 @@ void PublisherBase::internalStopPublisher()
 }
 
 
-zmq::multipart_t PublisherBase::prepareMessage(const common::PubSubData &data)
+zmq::multipart_t PublisherBase::prepareMessage(const PubSubData &data)
 {
     // Serializer.
     utils::BinarySerializer serializer;
@@ -311,5 +311,5 @@ zmq::multipart_t PublisherBase::prepareMessage(const common::PubSubData &data)
     return multipart_msg;
 }
 
-} // END NAMESPACES.
+}} // END NAMESPACES.
 // =====================================================================================================================

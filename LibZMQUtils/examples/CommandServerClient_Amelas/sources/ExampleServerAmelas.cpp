@@ -72,7 +72,7 @@ int main(int, char**)
 {
     // Nampesaces.
     using amelas::communication::AmelasControllerServer;
-    using amelas::communication::AmelasServerCommand;
+    using amelas::communication::common::AmelasServerCommand;
     using amelas::controller::AmelasController;
 
     // Configure the console.

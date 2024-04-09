@@ -51,26 +51,26 @@
 namespace logger{
 // =====================================================================================================================
 
-class LoggerPublisher : public zmqutils::PublisherBase
+class LoggerPublisher : public zmqutils::pubsub::PublisherBase
 {
 public:
 
     LoggerPublisher(std::string endpoint,
                     std::string name = "");
 
-    zmqutils::PublisherResult sendInfoLog(const std::string &msg);
-    zmqutils::PublisherResult sendWarningLog(const std::string &msg);
-    zmqutils::PublisherResult sendErrorLog(const std::string &msg);
+    zmqutils::pubsub::PublisherResult sendInfoLog(const std::string &msg);
+    zmqutils::pubsub::PublisherResult sendWarningLog(const std::string &msg);
+    zmqutils::pubsub::PublisherResult sendErrorLog(const std::string &msg);
 
 private:
 
-    zmqutils::common::PubSubData prepareData(const std::string &topic, const std::string &msg_string);
+    zmqutils::pubsub::PubSubData prepareData(const std::string &topic, const std::string &msg_string);
 
     virtual void onPublisherStart() override final;
 
     virtual void onPublisherStop() override final;
 
-    virtual void onSendingMsg(const zmqutils::common::PubSubData&) override final;
+    virtual void onSendingMsg(const zmqutils::pubsub::PubSubData&) override final;
 
     virtual void onPublisherError(const zmq::error_t&, const std::string& ext_info) override final;
 };

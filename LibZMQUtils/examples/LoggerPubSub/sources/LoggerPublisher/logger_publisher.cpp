@@ -42,24 +42,24 @@ LoggerPublisher::LoggerPublisher(std::string endpoint,
     PublisherBase(std::move(endpoint), std::move(name))
 {}
 
-zmqutils::PublisherResult LoggerPublisher::sendInfoLog(const std::string &msg)
+zmqutils::pubsub::PublisherResult LoggerPublisher::sendInfoLog(const std::string &msg)
 {
     return this->sendMsg(this->prepareData("LOG_INFO", msg));
 }
 
-zmqutils::PublisherResult LoggerPublisher::sendWarningLog(const std::string &msg)
+zmqutils::pubsub::PublisherResult LoggerPublisher::sendWarningLog(const std::string &msg)
 {
     return this->sendMsg(this->prepareData("LOG_WARNING", msg));
 }
 
-zmqutils::PublisherResult LoggerPublisher::sendErrorLog(const std::string &msg)
+zmqutils::pubsub::PublisherResult LoggerPublisher::sendErrorLog(const std::string &msg)
 {
     return this->sendMsg(this->prepareData("LOG_ERROR", msg));
 }
 
-zmqutils::common::PubSubData LoggerPublisher::prepareData(const std::string &topic, const std::string &msg_string)
+zmqutils::pubsub::PubSubData LoggerPublisher::prepareData(const std::string &topic, const std::string &msg_string)
 {
-    zmqutils::common::PubSubData data;
+    zmqutils::pubsub::PubSubData data;
 
     data.topic = topic;
     data.data_size = zmqutils::utils::BinarySerializer::fastSerialization(data.data, msg_string);
@@ -90,7 +90,7 @@ void LoggerPublisher::onPublisherStop()
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void LoggerPublisher::onSendingMsg(const zmqutils::common::PubSubData &req)
+void LoggerPublisher::onSendingMsg(const zmqutils::pubsub::PubSubData &req)
 {
     zmqutils::utils::BinarySerializer serializer(req.data.get(), req.data_size);
     // Log.

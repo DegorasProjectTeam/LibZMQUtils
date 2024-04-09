@@ -32,9 +32,6 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
-#include <zmq/zmq.hpp>
-#include <zmq/zmq_addon.hpp>
-#include <iostream>
 #include <string>
 #include <cstring>
 #include <cstdlib>
@@ -43,17 +40,24 @@
 #include <chrono>
 // =====================================================================================================================
 
+// ZMQ INCLUDES
+// =====================================================================================================================
+#include <zmq/zmq.hpp>
+#include <zmq/zmq_addon.hpp>
+// =====================================================================================================================
+
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/CommandServerClient/command_client_base.h"
+#include "LibZMQUtils/Global/constants.h"
 #include "LibZMQUtils/InternalHelpers/network_helpers.h"
 #include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
-namespace zmqutils
-{
+namespace zmqutils{
+namespace serverclient{
 // =====================================================================================================================
 
 CommandClientBase::CommandClientBase(const std::string& server_endpoint,
@@ -111,7 +115,7 @@ CommandClientBase::CommandClientBase(const std::string& server_endpoint,
     pid = std::to_string(internal_helpers::network::getCurrentPID());
 
     // Store all the client info.
-    this->client_info_ = common::HostInfo(uuid, ip, pid, hostname, this->client_name_);
+    this->client_info_ = HostInfo(uuid, ip, pid, hostname, this->client_name_);
 }
 
 CommandClientBase::~CommandClientBase()
@@ -121,7 +125,7 @@ CommandClientBase::~CommandClientBase()
     this->internalStopClient();
 }
 
-const common::HostInfo &CommandClientBase::getClientInfo() const
+const HostInfo &CommandClientBase::getClientInfo() const
 {
     return this->client_info_;
 }
@@ -381,7 +385,7 @@ ClientResult CommandClientBase::recvFromSocket(CommandReply& reply,
         try
         {
             // Use zmq::poll to set a timeout for receiving a message
-            zmq::poll(items.data(), items.size(), std::chrono::milliseconds(common::kDefaultServerAliveTimeoutMsec));
+            zmq::poll(items.data(), items.size(), std::chrono::milliseconds(kDefaultServerAliveTimeoutMsec));
 
             // Check if we must to close.
             if(!this->flag_client_working_ || (items[1].revents & ZMQ_POLLIN))
@@ -392,7 +396,7 @@ ClientResult CommandClientBase::recvFromSocket(CommandReply& reply,
             auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
             // Check for timeout.
-            if (elapsed.count() >= common::kDefaultServerAliveTimeoutMsec)
+            if (elapsed.count() >= kDefaultServerAliveTimeoutMsec)
                 return ClientResult::TIMEOUT_REACHED;
 
             // We have data.
@@ -414,7 +418,7 @@ ClientResult CommandClientBase::recvFromSocket(CommandReply& reply,
                 zmq::message_t msg_res = multipart_msg.pop();
 
                 // Check the result size.
-                if (msg_res.size() != sizeof(utils::BinarySerializer::SizeUnit) + sizeof(common::ResultType))
+                if (msg_res.size() != sizeof(utils::BinarySerializer::SizeUnit) + sizeof(ResultType))
                     return ClientResult::INVALID_MSG;
 
                 // Get the command.
@@ -447,7 +451,7 @@ ClientResult CommandClientBase::recvFromSocket(CommandReply& reply,
         {
             // Check if we want too close the client.
             // The error code is for ZMQ EFSM error.
-            if(error.num() == common::kZmqEFSMError && !this->flag_client_working_)
+            if(error.num() == kZmqEFSMError && !this->flag_client_working_)
                 return ClientResult::CLIENT_STOPPED;
 
             // Call to the error callback and stop the client for safety.
@@ -527,7 +531,7 @@ void CommandClientBase::aliveWorker()
     bool first_time = true;
 
     // Update the request.
-    request.command = common::ServerCommand::REQ_ALIVE;
+    request.command = ServerCommand::REQ_ALIVE;
 
     // Create the ZMQ auxiliar alive socket.
     try
@@ -569,7 +573,7 @@ void CommandClientBase::aliveWorker()
         if(!first_time)
         {
             // Avoid unnecesary alive messages.
-            auto res = this->auto_alive_cv_.wait_for(lk, std::chrono::milliseconds(common::kClientAlivePeriodMsec));
+            auto res = this->auto_alive_cv_.wait_for(lk, std::chrono::milliseconds(kClientAlivePeriodMsec));
             if (std::cv_status::timeout != res)
                 continue;
         }
@@ -680,7 +684,7 @@ ClientResult CommandClientBase::doConnect(bool auto_alive)
     serializer.write(this->client_info_.ip, this->client_info_.pid, this->client_info_.hostname, this->client_name_);
 
     // Update the request.
-    request.command = common::ServerCommand::REQ_CONNECT;
+    request.command = ServerCommand::REQ_CONNECT;
     request.params_size = serializer.moveUnique(request.params);
 
     // Send the command.
@@ -706,7 +710,7 @@ ClientResult CommandClientBase::doDisconnect()
     this->stopAutoAlive();
 
     // Update the request.
-    request.command = common::ServerCommand::REQ_DISCONNECT;
+    request.command = ServerCommand::REQ_DISCONNECT;
 
     // Send the command.
     return this->sendCommand(request, reply);
@@ -722,7 +726,7 @@ ClientResult CommandClientBase::doAlive()
     CommandReply reply;
 
     // Update the request.
-    request.command = common::ServerCommand::REQ_ALIVE;
+    request.command = ServerCommand::REQ_ALIVE;
 
     // Send the command.
     return this->sendCommand(request, reply);
@@ -739,7 +743,7 @@ ClientResult CommandClientBase::doGetServerTime(std::string &datetime)
     ClientResult result;
 
     // Update the request.
-    request.command = common::ServerCommand::REQ_GET_SERVER_TIME;
+    request.command = ServerCommand::REQ_GET_SERVER_TIME;
 
     // Send the command.
     result = this->sendCommand(request, reply);
@@ -789,5 +793,5 @@ zmq::multipart_t CommandClientBase::prepareMessage(const RequestData &request)
     return multipart_msg;
 }
 
-} // END NAMESPACES.
+}} // END NAMESPACES.
 // =====================================================================================================================

@@ -58,14 +58,14 @@ LoggerSubscriber::LoggerSubscriber()
 
 }
 
-zmqutils::SubscriberResult LoggerSubscriber::processLogMsg(const zmqutils::common::PubSubMsg& msg)
+zmqutils::pubsub::SubscriberResult LoggerSubscriber::processLogMsg(const zmqutils::pubsub::PubSubMsg& msg)
 {
     std::string message_str;
 
     // Check the request parameters size.
     if (msg.data.data_size == 0 || !msg.data.data)
     {
-        return zmqutils::SubscriberResult::EMPTY_PARAMS;
+        return zmqutils::pubsub::SubscriberResult::EMPTY_PARAMS;
     }
 
     // Try to read the parameters data.
@@ -75,11 +75,11 @@ zmqutils::SubscriberResult LoggerSubscriber::processLogMsg(const zmqutils::commo
     }
     catch(...)
     {
-        return zmqutils::SubscriberResult::INVALID_MSG;
+        return zmqutils::pubsub::SubscriberResult::INVALID_MSG;
     }
 
     // Now we will process the command in the controller.
-    return this->invokeCallback<LogMsgCallback, zmqutils::common::SubscriberResult>(msg, message_str);
+    return this->invokeCallback<LogMsgCallback, zmqutils::pubsub::SubscriberResult>(msg, message_str);
 }
 
 
@@ -118,7 +118,7 @@ void LoggerSubscriber::onSubscriberError(const zmq::error_t &error, const std::s
     std::cout << std::string(100, '-') << std::endl;
 }
 
-zmqutils::SubscriberResult LoggerSubscriber::onMsgReceived(const zmqutils::common::PubSubMsg& msg)
+zmqutils::pubsub::SubscriberResult LoggerSubscriber::onMsgReceived(const zmqutils::pubsub::PubSubMsg& msg)
 {
     // Log.
     zmqutils::utils::BinarySerializer serializer(msg.data.data.get(), msg.data.data_size);
@@ -138,7 +138,7 @@ zmqutils::SubscriberResult LoggerSubscriber::onMsgReceived(const zmqutils::commo
     return result;
 }
 
-void LoggerSubscriber::onInvalidMsgReceived(const zmqutils::common::PubSubMsg& msg, zmqutils::SubscriberResult)
+void LoggerSubscriber::onInvalidMsgReceived(const zmqutils::pubsub::PubSubMsg& msg, zmqutils::pubsub::SubscriberResult)
 {
     // Log.
     zmqutils::utils::BinarySerializer serializer(msg.data.data.get(), msg.data.data_size);

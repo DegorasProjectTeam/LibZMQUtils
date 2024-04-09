@@ -39,6 +39,10 @@
 #include <future>
 #include <string>
 #include <map>
+// =====================================================================================================================
+
+// ZMQ INCLUDES
+// =====================================================================================================================
 #include <zmq/zmq.hpp>
 #include <zmq/zmq_addon.hpp>
 // =====================================================================================================================
@@ -48,25 +52,18 @@
 #include "LibZMQUtils/Global/libzmqutils_global.h"
 #include "LibZMQUtils/Global/zmq_context_handler.h"
 #include "LibZMQUtils/PublisherSubscriber/common.h"
-#include "LibZMQUtils/InternalHelpers/network_helpers.h"
 #include "LibZMQUtils/Utilities/uuid_generator.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
+namespace pubsub{
 // =====================================================================================================================
 
 // SUBSCRIBER CONSTANTS
 // =====================================================================================================================
 constexpr std::string_view kReservedExitTopic = "quit";
-// =====================================================================================================================
-
-// =====================================================================================================================
-using common::SubscriberResultStr;
-using common::SubscriberResult;
-using internal_helpers::network::NetworkAdapterInfo;
-using utils::UUID;
 // =====================================================================================================================
 
 /**
@@ -93,7 +90,7 @@ public:
      * no message will be received by the subscriber.
      * @return the set of topic filters applied.
      */
-    LIBZMQUTILS_EXPORT const std::set<common::TopicType>& getTopicFilters() const;
+    LIBZMQUTILS_EXPORT const std::set<TopicType>& getTopicFilters() const;
 
 
     /**
@@ -112,7 +109,7 @@ public:
      *
      * @return A const reference to the map of subscribed publishers.
      */
-    LIBZMQUTILS_EXPORT const std::map<UUID, common::PublisherInfo>& getSubscribedPublishers() const;
+    LIBZMQUTILS_EXPORT const std::map<utils::UUID, PublisherInfo>& getSubscribedPublishers() const;
 
     /**
      * @brief Check if the worker thread is currently active.
@@ -159,14 +156,14 @@ public:
      * Reserved exit topic cannot be issued to this function. It will be discarded.
      * @param filter, the topic filter to add.
      */
-    LIBZMQUTILS_EXPORT void addTopicFilter(const common::TopicType &filter);
+    LIBZMQUTILS_EXPORT void addTopicFilter(const TopicType &filter);
 
     /**
      * @brief Removes a topic filter for incoming messages.
      * Reserved exit topic cannot be issued to this function. It will be discarded.
      * @param filter, the filter to remove.
      */
-    LIBZMQUTILS_EXPORT void removeTopicFilter(const common::TopicType &filter);
+    LIBZMQUTILS_EXPORT void removeTopicFilter(const TopicType &filter);
 
     /**
      * @brief Removes every topic filter for incoming messages. This way, no message will be allowed.
@@ -183,8 +180,8 @@ public:
 protected:
 
     // -----------------------------------------------------------------------------------------------------------------
-    using ProcessFunction = std::function<SubscriberResult(const common::PubSubMsg&)>;   ///< Process function alias.
-    using ProcessFunctionsMap = std::unordered_map<common::TopicType, ProcessFunction>;  ///< Process function map alias.
+    using ProcessFunction = std::function<SubscriberResult(const PubSubMsg&)>;   ///< Process function alias.
+    using ProcessFunctionsMap = std::unordered_map<TopicType, ProcessFunction>;  ///< Process function map alias.
     // -----------------------------------------------------------------------------------------------------------------
 
     /**
@@ -198,10 +195,10 @@ protected:
      *
      */
     template <typename ClassT>
-    void registerRequestProcFunc(const common::TopicType &topic, ClassT* obj,
-                                 SubscriberResult(ClassT::*func)(const common::PubSubMsg&))
+    void registerRequestProcFunc(const TopicType &topic, ClassT* obj,
+                                 SubscriberResult(ClassT::*func)(const PubSubMsg&))
     {
-        this->process_fnc_map_[topic] = [obj, func](const common::PubSubMsg& msg)
+        this->process_fnc_map_[topic] = [obj, func](const PubSubMsg& msg)
         {
             return (obj->*func)(msg);
         };
@@ -240,7 +237,7 @@ protected:
      *          perform them asynchronously to avoid blocking the subscriber's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    LIBZMQUTILS_EXPORT virtual void onInvalidMsgReceived(const common::PubSubMsg&, SubscriberResult) = 0;
+    LIBZMQUTILS_EXPORT virtual void onInvalidMsgReceived(const PubSubMsg&, SubscriberResult) = 0;
 
     /**
      * @brief Base message received callback. Subclasses may override this function.
@@ -253,7 +250,7 @@ protected:
      *          perform them asynchronously to avoid blocking the subscriber's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    LIBZMQUTILS_EXPORT virtual SubscriberResult onMsgReceived(const common::PubSubMsg&);
+    LIBZMQUTILS_EXPORT virtual SubscriberResult onMsgReceived(const PubSubMsg&);
 
     /**
      * @brief Base subscriber error callback. Subclasses must override this function.
@@ -285,7 +282,7 @@ private:
     void startWorker();
 
     // Function for receiving data from the socket.
-    SubscriberResult recvFromSocket(common::PubSubMsg&);
+    SubscriberResult recvFromSocket(PubSubMsg&);
 
     // Function for resetting the socket.
     void resetSocket();
@@ -296,10 +293,10 @@ private:
     // ZMQ socket.
     zmq::socket_t* socket_;              ///< ZMQ subscriber socket.
     zmq::socket_t* socket_pub_close_;    ///< ZMQ close publisher socket.
-    UUID socket_close_uuid_;             ///< UUID for close publisher.
+    utils::UUID socket_close_uuid_;             ///< UUID for close publisher.
 
     // Subscruiber uuid
-    UUID sub_uuid_;
+    utils::UUID sub_uuid_;
 
     // Mutex.
     mutable std::mutex mtx_;        ///< Safety mutex.
@@ -310,9 +307,9 @@ private:
     std::condition_variable cv_worker_depl_;  ///< Condition variable to notify the deployment status of the worker.
 
     // Clients container.
-    std::map<UUID, common::PublisherInfo> subscribed_publishers_;   ///< Dictionary with the connected clients.
+    std::map<utils::UUID, PublisherInfo> subscribed_publishers_;   ///< Dictionary with the connected clients.
 
-    std::set<common::TopicType> topic_filters_; ///< Set of topics allowed on this publisher.
+    std::set<TopicType> topic_filters_; ///< Set of topics allowed on this publisher.
 
     // Process functions container.
     ProcessFunctionsMap process_fnc_map_;        ///< Container with the internal factory process function.
@@ -322,5 +319,5 @@ private:
 
 };
 
-} // END NAMESPACES.
+}} // END NAMESPACES.
 // =====================================================================================================================

@@ -22,15 +22,30 @@
  *   along with this project. If not, see the license at < https://eupl.eu/ >.                                         *
  **********************************************************************************************************************/
 
+/** ********************************************************************************************************************
+ * @file common.cpp
+ * @brief This file contains common elements for the Command Server Client module.
+ * @author Degoras Project Team
+ * @copyright EUPL License
+ * @version 2309.5
+***********************************************************************************************************************/
+
+// ZMQUTILS INCLUDES
+// =====================================================================================================================
 #include "LibZMQUtils/CommandServerClient/common.h"
+// =====================================================================================================================
 
+// ZMQUTILS NAMESPACES
+// =====================================================================================================================
+namespace zmqutils{
+namespace serverclient{
+// =====================================================================================================================
 
-zmqutils::common::HostInfo::HostInfo(
-                                const utils::UUID& uuid,
-                                const std::string& ip,
-                                const std::string& pid,
-                                const std::string& hostname,
-                                const std::string& name ):
+HostInfo::HostInfo(const utils::UUID& uuid,
+                   const std::string& ip,
+                   const std::string& pid,
+                   const std::string& hostname,
+                   const std::string& name ):
     uuid(uuid),
     ip(ip),
     pid(pid),
@@ -38,7 +53,7 @@ zmqutils::common::HostInfo::HostInfo(
     name(name)
 {}
 
-std::string zmqutils::common::HostInfo::toJsonString() const
+std::string HostInfo::toJsonString() const
 {
     std::stringstream ss;
     ss << "{\n"
@@ -51,26 +66,29 @@ std::string zmqutils::common::HostInfo::toJsonString() const
     return ss.str();
 }
 
-zmqutils::common::RequestData::RequestData(ServerCommand id) :
+RequestData::RequestData(ServerCommand id) :
     command(id),
     params(nullptr),
     params_size(0){}
 
-zmqutils::common::RequestData::RequestData() :
+RequestData::RequestData() :
     command(ServerCommand::INVALID_COMMAND),
     params(nullptr),
     params_size(0){}
 
 
 
-zmqutils::common::CommandRequest::CommandRequest():
+CommandRequest::CommandRequest():
     command(ServerCommand::INVALID_COMMAND),
     params(nullptr),
     params_size(0)
 {}
 
-zmqutils::common::CommandReply::CommandReply():
+CommandReply::CommandReply():
     params(nullptr),
     params_size(0),
     result(ServerResult::COMMAND_OK)
 {}
+
+}} // END NAMESPACES.
+// =====================================================================================================================
