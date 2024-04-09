@@ -23,8 +23,8 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file amelas_controller_client.h
- * @brief EXAMPLE FILE - This file contains the declaration of the AmelasControllerClient example class.
+ * @file logger_publisher.h
+ * @brief EXAMPLE FILE - This file contains the declaration of the LoggerPublisher example class.
  * @author Degoras Project Team
  * @copyright EUPL License
  * @version 2309.5
@@ -41,53 +41,39 @@
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/CommandClient>
+#include <LibZMQUtils/Publisher>
 #include <LibZMQUtils/Utils>
 // =====================================================================================================================
 
-// PROJECT INCLUDES
+
+// NAMESPACES
 // =====================================================================================================================
+namespace logger{
 // =====================================================================================================================
 
-// AMELAS NAMESPACES
-// =====================================================================================================================
-namespace amelas{
-namespace communication{
-// =====================================================================================================================
-
-class AmelasControllerClient : public zmqutils::serverclient::CommandClientBase
+class LoggerPublisher : public zmqutils::pubsub::PublisherBase
 {
 public:
 
-    AmelasControllerClient(const std::string& server_endpoint,
-                           const std::string& client_name = "",
-                           const std::string interf_name = "");
+    LoggerPublisher(std::string endpoint,
+                    std::string name = "");
 
-    // TODO
-    //virtual void prepareRequest() = 0;
+    zmqutils::pubsub::PublisherResult sendInfoLog(const std::string &msg);
+    zmqutils::pubsub::PublisherResult sendWarningLog(const std::string &msg);
+    zmqutils::pubsub::PublisherResult sendErrorLog(const std::string &msg);
 
 private:
 
-    virtual void onClientStart() final;
+    zmqutils::pubsub::PubSubData prepareData(const std::string &topic, const std::string &msg_string);
 
-    virtual void onClientStop() final;
+    virtual void onPublisherStart() override final;
 
-    virtual void onWaitingReply() final;
+    virtual void onPublisherStop() override final;
 
-    virtual void onDeadServer() final;
+    virtual void onSendingMsg(const zmqutils::pubsub::PubSubData&) override final;
 
-    virtual void onConnected() final;
-
-    virtual void onDisconnected() final;
-
-    virtual void onInvalidMsgReceived(const zmqutils::serverclient::CommandReply&) final;
-
-    virtual void onReplyReceived(const zmqutils::serverclient::CommandReply& reply) final;
-
-    virtual void onSendingCommand(const zmqutils::serverclient::RequestData&) final;
-
-    virtual void onClientError(const zmq::error_t&, const std::string& ext_info) final;
+    virtual void onPublisherError(const zmq::error_t&, const std::string& ext_info) override final;
 };
 
-}} // END NAMESPACES.
+}  // END NAMESPACES.
 // =====================================================================================================================

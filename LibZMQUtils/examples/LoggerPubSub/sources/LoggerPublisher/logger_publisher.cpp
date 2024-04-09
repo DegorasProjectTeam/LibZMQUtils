@@ -23,71 +23,100 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file amelas_controller_client.h
- * @brief EXAMPLE FILE - This file contains the declaration of the AmelasControllerClient example class.
+ * @file logger_publisher.cpp
+ * @brief EXAMPLE FILE - This file contains the definition of the LoggerPublisher example class.
  * @author Degoras Project Team
  * @copyright EUPL License
  * @version 2309.5
 ***********************************************************************************************************************/
 
+#include "includes/LoggerPublisher/logger_publisher.h"
+
+// NAMESPACES
 // =====================================================================================================================
-#pragma once
+namespace logger {
 // =====================================================================================================================
 
-// C++ INCLUDES
-// =====================================================================================================================
-#include <string>
-// =====================================================================================================================
+LoggerPublisher::LoggerPublisher(std::string endpoint,
+                                 std::string name) :
+    PublisherBase(std::move(endpoint), std::move(name))
+{}
 
-// ZMQUTILS INCLUDES
-// =====================================================================================================================
-#include <LibZMQUtils/CommandClient>
-#include <LibZMQUtils/Utils>
-// =====================================================================================================================
-
-// PROJECT INCLUDES
-// =====================================================================================================================
-// =====================================================================================================================
-
-// AMELAS NAMESPACES
-// =====================================================================================================================
-namespace amelas{
-namespace communication{
-// =====================================================================================================================
-
-class AmelasControllerClient : public zmqutils::serverclient::CommandClientBase
+zmqutils::pubsub::PublisherResult LoggerPublisher::sendInfoLog(const std::string &msg)
 {
-public:
+    return this->sendMsg(this->prepareData("LOG_INFO", msg));
+}
 
-    AmelasControllerClient(const std::string& server_endpoint,
-                           const std::string& client_name = "",
-                           const std::string interf_name = "");
+zmqutils::pubsub::PublisherResult LoggerPublisher::sendWarningLog(const std::string &msg)
+{
+    return this->sendMsg(this->prepareData("LOG_WARNING", msg));
+}
 
-    // TODO
-    //virtual void prepareRequest() = 0;
+zmqutils::pubsub::PublisherResult LoggerPublisher::sendErrorLog(const std::string &msg)
+{
+    return this->sendMsg(this->prepareData("LOG_ERROR", msg));
+}
 
-private:
+zmqutils::pubsub::PubSubData LoggerPublisher::prepareData(const std::string &topic, const std::string &msg_string)
+{
+    zmqutils::pubsub::PubSubData data;
 
-    virtual void onClientStart() final;
+    data.topic = topic;
+    data.data_size = zmqutils::utils::BinarySerializer::fastSerialization(data.data, msg_string);
 
-    virtual void onClientStop() final;
+    return data;
+}
 
-    virtual void onWaitingReply() final;
+void LoggerPublisher::onPublisherStart()
+{
+    // Log.
+    std::cout << std::string(100, '-') << std::endl;
+    std::cout << "<"<<this->getName() << ">" <<std::endl;
+    std::cout << "-> ON PUBLISHER START: " << std::endl;
+    std::cout << "Time: " << zmqutils::utils::currentISO8601Date()<<std::endl;
+    std::cout << "Endpoint: " << this->getEndpoint() << std::endl;
+    std::cout << "Name: " << this->getName() << std::endl;
+    std::cout << "UUID: " << this->getUUID().toRFC4122String() << std::endl;
+    std::cout << std::string(100, '-') << std::endl;
+}
 
-    virtual void onDeadServer() final;
+void LoggerPublisher::onPublisherStop()
+{
+    // Log.
+    std::cout << std::string(100, '-') << std::endl;
+    std::cout<<"<"<<this->getName()<<">"<<std::endl;
+    std::cout<<"-> ON PUBLISHER STOP: "<<std::endl;
+    std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
+    std::cout << std::string(100, '-') << std::endl;
+}
 
-    virtual void onConnected() final;
+void LoggerPublisher::onSendingMsg(const zmqutils::pubsub::PubSubData &req)
+{
+    zmqutils::utils::BinarySerializer serializer(req.data.get(), req.data_size);
+    // Log.
+    std::cout << std::string(100, '-') << std::endl;
+    std::cout << "<"<<this->getName() << ">" << std::endl;
+    std::cout << "-> ON PUBLISHER SEND COMMAND: " << std::endl;
+    std::cout << "Time: " << zmqutils::utils::currentISO8601Date() << std::endl;
+    std::cout << "Topic: " << req.topic << std::endl;
+    std::cout << "Params size: " << req.data_size <<std::endl;
+    std::cout << "Params Hex: " << serializer.getDataHexString() << std::endl;
+    std::cout << std::string(100, '-') << std::endl;
+}
 
-    virtual void onDisconnected() final;
+void LoggerPublisher::onPublisherError(const zmq::error_t& error, const std::string& ext_info)
+{
+    // Log.
+    std::cout << std::string(100, '-') << std::endl;
+    std::cout<<"<"<<this->getName()<<">"<<std::endl;
+    std::cout<<"-> ON PUBLISHER ERROR: "<<std::endl;
+    std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
+    std::cout<<"Code: "<<error.num()<<std::endl;
+    std::cout<<"Error: "<<error.what()<<std::endl;
+    std::cout<<"Info: "<<ext_info<<std::endl;
+    std::cout << std::string(100, '-') << std::endl;
+}
 
-    virtual void onInvalidMsgReceived(const zmqutils::serverclient::CommandReply&) final;
-
-    virtual void onReplyReceived(const zmqutils::serverclient::CommandReply& reply) final;
-
-    virtual void onSendingCommand(const zmqutils::serverclient::RequestData&) final;
-
-    virtual void onClientError(const zmq::error_t&, const std::string& ext_info) final;
-};
-
-}} // END NAMESPACES.
+}  // END NAMESPACES.
 // =====================================================================================================================
+

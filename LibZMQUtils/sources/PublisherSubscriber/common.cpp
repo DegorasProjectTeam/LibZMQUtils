@@ -23,71 +23,49 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file amelas_controller_client.h
- * @brief EXAMPLE FILE - This file contains the declaration of the AmelasControllerClient example class.
+ * @file common.cpp
+ * @brief This file contains common elements for the Publisher Subscriber module.
  * @author Degoras Project Team
  * @copyright EUPL License
  * @version 2309.5
 ***********************************************************************************************************************/
 
-// =====================================================================================================================
-#pragma once
-// =====================================================================================================================
-
-// C++ INCLUDES
-// =====================================================================================================================
-#include <string>
-// =====================================================================================================================
-
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/CommandClient>
-#include <LibZMQUtils/Utils>
+#include "LibZMQUtils/PublisherSubscriber/common.h"
 // =====================================================================================================================
 
-// PROJECT INCLUDES
+// ZMQUTILS NAMESPACES
 // =====================================================================================================================
+namespace zmqutils{
+namespace pubsub{
 // =====================================================================================================================
+PublisherInfo::PublisherInfo(utils::UUID uuid,
+                                               std::string endpoint,
+                                               std::string name):
+    uuid(std::move(uuid)),
+    endpoint(std::move(endpoint)),
+    name(std::move(name))
+{}
 
-// AMELAS NAMESPACES
-// =====================================================================================================================
-namespace amelas{
-namespace communication{
-// =====================================================================================================================
-
-class AmelasControllerClient : public zmqutils::serverclient::CommandClientBase
+std::string PublisherInfo::toJsonString() const
 {
-public:
+    std::stringstream ss;
+    ss << "{\n"
+       << "\t\"uuid\": \"" << this->uuid.toRFC4122String() << "\",\n"
+       << "\t\"name\": \"" << this->name << "\"\n"
+       << "}";
+    return ss.str();
+}
 
-    AmelasControllerClient(const std::string& server_endpoint,
-                           const std::string& client_name = "",
-                           const std::string interf_name = "");
+PubSubData::PubSubData():
+    data(nullptr),
+    data_size(0)
+{}
 
-    // TODO
-    //virtual void prepareRequest() = 0;
-
-private:
-
-    virtual void onClientStart() final;
-
-    virtual void onClientStop() final;
-
-    virtual void onWaitingReply() final;
-
-    virtual void onDeadServer() final;
-
-    virtual void onConnected() final;
-
-    virtual void onDisconnected() final;
-
-    virtual void onInvalidMsgReceived(const zmqutils::serverclient::CommandReply&) final;
-
-    virtual void onReplyReceived(const zmqutils::serverclient::CommandReply& reply) final;
-
-    virtual void onSendingCommand(const zmqutils::serverclient::RequestData&) final;
-
-    virtual void onClientError(const zmq::error_t&, const std::string& ext_info) final;
-};
+PubSubMsg::PubSubMsg(const PublisherInfo &pub_info) :
+    pub_info(pub_info)
+{}
 
 }} // END NAMESPACES.
 // =====================================================================================================================

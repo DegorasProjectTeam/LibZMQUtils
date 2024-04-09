@@ -155,9 +155,35 @@ std::string UUID::toRFC4122String() const
 
 const std::array<std::byte, 16> &UUID::getBytes() const {return this->bytes_;}
 
-bool UUID::operator<(const UUID &rhs) const
+
+bool operator<(const UUID &a, const UUID &b)
 {
-    return this->bytes_ < rhs.bytes_;
+    return a.getBytes() < b.getBytes();
+}
+
+bool operator>(const UUID &a, const UUID &b)
+{
+    return a.getBytes() > b.getBytes();
+}
+
+bool operator<=(const UUID &a, const UUID &b)
+{
+    return a.getBytes() <= b.getBytes();
+}
+
+bool operator>=(const UUID &a, const UUID &b)
+{
+    return a.getBytes() >= b.getBytes();
+}
+
+bool operator==(const UUID &a, const UUID &b)
+{
+    return a.getBytes() == b.getBytes();
+}
+
+bool operator!=(const UUID &a, const UUID &b)
+{
+    return a.getBytes() != b.getBytes();
 }
 
 

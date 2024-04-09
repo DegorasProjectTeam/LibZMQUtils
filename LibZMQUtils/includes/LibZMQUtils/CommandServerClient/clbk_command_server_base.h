@@ -36,10 +36,7 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
-#include <unordered_map>
 #include <string>
-#include <any>
-#include <variant>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
@@ -53,34 +50,60 @@
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
+namespace serverclient{
 // =====================================================================================================================
 
-// =====================================================================================================================
-using common::ServerCommand;
-using utils::CallbackHandler;
-// =====================================================================================================================
-
+/**
+ * @brief The ClbkCommandServerBase class implements a CommandServer that includes callback handling for each command.
+ */
 class ClbkCommandServerBase : public CommandServerBase,
-                              public CallbackHandler
+                              public utils::CallbackHandler
 {
 public:
 
+    /**
+     * @brief ClbkCommandServerBase default constructor.
+     */
     LIBZMQUTILS_EXPORT ClbkCommandServerBase(unsigned port, const std::string& local_addr = "*");
 
+    /**
+     * @brief Template function for registering a callback. This callback will be registered for a specific command.
+     * @param command, the command the callback is applied to.
+     * @param object, a parametric object whose method will be called.
+     * @param callback, the callback method that will be called.
+     */
     template<typename ClassT, typename RetT = void, typename... Args>
     void registerCallback(ServerCommand command, ClassT* object, RetT(ClassT::*callback)(Args...))
     {
         CallbackHandler::registerCallback(static_cast<CallbackHandler::CallbackId>(command), object, callback);
     }
 
+    /**
+     * @brief Remove the registered callback for a specific command.
+     * @param command, the command whose callback will be erased.
+     */
     LIBZMQUTILS_EXPORT void removeCallback(ServerCommand command);
 
+    /**
+     * @brief Check if there is a registered callback for a specific command.
+     * @param command, the command whose callback existence will be checked.
+     * @return
+     */
     LIBZMQUTILS_EXPORT bool hasCallback(ServerCommand command);
 
+    /**
+     * @brief Virtual destructor.
+     */
     LIBZMQUTILS_EXPORT virtual ~ClbkCommandServerBase() override;
 
 protected:
 
+    /**
+     * @brief Parametric method for invoking a registed callback. If no callback is registered, an error is returned.
+     * @param msg, the received message.
+     * @param args, the args passed to the callback.
+     * @return the result of the callback inovocation.
+     */
     template <typename CallbackType, typename RetT = void,  typename... Args>
     RetT invokeCallback(const CommandRequest& request, CommandReply& reply, const RetT& err_ret, Args&&... args)
     {
@@ -115,5 +138,5 @@ private:
     using CallbackHandler::hasCallback;
 };
 
-} // END NAMESPACES.
+}} // END NAMESPACES.
 // =====================================================================================================================

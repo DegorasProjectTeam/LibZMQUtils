@@ -23,8 +23,8 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file amelas_controller_client.h
- * @brief EXAMPLE FILE - This file contains the declaration of the AmelasControllerClient example class.
+ * @file constants.h
+ * @brief This file contains global constants for the whole library.
  * @author Degoras Project Team
  * @copyright EUPL License
  * @version 2309.5
@@ -34,60 +34,4 @@
 #pragma once
 // =====================================================================================================================
 
-// C++ INCLUDES
-// =====================================================================================================================
-#include <string>
-// =====================================================================================================================
-
-// ZMQUTILS INCLUDES
-// =====================================================================================================================
-#include <LibZMQUtils/CommandClient>
-#include <LibZMQUtils/Utils>
-// =====================================================================================================================
-
-// PROJECT INCLUDES
-// =====================================================================================================================
-// =====================================================================================================================
-
-// AMELAS NAMESPACES
-// =====================================================================================================================
-namespace amelas{
-namespace communication{
-// =====================================================================================================================
-
-class AmelasControllerClient : public zmqutils::serverclient::CommandClientBase
-{
-public:
-
-    AmelasControllerClient(const std::string& server_endpoint,
-                           const std::string& client_name = "",
-                           const std::string interf_name = "");
-
-    // TODO
-    //virtual void prepareRequest() = 0;
-
-private:
-
-    virtual void onClientStart() final;
-
-    virtual void onClientStop() final;
-
-    virtual void onWaitingReply() final;
-
-    virtual void onDeadServer() final;
-
-    virtual void onConnected() final;
-
-    virtual void onDisconnected() final;
-
-    virtual void onInvalidMsgReceived(const zmqutils::serverclient::CommandReply&) final;
-
-    virtual void onReplyReceived(const zmqutils::serverclient::CommandReply& reply) final;
-
-    virtual void onSendingCommand(const zmqutils::serverclient::RequestData&) final;
-
-    virtual void onClientError(const zmq::error_t&, const std::string& ext_info) final;
-};
-
-}} // END NAMESPACES.
-// =====================================================================================================================
+constexpr int kZmqEFSMError = 156384765;                      ///< ZMQ EFSM error.

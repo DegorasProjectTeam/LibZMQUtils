@@ -23,13 +23,11 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @example ExampleServerAmelas.cpp
+ * @example ExampleLoggerPublisher.cpp
  *
- * @brief This file serves as a program example of how to use the AmelasServer and AmelasController classes.
+ * @brief This file serves as a program example of how to use the `LoggerPublisher` class.
  *
- * This program initializes an instance of the AmelasServer class and sets it up to interact with an instance of
- * the AmelasController class. The server is set up to respond to client requests by invoking callback methods on the
- * controller. The program will run indefinitely until the user hits ctrl-c.
+ * This program initializes an instance of the `LoggerPublisher` class to interact with an `LoggerSubscriber`.
  *
  * @author Degoras Project Team
  * @copyright EUPL License
@@ -38,17 +36,8 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
-#ifdef _WIN32
-#define NOMINMAX
-#include <Windows.h>
-#endif
 #include <iostream>
-#include <chrono>
-#include <thread>
-#include <csignal>
-#include <limits>
-#include <any>
-#include <sstream>
+#include <cstring>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
@@ -58,83 +47,151 @@
 
 // PROJECT INCLUDES
 // =====================================================================================================================
-#include "includes/AmelasControllerServer/amelas_controller_server.h"
-#include "includes/AmelasController/amelas_controller.h"
+#include "includes/LoggerPublisher/logger_publisher.h"
 // =====================================================================================================================
 
+using zmqutils::pubsub::PublisherResult;
+using zmqutils::utils::BinarySerializer;
+
+void parseCommand(logger::LoggerPublisher &pub, const std::string &command)
+{
+
+    char *command_str = new char[command.size() + 1];
+    std::copy(command.begin(), command.end(), command_str);
+    command_str[command.size()] = '\0';
+
+    char *token = std::strtok(command_str, " ");
+
+    if (token)
+    {
+        std::string token_command(token);
+        if (token_command != "info" && token_command != "warning" && token_command != "error")
+        {
+            std::cerr << "Failed at sending log message. Unknown type." << std::endl;
+            delete[] command_str;
+            return;
+        }
+
+        token = std::strtok(nullptr, "");
+
+        if (!token)
+        {
+            std::cerr << "There is no message to send" << std::endl;
+            delete[] command_str;
+            return;
+        }
+
+        std::string token_msg(token);
+        PublisherResult res = PublisherResult::INVALID_MSG;
+
+        if (token_command == "info")
+        {
+            std::cout << "Sending info log with msg: " << token_msg << std::endl;
+            res = pub.sendInfoLog(token_msg);
+        }
+        else if (token_command == "warning")
+        {
+            std::cout << "Sending warning log with msg: " << token_msg << std::endl;
+            res = pub.sendWarningLog(token_msg);
+        }
+        else if (token_command == "error")
+        {
+            std::cout << "Sending error log with msg: " << token_msg << std::endl;
+            res = pub.sendErrorLog(token_msg);
+        }
+
+        if (res != PublisherResult::MSG_OK)
+        {
+            std::cerr << "Error at sending log message. Error reason: " << static_cast<int>(res) << std::endl;
+        }
+    }
+    else
+    {
+        std::cerr << "Not a valid command" << std::endl;
+    }
+
+
+    delete[] command_str;
+}
+
 /**
- * @brief Main entry point of the program ExampleServerAmelas.
- *
- * Initializes an AmelasController and AmelasServer, then enters an infinite loop where it listens for client requests
- * and processes them using the server. If the user hits ctrl-c, the server is shut down and the program exits.
+ * @brief Main entry point of the program `ExampleLoggerPublisher`.
  */
 int main(int, char**)
 {
-    // Nampesaces.
-    using amelas::communication::AmelasControllerServer;
-    using amelas::communication::common::AmelasServerCommand;
-    using amelas::controller::AmelasController;
-
     // Configure the console.
     zmqutils::utils::ConsoleConfig& console_cfg = zmqutils::utils::ConsoleConfig::getInstance();
-    console_cfg.configureConsole(true, true, true);
+    console_cfg.configureConsole(true, false, false);
 
     // Configuration variables.
     unsigned port = 9999;
-    bool client_status_check = true;
+    std::string ip = "127.0.0.1";
 
-    // Instantiate the Amelas controller.
-    AmelasController amelas_controller;
+    std::string endpoint = "tcp://" + ip + ":" + std::to_string(port);
+    
+    logger::LoggerPublisher pub(endpoint, "Log Publisher");
 
-    // Instantiate the server.
-    AmelasControllerServer amelas_server(port);
+    // Set the exit callback to the console handler for safety.
+    console_cfg.setExitCallback(
+            [&pub]()
+            {
+                std::cout << std::endl;
+                std::cout << "Stopping the publisher..." << std::endl;
+                pub.stopPublisher();
+            });
 
-    // Disable or enables the client status checking.
-    amelas_server.setClientStatusCheck(client_status_check);
+    bool started = pub.startPublisher();
 
-    // ---------------------------------------
-
-    // Set the controller callbacks in the server.
-
-    amelas_server.registerControllerCallback(AmelasServerCommand::REQ_SET_HOME_POSITION,
-                                             &amelas_controller,
-                                             &AmelasController::setHomePosition);
-
-    amelas_server.registerControllerCallback(AmelasServerCommand::REQ_GET_HOME_POSITION,
-                                             &amelas_controller,
-                                             &AmelasController::getHomePosition);
-
-    // ---------------------------------------
-
-    // Start the server.
-    bool started = amelas_server.startServer();
-
-    // Check if the server starts ok.
     if(!started)
     {
-        // Log.
-        std::cout << "Server start failed!! Press Enter to exit!" << std::endl;
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.clear();
+        std::cout<<"Unable to start the publisher.";
         return 1;
     }
 
-    // Wait for closing as an infinite loop until ctrl-c.
-    console_cfg.waitForClose();
+    //client.startAutoAlive();
+    std::string command;
 
-    // Log.
-    std::cout << "Stopping the server..." << std::endl;
+    // Infinite loop for test.
+    while(!console_cfg.closeStatus())
+    {
+        // Get the command and parameters.
+        std::cout<<"------------------------------------------------------"<<std::endl;
+        std::cout<<"-- Commands --"<<std::endl;
+        std::cout<<"- info:          Send info msg."<<std::endl;
+        std::cout<<"- warning:       Send warning msg."<<std::endl;
+        std::cout<<"- error:         Send error msg"<<std::endl;
+        std::cout<<"-- Other --"<<std::endl;
+        std::cout<<"- Exit:             exit"<<std::endl;
+        std::cout<<"------------------------------------------------------"<<std::endl;
+        std::cout<<"Write a command: ";
+        std::getline(std::cin, command);
 
-    // Stop the server.
-    amelas_server.stopServer();
+        // Check for other commands.
+        if(command == "exit")
+        {
+            std::cout << "Stopping the publisher..." << std::endl;
+            pub.stopPublisher();
+            break;
+        }
+        else
+            parseCommand(pub, command);
+
+
+        // Break if we want to close the example program.
+        if(console_cfg.closeStatus() || std::cin.eof())
+        {
+            console_cfg.waitForClose();
+            break;
+        }
+
+    }
 
     // Final log.
-    std::cout << "Server stoped. All ok!!" << std::endl;
+    std::cout << "Publisher stoped. All ok!!" << std::endl;
 
     // Restore the console.
     console_cfg.restoreConsole();
 
-    // Return.
 	return 0;
 }
 

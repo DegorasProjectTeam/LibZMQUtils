@@ -78,7 +78,7 @@ class CallbackHandler
 public:
 
     // -----------------------------------------------------------------------------------------------------------------
-    using CallbackId = std::int32_t;     ///< Alias for the callback identifiers.
+    using CallbackId = std::uint64_t;     ///< Alias for the callback identifiers.
     // -----------------------------------------------------------------------------------------------------------------
 
     /**

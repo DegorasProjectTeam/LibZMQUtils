@@ -32,10 +32,7 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
-#include <unordered_map>
 #include <string>
-#include <any>
-#include <variant>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
@@ -46,6 +43,7 @@
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
+namespace serverclient{
 
 ClbkCommandServerBase::ClbkCommandServerBase(unsigned int port, const std::string &local_addr) :
     CommandServerBase(port, local_addr),
@@ -66,5 +64,5 @@ ClbkCommandServerBase::~ClbkCommandServerBase() { }
 
 // =====================================================================================================================
 
-} // END NAMESPACES.
+}} // END NAMESPACES.
 // =====================================================================================================================

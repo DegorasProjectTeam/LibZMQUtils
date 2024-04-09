@@ -23,71 +23,42 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file amelas_controller_client.h
- * @brief EXAMPLE FILE - This file contains the declaration of the AmelasControllerClient example class.
+ * @file clbk_subscriber_base.cpp
+ * @brief This file contains the implementation of the ClbkSubscriberBase class and related.
  * @author Degoras Project Team
  * @copyright EUPL License
  * @version 2309.5
 ***********************************************************************************************************************/
 
-// =====================================================================================================================
-#pragma once
-// =====================================================================================================================
-
 // C++ INCLUDES
 // =====================================================================================================================
-#include <string>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/CommandClient>
-#include <LibZMQUtils/Utils>
+#include "LibZMQUtils/PublisherSubscriber/clbk_subscriber_base.h"
 // =====================================================================================================================
 
-// PROJECT INCLUDES
+// ZMQUTILS NAMESPACES
 // =====================================================================================================================
-// =====================================================================================================================
+namespace zmqutils{
+namespace pubsub{
 
-// AMELAS NAMESPACES
-// =====================================================================================================================
-namespace amelas{
-namespace communication{
-// =====================================================================================================================
+ClbkSubscriberBase::ClbkSubscriberBase() {}
 
-class AmelasControllerClient : public zmqutils::serverclient::CommandClientBase
+void ClbkSubscriberBase::removeCallback(const TopicType &topic)
 {
-public:
+    CallbackHandler::removeCallback(std::hash<TopicType>{}(topic));
+}
 
-    AmelasControllerClient(const std::string& server_endpoint,
-                           const std::string& client_name = "",
-                           const std::string interf_name = "");
+bool ClbkSubscriberBase::hasCallback(const TopicType &topic)
+{
+    return CallbackHandler::hasCallback(std::hash<TopicType>{}(topic));
+}
 
-    // TODO
-    //virtual void prepareRequest() = 0;
+ClbkSubscriberBase::~ClbkSubscriberBase() { }
 
-private:
-
-    virtual void onClientStart() final;
-
-    virtual void onClientStop() final;
-
-    virtual void onWaitingReply() final;
-
-    virtual void onDeadServer() final;
-
-    virtual void onConnected() final;
-
-    virtual void onDisconnected() final;
-
-    virtual void onInvalidMsgReceived(const zmqutils::serverclient::CommandReply&) final;
-
-    virtual void onReplyReceived(const zmqutils::serverclient::CommandReply& reply) final;
-
-    virtual void onSendingCommand(const zmqutils::serverclient::RequestData&) final;
-
-    virtual void onClientError(const zmq::error_t&, const std::string& ext_info) final;
-};
+// =====================================================================================================================
 
 }} // END NAMESPACES.
 // =====================================================================================================================

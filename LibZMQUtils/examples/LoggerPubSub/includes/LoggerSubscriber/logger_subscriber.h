@@ -23,8 +23,8 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file amelas_controller_client.h
- * @brief EXAMPLE FILE - This file contains the declaration of the AmelasControllerClient example class.
+ * @file logger_subscriber.h
+ * @brief EXAMPLE FILE - This file contains the declaration of the LoggerSubscriber example class.
  * @author Degoras Project Team
  * @copyright EUPL License
  * @version 2309.5
@@ -41,53 +41,51 @@
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/CommandClient>
+#include <LibZMQUtils/CallbackSubscriber>
 #include <LibZMQUtils/Utils>
-// =====================================================================================================================
-
-// PROJECT INCLUDES
-// =====================================================================================================================
 // =====================================================================================================================
 
 // AMELAS NAMESPACES
 // =====================================================================================================================
-namespace amelas{
-namespace communication{
+namespace logger {
 // =====================================================================================================================
 
-class AmelasControllerClient : public zmqutils::serverclient::CommandClientBase
+// Example of creating a command server from the base.
+class LoggerSubscriber : public zmqutils::pubsub::ClbkSubscriberBase
 {
 public:
 
-    AmelasControllerClient(const std::string& server_endpoint,
-                           const std::string& client_name = "",
-                           const std::string interf_name = "");
+    LoggerSubscriber();
 
-    // TODO
-    //virtual void prepareRequest() = 0;
+    using zmqutils::pubsub::ClbkSubscriberBase::registerCallback;
+
+    using LogMsgCallback = std::function<zmqutils::pubsub::SubscriberResult(const std::string&)>;
 
 private:
 
-    virtual void onClientStart() final;
+    // -----------------------------------------------------------------------------------------------------------------
+    using SubscriberBase::registerRequestProcFunc;
+    using CallbackHandler::registerCallback;
+    // -----------------------------------------------------------------------------------------------------------------
 
-    virtual void onClientStop() final;
+    zmqutils::pubsub::SubscriberResult processLogMsg(const zmqutils::pubsub::PubSubMsg&);
 
-    virtual void onWaitingReply() final;
+    // Internal overrided start callback.
+    virtual void onSubscriberStart() override final;
 
-    virtual void onDeadServer() final;
+    // Internal overrided close callback.
+    virtual void onSubscriberStop() override final;
 
-    virtual void onConnected() final;
+    // Internal overrided command received callback.
+    virtual zmqutils::pubsub::SubscriberResult onMsgReceived(const zmqutils::pubsub::PubSubMsg&) override final;
 
-    virtual void onDisconnected() final;
+    // Internal overrided bad command received callback.
+    virtual void onInvalidMsgReceived(const zmqutils::pubsub::PubSubMsg&,
+                                      zmqutils::pubsub::SubscriberResult) override final;
 
-    virtual void onInvalidMsgReceived(const zmqutils::serverclient::CommandReply&) final;
-
-    virtual void onReplyReceived(const zmqutils::serverclient::CommandReply& reply) final;
-
-    virtual void onSendingCommand(const zmqutils::serverclient::RequestData&) final;
-
-    virtual void onClientError(const zmq::error_t&, const std::string& ext_info) final;
+    // Internal overrided server error callback.
+    virtual void onSubscriberError(const zmq::error_t&, const std::string& ext_info) override final;
 };
 
-}} // END NAMESPACES.
+} // END NAMESPACES.
 // =====================================================================================================================

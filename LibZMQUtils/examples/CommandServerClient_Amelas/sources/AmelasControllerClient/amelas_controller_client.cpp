@@ -1,4 +1,5 @@
 #include "includes/AmelasControllerClient/amelas_controller_client.h"
+#include "common.h"
 
 // AMELAS NAMESPACES
 // =====================================================================================================================
@@ -10,16 +11,18 @@ using common::AmelasServerCommandStr;
 using common::AmelasServerResultStr;
 using common::AmelasServerCommand;
 using common::AmelasServerResult;
-using zmqutils::common::ServerCommand;
-using zmqutils::common::ServerResult;
-using zmqutils::common::ResultType;
-using zmqutils::common::CommandType;
+using zmqutils::serverclient::ServerCommand;
+using zmqutils::serverclient::ServerResult;
+using zmqutils::serverclient::ResultType;
+using zmqutils::serverclient::CommandType;
+using zmqutils::serverclient::CommandReply;
+using zmqutils::serverclient::RequestData;
 using zmqutils::utils::BinarySerializer;
 
 AmelasControllerClient::AmelasControllerClient(const std::string& server_endpoint,
                            const std::string& client_name,
                            const std::string interf_name) :
-    zmqutils::CommandClientBase(server_endpoint, client_name, interf_name)
+    zmqutils::serverclient::CommandClientBase(server_endpoint, client_name, interf_name)
 {}
 
 void AmelasControllerClient::onClientStart()

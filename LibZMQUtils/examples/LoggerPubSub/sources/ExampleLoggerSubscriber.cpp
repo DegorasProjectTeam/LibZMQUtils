@@ -23,71 +23,112 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file amelas_controller_client.h
- * @brief EXAMPLE FILE - This file contains the declaration of the AmelasControllerClient example class.
+ * @example ExampleLoggerSubscriber.cpp
+ *
+ * @brief This file serves as a program example of how to use the subscriber.
+ *
  * @author Degoras Project Team
  * @copyright EUPL License
  * @version 2309.5
 ***********************************************************************************************************************/
 
-// =====================================================================================================================
-#pragma once
-// =====================================================================================================================
-
 // C++ INCLUDES
 // =====================================================================================================================
-#include <string>
+#ifdef _WIN32
+#define NOMINMAX
+#include <Windows.h>
+#endif
+#include <iostream>
+#include <limits>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/CommandClient>
 #include <LibZMQUtils/Utils>
 // =====================================================================================================================
 
 // PROJECT INCLUDES
 // =====================================================================================================================
+#include "includes/LoggerSubscriber/logger_subscriber.h"
 // =====================================================================================================================
 
-// AMELAS NAMESPACES
-// =====================================================================================================================
-namespace amelas{
-namespace communication{
-// =====================================================================================================================
-
-class AmelasControllerClient : public zmqutils::serverclient::CommandClientBase
+class Logger
 {
 public:
-
-    AmelasControllerClient(const std::string& server_endpoint,
-                           const std::string& client_name = "",
-                           const std::string interf_name = "");
-
-    // TODO
-    //virtual void prepareRequest() = 0;
-
-private:
-
-    virtual void onClientStart() final;
-
-    virtual void onClientStop() final;
-
-    virtual void onWaitingReply() final;
-
-    virtual void onDeadServer() final;
-
-    virtual void onConnected() final;
-
-    virtual void onDisconnected() final;
-
-    virtual void onInvalidMsgReceived(const zmqutils::serverclient::CommandReply&) final;
-
-    virtual void onReplyReceived(const zmqutils::serverclient::CommandReply& reply) final;
-
-    virtual void onSendingCommand(const zmqutils::serverclient::RequestData&) final;
-
-    virtual void onClientError(const zmq::error_t&, const std::string& ext_info) final;
+    zmqutils::pubsub::SubscriberResult processLogInfo(const std::string &msg)
+    {
+        std::cout << "[INFO] - " << msg << std::endl;
+        return zmqutils::pubsub::SubscriberResult::MSG_OK;
+    }
+    zmqutils::pubsub::SubscriberResult processLogWarning(const std::string &msg)
+    {
+        std::cout << "[WARNING] - " << msg << std::endl;
+        return zmqutils::pubsub::SubscriberResult::MSG_OK;
+    }
+    zmqutils::pubsub::SubscriberResult processLogError(const std::string &msg)
+    {
+        std::cout << "[ERROR] - " << msg << std::endl;
+        return zmqutils::pubsub::SubscriberResult::MSG_OK;
+    }
 };
 
-}} // END NAMESPACES.
-// =====================================================================================================================
+
+int main(int, char**)
+{
+
+    // Configure the console.
+    zmqutils::utils::ConsoleConfig& console_cfg = zmqutils::utils::ConsoleConfig::getInstance();
+    console_cfg.configureConsole(true, true, true);
+
+    Logger log;
+
+
+    // Instantiate and configure subscriber.
+    logger::LoggerSubscriber subscriber;
+    subscriber.subscribe("tcp://127.0.0.1:9999");
+    subscriber.addTopicFilter("LOG_INFO");
+    subscriber.addTopicFilter("LOG_WARNING");
+    subscriber.addTopicFilter("LOG_ERROR");
+
+
+    // ---------------------------------------
+    // Set the callbacks in the subscriber.
+    // ---------------------------------------
+    subscriber.registerCallback("LOG_INFO", &log, &Logger::processLogInfo);
+    subscriber.registerCallback("LOG_WARNING", &log, &Logger::processLogWarning);
+    subscriber.registerCallback("LOG_ERROR", &log, &Logger::processLogError);
+
+
+    // Start the subscriber.
+    bool started = subscriber.startSubscriber();
+
+    // Check if the subscriber starts ok.
+    if(!started)
+    {
+        // Log.
+        std::cout << "Subscriber start failed!! Press Enter to exit!" << std::endl;
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        std::cin.clear();
+        return 1;
+    }
+
+    // Wait for closing as an infinite loop until ctrl-c.
+    console_cfg.waitForClose();
+
+    // Log.
+    std::cout << "Stopping the subscriber..." << std::endl;
+
+    // Stop the subscriber.
+    subscriber.stopSubscriber();
+
+    // Final log.
+    std::cout << "Subscriber stoped. All ok!!" << std::endl;
+
+    // Restore the console.
+    console_cfg.restoreConsole();
+
+    // Return.
+	return 0;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------

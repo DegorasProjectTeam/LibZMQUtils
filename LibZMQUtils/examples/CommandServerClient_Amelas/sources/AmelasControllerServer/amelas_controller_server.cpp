@@ -42,9 +42,12 @@ namespace communication{
 // =====================================================================================================================
 
 // ---------------------------------------------------------------------------------------------------------------------
-using zmqutils::common::ServerCommand;
-using zmqutils::common::ServerResult;
-using zmqutils::common::ResultType;
+using zmqutils::serverclient::ServerCommand;
+using zmqutils::serverclient::ServerResult;
+using zmqutils::serverclient::ResultType;
+using zmqutils::serverclient::CommandRequest;
+using zmqutils::serverclient::CommandReply;
+using zmqutils::serverclient::HostInfo;
 using zmqutils::utils::BinarySerializer;
 // ---------------------------------------------------------------------------------------------------------------------
 
@@ -54,11 +57,11 @@ AmelasControllerServer::AmelasControllerServer(unsigned int port, const std::str
     // Register each internal specific process function in the base server.
 
     // REQ_SET_HOME_POSITION
-    this->registerRequestProcFunc(AmelasServerCommand::REQ_SET_HOME_POSITION,
+    this->registerRequestProcFunc(common::AmelasServerCommand::REQ_SET_HOME_POSITION,
                                   &AmelasControllerServer::processSetHomePosition);
 
     // REQ_GET_HOME_POSITION.
-    this->registerRequestProcFunc(AmelasServerCommand::REQ_GET_HOME_POSITION,
+    this->registerRequestProcFunc(common::AmelasServerCommand::REQ_GET_HOME_POSITION,
                                   &AmelasControllerServer::processGetHomePosition);
 }
 
@@ -110,7 +113,7 @@ void AmelasControllerServer::processGetHomePosition(const CommandRequest& reques
         reply.params_size = BinarySerializer::fastSerialization(reply.params, ctrl_err, pos.az, pos.el);
 }
 
-void AmelasControllerServer::registerRequestProcFunc(AmelasServerCommand command, AmelasRequestProcFunc func)
+void AmelasControllerServer::registerRequestProcFunc(common::AmelasServerCommand command, AmelasRequestProcFunc func)
 {
     CommandServerBase::registerRequestProcFunc(static_cast<ServerCommand>(command), this, func);
 }
@@ -119,7 +122,7 @@ bool AmelasControllerServer::validateCustomCommand(ServerCommand command)
 {
     // Auxiliar variables.
     bool result = false;
-    zmqutils::common::CommandType cmd = static_cast<zmqutils::common::CommandType>(command);
+    zmqutils::serverclient::CommandType cmd = static_cast<zmqutils::serverclient::CommandType>(command);
     // Check if the command is within the range of implemented custom commands.
     if (cmd >= common::kMinCmdId && cmd <= common::kMaxCmdId)
         result = true;
@@ -131,7 +134,8 @@ void AmelasControllerServer::onCustomCommandReceived(CommandRequest& request, Co
     // Get the command string.
     std::string cmd_str;
     std::uint32_t cmd_uint = static_cast<std::uint32_t>(request.command);
-    cmd_str = (cmd_uint < AmelasServerCommandStr.size()) ? AmelasServerCommandStr[cmd_uint] : "Unknown command";
+    cmd_str = (cmd_uint < common::AmelasServerCommandStr.size()) ?
+                  common::AmelasServerCommandStr[cmd_uint] : "Unknown command";
 
     // Log the command.
     std::cout << std::string(100, '-') << std::endl;
@@ -254,7 +258,8 @@ void AmelasControllerServer::onCommandReceived(const CommandRequest &request)
     // Get the command string.
     std::string cmd_str;
     std::uint32_t command = static_cast<std::uint32_t>(request.command);
-    cmd_str = (command < AmelasServerCommandStr.size()) ? AmelasServerCommandStr[command] : "Unknown command";
+    cmd_str = (command < common::AmelasServerCommandStr.size()) ?
+                  common::AmelasServerCommandStr[command] : "Unknown command";
     // Log.
     BinarySerializer serializer(request.params.get(), request.params_size);
     std::cout << std::string(100, '-') << std::endl;
@@ -292,7 +297,7 @@ void AmelasControllerServer::onSendingResponse(const CommandReply &reply)
     std::cout<<"<AMELAS SERVER>"<<std::endl;
     std::cout<<"-> ON SENDING RESPONSE: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
-    std::cout<<"Result: "<<result<<" ("<<AmelasServerResultStr[result]<<")"<<std::endl;
+    std::cout<<"Result: "<<result<<" ("<<common::AmelasServerResultStr[result]<<")"<<std::endl;
     std::cout<<"Params Size: "<<reply.params_size<<std::endl;
     std::cout<<"Params Hex: "<<serializer.getDataHexString()<<std::endl;
     std::cout << std::string(100, '-') << std::endl;

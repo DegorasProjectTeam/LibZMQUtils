@@ -23,8 +23,8 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file amelas_controller_client.h
- * @brief EXAMPLE FILE - This file contains the declaration of the AmelasControllerClient example class.
+ * @file clbk_subscriber_base.h
+ * @brief This file contains the declaration of the ClbkSubscriberBase class and related.
  * @author Degoras Project Team
  * @copyright EUPL License
  * @version 2309.5
@@ -34,59 +34,100 @@
 #pragma once
 // =====================================================================================================================
 
-// C++ INCLUDES
-// =====================================================================================================================
-#include <string>
-// =====================================================================================================================
-
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/CommandClient>
-#include <LibZMQUtils/Utils>
+#include "LibZMQUtils/Global/libzmqutils_global.h"
+#include "LibZMQUtils/PublisherSubscriber/subscriber_base.h"
+#include "LibZMQUtils/Utilities/callback_handler.h"
 // =====================================================================================================================
 
-// PROJECT INCLUDES
+// ZMQUTILS NAMESPACES
 // =====================================================================================================================
-// =====================================================================================================================
-
-// AMELAS NAMESPACES
-// =====================================================================================================================
-namespace amelas{
-namespace communication{
+namespace zmqutils{
+namespace pubsub{
 // =====================================================================================================================
 
-class AmelasControllerClient : public zmqutils::serverclient::CommandClientBase
+/**
+ * @brief The ClbkSubscriberBase class implements a Subscriber that includes callback handling for each topic.
+ */
+class ClbkSubscriberBase : public SubscriberBase, public utils::CallbackHandler
 {
+
 public:
 
-    AmelasControllerClient(const std::string& server_endpoint,
-                           const std::string& client_name = "",
-                           const std::string interf_name = "");
+    /**
+     * @brief ClbkSubscriberBase default constructor.
+     */
+    LIBZMQUTILS_EXPORT ClbkSubscriberBase();
 
-    // TODO
-    //virtual void prepareRequest() = 0;
+    /**
+     * @brief Template function for registering a callback. This callback will be registered for a specific topic.
+     * @param topic, the topic the callback is applied to.
+     * @param object, a parametric object whose method will be called.
+     * @param callback, the callback method that will be called.
+     */
+    template<typename ClassT, typename RetT = void, typename... Args>
+    void registerCallback(const TopicType &topic, ClassT* object, RetT(ClassT::*callback)(Args...))
+    {
+        CallbackHandler::registerCallback(std::hash<TopicType>{}(topic), object, callback);
+    }
+
+    /**
+     * @brief Remove the registered callback for a specific topic.
+     * @param topic, the topic whose callback will be erased.
+     */
+    LIBZMQUTILS_EXPORT void removeCallback(const TopicType &topic);
+
+    /**
+     * @brief Check if there is a registered callback for a specific topic.
+     * @param topic, the topic whose callback existence will be checked.
+     * @return
+     */
+    LIBZMQUTILS_EXPORT bool hasCallback(const TopicType &topic);
+
+    /**
+     * @brief Virtual destructor.
+     */
+    LIBZMQUTILS_EXPORT virtual ~ClbkSubscriberBase() override;
+
+protected:
+
+    /**
+     * @brief Parametric method for invoking a registed callback. If no callback is registered, an error is returned.
+     * @param msg, the received message.
+     * @param args, the args passed to the callback.
+     * @return the result of the callback inovocation.
+     */
+    template <typename CallbackType, typename RetT = void,  typename... Args>
+    RetT invokeCallback(const PubSubMsg& msg, Args&&... args)
+    {
+        // Get the command.
+        TopicType topic = msg.data.topic;
+
+        // Check the callback.
+        if(!this->hasCallback(topic))
+        {
+            return SubscriberResult::EMPTY_EXT_CALLBACK;
+        }
+
+        //Invoke the callback.
+        try
+        {
+            return CallbackHandler::invokeCallback<CallbackType, RetT>(
+                std::hash<TopicType>{}(topic), std::forward<Args>(args)...);
+        }
+        catch(...)
+        {
+            return SubscriberResult::INVALID_EXT_CALLBACK;
+        }
+    }
 
 private:
 
-    virtual void onClientStart() final;
-
-    virtual void onClientStop() final;
-
-    virtual void onWaitingReply() final;
-
-    virtual void onDeadServer() final;
-
-    virtual void onConnected() final;
-
-    virtual void onDisconnected() final;
-
-    virtual void onInvalidMsgReceived(const zmqutils::serverclient::CommandReply&) final;
-
-    virtual void onReplyReceived(const zmqutils::serverclient::CommandReply& reply) final;
-
-    virtual void onSendingCommand(const zmqutils::serverclient::RequestData&) final;
-
-    virtual void onClientError(const zmq::error_t&, const std::string& ext_info) final;
+    // Hide the base functions.
+    using CallbackHandler::invokeCallback;
+    using CallbackHandler::removeCallback;
+    using CallbackHandler::hasCallback;
 };
 
 }} // END NAMESPACES.

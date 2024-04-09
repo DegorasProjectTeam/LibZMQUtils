@@ -75,6 +75,12 @@ public:
      */
     LIBZMQUTILS_EXPORT UUID() = default;
 
+    LIBZMQUTILS_EXPORT UUID(const UUID&) = default;
+    LIBZMQUTILS_EXPORT UUID(UUID&&) = default;
+
+    LIBZMQUTILS_EXPORT UUID& operator=(const UUID&) = default;
+    LIBZMQUTILS_EXPORT UUID& operator=(UUID&&) = default;
+
     /**
      * @brief Returns string representation of the UUID
      *
@@ -104,13 +110,56 @@ public:
 
     LIBZMQUTILS_EXPORT const std::array<std::byte, 16>& getBytes() const;
 
-    LIBZMQUTILS_EXPORT bool operator<(const UUID& rhs) const;
 
 private:
 
     // Members.
     std::array<std::byte, 16> bytes_;  ///< Bytes of the UUID.
 };
+
+// UUID logical comparison operators
+/**
+ * @brief UUID less operator
+ * @param a
+ * @param b
+ * @return true if a is less than b, false otherwise
+ */
+LIBZMQUTILS_EXPORT bool operator<(const UUID& a, const UUID& b);
+/**
+ * @brief UUID greater operator
+ * @param a
+ * @param b
+ * @return true if a is greater than b, false otherwise
+ */
+LIBZMQUTILS_EXPORT bool operator>(const UUID& a, const UUID& b);
+/**
+ * @brief UUID less or equal operator
+ * @param a
+ * @param b
+ * @return true if a is less or equal than b, false otherwise
+ */
+LIBZMQUTILS_EXPORT bool operator<=(const UUID& a, const UUID& b);
+/**
+ * @brief UUID greater or equal operator
+ * @param a
+ * @param b
+ * @return true if a is greater or equal than b, false otherwise
+ */
+LIBZMQUTILS_EXPORT bool operator>=(const UUID& a, const UUID& b);
+/**
+ * @brief UUID equal operator
+ * @param a
+ * @param b
+ * @return true if a is equal than b, false otherwise
+ */
+LIBZMQUTILS_EXPORT bool operator==(const UUID& a, const UUID& b);
+/**
+ * @brief UUID not equal operator
+ * @param a
+ * @param b
+ * @return true if a is not equal than b, false otherwise
+ */
+LIBZMQUTILS_EXPORT bool operator!=(const UUID& a, const UUID& b);
 
 /**
  * @class UUIDGenerator

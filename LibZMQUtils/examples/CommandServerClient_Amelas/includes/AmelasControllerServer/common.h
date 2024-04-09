@@ -48,7 +48,7 @@ namespace common{
 
 // Specific subclass commands (0 to 20 are reserved for the base server).
 // WARNING: In our approach, the server commands must be always in order.
-enum class AmelasServerCommand : zmqutils::common::CommandType
+enum class AmelasServerCommand : zmqutils::serverclient::CommandType
 {
     REQ_SET_HOME_POSITION = 33,
     REQ_GET_HOME_POSITION = 34,
@@ -57,7 +57,7 @@ enum class AmelasServerCommand : zmqutils::common::CommandType
 };
 
 // Specific subclass errors (0 to 30 are reserved for the base server).
-enum class AmelasServerResult : zmqutils::common::ResultType
+enum class AmelasServerResult : zmqutils::serverclient::ResultType
 {
     EMPTY_CALLBACK = 31,
     INVALID_CALLBACK = 32
@@ -65,7 +65,7 @@ enum class AmelasServerResult : zmqutils::common::ResultType
 
 // Extend the base command strings with those of the subclass.
 static constexpr auto AmelasServerCommandStr = zmqutils::utils::joinArraysConstexpr(
-    zmqutils::common::ServerCommandStr,
+    zmqutils::serverclient::ServerCommandStr,
     std::array<const char*, 5>
     {
         "FUTURE_EXAMPLE",
@@ -77,7 +77,7 @@ static constexpr auto AmelasServerCommandStr = zmqutils::utils::joinArraysConste
 
 // Extend the base result strings with those of the subclass.
 static constexpr auto AmelasServerResultStr = zmqutils::utils::joinArraysConstexpr(
-    zmqutils::common::ServerResultStr,
+    zmqutils::serverclient::ServerResultStr,
     std::array<const char*, 2>
     {
         "EMPTY_CALLBACK - The external callback for the command is empty.",
@@ -85,7 +85,7 @@ static constexpr auto AmelasServerResultStr = zmqutils::utils::joinArraysConstex
     });
 
 // Usefull const expressions.
-constexpr int kMinCmdId = static_cast<int>(zmqutils::common::ServerCommand::END_BASE_COMMANDS) + 1;
+constexpr int kMinCmdId = static_cast<int>(zmqutils::serverclient::ServerCommand::END_BASE_COMMANDS) + 1;
 constexpr int kMaxCmdId = static_cast<int>(AmelasServerCommand::END_AMELAS_COMMANDS) - 1;
 
 }}} // END NAMESPACES.

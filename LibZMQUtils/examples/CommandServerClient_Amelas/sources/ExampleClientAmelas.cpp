@@ -52,26 +52,27 @@
 #include "includes/AmelasControllerClient/amelas_controller_client.h"
 // =====================================================================================================================
 
-
-// TODO Remove
-using namespace zmqutils;
-using namespace amelas;
-using namespace amelas::communication;
-using namespace amelas::communication::common;
-using namespace amelas::controller;
-
-
-using zmqutils::common::CommandType;
-using zmqutils::common::CommandReply;
-using zmqutils::common::ServerCommand;
+using zmqutils::serverclient::CommandType;
+using zmqutils::serverclient::CommandReply;
+using zmqutils::serverclient::ServerCommand;
+using zmqutils::serverclient::CommandClientBase;
+using zmqutils::serverclient::ClientResult;
+using zmqutils::serverclient::RequestData;
+using zmqutils::serverclient::ServerResult;
 using zmqutils::utils::BinarySerializer;
+
+using amelas::communication::AmelasControllerClient;
+using amelas::communication::common::AmelasServerCommand;
+using amelas::controller::AltAzPos;
+using amelas::controller::AmelasError;
 
 void parseCommand(CommandClientBase &client, const std::string &command)
 {
-    zmqutils::common::ClientResult client_result = ClientResult::COMMAND_OK;
+    zmqutils::serverclient::ClientResult client_result = ClientResult::COMMAND_OK;
 
-    char *command_str = new char[command.size()];
+    char *command_str = new char[command.size() + 1];
     std::copy(command.begin(), command.end(), command_str);
+    command_str[command.size()] = '\0';
 
     char *token = std::strtok(command_str, " ");
 

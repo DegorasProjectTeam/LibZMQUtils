@@ -23,8 +23,8 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file amelas_controller_client.h
- * @brief EXAMPLE FILE - This file contains the declaration of the AmelasControllerClient example class.
+ * @file common.h
+ * @brief EXAMPLE FILE - This file contains common elements for the example AmelasServer module.
  * @author Degoras Project Team
  * @copyright EUPL License
  * @version 2309.5
@@ -34,60 +34,59 @@
 #pragma once
 // =====================================================================================================================
 
-// C++ INCLUDES
-// =====================================================================================================================
-#include <string>
-// =====================================================================================================================
-
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/CommandClient>
-#include <LibZMQUtils/Utils>
-// =====================================================================================================================
-
-// PROJECT INCLUDES
-// =====================================================================================================================
+#include <LibZMQUtils/CommandServer>
 // =====================================================================================================================
 
 // AMELAS NAMESPACES
 // =====================================================================================================================
 namespace amelas{
 namespace communication{
+namespace common{
 // =====================================================================================================================
 
-class AmelasControllerClient : public zmqutils::serverclient::CommandClientBase
+// Specific subclass commands (0 to 20 are reserved for the base server).
+// WARNING: In our approach, the server commands must be always in order.
+enum class AmelasServerCommand : zmqutils::common::CommandType
 {
-public:
-
-    AmelasControllerClient(const std::string& server_endpoint,
-                           const std::string& client_name = "",
-                           const std::string interf_name = "");
-
-    // TODO
-    //virtual void prepareRequest() = 0;
-
-private:
-
-    virtual void onClientStart() final;
-
-    virtual void onClientStop() final;
-
-    virtual void onWaitingReply() final;
-
-    virtual void onDeadServer() final;
-
-    virtual void onConnected() final;
-
-    virtual void onDisconnected() final;
-
-    virtual void onInvalidMsgReceived(const zmqutils::serverclient::CommandReply&) final;
-
-    virtual void onReplyReceived(const zmqutils::serverclient::CommandReply& reply) final;
-
-    virtual void onSendingCommand(const zmqutils::serverclient::RequestData&) final;
-
-    virtual void onClientError(const zmq::error_t&, const std::string& ext_info) final;
+    REQ_SET_HOME_POSITION = 33,
+    REQ_GET_HOME_POSITION = 34,
+    END_IMPL_COMMANDS     = 35,
+    END_AMELAS_COMMANDS   = 50
 };
 
-}} // END NAMESPACES.
+// Specific subclass errors (0 to 30 are reserved for the base server).
+enum class AmelasServerResult : zmqutils::common::ResultType
+{
+    EMPTY_CALLBACK = 31,
+    INVALID_CALLBACK = 32
+};
+
+// Extend the base command strings with those of the subclass.
+static constexpr auto AmelasServerCommandStr = zmqutils::utils::joinArraysConstexpr(
+    zmqutils::common::ServerCommandStr,
+    std::array<const char*, 5>
+    {
+        "FUTURE_EXAMPLE",
+        "FUTURE_EXAMPLE",
+        "REQ_SET_HOME_POSITION",
+        "REQ_GET_HOME_POSITION",
+        "END_DRGG_COMMANDS"
+    });
+
+// Extend the base result strings with those of the subclass.
+static constexpr auto AmelasServerResultStr = zmqutils::utils::joinArraysConstexpr(
+    zmqutils::common::ServerResultStr,
+    std::array<const char*, 2>
+    {
+        "EMPTY_CALLBACK - The external callback for the command is empty.",
+        "INVALID_CALLBACK - The external callback for the command is invalid."
+    });
+
+// Usefull const expressions.
+constexpr int kMinCmdId = static_cast<int>(zmqutils::common::ServerCommand::END_BASE_COMMANDS) + 1;
+constexpr int kMaxCmdId = static_cast<int>(AmelasServerCommand::END_AMELAS_COMMANDS) - 1;
+
+}}} // END NAMESPACES.
 // =====================================================================================================================

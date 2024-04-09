@@ -32,25 +32,35 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
-#include <iostream>
 #include <stdio.h>
-#include <zmq/zmq_addon.hpp>
-#include <zmq/zmq.h>
 #include <thread>
 #include <chrono>
+// =====================================================================================================================
+
+// ZMQ INCLUDES
+// =====================================================================================================================
+#include <zmq/zmq_addon.hpp>
+#include <zmq/zmq.h>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/CommandServerClient/command_server_base.h"
+#include "LibZMQUtils/Global/constants.h"
 #include "LibZMQUtils/Utilities/utils.h"
-#include "LibZMQUtils/InternalHelpers/network_helpers.h"
 #include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
+#include "LibZMQUtils/InternalHelpers/network_helpers.h"
+// =====================================================================================================================
+
+// =====================================================================================================================
+using zmqutils::utils::UUID;
+using zmqutils::internal_helpers::network::NetworkAdapterInfo;
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
+namespace serverclient{
 // =====================================================================================================================
 
 CommandServerBase::CommandServerBase(unsigned port,
@@ -63,8 +73,8 @@ CommandServerBase::CommandServerBase(unsigned port,
     flag_server_working_(false),
     flag_check_clients_alive_(true),
     flag_alive_callbacks_(true),
-    client_alive_timeout_(common::kDefaultClientAliveTimeoutMsec),
-    server_reconn_attempts_(common::kServerReconnAttempts)
+    client_alive_timeout_(kDefaultClientAliveTimeoutMsec),
+    server_reconn_attempts_(kServerReconnAttempts)
 {
     // Get the adapters.
     std::vector<NetworkAdapterInfo> interfcs = internal_helpers::network::getHostIPsWithInterfaces();
@@ -367,7 +377,7 @@ void CommandServerBase::serverWorker()
             {
                 // Check if we want to close the server.
                 // The error code is for ZMQ EFSM error.
-                if(!(error.num() == common::kZmqEFSMError && !this->flag_server_working_))
+                if(!(error.num() == kZmqEFSMError && !this->flag_server_working_))
                     this->onServerError(error, "CommandServerBase: Error while sending a response.");
             }
         }
@@ -407,7 +417,7 @@ void CommandServerBase::serverWorker()
             {
                 // Check if we want to close the server.
                 // The error code is for ZMQ EFSM error.
-                if(!(error.num() == common::kZmqEFSMError && !this->flag_server_working_))
+                if(!(error.num() == kZmqEFSMError && !this->flag_server_working_))
                     this->onServerError(error, "CommandServerBase: Error while sending a response.");
             }
         }
@@ -434,7 +444,7 @@ ServerResult CommandServerBase::recvFromSocket(CommandRequest& request)
     {
         // Check if we want to close the server.
         // The error code is for ZMQ EFSM error.
-        if(error.num() == common::kZmqEFSMError && !this->flag_server_working_)
+        if(error.num() == kZmqEFSMError && !this->flag_server_working_)
             return ServerResult::COMMAND_OK;
 
         // Else, call to error callback.
@@ -526,10 +536,10 @@ bool CommandServerBase::validateCommand(int raw_command)
 {
     // Auxiliar variables.
     bool result = false;
-    int reserved_cmd = static_cast<int>(common::ServerCommand::RESERVED_COMMANDS);
-    int end_base_cmd = static_cast<int>(common::ServerCommand::END_BASE_COMMANDS);
+    int reserved_cmd = static_cast<int>(ServerCommand::RESERVED_COMMANDS);
+    int end_base_cmd = static_cast<int>(ServerCommand::END_BASE_COMMANDS);
     // Check if the command is valid.
-    if (raw_command >= common::kMinBaseCmdId && raw_command < reserved_cmd)
+    if (raw_command >= kMinBaseCmdId && raw_command < reserved_cmd)
         result = true;
     else if(raw_command > end_base_cmd)
         result = true;
@@ -736,5 +746,5 @@ void CommandServerBase::onCustomCommandReceived(CommandRequest& req, CommandRepl
     CommandServerBase::processCustomCommand(req, rep);
 }
 
-} // END NAMESPACES.
+}} // END NAMESPACES.
 // =====================================================================================================================
