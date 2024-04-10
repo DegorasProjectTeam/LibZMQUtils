@@ -75,14 +75,14 @@ void BinarySerializer::checkTriviallyCopyable()
 template<typename T, typename C>
 void BinarySerializer::binarySerialize(const T *src, SizeUnit data_size_bytes, C *dst)
 {
-    bool reverse = this->endianess_ == Endianess::LITTLE_ENDIAN;
+    bool reverse = this->endianess_ == Endianess::LT_ENDIAN;
     BinarySerializer::binarySerializeDeserialize(src, data_size_bytes, dst, reverse);
 }
 
 template<typename T, typename C>
 void BinarySerializer::binaryDeserialize(const T *src, SizeUnit data_size_bytes, C *dst)
 {
-    bool reverse = this->endianess_ == Endianess::LITTLE_ENDIAN;
+    bool reverse = this->endianess_ == Endianess::LT_ENDIAN;
     BinarySerializer::binarySerializeDeserialize(src, data_size_bytes, dst, reverse);
 }
 

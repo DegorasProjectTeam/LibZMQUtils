@@ -323,7 +323,7 @@ BinarySerializer::Endianess BinarySerializer::determineEndianess()
 {
     constexpr uint16_t number = 1;
     const uint8_t* byte_ptr = reinterpret_cast<const uint8_t*>(&number);
-    return (byte_ptr[0] == 1) ? Endianess::LITTLE_ENDIAN : Endianess::BIG_ENDIAN;
+    return (byte_ptr[0] == 1) ? Endianess::LT_ENDIAN : Endianess::BG_ENDIAN;
 }
 
 std::string BinarySerializer::toJsonString() const

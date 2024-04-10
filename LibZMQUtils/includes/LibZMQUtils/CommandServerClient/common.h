@@ -39,8 +39,6 @@
 #include <string>
 #include <cstring>
 #include <memory>
-#include <zmq/zmq.hpp>
-#include <zmq/zmq_addon.hpp>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES

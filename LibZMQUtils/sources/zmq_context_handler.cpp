@@ -36,8 +36,6 @@
 #include <vector>
 #include <functional>
 #include <mutex>
-#include <zmq/zmq.hpp>
-#include <zmq/zmq_addon.hpp>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES

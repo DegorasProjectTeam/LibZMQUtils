@@ -130,7 +130,7 @@ public:
      * @param serializer The BinarySerializer instance that will handle the serialization.
      * @return The size of the serialized data in bytes.
      */
-    virtual size_t serialize(BinarySerializer& serializer) const = 0;
+    virtual std::size_t serialize(BinarySerializer& serializer) const = 0;
 
     /**
      * @brief Method to deserialize the object from its binary representation.
@@ -142,7 +142,7 @@ public:
      * @brief Returns the size of the object when serialized into binary format.
      * @return The size of the serialized object in bytes.
      */
-    virtual size_t serializedSize() const = 0;
+    virtual std::size_t serializedSize() const = 0;
 };
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -205,8 +205,8 @@ public:
     /// Enumeration representing the byte order (endianness) of data.
     enum class Endianess
     {
-        LITTLE_ENDIAN, ///< Little-endian byte order (LSB first).
-        BIG_ENDIAN     ///< Big-endian byte order (MSB first).
+        LT_ENDIAN, ///< Little-endian byte order (LSB first).
+        BG_ENDIAN     ///< Big-endian byte order (MSB first).
     };
 
     /**

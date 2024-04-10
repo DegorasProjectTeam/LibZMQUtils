@@ -30,32 +30,34 @@
  * @version 2309.5
 ***********************************************************************************************************************/
 
-
-
-// C++ INCLUDES
+// SYSTEM DEPENDANT INCLUDES
 // =====================================================================================================================
-#include <iomanip>
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <windows.h>
-#else
-#include <sys/socket.h>
-#include <ifaddrs.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#endif
-
-#include <sstream>
 #include <iphlpapi.h>
-
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x0600
 #elif _WIN32_WINNT < 0x0600
 #undef _WIN32_WINNT
 #define _WIN32_WINNT 0x0600
 #endif
+#elif __unix__
+#include <sys/socket.h>
+#include <ifaddrs.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#endif
+// =====================================================================================================================
+
+// C++ INCLUDES
+// =====================================================================================================================
+#include <sstream>
+#include <vector>
+#include <iomanip>
+#include <regex>
 // =====================================================================================================================
 
 // LIBDPSLR INCLUDES
@@ -91,7 +93,7 @@ std::string getHostname()
     // Store the data.
     name = std::string(buffer);
 
-#else
+#elif __unix__
     // TODO
 #endif
 
@@ -153,7 +155,7 @@ std::vector<NetworkAdapterInfo> getHostIPsWithInterfaces()
 
         adapter_addrs = adapter_addrs->Next;
     }
-#else
+#elif __unix__
     // TODO
 #endif
 

@@ -84,6 +84,7 @@ macro_prepare_install_dir(INSTALL_BIN INSTALL_LIB ${CMAKE_CURRENT_SOURCE_DIR}/..
 include_directories(${CMAKE_SOURCE_DIR}/includes)
 include_directories(${ZMQ_DIR}/includes)
 
+
 # Get the headers, sources and template files.
 file(GLOB_RECURSE HEADERS ${CMAKE_SOURCE_DIR}/includes/${LIB_FULL_NAME}/*.h)
 file(GLOB_RECURSE TEMPLTS ${CMAKE_SOURCE_DIR}/includes/${LIB_FULL_NAME}/*.tpp)
@@ -130,7 +131,7 @@ endif()
 # Link libraries. For win32 only.
 if (WIN32)
 
-    set(ZMQ_LIBS_DIR ${ZMQ_DIR}/libs/x86_64)
+    set(ZMQ_LIBS_DIR ${ZMQ_DIR}/libs/windows)
 
     if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 
@@ -150,28 +151,45 @@ if (WIN32)
         message(FATAL_ERROR "Compiler not supported by default.")
     endif()
 
+elseif(UNIX)
+    set(ZMQ_LIBS_DIR ${ZMQ_DIR}/libs/unix)
+
+    target_link_libraries(${LIB_FULL_NAME} PUBLIC
+                          ${ZMQ_LIBS_DIR}/libzmq.so)
 endif()
 
 # Add the diferents subprojects directories.
+# TODO: examples are not adapted to Unix
+if (WIN32)
 add_subdirectory(examples)
+endif()
+
 add_subdirectory(testing)
+
+# Instalation common
+# Install the include files of LibZMQUtils.
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/includes/${LIB_FULL_NAME}
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/includes
+        PATTERN "*.txt" EXCLUDE)
+
+# Install the include files of ZMQ.
+install(DIRECTORY ${ZMQ_DIR}/includes/zmq
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/includes)
+
+# Install the binaries  of LibZMQUtils to the specified install directory.
+install(TARGETS ${LIB_FULL_NAME}
+        LIBRARY DESTINATION ${INSTALL_LIB}
+        RUNTIME DESTINATION ${INSTALL_LIB})
+
+
+# Runtime artifacts.
+install(IMPORTED_RUNTIME_ARTIFACTS ${LIB_FULL_NAME}
+        RUNTIME_DEPENDENCY_SET ${LIB_DEPS_SET}
+        DESTINATION ${INSTALL_BIN})
+
 
 # Installation process for windows.
 if(WIN32)
-
-    # Install the include files of LibZMQUtils.
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/includes/${LIB_FULL_NAME}
-            DESTINATION ${CMAKE_INSTALL_PREFIX}/includes
-            PATTERN "*.txt" EXCLUDE)
-
-    # Install the include files of ZMQ.
-    install(DIRECTORY ${ZMQ_DIR}/includes/zmq
-            DESTINATION ${CMAKE_INSTALL_PREFIX}/includes)
-
-    # Install the binaries  of LibZMQUtils to the specified install directory.
-    install(TARGETS ${LIB_FULL_NAME}
-            LIBRARY DESTINATION ${INSTALL_LIB}
-            RUNTIME DESTINATION ${INSTALL_LIB})
 
     # Install the binaries of ZMQ to the specified install directory.
     install(DIRECTORY ${ZMQ_LIBS_DIR}/
@@ -192,16 +210,22 @@ if(WIN32)
 
     endif()
 
-    # Runtime artifacts.
-    install(IMPORTED_RUNTIME_ARTIFACTS ${LIB_FULL_NAME}
-            RUNTIME_DEPENDENCY_SET ${LIB_DEPS_SET}
-            DESTINATION ${INSTALL_BIN})
-
     # Install the external dependencies.
     install(RUNTIME_DEPENDENCY_SET ${LIB_DEPS_SET}
             PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-"
             DIRECTORIES ${ZMQ_LIBS_DIR} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
             DESTINATION ${INSTALL_BIN})
+
+elseif(UNIX)
+    # Install the libraries of ZMQ to the specified install directory.
+    install(DIRECTORY ${ZMQ_LIBS_DIR}/
+            DESTINATION ${INSTALL_LIB}
+            FILES_MATCHING PATTERN "*.so")
+
+
+    install(DIRECTORY ${ZMQ_LIBS_DIR}/
+            DESTINATION ${INSTALL_LIB}
+            FILES_MATCHING PATTERN "*.a")
 
 endif()
 

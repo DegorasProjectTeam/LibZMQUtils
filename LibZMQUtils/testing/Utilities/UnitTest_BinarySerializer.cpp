@@ -146,7 +146,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Trivial)
     serializer_direct.read(r1, r2, r3, r4);
 
     // Checking.
-    M_EXPECTED_EQ(serializer.getSize(), 0ULL)
+    M_EXPECTED_EQ(serializer.getSize(), BinarySerializer::SizeUnit{0})
     M_EXPECTED_EQ(serializer.allReaded(), true)
     M_EXPECTED_EQ(r1, n1)
     M_EXPECTED_EQ(r2, n2)

@@ -41,11 +41,14 @@ MACRO(macro_prepare_install_dir bin_dir lib_dir base_dir)
     set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES ${CMAKE_INSTALL_PREFIX}/)
 
     # Define the install directories.
-    if (WIN32)
+    if (WIN32 OR UNIX)
         # Base prefix.
         if(MINGW)
             set(${bin_dir} ${CMAKE_INSTALL_PREFIX}/bin/mingw-x86_64)
             set(${lib_dir} ${CMAKE_INSTALL_PREFIX}/lib/mingw-x86_64)
+        elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+            set(${bin_dir} ${CMAKE_INSTALL_PREFIX}/bin/gcc-x86_64)
+            set(${lib_dir} ${CMAKE_INSTALL_PREFIX}/lib/gcc-x86_64)
         elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
             set(${bin_dir} ${CMAKE_INSTALL_PREFIX}/bin/msvc-x86_64)
             set(${lib_dir} ${CMAKE_INSTALL_PREFIX}/lib/msvc-x86_64)

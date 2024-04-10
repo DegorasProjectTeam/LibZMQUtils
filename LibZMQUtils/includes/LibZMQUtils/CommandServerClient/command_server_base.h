@@ -39,8 +39,6 @@
 #include <future>
 #include <string>
 #include <map>
-#include <zmq/zmq.hpp>
-#include <zmq/zmq_addon.hpp>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
@@ -51,6 +49,12 @@
 #include "LibZMQUtils/InternalHelpers/network_helpers.h"
 #include "LibZMQUtils/Utilities/uuid_generator.h"
 // =====================================================================================================================
+
+namespace zmq
+{
+    class socket_t;
+    class error_t;
+}
 
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================

@@ -110,7 +110,7 @@ void UnitTest::runTests()
             // Async execution.
             std::future<long long> future =
                 std::async(std::launch::async,
-                           [test, &result]()
+                           [test, &result]() -> long long
                            {
                                // Start time.
                                auto start = std::chrono::steady_clock::now();
