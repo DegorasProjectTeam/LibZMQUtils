@@ -133,34 +133,34 @@ public:
     /**
      * @brief Try to connect to the Command Server.
      * @param auto_alive, true to enable the auto alive sending, false to disable.
-     * @return the ClientResult of the operation.
+     * @return the OperationResult.
      */
-    LIBZMQUTILS_EXPORT ClientResult doConnect(bool auto_alive = false);
+    LIBZMQUTILS_EXPORT OperationResult doConnect(bool auto_alive = false);
 
     /**
      * @brief Try to Disconnect from CommandServer.
-     * @return the ClientResult of the operation.
+     * @return the OperationResult.
      */
-    LIBZMQUTILS_EXPORT ClientResult doDisconnect();
+    LIBZMQUTILS_EXPORT OperationResult doDisconnect();
 
     /**
      * @brief Try to send a keep alive message to the Command Server
-     * @return the ClientResult of the operation.
+     * @return the OperationResult.
      */
-    LIBZMQUTILS_EXPORT ClientResult doAlive();
+    LIBZMQUTILS_EXPORT OperationResult doAlive();
 
     /**
      * @brief Request the time from a Command Server.
      * @param datetime, the resulting datetime obtained from the Command Server.
-     * @return the ClientResult of the operation.
+     * @return the OperationResult.
      */
-    LIBZMQUTILS_EXPORT ClientResult doGetServerTime(std::string& datetime);
+    LIBZMQUTILS_EXPORT OperationResult doGetServerTime(std::string& datetime);
 
     /**
      * @brief Send a command to the Command Server.
-     * @return the ClientResult of the operation.
+     * @return the OperationResult.
      */
-    LIBZMQUTILS_EXPORT ClientResult sendCommand(const RequestData&, CommandReply&);
+    LIBZMQUTILS_EXPORT OperationResult sendCommand(const RequestData&, CommandReply&);
 
     /**
      * @brief Virtual destructor to ensure proper cleanup when the derived class is destroyed.
@@ -227,7 +227,7 @@ protected:
 
 private:
 
-    ClientResult recvFromSocket(CommandReply&repl, zmq::socket_t *recv_socket, zmq::socket_t *close_socket);
+    OperationResult recvFromSocket(CommandReply&repl, zmq::socket_t *recv_socket, zmq::socket_t *close_socket);
 
     void deleteSockets();
 
@@ -262,8 +262,8 @@ private:
     mutable std::mutex client_close_mtx_;       ///< Safety mutex for closing client.
 
     // Futures for receiving response from send command and auto alive
-    std::future<ClientResult> fut_recv_send_;   ///< Future that stores the client recv status for send command.
-    std::future<ClientResult> fut_recv_alive_;  ///< Future that stores the client recv status for auto alive.
+    std::future<OperationResult> fut_recv_send_;   ///< Future that stores the recv status for send command.
+    std::future<OperationResult> fut_recv_alive_;  ///< Future that stores the recv status for auto alive.
 
     // Auto alive functionality.
     std::future<void> auto_alive_future_;

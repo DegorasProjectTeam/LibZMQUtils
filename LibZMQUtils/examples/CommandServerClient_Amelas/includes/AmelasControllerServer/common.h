@@ -57,7 +57,7 @@ enum class AmelasServerCommand : zmqutils::serverclient::CommandType
 };
 
 // Specific subclass errors (0 to 30 are reserved for the base server).
-enum class AmelasServerResult : zmqutils::serverclient::ResultType
+enum class AmelasOperationResult : zmqutils::serverclient::ResultType
 {
     EMPTY_CALLBACK = 31,
     INVALID_CALLBACK = 32
@@ -76,8 +76,8 @@ static constexpr auto AmelasServerCommandStr = zmqutils::utils::joinArraysConste
     });
 
 // Extend the base result strings with those of the subclass.
-static constexpr auto AmelasServerResultStr = zmqutils::utils::joinArraysConstexpr(
-    zmqutils::serverclient::ServerResultStr,
+static constexpr auto AmelasOperationResultStr = zmqutils::utils::joinArraysConstexpr(
+    zmqutils::serverclient::OperationResultStr,
     std::array<const char*, 2>
     {
         "EMPTY_CALLBACK - The external callback for the command is empty.",

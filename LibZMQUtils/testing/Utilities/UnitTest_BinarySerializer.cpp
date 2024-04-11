@@ -394,7 +394,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, TrivialIntensive)
 
     BinarySerializer serializer;
 
-    const size_t count = 2000;
+    const size_t count = 50000;
     std::vector<double> original_numbers(count);
     std::vector<double> deserialized_numbers(count);
 

@@ -32,12 +32,11 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
+#include <thread>
 #include <string>
 #include <cstring>
 #include <cstdlib>
 #include <algorithm>
-#include <thread>
-#include <chrono>
 // =====================================================================================================================
 
 // ZMQ INCLUDES
@@ -45,19 +44,18 @@
 #include <zmq/zmq.hpp>
 #include <zmq/zmq_addon.hpp>
 // =====================================================================================================================
-
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/CommandServerClient/command_client_base.h"
-#include "LibZMQUtils/Global/constants.h"
 #include "LibZMQUtils/InternalHelpers/network_helpers.h"
 #include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
+#include "LibZMQUtils/Global/constants.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
-namespace zmqutils{
-namespace serverclient{
+namespace zmqutils {
+namespace serverclient {
 // =====================================================================================================================
 
 CommandClientBase::CommandClientBase(const std::string& server_endpoint,
@@ -281,17 +279,17 @@ void CommandClientBase::stopAutoAlive()
     }
 }
 
-ClientResult CommandClientBase::sendCommand(const RequestData& request, CommandReply& reply)
+OperationResult CommandClientBase::sendCommand(const RequestData& request, CommandReply& reply)
 {
     // Result.
-    ClientResult result = ClientResult::COMMAND_OK;
+    OperationResult result = OperationResult::COMMAND_OK;
 
     // Clean the reply.
     reply = CommandReply();
 
     // Check if we start the client.
     if (!this->client_socket_)
-        return ClientResult::CLIENT_STOPPED;
+        return OperationResult::CLIENT_STOPPED;
 
     // Send the command.
     try
@@ -311,7 +309,7 @@ ClientResult CommandClientBase::sendCommand(const RequestData& request, CommandR
         // Call to the error callback and stop the client for safety.
         this->onClientError(error, "CommandClientBase: Error while sending a request. Stopping the client.");
         this->internalStopClient();
-        return ClientResult::INTERNAL_ZMQ_ERROR;
+        return OperationResult::INTERNAL_ZMQ_ERROR;
     }
 
     // Now we need to wait the server response.
@@ -335,13 +333,13 @@ ClientResult CommandClientBase::sendCommand(const RequestData& request, CommandR
         this->auto_alive_cv_.notify_one();
 
     // Check if the client stopped.
-    if (result == ClientResult::CLIENT_STOPPED)
+    if (result == OperationResult::CLIENT_STOPPED)
     {
         return result;
     }
 
     // Check if was a timeout.
-    if (result == ClientResult::TIMEOUT_REACHED)
+    if (result == OperationResult::TIMEOUT_REACHED)
     {
         // Call to the internall callback and reset the socket.
         // NOTE: The client reset is neccesary for flush the ZMQ internal
@@ -350,12 +348,12 @@ ClientResult CommandClientBase::sendCommand(const RequestData& request, CommandR
     }
 
     // Check if was ok.
-    if(result == ClientResult::COMMAND_OK)
+    if(result == OperationResult::COMMAND_OK)
     {
         // Internal callback.
         this->onReplyReceived(reply);
     }
-    else if(result != ClientResult::COMMAND_OK && result != ClientResult::INTERNAL_ZMQ_ERROR)
+    else if(result != OperationResult::COMMAND_OK && result != OperationResult::INTERNAL_ZMQ_ERROR)
     {
         // Internal callback.
         this->onInvalidMsgReceived(reply);
@@ -367,7 +365,7 @@ ClientResult CommandClientBase::sendCommand(const RequestData& request, CommandR
 
 
 
-ClientResult CommandClientBase::recvFromSocket(CommandReply& reply,
+OperationResult CommandClientBase::recvFromSocket(CommandReply& reply,
                                                zmq::socket_t* recv_socket,
                                                zmq::socket_t *close_socket)
 {
@@ -389,7 +387,7 @@ ClientResult CommandClientBase::recvFromSocket(CommandReply& reply,
 
             // Check if we must to close.
             if(!this->flag_client_working_ || (items[1].revents & ZMQ_POLLIN))
-                return ClientResult::CLIENT_STOPPED;
+                return OperationResult::CLIENT_STOPPED;
 
             // Calculate elapsed time.
             auto end = std::chrono::steady_clock::now();
@@ -397,7 +395,7 @@ ClientResult CommandClientBase::recvFromSocket(CommandReply& reply,
 
             // Check for timeout.
             if (elapsed.count() >= kDefaultServerAliveTimeoutMsec)
-                return ClientResult::TIMEOUT_REACHED;
+                return OperationResult::TIMEOUT_REACHED;
 
             // We have data.
             if (items[0].revents & ZMQ_POLLIN)
@@ -408,21 +406,21 @@ ClientResult CommandClientBase::recvFromSocket(CommandReply& reply,
 
                 // Check for empty msg or timeout reached.
                 if (multipart_msg.empty())
-                    return ClientResult::EMPTY_MSG;
+                    return OperationResult::EMPTY_MSG;
 
                 // Check the multipart msg size.
                 if (multipart_msg.size() != 1 && multipart_msg.size() != 2)
-                    return ClientResult::INVALID_PARTS;
+                    return OperationResult::INVALID_PARTS;
 
                 // Get the multipart data.
                 zmq::message_t msg_res = multipart_msg.pop();
 
                 // Check the result size.
                 if (msg_res.size() != sizeof(utils::BinarySerializer::SizeUnit) + sizeof(ResultType))
-                    return ClientResult::INVALID_MSG;
+                    return OperationResult::INVALID_MSG;
 
                 // Get the command.
-                utils::BinarySerializer::fastDeserialization(msg_res.data(), msg_res.size(), reply.result);
+                utils::BinarySerializer::fastDeserialization(msg_res.data(), msg_res.size(), reply.server_result);
 
                 // If there is still one more part, they are the parameters.
                 if (multipart_msg.size() == 1)
@@ -432,19 +430,19 @@ ClientResult CommandClientBase::recvFromSocket(CommandReply& reply,
 
                     // Check the parameters.
                     if(msg_params.size() == 0)
-                        return ClientResult::EMPTY_PARAMS;
+                        return OperationResult::EMPTY_PARAMS;
 
                     // Get and store the parameters data.
                     utils::BinarySerializer serializer(msg_params.data(), msg_params.size());
                     reply.params_size = serializer.moveUnique(reply.params);
                 }
 
-
                 // TODO Actualizar aqui el client result según el server result?
+                // TODO REVISAR PORQUE PUEDE SER NECESARIO.
 
 
                 // All ok.
-                return ClientResult::COMMAND_OK;
+                return OperationResult::COMMAND_OK;
             }
         }
         catch(zmq::error_t& error)
@@ -452,12 +450,12 @@ ClientResult CommandClientBase::recvFromSocket(CommandReply& reply,
             // Check if we want too close the client.
             // The error code is for ZMQ EFSM error.
             if(error.num() == kZmqEFSMError && !this->flag_client_working_)
-                return ClientResult::CLIENT_STOPPED;
+                return OperationResult::CLIENT_STOPPED;
 
             // Call to the error callback and stop the client for safety.
             this->onClientError(error, "CommandClientBase: Error while receiving a reply. Stopping the client.");
             this->internalStopClient();
-            return ClientResult::INTERNAL_ZMQ_ERROR;
+            return OperationResult::INTERNAL_ZMQ_ERROR;
         }
     }
 }
@@ -517,7 +515,7 @@ void CommandClientBase::internalStopClient()
 void CommandClientBase::aliveWorker()
 {
     // Result.
-    ClientResult result = ClientResult::COMMAND_OK;
+    OperationResult result = OperationResult::COMMAND_OK;
 
     // Request and reply.
     RequestData request;
@@ -633,11 +631,11 @@ void CommandClientBase::aliveWorker()
         std::unique_lock<std::mutex> lock(this->mtx_);
 
         // Check the result.
-        if (result == ClientResult::CLIENT_STOPPED)
+        if (result == OperationResult::CLIENT_STOPPED)
         {
             this->flag_autoalive_enabled_ = false;
         }
-        else if (result == ClientResult::TIMEOUT_REACHED)
+        else if (result == OperationResult::TIMEOUT_REACHED)
         {
             // Call to the internall callback and reset the socket.
             // NOTE: The client reset is neccesary for flush the ZMQ internal
@@ -645,12 +643,12 @@ void CommandClientBase::aliveWorker()
             this->flag_autoalive_enabled_ = false;
             this->internalResetClient();
         }
-        else if(result == ClientResult::COMMAND_OK)
+        else if(result == OperationResult::COMMAND_OK)
         {
             if(this->flag_alive_callbacks_)
                 this->onReplyReceived(reply);
         }
-        else if(result != ClientResult::COMMAND_OK && result != ClientResult::INTERNAL_ZMQ_ERROR)
+        else if(result != OperationResult::COMMAND_OK && result != OperationResult::INTERNAL_ZMQ_ERROR)
         {
             // Internal callback.
             this->onInvalidMsgReceived(reply);
@@ -665,13 +663,13 @@ void CommandClientBase::aliveWorker()
         delete pull_close_socket;
 }
 
-ClientResult CommandClientBase::doConnect(bool auto_alive)
+OperationResult CommandClientBase::doConnect(bool auto_alive)
 {
     // Safe mutex lock
     std::unique_lock<std::mutex> lock(this->mtx_);
 
     // Result.
-    ClientResult result;
+    OperationResult result;
 
     // Containers.
     RequestData request;
@@ -690,14 +688,14 @@ ClientResult CommandClientBase::doConnect(bool auto_alive)
     // Send the command.
     result = this->sendCommand(request, reply);
 
-    if(result == ClientResult::COMMAND_OK && reply.result == ServerResult::COMMAND_OK && auto_alive)
+    if(result == OperationResult::COMMAND_OK && reply.server_result == OperationResult::COMMAND_OK && auto_alive)
         this->startAutoAlive();
 
     // Return the result.
     return result;
 }
 
-ClientResult CommandClientBase::doDisconnect()
+OperationResult CommandClientBase::doDisconnect()
 {
     // Safe mutex lock
     std::unique_lock<std::mutex> lock(this->mtx_);
@@ -716,7 +714,7 @@ ClientResult CommandClientBase::doDisconnect()
     return this->sendCommand(request, reply);
 }
 
-ClientResult CommandClientBase::doAlive()
+OperationResult CommandClientBase::doAlive()
 {
     // Safe mutex lock
     std::unique_lock<std::mutex> lock(this->mtx_);
@@ -732,7 +730,7 @@ ClientResult CommandClientBase::doAlive()
     return this->sendCommand(request, reply);
 }
 
-ClientResult CommandClientBase::doGetServerTime(std::string &datetime)
+OperationResult CommandClientBase::doGetServerTime(std::string &datetime)
 {
     // Safe mutex lock
     std::unique_lock<std::mutex> lock(this->mtx_);
@@ -740,7 +738,7 @@ ClientResult CommandClientBase::doGetServerTime(std::string &datetime)
     // Containers.
     RequestData request;
     CommandReply reply;
-    ClientResult result;
+    OperationResult result;
 
     // Update the request.
     request.command = ServerCommand::REQ_GET_SERVER_TIME;
@@ -749,12 +747,12 @@ ClientResult CommandClientBase::doGetServerTime(std::string &datetime)
     result = this->sendCommand(request, reply);
 
     // Check the result.
-    if(result != ClientResult::COMMAND_OK)
+    if(result != OperationResult::COMMAND_OK)
         return result;
 
     // Check the server result.
-    if(reply.result != ServerResult::COMMAND_OK)
-        return ClientResult::COMMAND_FAILED;
+    if(reply.server_result != OperationResult::COMMAND_OK)
+        return OperationResult::COMMAND_FAILED;
 
     // Get the ISO 8601 datetime string.
     utils::BinarySerializer::fastDeserialization(std::move(reply.params), reply.params_size, datetime);

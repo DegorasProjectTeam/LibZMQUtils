@@ -8,11 +8,11 @@ namespace communication{
 // =====================================================================================================================
 
 using common::AmelasServerCommandStr;
-using common::AmelasServerResultStr;
+using common::AmelasOperationResultStr;
 using common::AmelasServerCommand;
-using common::AmelasServerResult;
+using common::AmelasOperationResult;
 using zmqutils::serverclient::ServerCommand;
-using zmqutils::serverclient::ServerResult;
+using zmqutils::serverclient::OperationResult;
 using zmqutils::serverclient::ResultType;
 using zmqutils::serverclient::CommandType;
 using zmqutils::serverclient::CommandReply;
@@ -100,8 +100,8 @@ void AmelasControllerClient::onReplyReceived(const CommandReply &reply)
 {
     // Auxiliar.
     BinarySerializer serializer(reply.params.get(), reply.params_size);
-    ResultType result = static_cast<ResultType>(reply.result);
-    std::string res_str = zmqutils::utils::getEnumString(reply.result, AmelasServerResultStr);
+    ResultType result = static_cast<ResultType>(reply.server_result);
+    std::string res_str = zmqutils::utils::getEnumString(reply.server_result, AmelasOperationResultStr);
     // Log.
     std::cout << std::string(100, '-') << std::endl;
     std::cout<<"<"<<this->getClientName()<<">"<<std::endl;

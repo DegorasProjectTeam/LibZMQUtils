@@ -66,10 +66,9 @@ constexpr unsigned kClientAlivePeriodMsec = 5000;             ///< Default perio
 // =====================================================================================================================
 
 using CommandType = std::int32_t;   ///< Type used for the BaseServerCommand enumeration.
-using ResultType = std::int32_t;    ///< Type used for the BaseServerResult enumeration.
+using ResultType = std::int32_t;    ///< Type used for the BaseOperationResult enumeration.
 
 // TODO getServerInfo
-// TODO getServerTime
 // TODO Control the maximum number of clients.
 // TODO Dinamic configuration for the constants.
 
@@ -92,12 +91,12 @@ enum class ServerCommand : CommandType
 };
 
 /**
- * @enum ServerResult
+ * @enum OperationResult
  * @brief Enumerates the possible results of a base command operation. They can be extended in a subclass.
  * @warning Results 0 to 30 ids must not be used for custom results, they are special and reserved.
  * @warning Only positive results ids are allowed.
  */
-enum class ServerResult : ResultType
+enum class OperationResult : ResultType
 {
     COMMAND_OK             = 0,  ///< The command was executed successfully.
     INTERNAL_ZMQ_ERROR     = 1,  ///< An internal ZeroMQ error occurred.
@@ -110,31 +109,14 @@ enum class ServerResult : ResultType
     INVALID_MSG            = 10, ///< The message is invalid.
     CLIENT_NOT_CONNECTED   = 11, ///< Not connected to the target.
     ALREADY_CONNECTED      = 12, ///< Already connected to the target.
-    BAD_PARAMETERS         = 13, ///< The provided parameters are invalid.
+    BAD_PARAMETERS         = 13, ///< The provided parameters are invalid (deserialization fail).
     COMMAND_FAILED         = 14, ///< The command execution failed in the server (internal error).
-    NOT_IMPLEMENTED        = 15, ///< The command is not implemented.
-    BAD_NO_PARAMETERS      = 16, ///< The provided number of parameters are invalid.
-    EMPTY_EXT_CALLBACK     = 17, ///< The associated external callback is empty. Used in ClbkCommandServerBase.
-    INVALID_EXT_CALLBACK   = 18, ///< The associated external callback is invalid. Used in ClbkCommandServerBase.
-    INVALID_CLIENT_UUID    = 19, ///< The client UUID is invalid (could be invalid, missing or empty).
+    NOT_IMPLEMENTED        = 15, ///< The command is known but not implemented.
+    EMPTY_EXT_CALLBACK     = 16, ///< The associated external callback is empty. Used in ClbkCommandServerBase.
+    INVALID_EXT_CALLBACK   = 17, ///< The associated external callback is invalid. Used in ClbkCommandServerBase.
+    INVALID_CLIENT_UUID    = 18, ///< The client UUID is invalid (could be invalid, missing or empty).
+    CLIENT_STOPPED         = 19, ///< The client is stopped.
     END_BASE_RESULTS       = 30  ///< Sentinel value indicating the end of the base server results.
-};
-
-
-// TODO MORE CASES RELATED TO THE CLIENT
-enum class ClientResult : ResultType
-{
-    COMMAND_OK = 0,               ///< The command was executed successfully.
-    INTERNAL_ZMQ_ERROR     = 1,   ///< An internal ZeroMQ error occurred.
-    EMPTY_MSG              = 2,   ///< The message is empty.
-    EMPTY_PARAMS           = 6,   ///< The result parameters are missing or empty.
-    TIMEOUT_REACHED        = 7,   ///< The operation timed out, the server could be dead.
-    INVALID_PARTS          = 8,   ///< The command has invalid parts.
-    INVALID_MSG            = 10,  ///< The message is invalid.
-    COMMAND_FAILED         = 14,  ///< The command execution failed in the server (internal error).
-    CLIENT_STOPPED         = 17,  ///< The client is stopped.
-    END_BASE_RESULTS       = 30   ///< Sentinel value indicating the end of the base client results.
-
 };
 
 // Usefull const expressions.
@@ -176,7 +158,7 @@ static constexpr std::array<const char*, 31>  ServerCommandStr
     "END_BASE_COMMANDS"
 };
 
-static constexpr std::array<const char*, 31>  ServerResultStr
+static constexpr std::array<const char*, 30>  OperationResultStr
 {
     "COMMAND_OK - Command executed.",
     "INTERNAL_ZMQ_ERROR - Internal ZeroMQ error.",
@@ -191,49 +173,13 @@ static constexpr std::array<const char*, 31>  ServerResultStr
     "INVALID_MSG - The message is invalid.",
     "NOT_CONNECTED - Not connected to the server.",
     "ALREADY_CONNECTED - Already connected to the server.",
-    "BAD_PARAMETERS - Provided parameters are invalid.",
+    "BAD_PARAMETERS - Provided parameters are invalid (deserialization fail).",
     "COMMAND_FAILED - Command execution failed in the server (internal server error).",
-    "NOT_IMPLEMENTED - Command is not implemented and registered in server.",
-    "BAD_NO_PARAMETERS - The provided number of parameters are invalid.",
+    "NOT_IMPLEMENTED - The command is known but not implemented.",
     "EMPTY_EXT_CALLBACK - The associated external callback for the command is empty.",
     "INVALID_EXT_CALLBACK - The associated external callback for the command is invalid.",
     "INVALID_CLIENT_UUID - The client UUID is invalid (could be invalid, missing or empty).",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT"
-};
-
-static constexpr std::array<const char*, 31>  ClientResultStr
-{
-    "COMMAND_OK - Command executed.",
-    "INTERNAL_ZMQ_ERROR - Internal ZeroMQ error.",
-    "EMPTY_MSG - Message is empty.",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "TIMEOUT_REACHED - Operation timed out.",
-    "INVALID_PARTS - Command has invalid parts.",
-    "RESERVED_BASE_RESULT",
-    "INVALID_MSG - The message is invalid.",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
     "CLIENT_STOPPED - The client is stopped.",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
@@ -251,43 +197,44 @@ static constexpr std::array<const char*, 31>  ClientResultStr
 // COMMON STRUCTS
 // =====================================================================================================================
 
+/**
+ * @brief Represents information about a host client.
+ *
+ * The `HostInfo` class stores information about a host client, including a unique client host UUID, IP address,
+ * process ID (PID), hostname, and an optional client name. It also includes a timestamp to track the last time the
+ * host client was seen, which is typically used by servers to monitor client connections.
+ */
 struct HostInfo
 {
-    HostInfo() = default;
+    /**
+     * @brief Default constructor for HostInfo.
+     */
+    LIBZMQUTILS_EXPORT HostInfo() = default;
     
-    HostInfo(const utils::UUID& uuid, const std::string& ip, const std::string& pid,
-                   const std::string& hostname, const std::string& name = "");
+    /**
+     * @brief Constructor for HostInfo with specific parameters.
+     *
+     * @param uuid      Unique client host UUID.
+     * @param ip        Host client IP address.
+     * @param pid       PID of the host client process.
+     * @param hostname  Host client hostname.
+     * @param name      Optional client name (default is an empty string).
+     */
+    LIBZMQUTILS_EXPORT HostInfo(const utils::UUID& uuid, const std::string& ip, const std::string& pid,
+                                const std::string& hostname, const std::string& name = "");
 
-    std::string toJsonString() const;
+    /**
+     * @brief Convert HostInfo to a JSON-formatted string.
+     */
+    LIBZMQUTILS_EXPORT std::string toJsonString() const;
 
-    // Identifier.
+    // Struct data.
     utils::UUID uuid;                  ///< Unique client host UUID.
-    // Basic information
     std::string ip;                    ///< Host client ip.
     std::string pid;                   ///< PID of the host client process.
     std::string hostname;              ///< Host client name.
     std::string name;                  ///< Client name, optional.
-    // Others.
     utils::SCTimePointStd last_seen;   ///< Host client last connection time. Used by servers.
-};
-
-struct CommandRequest
-{
-    LIBZMQUTILS_EXPORT CommandRequest();
-
-    utils::UUID client_uuid;
-    ServerCommand command;
-    std::unique_ptr<std::byte[]> params;
-    size_t params_size;
-};
-
-struct CommandReply
-{
-    LIBZMQUTILS_EXPORT CommandReply();
-
-    std::unique_ptr<std::byte[]> params;  ///< Serialized parameters of the command.
-    size_t params_size;                   ///< Total serialized parameters size.
-    ServerResult result;                  ///< Reply result from the server.
 };
 
 struct RequestData
@@ -296,9 +243,28 @@ struct RequestData
 
     LIBZMQUTILS_EXPORT RequestData();
 
+    ServerCommand command;                    ///< Command to be sent.
+    std::unique_ptr<std::byte[]> params;      ///< Serialized parameters of the command.
+    size_t params_size;                       ///< Total serialized parameters size.
+};
+
+struct CommandRequest
+{
+    LIBZMQUTILS_EXPORT CommandRequest();
+
+    utils::UUID client_uuid;                 ///< Client UUID unique identification.
     ServerCommand command;                   ///< Command to be sent.
-    std::unique_ptr<std::byte[]> params;       ///< Serialized parameters of the command.
-    size_t params_size;                      ///< Total serialized parameters size.
+    std::unique_ptr<std::byte[]> params;
+    size_t params_size;
+};
+
+struct CommandReply
+{
+    LIBZMQUTILS_EXPORT CommandReply();
+
+    std::unique_ptr<std::byte[]> params;    ///< Serialized parameters of the command.
+    size_t params_size;                     ///< Total serialized parameters size.
+    OperationResult server_result;          ///< Reply result from the server.
 };
 
 // =====================================================================================================================

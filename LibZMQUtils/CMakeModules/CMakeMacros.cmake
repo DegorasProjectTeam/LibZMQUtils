@@ -30,15 +30,19 @@
 
 MACRO(macro_prepare_install_dir bin_dir lib_dir base_dir)
 
+    # Log
+    message(STATUS "${Green} Preparing the installation directory... ${ColourReset}")
+
     # Set the installation path.
-    if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT OR ${FORCE_INSTALL_DIR})
+        message(STATUS "${Green}Force the base installation directory: ${base_dir} ${ColourReset}")
         set(CMAKE_INSTALL_PREFIX ${base_dir} CACHE PATH "..." FORCE)
     endif()
 
     message(STATUS "${Green}Setting base installation directory: ${base_dir} ${ColourReset}")
 
     # Add properties for clean process.
-    set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES ${CMAKE_INSTALL_PREFIX}/)
+    set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES ${CMAKE_INSTALL_PREFIX})
 
     # Define the install directories.
     if (WIN32 OR UNIX)

@@ -38,6 +38,10 @@ set(INTERFACE_SERVER "AmelasServerInterface")
 set(APP_SERVER "Example_CommandServer_Amelas")
 set(APP_CLIENT "Example_CommandClient_Amelas")
 set(APP_BUILD_FOLDER ${CMAKE_BINARY_DIR}/bin/Examples/CommandServerClient_Amelas)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${APP_BUILD_FOLDER})
+
+# Include directories.
+include_directories(${CMAKE_SOURCE_DIR}/examples/CommandServerClient_Amelas)
 
 # **********************************************************************************************************************
 # AMELAS SERVER
@@ -46,12 +50,6 @@ set(APP_BUILD_FOLDER ${CMAKE_BINARY_DIR}/bin/Examples/CommandServerClient_Amelas
 set(LIBRARIES ${LIB_ZMQ_UTILS})
 set(LIBRARIES_OPTIMIZED "")
 set(LIBRARIES_DEBUG "")
-
-# Set the output directory.
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${APP_BUILD_FOLDER})
-
-# Include directories.
-include_directories(${CMAKE_SOURCE_DIR}/examples/CommandServerClient_Amelas)
 
 # Get the header files for the server.
 file(GLOB_RECURSE HEADERS

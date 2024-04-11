@@ -59,8 +59,8 @@ include(CMakeMacros)
 # Set the version.
 set(MAJOR_VERSION 1)
 set(MINOR_VERSION 2)
-set(PATCH_VERSION 4)
-set(VERSION ${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION})
+set(PATCH_VERSION 5)
+set(VERSION "${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}")
 
 # Output directories.
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -75,10 +75,11 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_COLOR_MAKEFILE ON)
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
 set(SHOW_EXTERNALS TRUE)
+set(FORCE_INSTALL_DIR TRUE)
 set(LIB_DEPS_SET ${LIB_FULL_NAME}_deps)
 
 # Define the install directory for each compiler and operating system.
-macro_prepare_install_dir(INSTALL_BIN INSTALL_LIB ${CMAKE_CURRENT_SOURCE_DIR}/../product)
+macro_prepare_install_dir(INSTALL_BIN INSTALL_LIB ${CMAKE_CURRENT_SOURCE_DIR}/../product_v${VERSION})
 
 # Includes.
 include_directories(${CMAKE_SOURCE_DIR}/includes)

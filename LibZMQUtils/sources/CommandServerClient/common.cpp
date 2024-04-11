@@ -92,7 +92,7 @@ CommandRequest::CommandRequest():
 CommandReply::CommandReply():
     params(nullptr),
     params_size(0),
-    result(ServerResult::COMMAND_OK)
+    server_result(OperationResult::COMMAND_OK)
 {}
 
 }} // END NAMESPACES.

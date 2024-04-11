@@ -113,7 +113,7 @@ protected:
         // Check the callback.
         if(!this->hasCallback(cmd))
         {
-            reply.result = ServerResult::EMPTY_EXT_CALLBACK;
+            reply.server_result = OperationResult::EMPTY_EXT_CALLBACK;
             return err_ret;
         }
 
@@ -125,7 +125,7 @@ protected:
         }
         catch(...)
         {
-            reply.result = ServerResult::INVALID_EXT_CALLBACK;
+            reply.server_result = OperationResult::INVALID_EXT_CALLBACK;
             return err_ret;
         }
     }
