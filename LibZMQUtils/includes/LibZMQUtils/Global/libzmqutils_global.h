@@ -26,25 +26,16 @@
 #pragma once
 // =====================================================================================================================
 
+// EXPORT
 // =====================================================================================================================
-
-// Library Version
-#define LIBZMQUTILS_VERSION_MAJOR 1
-#define LIBZMQUTILS_VERSION_MINOR 2
-#define LIBZMQUTILS_VERSION_PATCH 5
-
-// Windows DLL export/import directives
 #if ((defined __WIN32__) || (defined _WIN32)) && (!defined LIBZMQUTILS_STATIC)
-#ifdef LIBZMQUTILS_LIBRARY
-#define LIBZMQUTILS_EXPORT	__declspec(dllexport)
-#define LIBZMQUTILS_EXPIMP_TEMPLATE
+    #ifdef LIBZMQUTILS_LIBRARY
+        #define LIBZMQUTILS_EXPORT	__declspec(dllexport)
+    #else
+        #define LIBZMQUTILS_EXPORT	__declspec(dllimport)
+    #endif
 #else
-#define LIBZMQUTILS_EXPORT	__declspec(dllimport)
-#define LIBZMQUTILS_EXPIMP_TEMPLATE extern
+    /* Static libraries or non-Windows needs no special declaration. */
+    # define LIBZMQUTILS_EXPORT
 #endif
-#else
-/* Static libraries or non-Windows needs no special declaration. */
-# define LIBZMQUTILS_EXPORT
-#endif
-
 // =====================================================================================================================

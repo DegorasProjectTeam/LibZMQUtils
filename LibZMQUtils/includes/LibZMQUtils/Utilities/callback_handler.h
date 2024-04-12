@@ -36,16 +36,12 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
-#include <algorithm>
-#include <cstddef>
 #include <cstdint>
 #include <functional>
-#include <iostream>
 #include <map>
 #include <any>
 #include <mutex>
-#include <atomic>
-#include <variant>
+#include <stdexcept>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
@@ -84,7 +80,7 @@ public:
     /**
      * @brief Default constructor.
      */
-    LIBZMQUTILS_EXPORT CallbackHandler() = default;
+    CallbackHandler() = default;
 
     /**
      * @brief Deleted copy constructor.
@@ -109,7 +105,7 @@ public:
     /**
      * @brief Default destructor.
      */
-    LIBZMQUTILS_EXPORT ~CallbackHandler() = default;
+    ~CallbackHandler() = default;
 
     /**
      * @brief Register a member function as a callback replacing the old one.

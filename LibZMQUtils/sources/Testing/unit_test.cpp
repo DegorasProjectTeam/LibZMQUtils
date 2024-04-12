@@ -6,7 +6,6 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
-#include <list>
 #include <map>
 #include <vector>
 // =====================================================================================================================

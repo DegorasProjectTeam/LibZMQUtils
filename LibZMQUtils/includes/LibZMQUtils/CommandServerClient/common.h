@@ -56,7 +56,7 @@ namespace serverclient{
 
 // CONSTANTS
 // =====================================================================================================================
-constexpr unsigned  kDefaultClientAliveTimeoutMsec = 10000;   ///< Default timeout for consider a client dead (msec).
+constexpr unsigned kDefaultClientAliveTimeoutMsec = 10000;    ///< Default timeout for consider a client dead (msec).
 constexpr unsigned kDefaultServerAliveTimeoutMsec = 10000;    ///< Default timeout for consider a server dead (msec).
 constexpr unsigned kServerReconnAttempts = 5;                 ///< Server reconnection default number of attempts.
 constexpr unsigned kClientAlivePeriodMsec = 5000;             ///< Default period for sending alive commands.
@@ -209,7 +209,7 @@ struct HostInfo
     /**
      * @brief Default constructor for HostInfo.
      */
-    LIBZMQUTILS_EXPORT HostInfo() = default;
+    HostInfo() = default;
     
     /**
      * @brief Constructor for HostInfo with specific parameters.

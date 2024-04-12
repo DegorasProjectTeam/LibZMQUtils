@@ -113,6 +113,14 @@ PublisherBase::~PublisherBase()
     this->internalStopPublisher();
 }
 
+void PublisherBase::onPublisherError(const zmq::error_t &, const std::string &) {}
+
+void PublisherBase::onPublisherStart() {}
+
+void PublisherBase::onPublisherStop() {}
+
+void PublisherBase::onSendingMsg(const PubSubData &) {}
+
 bool PublisherBase::startPublisher()
 {
     // Safe mutex lock
@@ -275,8 +283,6 @@ void PublisherBase::internalStopPublisher()
     // Safe sleep.
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
 }
-
-
 zmq::multipart_t PublisherBase::prepareMessage(const PubSubData &data)
 {
     // Serializer.

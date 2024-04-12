@@ -1,5 +1,5 @@
 #include "includes/AmelasControllerClient/amelas_controller_client.h"
-#include "common.h"
+#include "includes/AmelasControllerServer/common.h"
 
 // AMELAS NAMESPACES
 // =====================================================================================================================

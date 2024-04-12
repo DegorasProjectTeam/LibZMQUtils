@@ -192,11 +192,11 @@ struct PublisherInfo
     LIBZMQUTILS_EXPORT PublisherInfo(utils::UUID uuid, std::string endpoint, std::string name = "");
 
     // Default constructor, copy and move
-    LIBZMQUTILS_EXPORT PublisherInfo() = default;
-    LIBZMQUTILS_EXPORT PublisherInfo(const PublisherInfo&) = default;
-    LIBZMQUTILS_EXPORT PublisherInfo(PublisherInfo&&) = default;
-    LIBZMQUTILS_EXPORT PublisherInfo& operator=(const PublisherInfo&) = default;
-    LIBZMQUTILS_EXPORT PublisherInfo& operator=(PublisherInfo&&) = default;
+    PublisherInfo() = default;
+    PublisherInfo(const PublisherInfo&) = default;
+    PublisherInfo(PublisherInfo&&) = default;
+    PublisherInfo& operator=(const PublisherInfo&) = default;
+    PublisherInfo& operator=(PublisherInfo&&) = default;
 
     /**
      * @brief Converts publisher info into a Json string.
@@ -233,7 +233,7 @@ struct PubSubMsg
 
     LIBZMQUTILS_EXPORT PubSubMsg(const PublisherInfo &pub_info);
 
-    LIBZMQUTILS_EXPORT PubSubMsg() = default;
+    PubSubMsg() = default;
 
     PublisherInfo pub_info;
     PubSubData data;

@@ -73,13 +73,13 @@ public:
     /**
      * @brief Default constructor.
      */
-    LIBZMQUTILS_EXPORT UUID() = default;
+    UUID() = default;
 
-    LIBZMQUTILS_EXPORT UUID(const UUID&) = default;
-    LIBZMQUTILS_EXPORT UUID(UUID&&) = default;
+    UUID(const UUID&) = default;
+    UUID(UUID&&) = default;
 
-    LIBZMQUTILS_EXPORT UUID& operator=(const UUID&) = default;
-    LIBZMQUTILS_EXPORT UUID& operator=(UUID&&) = default;
+    UUID& operator=(const UUID&) = default;
+    UUID& operator=(UUID&&) = default;
 
     /**
      * @brief Returns string representation of the UUID

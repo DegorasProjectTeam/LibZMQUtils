@@ -142,22 +142,22 @@ protected:
     /**
      * @brief Base publisher start callback. Subclasses can override this function.
      */
-    LIBZMQUTILS_EXPORT virtual void onPublisherStart() {}
+    LIBZMQUTILS_EXPORT virtual void onPublisherStart();
 
     /**
      * @brief Base publisher stop callback. Subclasses can override this function.
      */
-    LIBZMQUTILS_EXPORT virtual void onPublisherStop() {}
+    LIBZMQUTILS_EXPORT virtual void onPublisherStop();
 
     /**
      * @brief Base publisher sending message callback. Subclasses can override this function.
      */
-    LIBZMQUTILS_EXPORT virtual void onSendingMsg(const PubSubData&) {}
+    LIBZMQUTILS_EXPORT virtual void onSendingMsg(const PubSubData&);
 
     /**
      * @brief Base publisher error callback. Subclasses can override this function.
      */
-    LIBZMQUTILS_EXPORT virtual void onPublisherError(const zmq::error_t&, const std::string&) {}
+    LIBZMQUTILS_EXPORT virtual void onPublisherError(const zmq::error_t&, const std::string&);
 
 private:
 
