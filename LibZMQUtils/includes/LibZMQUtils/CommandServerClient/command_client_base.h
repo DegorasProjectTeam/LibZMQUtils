@@ -125,6 +125,18 @@ public:
     LIBZMQUTILS_EXPORT void setAliveCallbacksEnabled(bool enabled);
 
     /**
+     * @brief Set the timeout to consider a connected server dead.
+     * @param timeout_msec, the timeout in millliseconds.
+     */
+    LIBZMQUTILS_EXPORT void setServerAliveTimeout(unsigned timeout_msec);
+
+    /**
+     * @brief Set the period for automatically sending alive messages if active.
+     * @param period_msec, the period in milliseconds.
+     */
+    LIBZMQUTILS_EXPORT void setSendAlivePeriod(unsigned period_msec);
+
+    /**
      * @brief If auto alive sending was enabled when connecting, stop the process.
      * @warning For enabling the process again, it is necessary to disconnect and connect again.
      */
@@ -273,6 +285,10 @@ private:
     std::atomic_bool flag_client_working_;    ///< Flag for check the client working status.
     std::atomic_bool flag_autoalive_enabled_; ///< Flag for enables or disables the automatic sending of alive messages.
     std::atomic_bool flag_alive_callbacks_;   ///< Flag for enables or disables the callbacks for alive messages.
+
+    // Configurable parameters.
+    std::atomic_uint server_alive_timeout_;    ///< Tiemout for consider a server dead (in msec).
+    std::atomic_uint send_alive_period_;       ///< Server reconnection number of attempts.
 };
 
 }} // END NAMESPACES.

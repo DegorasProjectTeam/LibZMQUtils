@@ -104,14 +104,14 @@ bool CommandServerBase::isWorking() const{return this->flag_server_working_;}
 
 void CommandServerBase::setClientAliveTimeout(unsigned timeout_ms)
 {
-    this->client_alive_timeout_ = static_cast<int>(timeout_ms);
+    this->client_alive_timeout_ = timeout_ms;
     if(timeout_ms == 0)
         this->setClientStatusCheck(false);
 }
 
 void CommandServerBase::setReconectionAttempts(unsigned attempts)
 {
-    this->server_reconn_attempts_ = static_cast<int>(attempts);
+    this->server_reconn_attempts_ = attempts;
 }
 
 void CommandServerBase::setClientStatusCheck(bool enable)

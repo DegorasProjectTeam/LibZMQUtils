@@ -676,8 +676,8 @@ private:
     std::atomic_bool flag_alive_callbacks_;      ///< Flag that enables and disables the callbacks for alive messages.
 
     // Server confg parameters.
-    std::atomic_int client_alive_timeout_;      ///< Tiemout for consider a client dead (in msec).
-    std::atomic_int server_reconn_attempts_;    ///< Server reconnection number of attempts.
+    std::atomic_uint client_alive_timeout_;      ///< Tiemout for consider a client dead (in msec).
+    std::atomic_uint server_reconn_attempts_;    ///< Server reconnection number of attempts.
 };
 
 }} // END NAMESPACES.

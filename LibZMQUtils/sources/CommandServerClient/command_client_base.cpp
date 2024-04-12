@@ -69,8 +69,10 @@ CommandClientBase::CommandClientBase(const std::string& server_endpoint,
     flag_client_closed_(true),
     flag_client_working_(false),
     flag_autoalive_enabled_(false),
-    flag_alive_callbacks_(false)
-{
+    flag_alive_callbacks_(false),
+    server_alive_timeout_(kDefaultServerAliveTimeoutMsec),
+    send_alive_period_(kClientAlivePeriodMsec)
+{    
     // Auxiliar variables and containers.
     std::string ip, hostname, pid;
     internal_helpers::network::NetworkAdapterInfo sel_interf;
@@ -218,6 +220,16 @@ bool CommandClientBase::internalResetClient()
 void CommandClientBase::setAliveCallbacksEnabled(bool enable)
 {
     this->flag_alive_callbacks_ = enable;
+}
+
+void CommandClientBase::setServerAliveTimeout(unsigned timeout_msec)
+{
+    this->server_alive_timeout_ = timeout_msec;
+}
+
+void CommandClientBase::setSendAlivePeriod(unsigned int period_msec)
+{
+    this->send_alive_period_ = period_msec;
 }
 
 void CommandClientBase::disableAutoAlive()
@@ -383,7 +395,7 @@ OperationResult CommandClientBase::recvFromSocket(CommandReply& reply,
         try
         {
             // Use zmq::poll to set a timeout for receiving a message
-            zmq::poll(items.data(), items.size(), std::chrono::milliseconds(kDefaultServerAliveTimeoutMsec));
+            zmq::poll(items.data(), items.size(), std::chrono::milliseconds(this->server_alive_timeout_));
 
             // Check if we must to close.
             if(!this->flag_client_working_ || (items[1].revents & ZMQ_POLLIN))
@@ -394,7 +406,7 @@ OperationResult CommandClientBase::recvFromSocket(CommandReply& reply,
             auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
             // Check for timeout.
-            if (elapsed.count() >= kDefaultServerAliveTimeoutMsec)
+            if (elapsed.count() >= this->server_alive_timeout_)
                 return OperationResult::TIMEOUT_REACHED;
 
             // We have data.
@@ -571,7 +583,7 @@ void CommandClientBase::aliveWorker()
         if(!first_time)
         {
             // Avoid unnecesary alive messages.
-            auto res = this->auto_alive_cv_.wait_for(lk, std::chrono::milliseconds(kClientAlivePeriodMsec));
+            auto res = this->auto_alive_cv_.wait_for(lk, std::chrono::milliseconds(this->send_alive_period_));
             if (std::cv_status::timeout != res)
                 continue;
         }
