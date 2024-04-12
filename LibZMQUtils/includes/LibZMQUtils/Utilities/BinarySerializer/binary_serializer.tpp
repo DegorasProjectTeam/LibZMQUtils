@@ -51,7 +51,12 @@
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
+// -----------------------------------------------------------------------
+// WARNING
+// REMEMBER COMMENT THIS INCLUDE TO AVOID CIRCULAR DEPENDENCIES
+// UNCOMMENT ONLY TO HELP THE DEVELOPMENT WITH CLANG
+//#include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
+// -----------------------------------------------------------------------
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES

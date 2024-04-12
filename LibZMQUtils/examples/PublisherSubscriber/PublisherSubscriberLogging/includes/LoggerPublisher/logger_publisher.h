@@ -71,7 +71,6 @@ struct AmelasLog : public zmqutils::utils::Serializable
 
     zmqutils::utils::SizeUnit serializedSize() const final
     {
-        //return (2*sizeof(uint64_t) + sizeof(std::uint32_t) + this->str_info.size());
         return zmqutils::utils::Serializable::calcTotalSize(this->level, this->str_info);
     }
 
