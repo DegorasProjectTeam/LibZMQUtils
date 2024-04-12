@@ -123,7 +123,7 @@ void BinarySerializer::resetReading()
     this->offset_ = 0;
 }
 
-BinarySerializer::SizeUnit BinarySerializer::moveUnique(BinarySerializer::BytesSmartPtr& out)
+SizeUnit BinarySerializer::moveUnique(BinarySerializer::BytesSmartPtr& out)
 {
     std::lock_guard<std::mutex> lock(this->mtx_);
 
@@ -135,7 +135,7 @@ BinarySerializer::SizeUnit BinarySerializer::moveUnique(BinarySerializer::BytesS
             ss << " ";
     }
 
-    BinarySerializer::SizeUnit size = this->size_;
+    SizeUnit size = this->size_;
     this->size_ = 0;
     this->capacity_ = 0;
     this->offset_ = 0;
@@ -180,7 +180,7 @@ std::byte *BinarySerializer::release(SizeUnit& size)
     return this->release();
 }
 
-BinarySerializer::SizeUnit BinarySerializer::getSize() const
+SizeUnit BinarySerializer::getSize() const
 {
     return this->size_;
 }
@@ -203,7 +203,7 @@ std::string BinarySerializer::getDataHexString() const
     return ss.str();
 }
 
-BinarySerializer::SizeUnit BinarySerializer::writeFile(const std::string &in_filenamepath)
+SizeUnit BinarySerializer::writeFile(const std::string &in_filenamepath)
 {
     // Get the filename.
     std::string filename = internal_helpers::files::getFileName(in_filenamepath);

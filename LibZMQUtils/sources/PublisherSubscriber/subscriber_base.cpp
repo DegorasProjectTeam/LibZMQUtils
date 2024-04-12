@@ -335,7 +335,7 @@ SubscriberResult SubscriberBase::recvFromSocket(PubSubMsg& msg)
             msg_pub_name.data(), msg_pub_name.size(), msg.pub_info.name);
 
         // Get the publisher uuid data.
-        if (msg_uuid.size() == utils::UUID::kUUIDSize + sizeof(utils::BinarySerializer::SizeUnit)*2)
+        if (msg_uuid.size() == utils::UUID::kUUIDSize + sizeof(utils::SizeUnit)*2)
         {
             std::array<std::byte, 16> uuid_bytes;
             utils::BinarySerializer::fastDeserialization(msg_uuid.data(), msg_uuid.size(), uuid_bytes);
@@ -445,9 +445,7 @@ void SubscriberBase::resetSocket()
         return;
 
     }
-
 }
-
 
 }} // END NAMESPACES.
 // =====================================================================================================================

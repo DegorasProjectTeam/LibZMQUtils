@@ -428,7 +428,7 @@ OperationResult CommandClientBase::recvFromSocket(CommandReply& reply,
                 zmq::message_t msg_res = multipart_msg.pop();
 
                 // Check the result size.
-                if (msg_res.size() != sizeof(utils::BinarySerializer::SizeUnit) + sizeof(ResultType))
+                if (msg_res.size() != sizeof(utils::SizeUnit) + sizeof(ResultType))
                     return OperationResult::INVALID_MSG;
 
                 // Get the command.

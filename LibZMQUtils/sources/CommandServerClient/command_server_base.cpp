@@ -470,7 +470,7 @@ OperationResult CommandServerBase::recvFromSocket(CommandRequest& request)
         zmq::message_t msg_command = multipart_msg.pop();
 
         // First get the uuid data.
-        if (msg_uuid.size() == UUID::kUUIDSize + sizeof(utils::BinarySerializer::SizeUnit)*2)
+        if (msg_uuid.size() == UUID::kUUIDSize + sizeof(utils::SizeUnit)*2)
         {
             std::array<std::byte, 16> uuid_bytes;
             utils::BinarySerializer::fastDeserialization(msg_uuid.data(), msg_uuid.size(), uuid_bytes);
@@ -483,7 +483,7 @@ OperationResult CommandServerBase::recvFromSocket(CommandRequest& request)
         this->updateClientLastConnection(request.client_uuid);
 
         // Get the command.
-        if (msg_command.size() == sizeof(utils::BinarySerializer::SizeUnit) + sizeof(CommandType))
+        if (msg_command.size() == sizeof(utils::SizeUnit) + sizeof(CommandType))
         {
             // Auxiliar command container.
             std::int32_t raw_command;

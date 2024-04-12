@@ -112,7 +112,7 @@ void BinarySerializer::binarySerializeDeserialize(const TSRC* src, SizeUnit data
 }
 
 template<typename T>
-BinarySerializer::SizeUnit BinarySerializer::calcTotalSize(const T& data)
+SizeUnit BinarySerializer::calcTotalSize(const T& data)
 {
     if constexpr(std::is_base_of_v<Serializable, std::decay_t<T>>)
     {
@@ -132,7 +132,7 @@ BinarySerializer::SizeUnit BinarySerializer::calcTotalSize(const T& data)
 }
 
 template<typename T, size_t L>
-BinarySerializer::SizeUnit BinarySerializer::calcTotalSize(const std::array<T, L>&)
+SizeUnit BinarySerializer::calcTotalSize(const std::array<T, L>&)
 {
     // Check the types.
     (BinarySerializer::checkTriviallyCopyable<T>());
@@ -144,7 +144,7 @@ BinarySerializer::SizeUnit BinarySerializer::calcTotalSize(const std::array<T, L
 }
 
 template<typename T>
-BinarySerializer::SizeUnit BinarySerializer::calcTotalSize(const std::vector<T>& data)
+SizeUnit BinarySerializer::calcTotalSize(const std::vector<T>& data)
 {
     // Check the types.
     (BinarySerializer::checkTriviallyCopyable<T>());
@@ -177,7 +177,7 @@ void BinarySerializer::readRecursive(T& value, Args&... args)
 }
 
 template<typename... Args>
-BinarySerializer::SizeUnit BinarySerializer::fastSerialization(BytesSmartPtr& out, const Args&... args)
+SizeUnit BinarySerializer::fastSerialization(BytesSmartPtr& out, const Args&... args)
 {
     // Do the serialization
     BinarySerializer serializer;
@@ -216,7 +216,7 @@ void BinarySerializer::fastDeserialization(BytesSmartPtr&& src, SizeUnit size, A
 }
 
 template<typename T, typename... Args, typename>
-BinarySerializer::SizeUnit BinarySerializer::write(const T& value, const Args&... args)
+SizeUnit BinarySerializer::write(const T& value, const Args&... args)
 {
     // Calculate total size of all arguments.
     const SizeUnit t_size = (BinarySerializer::calcTotalSize(value) + ... + BinarySerializer::calcTotalSize(args));
@@ -265,7 +265,7 @@ BinarySerializer::writeSingle(const T& data)
     this->size_ += data_size;
 }
 
-template<typename T, BinarySerializer::SizeUnit L>
+template<typename T, SizeUnit L>
 void BinarySerializer::writeSingle(const std::array<T, L>& arr)
 {
     // Check the types.
@@ -364,7 +364,7 @@ BinarySerializer::readSingle(T& value)
     this->offset_ += size;
 }
 
-template<typename T, BinarySerializer::SizeUnit L>
+template<typename T, SizeUnit L>
 void BinarySerializer::readSingle(std::array<T, L>& arr)
 {
     // Safety mutex.
@@ -400,7 +400,7 @@ void BinarySerializer::readSingle(std::array<T, L>& arr)
     if(size_elem == 0)
         throw std::out_of_range("BinarySerializer: Unknow size of elements of the array.");
 
-    // Check if we have enough data left to read the string.
+    // Check if we have enough data left to read the array.
     if (this->offset_ + size_elem*size_array > this->size_)
         throw std::out_of_range("BinarySerializer: Read array data beyond the data size.");
 
@@ -463,6 +463,21 @@ void BinarySerializer::readSingle(std::vector<T>& v)
         this->offset_ += size_elem;
     }
 }
+
+
+template<typename T>
+SizeUnit Serializable::calcTotalSizeHelper(const T& single)
+{
+    return BinarySerializer::calcTotalSize(single);
+}
+
+template<typename T, typename... Args>
+SizeUnit Serializable::calcTotalSizeHelper(const T& first, const Args&... rest)
+{
+    return BinarySerializer::calcTotalSize(first) + Serializable::calcTotalSizeHelper(rest...);
+}
+
+
 
 }} // END NAMESPACES.
 // =====================================================================================================================

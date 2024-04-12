@@ -64,6 +64,8 @@ struct trait_has_nullptr_t : std::disjunction<std::is_same<std::nullptr_t, Ts>..
 
 // ---------------------------------------------------------------------------------------------------------------------
 
+using SizeUnit = std::uint64_t;                      ///< Alias for the size unit.
+
 /**
  * @class Serializable
  * @brief An interface that defines the contract for serializable objects.
@@ -130,7 +132,7 @@ public:
      * @param serializer The BinarySerializer instance that will handle the serialization.
      * @return The size of the serialized data in bytes.
      */
-    virtual std::size_t serialize(BinarySerializer& serializer) const = 0;
+    virtual SizeUnit serialize(BinarySerializer& serializer) const = 0;
 
     /**
      * @brief Method to deserialize the object from its binary representation.
@@ -142,7 +144,21 @@ public:
      * @brief Returns the size of the object when serialized into binary format.
      * @return The size of the serialized object in bytes.
      */
-    virtual std::size_t serializedSize() const = 0;
+    virtual SizeUnit serializedSize() const = 0;
+
+    template<typename... Args>
+    static SizeUnit calcTotalSize(const Args&... args)
+    {
+        return Serializable::calcTotalSizeHelper(args...);
+    }
+
+private:
+
+    template<typename T>
+    static SizeUnit calcTotalSizeHelper(const T& single);
+
+    template<typename T, typename... Args>
+    static SizeUnit calcTotalSizeHelper(const T& first, const Args&... rest);
 };
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -199,7 +215,6 @@ class BinarySerializer
 {
 public:
 
-    using SizeUnit = std::uint64_t;                      ///< Alias for the size unit.
     using BytesSmartPtr = std::unique_ptr<std::byte[]>;  ///< Alias for the bytes storage smart pointer.
 
     /// Enumeration representing the byte order (endianness) of data.
@@ -470,6 +485,10 @@ public:
      */
     LIBZMQUTILS_EXPORT void readFile(const std::string& out_filepath);
 
+    // Size calculator function.
+    template<typename T>
+    static SizeUnit calcTotalSize(const T& data);
+
 protected:
 
     // -----------------------------------------------------------------------------------------------------------------
@@ -497,10 +516,6 @@ protected:
     // Internal function to check if the type is trivial.
     template<typename T>
     static void checkTrivial();
-
-    // Internal size calculator function.
-    template<typename T>
-    static SizeUnit calcTotalSize(const T& data);
 
     // Internal size calculator function for vectors.
     template<typename T>

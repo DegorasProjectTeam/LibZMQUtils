@@ -51,6 +51,36 @@
 namespace logger{
 // =====================================================================================================================
 
+enum AmelasLogLevel : std::uint32_t
+{
+    INFO = 0
+};
+
+struct AmelasLog : public zmqutils::utils::Serializable
+{
+
+    zmqutils::utils::SizeUnit serialize(zmqutils::utils::BinarySerializer& serializer) const final
+    {
+        return serializer.write(this->level, this->str_info);
+    }
+
+    void deserialize(zmqutils::utils::BinarySerializer& serializer) final
+    {
+        serializer.read(this->level, this->str_info);
+    }
+
+    zmqutils::utils::SizeUnit serializedSize() const final
+    {
+        //return (2*sizeof(uint64_t) + sizeof(std::uint32_t) + this->str_info.size());
+        return zmqutils::utils::Serializable::calcTotalSize(this->level, this->str_info);
+    }
+
+    AmelasLogLevel level;
+    std::string str_info;
+};
+
+
+
 class LoggerPublisher : public zmqutils::pubsub::PublisherBase
 {
 public:
