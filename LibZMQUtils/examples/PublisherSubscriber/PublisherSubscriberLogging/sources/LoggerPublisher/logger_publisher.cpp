@@ -42,29 +42,17 @@ LoggerPublisher::LoggerPublisher(std::string endpoint,
     PublisherBase(std::move(endpoint), std::move(name))
 {}
 
-zmqutils::pubsub::PublisherResult LoggerPublisher::sendInfoLog(const std::string &msg)
-{
-    return this->sendMsg(this->prepareData("LOG_INFO", msg));
-}
-
-zmqutils::pubsub::PublisherResult LoggerPublisher::sendWarningLog(const std::string &msg)
-{
-    return this->sendMsg(this->prepareData("LOG_WARNING", msg));
-}
-
-zmqutils::pubsub::PublisherResult LoggerPublisher::sendErrorLog(const std::string &msg)
-{
-    return this->sendMsg(this->prepareData("LOG_ERROR", msg));
-}
-
-zmqutils::pubsub::PubSubData LoggerPublisher::prepareData(const std::string &topic, const std::string &msg_string)
+zmqutils::pubsub::PublisherResult LoggerPublisher::sendLog(const AmelasLog &log)
 {
     zmqutils::pubsub::PubSubData data;
+    zmqutils::utils::BinarySerializer serializer;
 
-    data.topic = topic;
-    data.data_size = zmqutils::utils::BinarySerializer::fastSerialization(data.data, msg_string);
+    log.serialize(serializer);
 
-    return data;
+    data.topic = AmelasLogTopic[static_cast<std::size_t>(log.level)];
+    data.data_size = serializer.moveUnique(data.data);
+
+    return this->sendMsg(data);
 }
 
 void LoggerPublisher::onPublisherStart()

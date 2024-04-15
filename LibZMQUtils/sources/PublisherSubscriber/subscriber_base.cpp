@@ -366,6 +366,7 @@ SubscriberResult SubscriberBase::recvFromSocket(PubSubMsg& msg)
                 // Get and store the parameters data.
                 utils::BinarySerializer serializer(message_data.data(), message_data.size());
                 msg.data.data_size = serializer.moveUnique(msg.data.data);
+
             }
             else
                 return SubscriberResult::EMPTY_PARAMS;

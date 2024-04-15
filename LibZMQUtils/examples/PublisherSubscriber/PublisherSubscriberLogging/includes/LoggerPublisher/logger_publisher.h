@@ -45,40 +45,12 @@
 #include <LibZMQUtils/Modules/Utils>
 // =====================================================================================================================
 
+#include "includes/LoggerCommon/logger_common.h"
 
 // NAMESPACES
 // =====================================================================================================================
 namespace logger{
 // =====================================================================================================================
-
-enum AmelasLogLevel : std::uint32_t
-{
-    INFO = 0
-};
-
-struct AmelasLog : public zmqutils::utils::Serializable
-{
-
-    zmqutils::utils::SizeUnit serialize(zmqutils::utils::BinarySerializer& serializer) const final
-    {
-        return serializer.write(this->level, this->str_info);
-    }
-
-    void deserialize(zmqutils::utils::BinarySerializer& serializer) final
-    {
-        serializer.read(this->level, this->str_info);
-    }
-
-    zmqutils::utils::SizeUnit serializedSize() const final
-    {
-        return zmqutils::utils::Serializable::calcTotalSize(this->level, this->str_info);
-    }
-
-    AmelasLogLevel level;
-    std::string str_info;
-};
-
-
 
 class LoggerPublisher : public zmqutils::pubsub::PublisherBase
 {
@@ -87,13 +59,9 @@ public:
     LoggerPublisher(std::string endpoint,
                     std::string name = "");
 
-    zmqutils::pubsub::PublisherResult sendInfoLog(const std::string &msg);
-    zmqutils::pubsub::PublisherResult sendWarningLog(const std::string &msg);
-    zmqutils::pubsub::PublisherResult sendErrorLog(const std::string &msg);
+    zmqutils::pubsub::PublisherResult sendLog(const AmelasLog &log);
 
 private:
-
-    zmqutils::pubsub::PubSubData prepareData(const std::string &topic, const std::string &msg_string);
 
     virtual void onPublisherStart() override final;
 

@@ -13,23 +13,41 @@ set(EXAMPLE_DIR ${CMAKE_SOURCE_DIR}/examples/${MODULE_NAME}/${EXAMPLE_NAME})
 set(EXAMPLE_FULL_NAME ${MODULE_NAME}_${EXAMPLE_NAME})
 set(EXAMPLE_INSTALL_PATH ${GLOBAL_LIBZMQUTILS_EXAMPLES_INSTALL_PATH}/${EXAMPLE_FULL_NAME})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Examples/${EXAMPLE_FULL_NAME})
-#set(INTERFACE_SERVER "AmelasServerInterface")
+set(INTERFACE_LOGGER "LoggerCommon")
 set(APP_PUBLISHER "Example_Logger_Publisher")
 set(APP_SUBSCRIBER "Example_Logger_Subscriber")
+
+# Auxiliar interface library.
+add_library(${INTERFACE_LOGGER} INTERFACE)
+target_sources(${INTERFACE_LOGGER} INTERFACE ${EXAMPLE_DIR}/sources/LoggerCommon/logger_common.cpp)
+target_include_directories(${INTERFACE_LOGGER} INTERFACE
+                           ${EXAMPLE_DIR}/includes/LoggerCommon)
+
+# Add the interface library to the libraries list.
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+   macro_global_add_libs_debug("${INTERFACE_LOGGER}")
+else()
+   macro_global_add_libs_optimized("${INTERFACE_LOGGER}")
+endif()
 
 # ----------------------------------------------------------------------------------------------------------------------
 # SUBSCRIBER
 
 # Get the header files for the subscriber.
-file(GLOB_RECURSE HEADERS ${EXAMPLE_DIR}/includes/LoggerSubscriber/*.h)
+file(GLOB_RECURSE HEADERS
+        ${EXAMPLE_DIR}/includes/LoggerSubscriber/*.h
+        ${EXAMPLE_DIR}/includes/LoggerCommon/*.h)
 
 # Get the template files for subscriber.
-file(GLOB_RECURSE TEMPLTS ${EXAMPLE_DIR}/includes/LoggerSubscriber/*.tpp)
+file(GLOB_RECURSE TEMPLTS
+        ${EXAMPLE_DIR}/includes/LoggerSubscriber/*.tpp
+        ${EXAMPLE_DIR}/includes/LoggerCommon/*.tpp)
 
 # Get the source files for subscriber.
 file(GLOB_RECURSE SOURCES
-    ${EXAMPLE_DIR}/sources/ExampleLoggerSubscriber.cpp
-    ${EXAMPLE_DIR}/sources/LoggerSubscriber/*.cpp)
+        ${EXAMPLE_DIR}/sources/ExampleLoggerSubscriber.cpp
+        ${EXAMPLE_DIR}/sources/LoggerSubscriber/*.cpp
+        ${EXAMPLE_DIR}/sources/LoggerCommon/*.cpp)
 
 # Create a custom group for the templates.
 source_group("Header Files" FILES ${TEMPLTS})
@@ -47,15 +65,20 @@ target_include_directories(${APP_SUBSCRIBER} PRIVATE ${CMAKE_SOURCE_DIR}/example
 # PUBLISHER
 
 # Get the header files for the client.
-file(GLOB_RECURSE HEADERS ${EXAMPLE_DIR}/includes/LoggerPublisher/*.h)
+file(GLOB_RECURSE HEADERS
+        ${EXAMPLE_DIR}/includes/LoggerPublisher/*.h
+        ${EXAMPLE_DIR}/includes/LoggerCommon/*.h)
 
 # Get the template files for client.
-file(GLOB_RECURSE TEMPLTS ${EXAMPLE_DIR}/includes/LoggerPublisher/*.tpp)
+file(GLOB_RECURSE TEMPLTS
+        ${EXAMPLE_DIR}/includes/LoggerPublisher/*.tpp
+        ${EXAMPLE_DIR}/includes/LoggerCommon/*.tpp)
 
 # Get the source files for client.
 file(GLOB_RECURSE SOURCES
-    ${EXAMPLE_DIR}/sources/ExampleLoggerPublisher.cpp
-    ${EXAMPLE_DIR}/sources/LoggerPublisher/*.cpp)
+        ${EXAMPLE_DIR}/sources/ExampleLoggerPublisher.cpp
+        ${EXAMPLE_DIR}/sources/LoggerPublisher/*.cpp
+        ${EXAMPLE_DIR}/sources/LoggerCommon/*.cpp)
 
 # Create a custom group for the templates and external.
 source_group("Header Files" FILES ${TEMPLTS})

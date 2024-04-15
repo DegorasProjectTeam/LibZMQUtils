@@ -33,6 +33,7 @@
 // PROJECT INCLUDES
 // =====================================================================================================================
 #include "includes/LoggerSubscriber/logger_subscriber.h"
+#include "includes/LoggerCommon/logger_common.h"
 // =====================================================================================================================
 
 // NAMESPACES
@@ -60,18 +61,20 @@ LoggerSubscriber::LoggerSubscriber()
 
 zmqutils::pubsub::SubscriberResult LoggerSubscriber::processLogMsg(const zmqutils::pubsub::PubSubMsg& msg)
 {
-    std::string message_str;
-
     // Check the request parameters size.
     if (msg.data.data_size == 0 || !msg.data.data)
     {
         return zmqutils::pubsub::SubscriberResult::EMPTY_PARAMS;
     }
 
+    AmelasLog log;
+
     // Try to read the parameters data.
     try
     {
-        zmqutils::utils::BinarySerializer::fastDeserialization(msg.data.data.get(), msg.data.data_size, message_str);
+        zmqutils::utils::BinarySerializer serializer(msg.data.data.get(), msg.data.data_size);
+
+        log.deserialize(serializer);
     }
     catch(...)
     {
@@ -79,7 +82,7 @@ zmqutils::pubsub::SubscriberResult LoggerSubscriber::processLogMsg(const zmqutil
     }
 
     // Now we will process the command in the controller.
-    return this->invokeCallback<LogMsgCallback, zmqutils::pubsub::SubscriberResult>(msg, message_str);
+    return this->invokeCallback<LogMsgCallback, zmqutils::pubsub::SubscriberResult>(msg, log);
 }
 
 

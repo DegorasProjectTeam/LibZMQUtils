@@ -83,21 +83,28 @@ void parseCommand(logger::LoggerPublisher &pub, const std::string &command)
 
         std::string token_msg(token);
         PublisherResult res = PublisherResult::INVALID_MSG;
+        logger::AmelasLog log;
 
         if (token_command == "info")
         {
             std::cout << "Sending info log with msg: " << token_msg << std::endl;
-            res = pub.sendInfoLog(token_msg);
+            log.level = logger::AmelasLogLevel::AMELAS_INFO;
+            log.str_info = token_msg;
+            res = pub.sendLog(log);
         }
         else if (token_command == "warning")
         {
             std::cout << "Sending warning log with msg: " << token_msg << std::endl;
-            res = pub.sendWarningLog(token_msg);
+            log.level = logger::AmelasLogLevel::AMELAS_WARNING;
+            log.str_info = token_msg;
+            res = pub.sendLog(log);
         }
         else if (token_command == "error")
         {
             std::cout << "Sending error log with msg: " << token_msg << std::endl;
-            res = pub.sendErrorLog(token_msg);
+            log.level = logger::AmelasLogLevel::AMELAS_ERROR;
+            log.str_info = token_msg;
+            res = pub.sendLog(log);
         }
 
         if (res != PublisherResult::MSG_OK)

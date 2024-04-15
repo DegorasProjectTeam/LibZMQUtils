@@ -50,6 +50,8 @@
 namespace logger {
 // =====================================================================================================================
 
+class AmelasLog;
+
 // Example of creating a command server from the base.
 class LoggerSubscriber : public zmqutils::pubsub::ClbkSubscriberBase
 {
@@ -59,7 +61,7 @@ public:
 
     using zmqutils::pubsub::ClbkSubscriberBase::registerCallback;
 
-    using LogMsgCallback = std::function<zmqutils::pubsub::SubscriberResult(const std::string&)>;
+    using LogMsgCallback = std::function<zmqutils::pubsub::SubscriberResult(const AmelasLog&)>;
 
 private:
 

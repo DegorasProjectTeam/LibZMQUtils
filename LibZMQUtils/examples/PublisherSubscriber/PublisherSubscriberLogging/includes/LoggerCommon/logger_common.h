@@ -23,8 +23,8 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file common.h
- * @brief EXAMPLE FILE - This file contains common elements for the example AmelasServer module.
+ * @file logger_common.h
+ * @brief EXAMPLE FILE - This file contains the declaration of those types common to publisher and subscriber
  * @author Degoras Project Team
  * @copyright EUPL License
  * @version 2309.5
@@ -34,59 +34,48 @@
 #pragma once
 // =====================================================================================================================
 
+// C++ INCLUDES
+// =====================================================================================================================
+#include <string>
+// =====================================================================================================================
+
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/CommandServer>
+#include <LibZMQUtils/Modules/Publisher>
+#include <LibZMQUtils/Modules/Utils>
 // =====================================================================================================================
 
-// AMELAS NAMESPACES
+// NAMESPACES
 // =====================================================================================================================
-namespace amelas{
-namespace communication{
-namespace common{
+namespace logger{
 // =====================================================================================================================
 
-// Specific subclass commands (0 to 20 are reserved for the base server).
-// WARNING: In our approach, the server commands must be always in order.
-enum class AmelasServerCommand : zmqutils::common::CommandType
+enum AmelasLogLevel : std::uint32_t
 {
-    REQ_SET_HOME_POSITION = 33,
-    REQ_GET_HOME_POSITION = 34,
-    END_IMPL_COMMANDS     = 35,
-    END_AMELAS_COMMANDS   = 50
+    AMELAS_INFO = 0,
+    AMELAS_WARNING = 1,
+    AMELAS_ERROR = 2
 };
 
-// Specific subclass errors (0 to 30 are reserved for the base server).
-enum class AmelasServerResult : zmqutils::common::ResultType
+static constexpr std::array<const char*, 3>  AmelasLogTopic
 {
-    EMPTY_CALLBACK = 31,
-    INVALID_CALLBACK = 32
+    "LOG_INFO",
+    "LOG_WARNING",
+    "LOG_ERROR"
 };
 
-// Extend the base command strings with those of the subclass.
-static constexpr auto AmelasServerCommandStr = zmqutils::utils::joinArraysConstexpr(
-    zmqutils::common::ServerCommandStr,
-    std::array<const char*, 5>
-    {
-        "FUTURE_EXAMPLE",
-        "FUTURE_EXAMPLE",
-        "REQ_SET_HOME_POSITION",
-        "REQ_GET_HOME_POSITION",
-        "END_DRGG_COMMANDS"
-    });
+struct AmelasLog : public zmqutils::utils::Serializable
+{
 
-// Extend the base result strings with those of the subclass.
-static constexpr auto AmelasServerResultStr = zmqutils::utils::joinArraysConstexpr(
-    zmqutils::common::ServerResultStr,
-    std::array<const char*, 2>
-    {
-        "EMPTY_CALLBACK - The external callback for the command is empty.",
-        "INVALID_CALLBACK - The external callback for the command is invalid."
-    });
+    zmqutils::utils::SizeUnit serialize(zmqutils::utils::BinarySerializer& serializer) const override final;
 
-// Usefull const expressions.
-constexpr int kMinCmdId = static_cast<int>(zmqutils::common::ServerCommand::END_BASE_COMMANDS) + 1;
-constexpr int kMaxCmdId = static_cast<int>(AmelasServerCommand::END_AMELAS_COMMANDS) - 1;
+    void deserialize(zmqutils::utils::BinarySerializer& serializer) override final;
 
-}}} // END NAMESPACES.
+    zmqutils::utils::SizeUnit serializedSize() const override final;
+
+    AmelasLogLevel level;
+    std::string str_info;
+};
+
+} // END NAMESPACES.
 // =====================================================================================================================

@@ -50,24 +50,25 @@
 // PROJECT INCLUDES
 // =====================================================================================================================
 #include "includes/LoggerSubscriber/logger_subscriber.h"
+#include "includes/LoggerCommon/logger_common.h"
 // =====================================================================================================================
 
 class Logger
 {
 public:
-    zmqutils::pubsub::SubscriberResult processLogInfo(const std::string &msg)
+    zmqutils::pubsub::SubscriberResult processLogInfo(const logger::AmelasLog &log)
     {
-        std::cout << "[INFO] - " << msg << std::endl;
+        std::cout << "[INFO] - " << log.str_info << ". Size of log: " << log.serializedSize() << std::endl;
         return zmqutils::pubsub::SubscriberResult::MSG_OK;
     }
-    zmqutils::pubsub::SubscriberResult processLogWarning(const std::string &msg)
+    zmqutils::pubsub::SubscriberResult processLogWarning(const logger::AmelasLog &log)
     {
-        std::cout << "[WARNING] - " << msg << std::endl;
+        std::cout << "[WARNING] - " << log.str_info << std::endl;
         return zmqutils::pubsub::SubscriberResult::MSG_OK;
     }
-    zmqutils::pubsub::SubscriberResult processLogError(const std::string &msg)
+    zmqutils::pubsub::SubscriberResult processLogError(const logger::AmelasLog &log)
     {
-        std::cout << "[ERROR] - " << msg << std::endl;
+        std::cout << "[ERROR] - " << log.str_info << std::endl;
         return zmqutils::pubsub::SubscriberResult::MSG_OK;
     }
 };
@@ -86,17 +87,20 @@ int main(int, char**)
     // Instantiate and configure subscriber.
     logger::LoggerSubscriber subscriber;
     subscriber.subscribe("tcp://127.0.0.1:9999");
-    subscriber.addTopicFilter("LOG_INFO");
-    subscriber.addTopicFilter("LOG_WARNING");
-    subscriber.addTopicFilter("LOG_ERROR");
+    subscriber.addTopicFilter(logger::AmelasLogTopic[static_cast<int>(logger::AmelasLogLevel::AMELAS_INFO)]);
+    subscriber.addTopicFilter(logger::AmelasLogTopic[static_cast<int>(logger::AmelasLogLevel::AMELAS_WARNING)]);
+    subscriber.addTopicFilter(logger::AmelasLogTopic[static_cast<int>(logger::AmelasLogLevel::AMELAS_ERROR)]);
 
 
     // ---------------------------------------
     // Set the callbacks in the subscriber.
     // ---------------------------------------
-    subscriber.registerCallback("LOG_INFO", &log, &Logger::processLogInfo);
-    subscriber.registerCallback("LOG_WARNING", &log, &Logger::processLogWarning);
-    subscriber.registerCallback("LOG_ERROR", &log, &Logger::processLogError);
+    subscriber.registerCallback(logger::AmelasLogTopic[static_cast<int>(logger::AmelasLogLevel::AMELAS_INFO)],
+                                &log, &Logger::processLogInfo);
+    subscriber.registerCallback(logger::AmelasLogTopic[static_cast<int>(logger::AmelasLogLevel::AMELAS_WARNING)],
+                                &log, &Logger::processLogWarning);
+    subscriber.registerCallback(logger::AmelasLogTopic[static_cast<int>(logger::AmelasLogLevel::AMELAS_ERROR)],
+                                &log, &Logger::processLogError);
 
 
     // Start the subscriber.
