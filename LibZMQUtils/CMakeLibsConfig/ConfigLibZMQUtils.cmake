@@ -1,5 +1,5 @@
 # **********************************************************************************************************************
-# Updated 12/04/2024
+# Updated 15/04/2024
 # **********************************************************************************************************************
 
 # **********************************************************************************************************************
@@ -52,10 +52,6 @@ MACRO(macro_link_libzmqutils_default target visibility)
         file(GLOB_RECURSE EXTERNAL_HEADERS ${LibZMQUtils_INCLUDES}/*)
         target_sources(${target} ${visibility} ${EXTERNAL_HEADERS})
 
-        # LibNovasCpp
-        get_target_property(LibNovasCpp_INCLUDES LibNovasCpp::LibNovasCpp INTERFACE_INCLUDE_DIRECTORIES)
-        file(GLOB_RECURSE EXTERNAL_HEADERS ${LibNovasCpp_INCLUDES}/*)
-        target_sources(${target} ${visibility} ${EXTERNAL_HEADERS})
 
     endif()
 

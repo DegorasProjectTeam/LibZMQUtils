@@ -1,9 +1,11 @@
 # **********************************************************************************************************************
-#    LibZMQUtils (ZeroMQ Messaging Library High-level Utilities).
+#    LibZMQUtils (ZeroMQ High Level Utilities C++ Library).
 #
-#    A modern and efficient C++ library that includes ZeroMQ messaging library high-level utilities. Developed as a 
-#    free software under the context of Degoras Project for the Spanish Navy Observatory SLR station (SFEL) in San 
-#    Fernando and, of course, for any other station that wants to use it!
+#    A modern open-source C++ library with high level utilities based on the well-known ZeroMQ open-source universal
+#    messaging library. Includes custom command based server-client and publisher-subscriber with automatic binary
+#    serialization capabilities, specially designed for system infraestructure. Developed as a free software under the
+#    context of Degoras Project for the Spanish Navy Observatory SLR station (SFEL) in San Fernando and, of course,
+#    for any other station that wants to use it!
 #
 #    Copyright (C) 2024 Degoras Project Team
 #                       < Ángel Vera Herrera, avera@roa.es - angeldelaveracruz@gmail.com >
@@ -28,8 +30,8 @@
 
 @PACKAGE_INIT@
 
-# Find the ZMQ package required by LibZMQUtils, in this case.
-#find_package(LibNovasCpp @LibNovasCpp_VERSION@ REQUIRED PATHS @LibNovasCpp_CONFIG_PATH@)
+# Find the LibZMQ library required by LibZMQUtils, in this case.
+find_package(LibZMQ REQUIRED)
 
 # Include the targets file.
 include("${CMAKE_CURRENT_LIST_DIR}/LibZMQUtilsTargets.cmake")

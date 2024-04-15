@@ -89,8 +89,8 @@ set(CMAKE_FIND_PACKAGE_PREFER_CONFIG TRUE)
 set(LIB_INCLUDES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/includes/)
 set(LIB_SOURCES_DIR ${CMAKE_SOURCE_DIR}/sources)
 
-# Configure the ZMQ package.
-
+# Configure the LibZMQ package.
+find_package(LibZMQ REQUIRED)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # SETUP THE SHARED LIBRARY
@@ -113,42 +113,21 @@ source_group("Alias Files" FILES ${ALIAS})
 macro_setup_shared_lib("${LIB_NAME}" "${LIB_INCLUDES_DIR}" "${LIB_VER}"
                        ${SOURCES1} ${SOURCES2} ${HEADERS} ${TEMPLTS} ${INL} ${ALIAS})
 
+# Link with LibZMQ.
+target_link_libraries(${LIB_NAME} PUBLIC ${LIBZMQ_LIBRARIES})
+target_include_directories(${LIB_NAME} PUBLIC ${LIBZMQ_INCLUDE_DIR})
+include_directories(${LIBZMQ_INCLUDE_DIRS})
 
-
-# REMODELAR ================================================
-# Link with ZMQ.
-# External dependencies.
-set(ZMQ_DIR ${CMAKE_SOURCE_DIR}/external/zmq/)
-target_include_directories(${LIB_NAME} PRIVATE
-                           ${ZMQ_DIR}/includes)
-include_directories(${ZMQ_DIR}/includes)
-# Link libraries. For win32 only.
-if (WIN32)
-
-    set(ZMQ_LIBS_DIR ${ZMQ_DIR}/libs/windows)
-
-    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-
-        target_link_libraries(${LIB_NAME} PUBLIC
-                              ${ZMQ_LIBS_DIR}/libsodium.dll
-                              ${ZMQ_LIBS_DIR}/libzmq-v142-mt-4_3_4.dll
-                              ws2_32
-                              iphlpapi)
-   else()
-        message(FATAL_ERROR "Compiler not supported by default.")
-    endif()
-
-elseif(UNIX)
-    set(ZMQ_LIBS_DIR ${ZMQ_DIR}/libs/unix)
-
-    target_link_libraries(${LIB_FULL_NAME} PUBLIC
-                          ${ZMQ_LIBS_DIR}/libzmq.so)
+# Add external headers.
+if(MODULES_GLOBAL_SHOW_EXTERNALS)
+    file(GLOB_RECURSE EXTERNAL_HEADERS ${LIBZMQ_INCLUDE_DIR}/*)
+    target_sources(${LIB_NAME} PUBLIC ${EXTERNAL_HEADERS})
 endif()
-# ================================================
 
-
-
-
+# Specific links in Windows plattform.
+if (WIN32)
+    target_link_libraries(${LIB_NAME} PUBLIC ws2_32 iphlpapi)
+endif()
 
 # Include the shared library CMake configuration file.
 include(ConfigLibZMQUtils)
@@ -180,7 +159,8 @@ endif()
 # INSTALLATION PROCESS
 
 # External libs locations.
-set(ext_libs_loc ${ZMQ_LIBS_DIR})
+set(ext_libs_loc ${LIBZMQ_LIBRARY_DIRS})
+message(STATUS "ext_libs_loc: ${ext_libs_loc}")
 
 # Installation process.
 macro_default_library_installation("${LIB_NAME}" "${LIB_INCLUDES_DIR}" "${ext_libs_loc}")
