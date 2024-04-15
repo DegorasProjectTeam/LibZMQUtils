@@ -11,7 +11,7 @@ set(EXAMPLE_NAME ServerClientAmelas)
 # --
 set(EXAMPLE_DIR ${CMAKE_SOURCE_DIR}/examples/${MODULE_NAME}/${EXAMPLE_NAME})
 set(EXAMPLE_FULL_NAME ${MODULE_NAME}_${EXAMPLE_NAME})
-set(EXAMPLE_INSTALL_PATH ${GLOBAL_LIBDPSLR_EXAMPLES_INSTALL_PATH}/${EXAMPLE_FULL_NAME})
+set(EXAMPLE_INSTALL_PATH ${GLOBAL_LIBZMQUTILS_EXAMPLES_INSTALL_PATH}/${EXAMPLE_FULL_NAME})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Examples/${EXAMPLE_FULL_NAME})
 set(INTERFACE_SERVER "AmelasServerInterface")
 set(APP_SERVER "Example_CommandServer_Amelas")
@@ -47,6 +47,9 @@ macro_setup_launcher("${APP_SERVER}"
 
 # Include directories.
 target_include_directories(${APP_SERVER} PRIVATE ${CMAKE_SOURCE_DIR}/examples/${MODULE_NAME}/${EXAMPLE_NAME})
+
+# ----------------------------------------------------------------------------------------------------------------------
+#◙ INTERFACE LIBRARY
 
 # Auxiliar interface library.
 add_library(${INTERFACE_SERVER} INTERFACE)
@@ -87,5 +90,46 @@ macro_setup_launcher("${APP_CLIENT}"
 
 # Include directories.
 target_include_directories(${APP_CLIENT} PRIVATE ${CMAKE_SOURCE_DIR}/examples/${MODULE_NAME}/${EXAMPLE_NAME})
+
+# ----------------------------------------------------------------------------------------------------------------------
+# INSTALLATION PROCESS
+
+# Prepare the external library search folders.
+set(ext_libs_loc "${MODULES_GLOBAL_INSTALL_LIB_PATH}"
+                 "${MODULES_GLOBAL_INSTALL_BIN_PATH}")
+
+# Install the launcher for server.
+macro_install_launcher("${APP_SERVER}"
+                       "${EXAMPLE_INSTALL_PATH}")
+
+# Install the launcher for client.
+macro_install_launcher("${APP_CLIENT}"
+                       "${EXAMPLE_INSTALL_PATH}")
+
+# Install runtime artifacts for server.
+macro_install_runtime_artifacts("${APP_SERVER}"
+                               "${MODULES_GLOBAL_MAIN_DEP_SET_NAME}"
+                               "${EXAMPLE_INSTALL_PATH}")
+
+# Install runtime artifacts for client.
+macro_install_runtime_artifacts("${APP_CLIENT}"
+                                "${MODULES_GLOBAL_MAIN_DEP_SET_NAME}"
+                                "${EXAMPLE_INSTALL_PATH}")
+
+# Install the runtime dependencies for server.
+macro_install_runtime_deps("${APP_SERVER}"
+                            "${MODULES_GLOBAL_MAIN_DEP_SET_NAME}"
+                            "${ext_libs_loc}"
+                            "${EXAMPLE_INSTALL_PATH}"
+                            "" "")
+
+# Install the runtime dependencies for client.
+macro_install_runtime_deps("${APP_CLIENT}"
+                            "${MODULES_GLOBAL_MAIN_DEP_SET_NAME}"
+                            "${ext_libs_loc}"
+                            "${EXAMPLE_INSTALL_PATH}"
+                            "" "")
+
+# ----------------------------------------------------------------------------------------------------------------------
 
 # **********************************************************************************************************************

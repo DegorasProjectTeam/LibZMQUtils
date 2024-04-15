@@ -1,9 +1,11 @@
 # **********************************************************************************************************************
-#    LibZMQUtils (Degoras Project SLR Library).
+#    LibZMQUtils (ZeroMQ High Level Utilities C++ Library).
 #
-#    A modern and efficient C++ base library for Satellite Laser Ranging (SLR) software and real-time hardware
-#    related developments. Developed as a free software under the context of Degoras Project for the Spanish Navy
-#    Observatory SLR station (SFEL) in San Fernando and, of course, for any other station that wants to use it!
+#    A modern open-source C++ library with high level utilities based on the well-known ZeroMQ open-source universal
+#    messaging library. Includes custom command based server-client and publisher-subscriber with automatic binary
+#    serialization capabilities, specially designed for system infraestructure. Developed as a free software under the
+#    context of Degoras Project for the Spanish Navy Observatory SLR station (SFEL) in San Fernando and, of course,
+#    for any other station that wants to use it!
 #
 #    Copyright (C) 2024 Degoras Project Team
 #                       < Ángel Vera Herrera, avera@roa.es - angeldelaveracruz@gmail.com >
@@ -27,11 +29,11 @@
 # **********************************************************************************************************************
 
 # **********************************************************************************************************************
-# Updated 11/03/2024
+# Updated 15/04/2024
 # **********************************************************************************************************************
 
 # **********************************************************************************************************************
-# LIBDEGORASSLR MAIN SHARED LIBRARY PROJECT CMAKELIST
+# LIBZMQUTILS MAIN SHARED LIBRARY PROJECT CMAKELIST
 # **********************************************************************************************************************
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -56,7 +58,7 @@ macro_cmakemodules_init()
 
 # Base project configuration.
 set(LIB_NAME LibZMQUtils)
-set(LIB_VER 1.5.1)
+set(LIB_VER 1.6)
 set(LIB_BUILD_MODE Debug)
 set(LIB_INSTALL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../${LIB_NAME}_product_v${LIB_VER})
 set(LIB_LANGUAGES CXX C)
@@ -178,7 +180,7 @@ endif()
 # INSTALLATION PROCESS
 
 # External libs locations.
-#set(ext_libs_loc ${LibNovasCpp_LOCATION_DIR})
+set(ext_libs_loc ${ZMQ_LIBS_DIR})
 
 # Installation process.
 macro_default_library_installation("${LIB_NAME}" "${LIB_INCLUDES_DIR}" "${ext_libs_loc}")

@@ -24,10 +24,9 @@
 
 /** ********************************************************************************************************************
  * @file command_client_base.h
- * @brief This file contains the declaration of the CommandClientBase class and related.
  * @author Degoras Project Team
+ * @brief This file contains the declaration of the CommandClientBase class and related.
  * @copyright EUPL License
- * @version 2309.5
 ***********************************************************************************************************************/
 
 // =====================================================================================================================
