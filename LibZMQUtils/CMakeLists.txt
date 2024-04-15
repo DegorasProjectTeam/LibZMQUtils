@@ -1,5 +1,5 @@
 # **********************************************************************************************************************
-#    LibDegorasSLR (Degoras Project SLR Library).
+#    LibZMQUtils (Degoras Project SLR Library).
 #
 #    A modern and efficient C++ base library for Satellite Laser Ranging (SLR) software and real-time hardware
 #    related developments. Developed as a free software under the context of Degoras Project for the Spanish Navy
@@ -9,7 +9,7 @@
 #                       < Ángel Vera Herrera, avera@roa.es - angeldelaveracruz@gmail.com >
 #                       < Jesús Relinque Madroñal >
 #
-#    This file is part of LibDegorasSLR.
+#    This file is part of LibZMQUtils.
 #
 #    Licensed under the European Union Public License (EUPL), Version 1.2 or subsequent versions of the EUPL license
 #    as soon they will be approved by the European Commission (IDABC).

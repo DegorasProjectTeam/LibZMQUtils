@@ -41,8 +41,8 @@
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/Publisher>
-#include <LibZMQUtils/Utils>
+#include <LibZMQUtils/Modules/Publisher>
+#include <LibZMQUtils/Modules/Utils>
 // =====================================================================================================================
 
 

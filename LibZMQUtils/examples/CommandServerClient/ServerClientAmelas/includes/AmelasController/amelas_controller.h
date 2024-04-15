@@ -42,8 +42,8 @@
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/CommandServer>
-#include <LibZMQUtils/Utils>
+#include <LibZMQUtils/Modules/CommandServer>
+#include <LibZMQUtils/Modules/Utils>
 // =====================================================================================================================
 
 // PROJECT INCLUDES

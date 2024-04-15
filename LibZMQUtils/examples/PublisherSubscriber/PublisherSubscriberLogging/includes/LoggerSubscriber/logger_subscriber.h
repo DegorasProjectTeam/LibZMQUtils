@@ -41,8 +41,8 @@
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/CallbackSubscriber>
-#include <LibZMQUtils/Utils>
+#include <LibZMQUtils/Modules/CallbackSubscriber>
+#include <LibZMQUtils/Modules/Utils>
 // =====================================================================================================================
 
 // AMELAS NAMESPACES

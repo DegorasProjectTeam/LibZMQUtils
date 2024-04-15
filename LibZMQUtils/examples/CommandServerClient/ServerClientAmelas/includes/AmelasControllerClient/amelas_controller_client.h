@@ -41,8 +41,8 @@
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/CommandClient>
-#include <LibZMQUtils/Utils>
+#include <LibZMQUtils/Modules/CommandClient>
+#include <LibZMQUtils/Modules/Utils>
 // =====================================================================================================================
 
 // PROJECT INCLUDES

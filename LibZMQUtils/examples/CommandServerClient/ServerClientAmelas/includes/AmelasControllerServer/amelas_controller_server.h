@@ -44,8 +44,8 @@
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/CallbackCommandServer>
-#include <LibZMQUtils/Utils>
+#include <LibZMQUtils/Modules/CallbackCommandServer>
+#include <LibZMQUtils/Modules/Utils>
 // =====================================================================================================================
 
 // PROJECT INCLUDES
