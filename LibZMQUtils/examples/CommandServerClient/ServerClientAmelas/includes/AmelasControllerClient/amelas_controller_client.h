@@ -55,6 +55,7 @@
 
 // PROJECT INCLUDES
 // =====================================================================================================================
+#include "common.h"
 // =====================================================================================================================
 
 // AMELAS NAMESPACES
@@ -71,30 +72,33 @@ public:
                            const std::string& client_name = "",
                            const std::string interf_name = "");
 
-    // TODO
-    //virtual void prepareRequest() = 0;
+    zmqutils::serverclient::OperationResult doGetHomePosition(controller::AltAzPos &pos,
+                                                              controller::AmelasError &res);
+
+    zmqutils::serverclient::OperationResult doSetHomePosition(const controller::AltAzPos &pos,
+                                                              controller::AmelasError &res);
 
 private:
 
-    virtual void onClientStart() final;
+    virtual void onClientStart() override final;
 
-    virtual void onClientStop() final;
+    virtual void onClientStop() override final;
 
-    virtual void onWaitingReply() final;
+    virtual void onWaitingReply() override final;
 
-    virtual void onDeadServer() final;
+    virtual void onDeadServer() override final;
 
-    virtual void onConnected() final;
+    virtual void onConnected() override final;
 
-    virtual void onDisconnected() final;
+    virtual void onDisconnected() override final;
 
-    virtual void onInvalidMsgReceived(const zmqutils::serverclient::CommandReply&) final;
+    virtual void onInvalidMsgReceived(const zmqutils::serverclient::CommandReply&) override final;
 
-    virtual void onReplyReceived(const zmqutils::serverclient::CommandReply& reply) final;
+    virtual void onReplyReceived(const zmqutils::serverclient::CommandReply& reply) override final;
 
-    virtual void onSendingCommand(const zmqutils::serverclient::RequestData&) final;
+    virtual void onSendingCommand(const zmqutils::serverclient::RequestData&) override final;
 
-    virtual void onClientError(const zmq::error_t&, const std::string& ext_info) final;
+    virtual void onClientError(const zmq::error_t&, const std::string& ext_info) override final;
 };
 
 }} // END NAMESPACES.

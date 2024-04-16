@@ -57,6 +57,52 @@ AmelasControllerClient::AmelasControllerClient(const std::string& server_endpoin
     zmqutils::serverclient::CommandClientBase(server_endpoint, client_name, interf_name)
 {}
 
+OperationResult AmelasControllerClient::doGetHomePosition(controller::AltAzPos &pos, controller::AmelasError &res)
+{
+    RequestData command_msg(static_cast<ServerCommand>(AmelasServerCommand::REQ_GET_HOME_POSITION));
+    CommandReply reply;
+    OperationResult op_res = this->sendCommand(command_msg, reply);
+
+    if (OperationResult::COMMAND_OK == op_res)
+    {
+        try
+        {
+            BinarySerializer::fastDeserialization(reply.params.get(), reply.params_size, res, pos.az, pos.el);
+        }
+        catch(...)
+        {
+            op_res = OperationResult::BAD_PARAMETERS;
+        }
+    }
+
+    return op_res;
+}
+
+OperationResult AmelasControllerClient::doSetHomePosition(const controller::AltAzPos &pos,
+                                                          controller::AmelasError &res)
+{
+    RequestData command_msg(static_cast<ServerCommand>(AmelasServerCommand::REQ_SET_HOME_POSITION));
+    CommandReply reply;
+    BinarySerializer serializer;
+    pos.serialize(serializer);
+    command_msg.params_size = serializer.moveUnique(command_msg.params);
+    OperationResult op_res = this->sendCommand(command_msg, reply);
+
+    if (OperationResult::COMMAND_OK == op_res)
+    {
+        try
+        {
+            BinarySerializer::fastDeserialization(reply.params.get(), reply.params_size, res);
+        }
+        catch(...)
+        {
+            op_res = OperationResult::BAD_PARAMETERS;
+        }
+    }
+
+    return op_res;
+}
+
 void AmelasControllerClient::onClientStart()
 {
     // Log.

@@ -45,12 +45,12 @@
 // C++ INCLUDES
 // =====================================================================================================================
 #include <iostream>
-#include <cstring>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
 #include <LibZMQUtils/Modules/Utils>
+#include "LibZMQUtils/InternalHelpers/string_helpers.h"
 // =====================================================================================================================
 
 // PROJECT INCLUDES
@@ -73,231 +73,171 @@ using amelas::communication::common::AmelasServerCommand;
 using amelas::controller::AltAzPos;
 using amelas::controller::AmelasError;
 
-void parseCommand(CommandClientBase &client, const std::string &command)
+class AmelasClientParser
 {
-    zmqutils::serverclient::OperationResult client_result = OperationResult::COMMAND_OK;
+public:
 
-    char *command_str = new char[command.size() + 1];
-    std::copy(command.begin(), command.end(), command_str);
-    command_str[command.size()] = '\0';
+    AmelasClientParser(AmelasControllerClient &client) : client_(client)
+    {}
 
-    char *token = std::strtok(command_str, " ");
-
-    if (token)
+    zmqutils::serverclient::OperationResult parseCommand(const std::string &command)
     {
+        auto tokens = zmqutils::internal_helpers::strings::split<std::vector<std::string>>(command, " ", false);
+
+        if (tokens.empty())
+        {
+            std::cerr << "Not a valid command." << std::endl;
+            return OperationResult::UNKNOWN_COMMAND;
+        }
+
         CommandType command_id;
 
         try
         {
-            command_id = static_cast<CommandType>(std::stoi(token));
+            command_id = static_cast<CommandType>(std::stoi(tokens.front()));
         }
         catch (...)
         {
-            std::cerr << "Failed at sending command." << std::endl;
-            delete[] command_str;
-            return;
+            std::cerr << "Not a valid command." << std::endl;
+            return OperationResult::UNKNOWN_COMMAND;
         }
 
-        RequestData command_msg(static_cast<ServerCommand>(command_id));
+        if (!this->validCommand(command_id))
+        {
+            std::cerr << "Not implemented command." << std::endl;
+            return OperationResult::NOT_IMPLEMENTED;
+        }
 
-        bool valid = true;
+        std::vector<std::string> params;
+        std::move(tokens.begin() + 1, tokens.end(), std::back_inserter(params));
+
+        return this->executeCommand(command_id, params);
+
+    }
+
+    zmqutils::serverclient::OperationResult executeCommand(CommandType command_id,
+                                                           const std::vector<std::string> &params)
+    {
+        zmqutils::serverclient::OperationResult res;
 
         if (command_id == static_cast<CommandType>(ServerCommand::REQ_CONNECT))
         {
             std::cout << "Sending REQ_CONNECT command." << std::endl;
+            res = this->client_.doConnect();
         }
         else if (command_id == static_cast<CommandType>(ServerCommand::REQ_DISCONNECT))
         {
             std::cout << "Sending REQ_DISCONNECT command" << std::endl;
+            res = this->client_.doDisconnect();
         }
         else if (command_id == static_cast<CommandType>(ServerCommand::REQ_ALIVE))
         {
             std::cout << "Sending REQ_ALIVE command." << std::endl;
+            res = this->client_.doAlive();
         }
         else if (command_id == static_cast<CommandType>(ServerCommand::REQ_GET_SERVER_TIME))
         {
             std::cout << "Sending REQ_GET_SERVER_TIME command." << std::endl;
+            std::string datetime;
+            res = this->client_.doGetServerTime(datetime);
         }
         else if (command_id == static_cast<CommandType>(AmelasServerCommand::REQ_GET_HOME_POSITION))
         {
-            std::cout << "Sending get home position command." << std::endl;
+            std::cout << "Sending GET_HOME_POSITION command." << std::endl;
+            AltAzPos pos;
+            AmelasError error = AmelasError::INVALID_ERROR;
+            res = this->client_.doGetHomePosition(pos, error);
+            this->processGetHomePosition(res, pos, error);
         }
         else if (command_id == static_cast<CommandType>(AmelasServerCommand::REQ_SET_HOME_POSITION))
         {
-            std::cout << "Sending set home position command." << std::endl;
-
-            bool valid_params = true;
-            double az = 0., el = 0.;
-            char *param_token = std::strtok(nullptr, " ");
-
-            try
-            {
-                az = std::stod(param_token);
-            }
-            catch (...)
-            {
-                std::cerr << "Bad parameter azimuth issued.";
-                valid_params = false;
-            }
-
-            if (valid_params)
-            {
-                param_token = std::strtok(nullptr, " ");
-
-                try
-                {
-                    el = std::stod(param_token);
-                }
-                catch (...)
-                {
-                    std::cerr << "Bad parameter elevation issued.";
-                    valid_params = false;
-                }
-            }
-
-            if (valid_params)
-            {
-                std::cout<<"Sending: " << az <<" "<<el<<std::endl;
-
-                AltAzPos pos(az, el);
-
-                BinarySerializer serializer;
-
-                serializer.write(pos);
-
-                std::cout<<serializer.toJsonString();
-
-                command_msg.params_size = BinarySerializer::fastSerialization(command_msg.params, pos);
-
-                std::cout<<std::endl;
-            }
+            std::cout << "Sending SET_HOME_POSITION command." << std::endl;
+            AltAzPos pos;
+            AmelasError error = AmelasError::INVALID_ERROR;
+            bool params_valid = this->parseAltAz(params, pos);
+            if (params_valid)
+                res = this->client_.doSetHomePosition(pos, error);
             else
-            {
-                std::cout<<"Sending invalid command: "<<std::endl;
-                command_msg.params_size = BinarySerializer::fastSerialization(command_msg.params, az);
-
-                valid_params = true;
-            }
-
-            valid = valid_params;
-
+                res = OperationResult::BAD_PARAMETERS;
+            this->processSetHomePosition(res, error);
         }
         else
         {
-            valid = false;
+            res = OperationResult::NOT_IMPLEMENTED;
         }
-
-        // TODO MOVE ALL OF THIS TO A SUBCLASS IN A PURE VIRTUAL. THE FUNCTION WILL RETURN ClientResult
-        // TODO THE ERROR CONTROL MUST BE IN THE BASE CLIENT. THE SUBCLASS MUST CONTROL THE OUTPUT DATA AND CUSTOM ERRORS ONLY.
-        // TODO DISABLE SEND WITH THIS WAY THE RESERVED COMMANDS.
-        // TODO CREATE doConnect, doDisconnect, checkServerAlive
-        // TODO CREATE IN THE CLIENT THE INTERNAL CALLBACKS LIKE THE SERVER.
-        // TODO MOVE THE PROCESSING OF EACH COMPLEX RESPONSE TO A FUNCTION.
-
-        if (valid)
-        {
-            // TODO MOVE ALL
-            CommandReply reply;
-
-            if(command_msg.command == ServerCommand::REQ_CONNECT)
-            {
-                client_result = client.doConnect();
-
-                if (client_result == OperationResult::CLIENT_STOPPED)
-                {
-                    delete[] command_str;
-                    return;
-                }
-
-
-            }
-            else if(command_msg.command == ServerCommand::REQ_GET_SERVER_TIME)
-            {
-                std::string datetime;
-                client_result = client.doGetServerTime(datetime);
-
-                if (client_result == OperationResult::COMMAND_OK)
-                {
-                    std::cout<<"Server time: "<<datetime<<std::endl;
-
-                    delete[] command_str;
-                    return;
-                }
-
-            }
-            else
-                client_result = client.sendCommand(command_msg, reply);
-
-            std::cerr << "Client Result: " << static_cast<int>(client_result)<<std::endl;
-
-            if (client_result != OperationResult::COMMAND_OK)
-            {
-            }
-            else
-            {
-
-
-                std::cout<<"Server result: "<<static_cast<int>(reply.server_result)<<std::endl;
-
-                if(reply.server_result != OperationResult::COMMAND_OK)
-                {
-                    delete[] command_str;
-                    return;
-                }
-
-                // Get the controller result.
-                // TODO ERROR CONTROL
-
-                if(command_id > static_cast<CommandType>(ServerCommand::END_BASE_COMMANDS))
-                {
-                    AmelasError error;
-
-                    BinarySerializer ser(reply.params.get(), reply.params_size);
-                    std::cout<<ser.toJsonString()<<std::endl;
-
-                    ser.read(error);
-
-                    std::cout<<"Controller error: "<<static_cast<int>(error)<<std::endl;
-                }
-
-                if (command_id == static_cast<CommandType>(AmelasServerCommand::REQ_GET_HOME_POSITION))
-                {
-                    try
-                    {
-                        AmelasError error;   // Trash. The controller error must be checked.
-                        double az;
-                        double el;
-
-                        // Deserialize the parameters.
-                        BinarySerializer::fastDeserialization(reply.params.get(), reply.params_size, error, az, el);
-
-                        // Generate the struct.
-                        std::cout<<"Az: "<<az<<std::endl;
-                        std::cout<<"El: "<<el<<std::endl;
-                    }
-                    catch(...)
-                    {
-                        std::cout<<"BAD PARAMS"<<std::endl;
-                        // RETURN BAD PARAMS
-                        //result = ClientResult::
-                    }
-                }
-            }
-        }
-        else
-        {
-            std::cerr << "Command is not implemented or valid" << std::endl;
-        }
+        return res;
 
     }
-    else
+
+    bool validCommand(CommandType command)
     {
-        std::cerr << "Not a valid command" << std::endl;
+        return ((command >= static_cast<CommandType>(ServerCommand::REQ_CONNECT) &&
+                 command < static_cast<CommandType>(ServerCommand::END_BASE_COMMANDS)) ||
+                (command >= static_cast<CommandType>(AmelasServerCommand::REQ_SET_HOME_POSITION) &&
+                 command < static_cast<CommandType>(AmelasServerCommand::END_IMPL_COMMANDS)));
     }
 
+private:
 
-    delete[] command_str;
-}
+    bool parseAltAz(const std::vector<std::string> &params, AltAzPos &pos)
+    {
+        if (params.size() != 2)
+            return false;
+
+        bool valid_params = true;
+
+        try
+        {
+            pos.az = std::stod(params[0]);
+            pos.el = std::stod(params[1]);
+        }
+        catch (...)
+        {
+            valid_params = false;
+        }
+
+        return valid_params;
+
+    }
+
+    void processGetHomePosition(zmqutils::serverclient::OperationResult res, const amelas::controller::AltAzPos &pos,
+                                amelas::controller::AmelasError error)
+    {
+        if (OperationResult::COMMAND_OK == res)
+        {
+            if (AmelasError::SUCCESS == error)
+                std::cout << "GET_HOME_POSITION command executed succesfully. "
+                          << "Position is, Az: " << pos.az << ", El: " << pos.el << std::endl;
+            else
+                std::cout << "GET_HOME_POSITION command failed. Controller error code is: "
+                          << static_cast<int>(error) << std::endl;
+        }
+        else
+        {
+            std::cerr << "GET_HOME_POSITION command failed. Operation error code is: "
+                      << static_cast<int>(res) << std::endl;
+        }
+    }
+    void processSetHomePosition(zmqutils::serverclient::OperationResult res, amelas::controller::AmelasError error)
+    {
+        if (OperationResult::COMMAND_OK == res)
+        {
+            if (AmelasError::SUCCESS == error)
+                std::cout << "SET_HOME_POSITION command executed succesfully." << std::endl;
+            else
+                std::cerr << "SET_HOME_POSITION command failed. Bad position. Controller Error Code is: "
+                          << static_cast<int>(error) << std::endl;
+        }
+        else
+        {
+            std::cerr << "SET_HOME_POSITION command failed. Operation error code is: "
+                      << static_cast<int>(res) << std::endl;
+        }
+    }
+
+    AmelasControllerClient &client_;
+};
+
 
 /**
  * @brief Main entry point of the program `ExampleClientAmelas`.
@@ -315,6 +255,8 @@ int main(int, char**)
     std::string endpoint = "tcp://" + ip + ":" + std::to_string(port);
     
     AmelasControllerClient client(endpoint, "AMELAS EXAMPLE CLIENT");
+
+    AmelasClientParser client_parser(client);
 
     // Configure the client.
     client.setAliveCallbacksEnabled(false);
@@ -401,7 +343,7 @@ int main(int, char**)
         }
 
         // Parse the command.
-        parseCommand(client, command);
+        client_parser.parseCommand(command);
     }
 
     // Final log.
