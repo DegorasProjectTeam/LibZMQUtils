@@ -58,7 +58,7 @@ macro_cmakemodules_init()
 
 # Base project configuration.
 set(LIB_NAME LibZMQUtils)
-set(LIB_VER 1.6)
+set(LIB_VER 1.6.1)
 set(LIB_BUILD_MODE Debug)
 set(LIB_INSTALL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../${LIB_NAME}_product_v${LIB_VER})
 set(LIB_LANGUAGES CXX C)
@@ -89,8 +89,9 @@ set(CMAKE_FIND_PACKAGE_PREFER_CONFIG TRUE)
 set(LIB_INCLUDES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/includes/)
 set(LIB_SOURCES_DIR ${CMAKE_SOURCE_DIR}/sources)
 
-# Configure the LibZMQ package.
+# Configure the LibZMQ package and set the located paths.
 find_package(LibZMQ REQUIRED)
+set(LIBZMQ_PATHS ${LIBZMQ_INCLUDE_DIRS} ${LIBZMQ_LIBRARY_DIRS})
 
 # ----------------------------------------------------------------------------------------------------------------------
 # SETUP THE SHARED LIBRARY
@@ -142,9 +143,6 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     else()
         set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -pedantic -Wall -Wextra -m64 -O3 -pthread -fopenmp")
     endif()
-elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    #target_compile_options(${LIB_NAME} PUBLIC)
-    message(FATAL_ERROR "Compiler not supported by default.")
 else()
     message(FATAL_ERROR "Compiler not supported by default.")
 endif()
@@ -160,10 +158,13 @@ endif()
 
 # External libs locations.
 set(ext_libs_loc ${LIBZMQ_LIBRARY_DIRS})
-message(STATUS "ext_libs_loc: ${ext_libs_loc}")
 
 # Installation process.
 macro_default_library_installation("${LIB_NAME}" "${LIB_INCLUDES_DIR}" "${ext_libs_loc}")
+
+# Install additional files.
+install(FILES "${CMAKE_SOURCE_DIR}/CMakeLibsConfig/FindLibZMQ.cmake"
+        DESTINATION ${MODULES_GLOBAL_INSTALL_SHARE_PATH}/cmake)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # CONFIGURE THE SUBPROJECTS

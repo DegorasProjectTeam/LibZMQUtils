@@ -52,6 +52,7 @@ MACRO(macro_link_libzmqutils_default target visibility)
         file(GLOB_RECURSE EXTERNAL_HEADERS ${LibZMQUtils_INCLUDES}/*)
         target_sources(${target} ${visibility} ${EXTERNAL_HEADERS})
 
+        # LibZMQ
 
     endif()
 

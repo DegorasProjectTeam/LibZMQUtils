@@ -38,8 +38,14 @@ if(WIN32)
         "C:/Program Files (x86)/LibZMQ"   # Standard installation.
         NO_DEFAULT_PATH)
 
-    # Combine both lists into one
-    set(SEARCH_PATHS ${LIBZMQ_CANDIDATE_DIRS} ${HARDCODED_PATHS})
+    # Check if a forced search path is provided externally
+    if(LIBZMQ_FORCED_SEARCH_PATHS)
+        message(STATUS "Forced LibZMQ search path is set to: ${LIBZMQ_FORCED_SEARCH_PATH}")
+        set(SEARCH_PATHS ${LIBZMQ_FORCED_SEARCH_PATHS})
+    else()
+       # Combine both lists into one if forced path is not set
+       set(SEARCH_PATHS ${LIBZMQ_CANDIDATE_DIRS} ${HARDCODED_PATHS})
+    endif()
 
     # Search for includes.
     macro_search_file_in_paths("LibZMQ/zmq.h" "${SEARCH_PATHS}" LIBZMQ_INCLUDE_DIR FALSE)

@@ -31,6 +31,7 @@
 @PACKAGE_INIT@
 
 # Find the LibZMQ library required by LibZMQUtils, in this case.
+set(LIBZMQ_FORCED_SEARCH_PATHS @LIBZMQ_PATHS@)
 find_package(LibZMQ REQUIRED)
 
 # Include the targets file.
