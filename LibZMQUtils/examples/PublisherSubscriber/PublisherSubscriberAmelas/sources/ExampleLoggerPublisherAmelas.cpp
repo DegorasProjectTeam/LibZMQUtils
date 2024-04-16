@@ -23,15 +23,15 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @example ExampleLoggerPublisher.cpp
+ * @example ExampleLoggerPublisherAmelas.cpp
  *
- * @brief This file serves as a program example of how to use the `LoggerPublisher` class.
+ * @brief This file serves as a program example of how to use the `AmelasLoggerPublisher` class.
  *
- * This program initializes an instance of the `LoggerPublisher` class to interact with an `LoggerSubscriber`.
+ * This program initializes an instance of the `AmelasLoggerPublisher` class to interact with an instance of
+ * `AmelasLoggerSubscriber` class.
  *
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2309.5
 ***********************************************************************************************************************/
 
 // C++ INCLUDES
@@ -40,26 +40,31 @@
 #include <cstring>
 // =====================================================================================================================
 
-// ZMQUTILS INCLUDES
+// LIBZMQUTILS INCLUDES
 // =====================================================================================================================
 #include <LibZMQUtils/Modules/Utils>
 // =====================================================================================================================
 
 // PROJECT INCLUDES
 // =====================================================================================================================
-#include "includes/LoggerPublisher/logger_publisher.h"
+#include "AmelasLoggerPublisher/amelas_logger_publisher.h"
+#include "AmelasController/amelas_log.h"
 // =====================================================================================================================
 
+// ---------------------------------------------------------------------------------------------------------------------
 using zmqutils::pubsub::PublisherResult;
 using zmqutils::utils::BinarySerializer;
+using amelas::communication::AmelasLoggerPublisher;
+using amelas::controller::AmelasLog;
+using amelas::controller::AmelasLogLevel;
+// ---------------------------------------------------------------------------------------------------------------------
 
-void parseCommand(logger::LoggerPublisher &pub, const std::string &command)
+// Helper parse command function.
+void parseCommand(AmelasLoggerPublisher &pub, const std::string &command)
 {
-
     char *command_str = new char[command.size() + 1];
     std::copy(command.begin(), command.end(), command_str);
     command_str[command.size()] = '\0';
-
     char *token = std::strtok(command_str, " ");
 
     if (token)
@@ -83,26 +88,26 @@ void parseCommand(logger::LoggerPublisher &pub, const std::string &command)
 
         std::string token_msg(token);
         PublisherResult res = PublisherResult::INVALID_MSG;
-        logger::AmelasLog log;
+        AmelasLog log;
 
         if (token_command == "info")
         {
             std::cout << "Sending info log with msg: " << token_msg << std::endl;
-            log.level = logger::AmelasLogLevel::AMELAS_INFO;
+            log.level = AmelasLogLevel::AMELAS_INFO;
             log.str_info = token_msg;
             res = pub.sendLog(log);
         }
         else if (token_command == "warning")
         {
             std::cout << "Sending warning log with msg: " << token_msg << std::endl;
-            log.level = logger::AmelasLogLevel::AMELAS_WARNING;
+            log.level = AmelasLogLevel::AMELAS_WARNING;
             log.str_info = token_msg;
             res = pub.sendLog(log);
         }
         else if (token_command == "error")
         {
             std::cout << "Sending error log with msg: " << token_msg << std::endl;
-            log.level = logger::AmelasLogLevel::AMELAS_ERROR;
+            log.level = AmelasLogLevel::AMELAS_ERROR;
             log.str_info = token_msg;
             res = pub.sendLog(log);
         }
@@ -122,7 +127,7 @@ void parseCommand(logger::LoggerPublisher &pub, const std::string &command)
 }
 
 /**
- * @brief Main entry point of the program `ExampleLoggerPublisher`.
+ * @brief Main entry point of the program `ExampleLoggerPublisherAmelas`.
  */
 int main(int, char**)
 {
@@ -136,7 +141,7 @@ int main(int, char**)
 
     std::string endpoint = "tcp://" + ip + ":" + std::to_string(port);
     
-    logger::LoggerPublisher pub(endpoint, "Log Publisher");
+    AmelasLoggerPublisher pub(endpoint, "Log Publisher");
 
     // Set the exit callback to the console handler for safety.
     console_cfg.setExitCallback(

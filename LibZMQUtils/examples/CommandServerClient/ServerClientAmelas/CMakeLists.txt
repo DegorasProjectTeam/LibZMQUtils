@@ -49,7 +49,7 @@ macro_setup_launcher("${APP_SERVER}"
 target_include_directories(${APP_SERVER} PRIVATE ${CMAKE_SOURCE_DIR}/examples/${MODULE_NAME}/${EXAMPLE_NAME})
 
 # ----------------------------------------------------------------------------------------------------------------------
-#◙ INTERFACE LIBRARY
+# INTERFACE LIBRARY
 
 # Auxiliar interface library.
 add_library(${INTERFACE_SERVER} INTERFACE)

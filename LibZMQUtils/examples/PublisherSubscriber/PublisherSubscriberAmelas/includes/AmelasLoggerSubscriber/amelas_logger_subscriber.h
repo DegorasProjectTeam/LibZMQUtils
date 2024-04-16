@@ -23,116 +23,84 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @example ExampleLoggerSubscriber.cpp
- *
- * @brief This file serves as a program example of how to use the subscriber.
- *
+ * @file amelas_logger_subscriber.h
+ * @brief EXAMPLE FILE - This file contains the declaration of the AmelasLoggerSubscriber example class.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2309.5
 ***********************************************************************************************************************/
+
+// =====================================================================================================================
+#pragma once
+// =====================================================================================================================
 
 // C++ INCLUDES
 // =====================================================================================================================
-#ifdef _WIN32
-#define NOMINMAX
-#include <Windows.h>
-#endif
-#include <iostream>
-#include <limits>
+#include <string>
 // =====================================================================================================================
 
-// ZMQUTILS INCLUDES
+// LIBZMQUTILS INCLUDES
 // =====================================================================================================================
+#include <LibZMQUtils/Modules/CallbackSubscriber>
 #include <LibZMQUtils/Modules/Utils>
 // =====================================================================================================================
 
-// PROJECT INCLUDES
+// INTERFACE INCLUDES
 // =====================================================================================================================
-#include "includes/LoggerSubscriber/logger_subscriber.h"
-#include "includes/LoggerCommon/logger_common.h"
+#include <AmelasController/amelas_log.h>
+#include <AmelasLoggerPublisher/amelas_logger_publisher.h>
 // =====================================================================================================================
 
-class Logger
+// AMELAS NAMESPACES
+// =====================================================================================================================
+namespace amelas{
+namespace communication{
+// =====================================================================================================================
+
+// Example of creating a command server from the base.
+class AmelasLoggerSubscriber : public zmqutils::pubsub::ClbkSubscriberBase
 {
 public:
-    zmqutils::pubsub::SubscriberResult processLogInfo(const logger::AmelasLog &log)
+
+    AmelasLoggerSubscriber();
+
+    template<typename ClassT, typename RetT = void, typename... Args>
+    void registerCallback(const controller::AmelasLogLevel &log_level, ClassT* object, RetT(ClassT::*callback)(Args...))
     {
-        std::cout << "[INFO] - " << log.str_info << ". Size of log: " << log.serializedSize() << std::endl;
-        return zmqutils::pubsub::SubscriberResult::MSG_OK;
+        zmqutils::pubsub::ClbkSubscriberBase::registerCallback(
+            AmelasLoggerTopic[static_cast<size_t>(log_level)], object, callback);
     }
-    zmqutils::pubsub::SubscriberResult processLogWarning(const logger::AmelasLog &log)
-    {
-        std::cout << "[WARNING] - " << log.str_info << std::endl;
-        return zmqutils::pubsub::SubscriberResult::MSG_OK;
-    }
-    zmqutils::pubsub::SubscriberResult processLogError(const logger::AmelasLog &log)
-    {
-        std::cout << "[ERROR] - " << log.str_info << std::endl;
-        return zmqutils::pubsub::SubscriberResult::MSG_OK;
-    }
+
+    void addTopicFilter(const controller::AmelasLogLevel& log_level);
+
+    using LogMsgCallback = std::function<zmqutils::pubsub::SubscriberResult(const controller::AmelasLog&)>;
+
+private:
+
+    // -----------------------------------------------------------------------------------------------------------------
+    using SubscriberBase::registerRequestProcFunc;
+    using CallbackHandler::registerCallback;
+    using zmqutils::pubsub::ClbkSubscriberBase::registerCallback;
+    using zmqutils::pubsub::SubscriberBase::addTopicFilter;
+    // -----------------------------------------------------------------------------------------------------------------
+
+    zmqutils::pubsub::SubscriberResult processLogMsg(const zmqutils::pubsub::PubSubMsg&);
+
+    // Internal overrided start callback.
+    virtual void onSubscriberStart() override final;
+
+    // Internal overrided close callback.
+    virtual void onSubscriberStop() override final;
+
+    // Internal overrided command received callback.
+    virtual zmqutils::pubsub::SubscriberResult onMsgReceived(const zmqutils::pubsub::PubSubMsg&) override final;
+
+    // Internal overrided bad command received callback.
+    virtual void onInvalidMsgReceived(const zmqutils::pubsub::PubSubMsg&,
+                                      zmqutils::pubsub::SubscriberResult) override final;
+
+    // Internal overrided server error callback.
+    virtual void onSubscriberError(const zmq::error_t&, const std::string& ext_info) override final;
 };
 
-
-int main(int, char**)
-{
-
-    // Configure the console.
-    zmqutils::utils::ConsoleConfig& console_cfg = zmqutils::utils::ConsoleConfig::getInstance();
-    console_cfg.configureConsole(true, true, true);
-
-    Logger log;
-
-
-    // Instantiate and configure subscriber.
-    logger::LoggerSubscriber subscriber;
-    subscriber.subscribe("tcp://127.0.0.1:9999");
-    subscriber.addTopicFilter(logger::AmelasLogTopic[static_cast<int>(logger::AmelasLogLevel::AMELAS_INFO)]);
-    subscriber.addTopicFilter(logger::AmelasLogTopic[static_cast<int>(logger::AmelasLogLevel::AMELAS_WARNING)]);
-    subscriber.addTopicFilter(logger::AmelasLogTopic[static_cast<int>(logger::AmelasLogLevel::AMELAS_ERROR)]);
-
-
-    // ---------------------------------------
-    // Set the callbacks in the subscriber.
-    // ---------------------------------------
-    subscriber.registerCallback(logger::AmelasLogTopic[static_cast<int>(logger::AmelasLogLevel::AMELAS_INFO)],
-                                &log, &Logger::processLogInfo);
-    subscriber.registerCallback(logger::AmelasLogTopic[static_cast<int>(logger::AmelasLogLevel::AMELAS_WARNING)],
-                                &log, &Logger::processLogWarning);
-    subscriber.registerCallback(logger::AmelasLogTopic[static_cast<int>(logger::AmelasLogLevel::AMELAS_ERROR)],
-                                &log, &Logger::processLogError);
-
-
-    // Start the subscriber.
-    bool started = subscriber.startSubscriber();
-
-    // Check if the subscriber starts ok.
-    if(!started)
-    {
-        // Log.
-        std::cout << "Subscriber start failed!! Press Enter to exit!" << std::endl;
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cin.clear();
-        return 1;
-    }
-
-    // Wait for closing as an infinite loop until ctrl-c.
-    console_cfg.waitForClose();
-
-    // Log.
-    std::cout << "Stopping the subscriber..." << std::endl;
-
-    // Stop the subscriber.
-    subscriber.stopSubscriber();
-
-    // Final log.
-    std::cout << "Subscriber stoped. All ok!!" << std::endl;
-
-    // Restore the console.
-    console_cfg.restoreConsole();
-
-    // Return.
-	return 0;
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
+}} // END NAMESPACES.
+// =====================================================================================================================

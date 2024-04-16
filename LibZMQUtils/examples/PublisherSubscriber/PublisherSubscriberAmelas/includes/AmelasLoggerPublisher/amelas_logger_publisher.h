@@ -23,11 +23,10 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file logger_common.h
- * @brief EXAMPLE FILE - This file contains the declaration of those types common to publisher and subscriber
+ * @file amelas_logger_publisher.h
+ * @brief EXAMPLE FILE - This file contains the declaration of the AmelasLoggerPublisher example class.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2309.5
 ***********************************************************************************************************************/
 
 // =====================================================================================================================
@@ -39,43 +38,48 @@
 #include <string>
 // =====================================================================================================================
 
-// ZMQUTILS INCLUDES
+// LIBZMQUTILS INCLUDES
 // =====================================================================================================================
 #include <LibZMQUtils/Modules/Publisher>
 #include <LibZMQUtils/Modules/Utils>
 // =====================================================================================================================
 
+// PROJECT INCLUDES
+// =====================================================================================================================
+#include "AmelasController/amelas_log.h"
+// =====================================================================================================================
+
 // NAMESPACES
 // =====================================================================================================================
-namespace logger{
+namespace amelas{
+namespace communication{
 // =====================================================================================================================
 
-enum AmelasLogLevel : std::uint32_t
-{
-    AMELAS_INFO = 0,
-    AMELAS_WARNING = 1,
-    AMELAS_ERROR = 2
-};
-
-static constexpr std::array<const char*, 3>  AmelasLogTopic
+static constexpr std::array<const char*, 3>  AmelasLoggerTopic
 {
     "LOG_INFO",
     "LOG_WARNING",
     "LOG_ERROR"
 };
 
-struct AmelasLog : public zmqutils::utils::Serializable
+class AmelasLoggerPublisher : public zmqutils::pubsub::PublisherBase
 {
+public:
 
-    zmqutils::utils::SizeUnit serialize(zmqutils::utils::BinarySerializer& serializer) const override final;
+    AmelasLoggerPublisher(std::string endpoint, std::string name = "");
 
-    void deserialize(zmqutils::utils::BinarySerializer& serializer) override final;
+    zmqutils::pubsub::PublisherResult sendLog(const controller::AmelasLog& log);
 
-    zmqutils::utils::SizeUnit serializedSize() const override final;
+private:
 
-    AmelasLogLevel level;
-    std::string str_info;
+    virtual void onPublisherStart() override final;
+
+    virtual void onPublisherStop() override final;
+
+    virtual void onSendingMsg(const zmqutils::pubsub::PubSubData&) override final;
+
+    virtual void onPublisherError(const zmq::error_t&, const std::string& ext_info) override final;
 };
 
-} // END NAMESPACES.
+}} // END NAMESPACES.
 // =====================================================================================================================

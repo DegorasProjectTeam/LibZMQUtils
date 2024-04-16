@@ -23,88 +23,51 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file logger_publisher.cpp
- * @brief EXAMPLE FILE - This file contains the definition of the LoggerPublisher example class.
+ * @file amelas_log.h
+ * @brief EXAMPLE FILE - This file contains the declaration of the AmelasLog example struct.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2309.5
 ***********************************************************************************************************************/
 
-#include "includes/LoggerPublisher/logger_publisher.h"
+// =====================================================================================================================
+#pragma once
+// =====================================================================================================================
+
+// C++ INCLUDES
+// =====================================================================================================================
+#include <string>
+// =====================================================================================================================
+
+// LIBZMQUTILS INCLUDES
+// =====================================================================================================================
+#include <LibZMQUtils/Modules/Publisher>
+#include <LibZMQUtils/Modules/Utils>
+// =====================================================================================================================
 
 // NAMESPACES
 // =====================================================================================================================
-namespace logger {
+namespace amelas{
+namespace controller{
 // =====================================================================================================================
 
-LoggerPublisher::LoggerPublisher(std::string endpoint,
-                                 std::string name) :
-    PublisherBase(std::move(endpoint), std::move(name))
-{}
-
-zmqutils::pubsub::PublisherResult LoggerPublisher::sendLog(const AmelasLog &log)
+enum class AmelasLogLevel : std::uint32_t
 {
-    zmqutils::pubsub::PubSubData data;
-    zmqutils::utils::BinarySerializer serializer;
+    AMELAS_INFO = 0,
+    AMELAS_WARNING = 1,
+    AMELAS_ERROR = 2
+};
 
-    log.serialize(serializer);
-
-    data.topic = AmelasLogTopic[static_cast<std::size_t>(log.level)];
-    data.data_size = serializer.moveUnique(data.data);
-
-    return this->sendMsg(data);
-}
-
-void LoggerPublisher::onPublisherStart()
+struct AmelasLog : public zmqutils::utils::Serializable
 {
-    // Log.
-    std::cout << std::string(100, '-') << std::endl;
-    std::cout << "<"<<this->getName() << ">" <<std::endl;
-    std::cout << "-> ON PUBLISHER START: " << std::endl;
-    std::cout << "Time: " << zmqutils::utils::currentISO8601Date()<<std::endl;
-    std::cout << "Endpoint: " << this->getEndpoint() << std::endl;
-    std::cout << "Name: " << this->getName() << std::endl;
-    std::cout << "UUID: " << this->getUUID().toRFC4122String() << std::endl;
-    std::cout << std::string(100, '-') << std::endl;
-}
+    zmqutils::utils::SizeUnit serialize(zmqutils::utils::BinarySerializer& serializer) const override final;
 
-void LoggerPublisher::onPublisherStop()
-{
-    // Log.
-    std::cout << std::string(100, '-') << std::endl;
-    std::cout<<"<"<<this->getName()<<">"<<std::endl;
-    std::cout<<"-> ON PUBLISHER STOP: "<<std::endl;
-    std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
-    std::cout << std::string(100, '-') << std::endl;
-}
+    void deserialize(zmqutils::utils::BinarySerializer& serializer) override final;
 
-void LoggerPublisher::onSendingMsg(const zmqutils::pubsub::PubSubData &req)
-{
-    zmqutils::utils::BinarySerializer serializer(req.data.get(), req.data_size);
-    // Log.
-    std::cout << std::string(100, '-') << std::endl;
-    std::cout << "<"<<this->getName() << ">" << std::endl;
-    std::cout << "-> ON PUBLISHER SEND COMMAND: " << std::endl;
-    std::cout << "Time: " << zmqutils::utils::currentISO8601Date() << std::endl;
-    std::cout << "Topic: " << req.topic << std::endl;
-    std::cout << "Params size: " << req.data_size <<std::endl;
-    std::cout << "Params Hex: " << serializer.getDataHexString() << std::endl;
-    std::cout << std::string(100, '-') << std::endl;
-}
+    zmqutils::utils::SizeUnit serializedSize() const override final;
 
-void LoggerPublisher::onPublisherError(const zmq::error_t& error, const std::string& ext_info)
-{
-    // Log.
-    std::cout << std::string(100, '-') << std::endl;
-    std::cout<<"<"<<this->getName()<<">"<<std::endl;
-    std::cout<<"-> ON PUBLISHER ERROR: "<<std::endl;
-    std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
-    std::cout<<"Code: "<<error.num()<<std::endl;
-    std::cout<<"Error: "<<error.what()<<std::endl;
-    std::cout<<"Info: "<<ext_info<<std::endl;
-    std::cout << std::string(100, '-') << std::endl;
-}
+    AmelasLogLevel level;
+    std::string str_info;
+};
 
-}  // END NAMESPACES.
+}} // END NAMESPACES.
 // =====================================================================================================================
-

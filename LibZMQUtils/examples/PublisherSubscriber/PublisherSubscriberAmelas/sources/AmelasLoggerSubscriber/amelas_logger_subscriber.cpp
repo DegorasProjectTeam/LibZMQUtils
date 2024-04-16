@@ -24,42 +24,50 @@
 
 /** ********************************************************************************************************************
  * @file logger_subscriber.cpp
- * @brief EXAMPLE FILE - This file contains the implementation of the LoggerSubscriber example class.
+ * @brief EXAMPLE FILE - This file contains the implementation of the AmelasAmelasLoggerSubscriber example class.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2309.5
 ***********************************************************************************************************************/
 
 // PROJECT INCLUDES
 // =====================================================================================================================
-#include "includes/LoggerSubscriber/logger_subscriber.h"
-#include "includes/LoggerCommon/logger_common.h"
+#include "AmelasLoggerSubscriber/amelas_logger_subscriber.h"
 // =====================================================================================================================
 
 // NAMESPACES
 // =====================================================================================================================
-namespace logger{
+namespace amelas{
+namespace communication{
 // =====================================================================================================================
 
-LoggerSubscriber::LoggerSubscriber()
+// ---------------------------------------------------------------------------------------------------------------------
+using namespace controller;
+// ---------------------------------------------------------------------------------------------------------------------
+
+AmelasLoggerSubscriber::AmelasLoggerSubscriber()
 {
     // Register each internal specific process function in the base subscriber.
 
     // Process log info
     this->registerRequestProcFunc("LOG_INFO", this,
-                                  &LoggerSubscriber::processLogMsg);
+                                  &AmelasLoggerSubscriber::processLogMsg);
 
     // Process log info
     this->registerRequestProcFunc("LOG_WARNING", this,
-                                  &LoggerSubscriber::processLogMsg);
+                                  &AmelasLoggerSubscriber::processLogMsg);
 
     // Process log info
     this->registerRequestProcFunc("LOG_ERROR", this,
-                                  &LoggerSubscriber::processLogMsg);
+                                  &AmelasLoggerSubscriber::processLogMsg);
 
 }
 
-zmqutils::pubsub::SubscriberResult LoggerSubscriber::processLogMsg(const zmqutils::pubsub::PubSubMsg& msg)
+void AmelasLoggerSubscriber::addTopicFilter(const controller::AmelasLogLevel &log_level)
+{
+    zmqutils::pubsub::SubscriberBase::addTopicFilter(AmelasLoggerTopic[static_cast<size_t>(log_level)]);
+}
+
+zmqutils::pubsub::SubscriberResult AmelasLoggerSubscriber::processLogMsg(const zmqutils::pubsub::PubSubMsg& msg)
 {
     // Check the request parameters size.
     if (msg.data.data_size == 0 || !msg.data.data)
@@ -87,7 +95,7 @@ zmqutils::pubsub::SubscriberResult LoggerSubscriber::processLogMsg(const zmqutil
 
 
 
-void LoggerSubscriber::onSubscriberStart()
+void AmelasLoggerSubscriber::onSubscriberStart()
 {
 
     // Log.
@@ -98,7 +106,7 @@ void LoggerSubscriber::onSubscriberStart()
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void LoggerSubscriber::onSubscriberStop()
+void AmelasLoggerSubscriber::onSubscriberStop()
 {
     // Log.
     std::cout << std::string(100, '-') << std::endl;
@@ -108,7 +116,7 @@ void LoggerSubscriber::onSubscriberStop()
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void LoggerSubscriber::onSubscriberError(const zmq::error_t &error, const std::string &ext_info)
+void AmelasLoggerSubscriber::onSubscriberError(const zmq::error_t &error, const std::string &ext_info)
 {
     // Log.
     std::cout << std::string(100, '-') << std::endl;
@@ -121,7 +129,7 @@ void LoggerSubscriber::onSubscriberError(const zmq::error_t &error, const std::s
     std::cout << std::string(100, '-') << std::endl;
 }
 
-zmqutils::pubsub::SubscriberResult LoggerSubscriber::onMsgReceived(const zmqutils::pubsub::PubSubMsg& msg)
+zmqutils::pubsub::SubscriberResult AmelasLoggerSubscriber::onMsgReceived(const zmqutils::pubsub::PubSubMsg& msg)
 {
     // Log.
     zmqutils::utils::BinarySerializer serializer(msg.data.data.get(), msg.data.data_size);
@@ -141,7 +149,7 @@ zmqutils::pubsub::SubscriberResult LoggerSubscriber::onMsgReceived(const zmqutil
     return result;
 }
 
-void LoggerSubscriber::onInvalidMsgReceived(const zmqutils::pubsub::PubSubMsg& msg, zmqutils::pubsub::SubscriberResult)
+void AmelasLoggerSubscriber::onInvalidMsgReceived(const zmqutils::pubsub::PubSubMsg& msg, zmqutils::pubsub::SubscriberResult)
 {
     // Log.
     zmqutils::utils::BinarySerializer serializer(msg.data.data.get(), msg.data.data_size);
@@ -155,8 +163,6 @@ void LoggerSubscriber::onInvalidMsgReceived(const zmqutils::pubsub::PubSubMsg& m
     std::cout << std::string(100, '-') << std::endl;
 }
 
-
-
-} // END NAMESPACES.
+}} // END NAMESPACES.
 // =====================================================================================================================
 

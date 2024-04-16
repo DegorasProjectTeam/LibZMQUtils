@@ -23,54 +23,127 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file logger_publisher.h
- * @brief EXAMPLE FILE - This file contains the declaration of the LoggerPublisher example class.
+ * @example ExampleLoggerSubscriberAmelas.cpp
+ *
+ * @brief This file serves as a program example of how to use the `AmelasLoggerSubscriber` class.
+ *
+ * This program initializes an instance of the `AmelasLoggerSubscriber` class to interact with an instance of
+ * `AmelasLoggerPublisher` class.
+ *
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2309.5
 ***********************************************************************************************************************/
-
-// =====================================================================================================================
-#pragma once
-// =====================================================================================================================
 
 // C++ INCLUDES
 // =====================================================================================================================
-#include <string>
+#ifdef _WIN32
+#define NOMINMAX
+#include <Windows.h>
+#endif
+#include <iostream>
+#include <limits>
 // =====================================================================================================================
 
-// ZMQUTILS INCLUDES
+// LIBZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/Modules/Publisher>
 #include <LibZMQUtils/Modules/Utils>
 // =====================================================================================================================
 
-#include "includes/LoggerCommon/logger_common.h"
-
-// NAMESPACES
+// PROJECT INCLUDES
 // =====================================================================================================================
-namespace logger{
+#include "AmelasLoggerSubscriber/amelas_logger_subscriber.h"
+#include "AmelasLoggerPublisher/amelas_logger_publisher.h"
+#include "AmelasController/amelas_log.h"
 // =====================================================================================================================
 
-class LoggerPublisher : public zmqutils::pubsub::PublisherBase
+// ---------------------------------------------------------------------------------------------------------------------
+using zmqutils::pubsub::SubscriberResult;
+using zmqutils::utils::BinarySerializer;
+using amelas::communication::AmelasLoggerSubscriber;
+using amelas::communication::AmelasLoggerTopic;
+using amelas::controller::AmelasLog;
+using amelas::controller::AmelasLogLevel;
+// ---------------------------------------------------------------------------------------------------------------------
+
+// Helper log processor class.
+class LogProcessor
 {
+
 public:
 
-    LoggerPublisher(std::string endpoint,
-                    std::string name = "");
+    SubscriberResult processLogInfo(const AmelasLog &log)
+    {
+        std::cout << "[INFO] - " << log.str_info << ". Size of log: " << log.serializedSize() << std::endl;
+        return SubscriberResult::MSG_OK;
+    }
 
-    zmqutils::pubsub::PublisherResult sendLog(const AmelasLog &log);
+    SubscriberResult processLogWarning(const AmelasLog &log)
+    {
+        std::cout << "[WARNING] - " << log.str_info << std::endl;
+        return zmqutils::pubsub::SubscriberResult::MSG_OK;
+    }
 
-private:
-
-    virtual void onPublisherStart() override final;
-
-    virtual void onPublisherStop() override final;
-
-    virtual void onSendingMsg(const zmqutils::pubsub::PubSubData&) override final;
-
-    virtual void onPublisherError(const zmq::error_t&, const std::string& ext_info) override final;
+    zmqutils::pubsub::SubscriberResult processLogError(const AmelasLog &log)
+    {
+        std::cout << "[ERROR] - " << log.str_info << std::endl;
+        return zmqutils::pubsub::SubscriberResult::MSG_OK;
+    }
 };
 
-}  // END NAMESPACES.
-// =====================================================================================================================
+/**
+ * @brief Main entry point of the program `ExampleLoggerSubscriberAmelas`.
+ */
+int main(int, char**)
+{
+    // Configure the console.
+    zmqutils::utils::ConsoleConfig& console_cfg = zmqutils::utils::ConsoleConfig::getInstance();
+    console_cfg.configureConsole(true, true, true);
+
+    // Configure the log processor.
+    LogProcessor log_processor;
+
+    // Instantiate and configure subscriber.
+    AmelasLoggerSubscriber subscriber;
+    subscriber.subscribe("tcp://127.0.0.1:9999");
+    subscriber.addTopicFilter(AmelasLogLevel::AMELAS_INFO);
+    subscriber.addTopicFilter(AmelasLogLevel::AMELAS_WARNING);
+    subscriber.addTopicFilter(AmelasLogLevel::AMELAS_ERROR);
+
+    // Set the callbacks in the subscriber.
+    subscriber.registerCallback(AmelasLogLevel::AMELAS_INFO, &log_processor, &LogProcessor::processLogInfo);
+    subscriber.registerCallback(AmelasLogLevel::AMELAS_WARNING, &log_processor, &LogProcessor::processLogWarning);
+    subscriber.registerCallback(AmelasLogLevel::AMELAS_ERROR, &log_processor, &LogProcessor::processLogError);
+
+    // Start the subscriber.
+    bool started = subscriber.startSubscriber();
+
+    // Check if the subscriber starts ok.
+    if(!started)
+    {
+        // Log.
+        std::cout << "Subscriber start failed!! Press Enter to exit!" << std::endl;
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        std::cin.clear();
+        return 1;
+    }
+
+    // Wait for closing as an infinite loop until ctrl-c.
+    console_cfg.waitForClose();
+
+    // Log.
+    std::cout << "Stopping the subscriber..." << std::endl;
+
+    // Stop the subscriber.
+    subscriber.stopSubscriber();
+
+    // Final log.
+    std::cout << "Subscriber stoped. All ok!!" << std::endl;
+
+    // Restore the console.
+    console_cfg.restoreConsole();
+
+    // Return.
+	return 0;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------

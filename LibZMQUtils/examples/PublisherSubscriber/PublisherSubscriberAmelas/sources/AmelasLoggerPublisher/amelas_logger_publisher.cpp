@@ -23,71 +23,96 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file logger_subscriber.h
- * @brief EXAMPLE FILE - This file contains the declaration of the LoggerSubscriber example class.
+ * @file amelas_logger_publisher.cpp
+ * @brief EXAMPLE FILE - This file contains the definition of the AmelasLoggerPublisher example class.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2309.5
 ***********************************************************************************************************************/
 
+// PROJECT INCLUDES
 // =====================================================================================================================
-#pragma once
-// =====================================================================================================================
-
-// C++ INCLUDES
-// =====================================================================================================================
-#include <string>
+#include "AmelasLoggerPublisher/amelas_logger_publisher.h"
 // =====================================================================================================================
 
-// ZMQUTILS INCLUDES
+// NAMESPACES
 // =====================================================================================================================
-#include <LibZMQUtils/Modules/CallbackSubscriber>
-#include <LibZMQUtils/Modules/Utils>
-// =====================================================================================================================
-
-// AMELAS NAMESPACES
-// =====================================================================================================================
-namespace logger {
+namespace amelas{
+namespace communication{
 // =====================================================================================================================
 
-class AmelasLog;
+// ---------------------------------------------------------------------------------------------------------------------
+using namespace controller;
+// ---------------------------------------------------------------------------------------------------------------------
 
-// Example of creating a command server from the base.
-class LoggerSubscriber : public zmqutils::pubsub::ClbkSubscriberBase
+AmelasLoggerPublisher::AmelasLoggerPublisher(std::string endpoint,
+                                 std::string name) :
+    PublisherBase(std::move(endpoint), std::move(name))
+{}
+
+zmqutils::pubsub::PublisherResult AmelasLoggerPublisher::sendLog(const AmelasLog &log)
 {
-public:
+    // Containers.
+    zmqutils::pubsub::PubSubData data;
+    zmqutils::utils::BinarySerializer serializer;
 
-    LoggerSubscriber();
+    // Serialize the log and add to the data.
+    log.serialize(serializer);
+    data.topic = AmelasLoggerTopic[static_cast<std::size_t>(log.level)];
+    data.data_size = serializer.moveUnique(data.data);
 
-    using zmqutils::pubsub::ClbkSubscriberBase::registerCallback;
+    // Send the log data.
+    return this->sendMsg(data);
+}
 
-    using LogMsgCallback = std::function<zmqutils::pubsub::SubscriberResult(const AmelasLog&)>;
+void AmelasLoggerPublisher::onPublisherStart()
+{
+    // Log.
+    std::cout << std::string(100, '-') << std::endl;
+    std::cout << "<"<<this->getName() << ">" <<std::endl;
+    std::cout << "-> ON PUBLISHER START: " << std::endl;
+    std::cout << "Time: " << zmqutils::utils::currentISO8601Date()<<std::endl;
+    std::cout << "Endpoint: " << this->getEndpoint() << std::endl;
+    std::cout << "Name: " << this->getName() << std::endl;
+    std::cout << "UUID: " << this->getUUID().toRFC4122String() << std::endl;
+    std::cout << std::string(100, '-') << std::endl;
+}
 
-private:
+void AmelasLoggerPublisher::onPublisherStop()
+{
+    // Log.
+    std::cout << std::string(100, '-') << std::endl;
+    std::cout<<"<"<<this->getName()<<">"<<std::endl;
+    std::cout<<"-> ON PUBLISHER STOP: "<<std::endl;
+    std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
+    std::cout << std::string(100, '-') << std::endl;
+}
 
-    // -----------------------------------------------------------------------------------------------------------------
-    using SubscriberBase::registerRequestProcFunc;
-    using CallbackHandler::registerCallback;
-    // -----------------------------------------------------------------------------------------------------------------
+void AmelasLoggerPublisher::onSendingMsg(const zmqutils::pubsub::PubSubData &req)
+{
+    zmqutils::utils::BinarySerializer serializer(req.data.get(), req.data_size);
+    // Log.
+    std::cout << std::string(100, '-') << std::endl;
+    std::cout << "<"<<this->getName() << ">" << std::endl;
+    std::cout << "-> ON PUBLISHER SEND COMMAND: " << std::endl;
+    std::cout << "Time: " << zmqutils::utils::currentISO8601Date() << std::endl;
+    std::cout << "Topic: " << req.topic << std::endl;
+    std::cout << "Params size: " << req.data_size <<std::endl;
+    std::cout << "Params Hex: " << serializer.getDataHexString() << std::endl;
+    std::cout << std::string(100, '-') << std::endl;
+}
 
-    zmqutils::pubsub::SubscriberResult processLogMsg(const zmqutils::pubsub::PubSubMsg&);
+void AmelasLoggerPublisher::onPublisherError(const zmq::error_t& error, const std::string& ext_info)
+{
+    // Log.
+    std::cout << std::string(100, '-') << std::endl;
+    std::cout<<"<"<<this->getName()<<">"<<std::endl;
+    std::cout<<"-> ON PUBLISHER ERROR: "<<std::endl;
+    std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
+    std::cout<<"Code: "<<error.num()<<std::endl;
+    std::cout<<"Error: "<<error.what()<<std::endl;
+    std::cout<<"Info: "<<ext_info<<std::endl;
+    std::cout << std::string(100, '-') << std::endl;
+}
 
-    // Internal overrided start callback.
-    virtual void onSubscriberStart() override final;
-
-    // Internal overrided close callback.
-    virtual void onSubscriberStop() override final;
-
-    // Internal overrided command received callback.
-    virtual zmqutils::pubsub::SubscriberResult onMsgReceived(const zmqutils::pubsub::PubSubMsg&) override final;
-
-    // Internal overrided bad command received callback.
-    virtual void onInvalidMsgReceived(const zmqutils::pubsub::PubSubMsg&,
-                                      zmqutils::pubsub::SubscriberResult) override final;
-
-    // Internal overrided server error callback.
-    virtual void onSubscriberError(const zmq::error_t&, const std::string& ext_info) override final;
-};
-
-} // END NAMESPACES.
+}}  // END NAMESPACES.
 // =====================================================================================================================
