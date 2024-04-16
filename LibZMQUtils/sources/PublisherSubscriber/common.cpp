@@ -1,9 +1,15 @@
 /***********************************************************************************************************************
- *   LibZMQUtils (ZMQ Utilitites Library): A libre library with ZMQ related useful utilities.                          *
+ *   LibZMQUtils (ZeroMQ High-Level Utilities C++ Library).                                                            *
  *                                                                                                                     *
- *   Copyright (C) 2023 Degoras Project Team                                                                           *
+ *   A modern open-source C++ library with high-level utilities based on the well-known ZeroMQ open-source universal   *
+ *   messaging library. Includes custom command based server-client and publisher-subscriber with automatic binary     *
+ *   serialization capabilities, specially designed for system infraestructure. Developed as a free software under the *
+ *   context of Degoras Project for the Spanish Navy Observatory SLR station (SFEL) in San Fernando and, of course,    *
+ *   for any other station that wants to use it!                                                                       *
+ *                                                                                                                     *
+ *   Copyright (C) 2024 Degoras Project Team                                                                           *
  *                      < Ángel Vera Herrera, avera@roa.es - angeldelaveracruz@gmail.com >                             *
- *                      < Jesús Relinque Madroñal >                                                                    *
+ *                      < Jesús Relinque Madroñal >                                                                    *                                                            *
  *                                                                                                                     *
  *   This file is part of LibZMQUtils.                                                                                 *
  *                                                                                                                     *
@@ -27,7 +33,6 @@
  * @brief This file contains common elements for the Publisher Subscriber module.
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2309.5
 ***********************************************************************************************************************/
 
 // C++ INCLUDES
