@@ -10,7 +10,7 @@ set(MODULE_NAME CommandServerClient)
 set(EXAMPLE_NAME ServerClientAmelas)
 # --
 set(EXAMPLE_DIR ${CMAKE_SOURCE_DIR}/examples/${MODULE_NAME}/${EXAMPLE_NAME})
-set(EXAMPLE_FULL_NAME ${MODULE_NAME}_${EXAMPLE_NAME})
+set(EXAMPLE_FULL_NAME ${EXAMPLE_NAME})
 set(EXAMPLE_INSTALL_PATH ${GLOBAL_LIBZMQUTILS_EXAMPLES_INSTALL_PATH}/${EXAMPLE_FULL_NAME})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Examples/${EXAMPLE_FULL_NAME})
 set(INTERFACE_SERVER "AmelasServerInterface")
@@ -48,15 +48,23 @@ macro_setup_launcher("${APP_SERVER}"
 # Include directories.
 target_include_directories(${APP_SERVER} PRIVATE ${CMAKE_SOURCE_DIR}/examples/${MODULE_NAME}/${EXAMPLE_NAME})
 
+# In mingw better do static linking of the libgcc, libwinpthread and libstd.
+if (MINGW)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++ -static -lpthread")
+    target_link_libraries(${APP_SERVER} PRIVATE -static-libgcc -static-libstdc++ -static -lpthread)
+endif()
+
+# Link against LibZMQUtils.
+# NOTE You can comment this and link all launcher using global variable.
+#macro_link_libzmqutils_default(${APP_SERVER} PUBLIC)
+
 # ----------------------------------------------------------------------------------------------------------------------
 # INTERFACE LIBRARY
 
 # Auxiliar interface library.
 add_library(${INTERFACE_SERVER} INTERFACE)
 target_sources(${INTERFACE_SERVER} INTERFACE ${EXAMPLE_DIR}/sources/AmelasController/common.cpp)
-target_include_directories(${INTERFACE_SERVER} INTERFACE
-                           ${EXAMPLE_DIR}/includes/AmelasController
-                           ${EXAMPLE_DIR}/includes/AmelasControllerServer)
+target_include_directories(${INTERFACE_SERVER} INTERFACE ${EXAMPLE_DIR}/includes/)
 
 # Add the interface library to the libraries list.
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -91,12 +99,21 @@ macro_setup_launcher("${APP_CLIENT}"
 # Include directories.
 target_include_directories(${APP_CLIENT} PRIVATE ${CMAKE_SOURCE_DIR}/examples/${MODULE_NAME}/${EXAMPLE_NAME})
 
+# In mingw better do static linking of the libgcc, libwinpthread and libstd.
+if (MINGW)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++ -static -lpthread")
+    target_link_libraries(${APP_CLIENT} PRIVATE -static-libgcc -static-libstdc++ -static -lpthread)
+endif()
+
+# Link against LibZMQUtils.
+# NOTE You can comment this and link all launcher using global variable.
+#macro_link_libzmqutils_default(${APP_CLIENT} PUBLIC)
+
 # ----------------------------------------------------------------------------------------------------------------------
 # INSTALLATION PROCESS
 
 # Prepare the external library search folders.
-set(ext_libs_loc "${MODULES_GLOBAL_INSTALL_LIB_PATH}"
-                 "${MODULES_GLOBAL_INSTALL_BIN_PATH}")
+set(ext_libs_loc "${ext_libs_loc}" "${MODULES_GLOBAL_INSTALL_LIB_PATH}" "${MODULES_GLOBAL_INSTALL_BIN_PATH}")
 
 # Install the launcher for server.
 macro_install_launcher("${APP_SERVER}"

@@ -30,8 +30,10 @@
  *   along with this project. If not, see the license at < https://eupl.eu/ >.                                         *
  **********************************************************************************************************************/
 
-#include "includes/AmelasControllerClient/amelas_controller_client.h"
-#include "includes/AmelasControllerServer/common.h"
+// PROJECT INCLUDES
+// =====================================================================================================================
+#include "AmelasControllerClient/amelas_controller_client.h"
+// =====================================================================================================================
 
 // AMELAS NAMESPACES
 // =====================================================================================================================
@@ -39,6 +41,7 @@ namespace amelas{
 namespace communication{
 // =====================================================================================================================
 
+// -----------------------------------------------------------------------------------------------------------------
 using common::AmelasServerCommandStr;
 using common::AmelasOperationResultStr;
 using common::AmelasServerCommand;
@@ -50,6 +53,7 @@ using zmqutils::serverclient::CommandType;
 using zmqutils::serverclient::CommandReply;
 using zmqutils::serverclient::RequestData;
 using zmqutils::utils::BinarySerializer;
+    // -----------------------------------------------------------------------------------------------------------------
 
 AmelasControllerClient::AmelasControllerClient(const std::string& server_endpoint,
                            const std::string& client_name,

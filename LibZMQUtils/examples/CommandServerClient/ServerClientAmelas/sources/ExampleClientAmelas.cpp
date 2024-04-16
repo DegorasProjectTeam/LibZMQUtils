@@ -39,7 +39,6 @@
  *
  * @author Degoras Project Team
  * @copyright EUPL License
- * @version 2309.5
 ***********************************************************************************************************************/
 
 // C++ INCLUDES
@@ -47,7 +46,7 @@
 #include <iostream>
 // =====================================================================================================================
 
-// ZMQUTILS INCLUDES
+// LIBZMQUTILS INCLUDES
 // =====================================================================================================================
 #include <LibZMQUtils/Modules/Utils>
 #include "LibZMQUtils/InternalHelpers/string_helpers.h"
@@ -60,6 +59,7 @@
 #include "includes/AmelasControllerClient/amelas_controller_client.h"
 // =====================================================================================================================
 
+// -----------------------------------------------------------------------------------------------------------------
 using zmqutils::serverclient::CommandType;
 using zmqutils::serverclient::CommandReply;
 using zmqutils::serverclient::ServerCommand;
@@ -67,11 +67,11 @@ using zmqutils::serverclient::CommandClientBase;
 using zmqutils::serverclient::RequestData;
 using zmqutils::serverclient::OperationResult;
 using zmqutils::utils::BinarySerializer;
-
 using amelas::communication::AmelasControllerClient;
 using amelas::communication::common::AmelasServerCommand;
 using amelas::controller::AltAzPos;
 using amelas::controller::AmelasError;
+    // -----------------------------------------------------------------------------------------------------------------
 
 class AmelasClientParser
 {
@@ -112,7 +112,6 @@ public:
         std::move(tokens.begin() + 1, tokens.end(), std::back_inserter(params));
 
         return this->executeCommand(command_id, params);
-
     }
 
     zmqutils::serverclient::OperationResult executeCommand(CommandType command_id,
