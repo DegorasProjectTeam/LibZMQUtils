@@ -43,7 +43,13 @@ This project is compiled under C++17 with Mingw compilator in Windows OS, using 
 
 ## Utilities
 
-This library contains an abstract command server and an abstract command client which can be used to implement your application specific command client and server. The base clasess will deal for you with connection/disconnection, clients present or dead and data sending and receiving, using ZMQ technology. You will only have to deal with the serialization/deserialization of your application's commands data, as well, as with the execution of your custom commands. In this section you can see a brief description of the utilities included in this library. For more specific information, please read the documentation.
+This library contains the implementation of Client/Server and Publisher/Subscriber patterns using the ZMQ framework.
+
+The Client/Server module contains an abstract command server and an abstract command client which can be used to implement your application specific command client and server. The base clasess will deal for you with connection/disconnection, clients present or dead and data sending and receiving. You will only have to deal with the serialization/deserialization of your application's commands data, as well, as with the execution of your custom commands.
+
+The Publisher/Subscriber module contains a base publisher, that can be used directly or subclassed, to send messages to subscribers. The subscriber class is abstract and must be subclassed. The subscriber can subscribe to multiple publishers and filter the received messages by topics.
+
+In this section you can see a brief description of both modules included in this library. For more specific information, please read the documentation.
 
 ### CommandServer / CommandClient
 
@@ -51,17 +57,33 @@ The main classes of this library are CommandServerBase and CommandClientBase. Th
 
 #### CommandClientBase
 
-In the case of the client, you only have to implement the onSendCommand method, that is called after a command is sent. Optionally, you can leave the implementation body blank or use it for log purposes.
+In the case of the client, you have to implement the onClientStart, onClientStop, onWaitingReply, onDeadServer, onConnected, onDisconnected, onInvalidMsgReceived, onReplyReceived, onSendingCommand and onClientError methods. You can add the logic for your application when those events occur, leave the implementation body blank or use it for log purposes.
 
 You will also have to implement the serialization of the input data before using the client sendCommand method, and the deserialization and management of the data received.
 
 #### CommandServerBase
 
-The CommandServerBase will only deal with the three base commands: connect, disconnect and keepalive. These commands' id are reserved and cannot be used for your application's custom commands. 
+The CommandServerBase will only deal with the three base commands: connect, disconnect and keepalive. These commands' IDs are reserved and cannot be used for your application's custom commands. 
 
 You will have to implement the management of your custom commands in the onCustomCommandReceived method. This method will be called whenever a custom command is sent to the server, so you can process the input data and send back the output data.
 
 Aside from the onCustomCommandReceived method, you also have to implement the callbacks onServerStart, onServerStop, onWaitingCommand, onDeadClient, onConnected, onDisconnected, onCommandReceived, onInvalidMsgReceived, onSendingResponse and onServerError. These methods are optional and can be left with an empty implementation.
+
+### Publisher / Subscriber
+
+The main classes of this library are PublisherBase and SubscriberBase. SubscriberBase is an abstract class and must be extended by your specific application subscriber class to implement the necessary functionalities. PublisherBase can be used directly or subclassed. You can see more information about the implementation in the documentation. 
+
+#### PublisherBase
+
+In the case of the client, you can implement the onPublisherStart, onPublisherStop, onSendingMsg and onPublisherError methods. The base class' implementation does nothing.
+
+You will also have to implement the serialization of the input data before using the publisher sendMsg method.
+
+#### SubscriberBase
+
+The SubscriberBase can filter any number of topics, so that it will only receive those topics that are allowed in by using the addTopicFilter method. There is one reserved topic, denoted by constant kReservedExitTopic. This topic cannot be set or unset.
+
+You will have to implement the callbacks onSubscriberStart, onSubscriberStop, onMsgReceived, onInvalidMsgReceived, and onSubscriberError. These methods can be left with an empty implementation.
 
 ### Generic and helper utilities
 
