@@ -2,6 +2,75 @@
 # Updated 15/04/2024
 # **********************************************************************************************************************
 
+# **********************************************************************************************************************
+
+macro(macro_search_file file_name current_path result_var)
+
+    # Initial search for the file in the current directory
+    file(GLOB_RECURSE found_files RELATIVE "${current_path}" "${current_path}/*/${file_name}")
+    if(found_files)
+    else()
+        message(STATUS "  Internal search in: ${current_path}/${file_name}")
+        file(GLOB_RECURSE found_files RELATIVE "${current_path}" "${current_path}/${file_name}")
+    endif()
+
+    if(found_files)
+        list(GET found_files 0 first_found_file)
+        get_filename_component(first_found_dir "${first_found_file}" DIRECTORY)
+        set(${result_var} "${current_path}/${first_found_dir}")
+    else()
+        # Recursively search in subdirectories
+        file(GLOB children RELATIVE "${current_path}" "${current_path}/*")
+        foreach(child IN LISTS children)
+            if(IS_DIRECTORY "${current_path}/${child}")
+                macro_search_file(${file_name} "${current_path}/${child}" ${result_var})
+                if(${result_var})
+                    break()  # Stop if the file has been found
+                endif()
+            endif()
+        endforeach()
+    endif()
+endmacro()
+
+# **********************************************************************************************************************
+
+macro(macro_search_file_in_paths file_name paths result_var append_filename)
+    # Split file_name into directory and the actual file name
+    string(FIND "${file_name}" "/" last_slash REVERSE)
+    if(last_slash GREATER -1)
+        string(SUBSTRING "${file_name}" 0 ${last_slash} sub_path)
+        string(SUBSTRING "${file_name}" ${last_slash} -1 actual_file_name)
+        if(actual_file_name MATCHES "^/")
+            string(SUBSTRING ${actual_file_name} 1 -1 actual_file_name)
+        endif()
+        message(STATUS "  Search for: ${actual_file_name}")
+    else()
+        set(sub_path "")
+        set(actual_file_name "${file_name}")
+        message(STATUS "  Search for: ${file_name}")
+    endif()
+
+    set(local_result)
+    foreach(dir ${paths})
+        if(IS_DIRECTORY ${dir})
+            macro_search_file("${actual_file_name}" "${dir}" local_result)
+        endif()
+        if(local_result)
+            # Check if the filename should be appended to the result
+            if(${append_filename})
+                set(${result_var} "${local_result}/${file_name}")  # Append filename to path
+            else()
+                # Determine if the sub_path should be removed from the result
+                string(REGEX REPLACE "/${sub_path}$" "" trimmed_path "${local_result}")
+                set(${result_var} ${trimmed_path})  # Just set the directory path
+            endif()
+            break()  # Stop if the file has been found
+        endif()
+    endforeach()
+endmacro()
+
+# **********************************************************************************************************************
+
 # Find the ZMQ library.
 
 # Log.
@@ -40,7 +109,7 @@ if(WIN32)
 
     # Check if a forced search path is provided externally
     if(LIBZMQ_FORCED_SEARCH_PATHS)
-        message(STATUS "Forced LibZMQ search path is set to: ${LIBZMQ_FORCED_SEARCH_PATH}")
+        message(STATUS "Forced LibZMQ search path is set to: ${LIBZMQ_FORCED_SEARCH_PATHS}")
         set(SEARCH_PATHS ${LIBZMQ_FORCED_SEARCH_PATHS})
     else()
        # Combine both lists into one if forced path is not set

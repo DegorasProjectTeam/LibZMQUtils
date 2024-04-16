@@ -31,6 +31,7 @@
 @PACKAGE_INIT@
 
 # Find the LibZMQ library required by LibZMQUtils, in this case.
+list(PREPEND CMAKE_MODULE_PATH @MODULES_GLOBAL_INSTALL_SHARE_PATH@/cmake)
 set(LIBZMQ_FORCED_SEARCH_PATHS @LIBZMQ_PATHS@)
 find_package(LibZMQ REQUIRED)
 

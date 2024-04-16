@@ -10,12 +10,12 @@ set(MODULE_NAME PublisherSubscriber)
 set(EXAMPLE_NAME PublisherSubscriberAmelas)
 # --
 set(EXAMPLE_DIR ${CMAKE_SOURCE_DIR}/examples/${MODULE_NAME}/${EXAMPLE_NAME})
-set(EXAMPLE_FULL_NAME ${MODULE_NAME}_${EXAMPLE_NAME})
+set(EXAMPLE_FULL_NAME ${EXAMPLE_NAME})
 set(EXAMPLE_INSTALL_PATH ${GLOBAL_LIBZMQUTILS_EXAMPLES_INSTALL_PATH}/${EXAMPLE_FULL_NAME})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Examples/${EXAMPLE_FULL_NAME})
 set(INTERFACE_PUBLISHER "AmelasLoggerPublisherInterface")
-set(APP_PUBLISHER "Example_LoggerPublisher_Amelas")
-set(APP_SUBSCRIBER "Example_LoggerSubscriber_Amelas")
+set(APP_PUBLISHER "Example_LoggerPub_Amelas")
+set(APP_SUBSCRIBER "Example_LoggerSub_Amelas")
 
 # ----------------------------------------------------------------------------------------------------------------------
 # PUBLISHER
@@ -42,6 +42,16 @@ macro_setup_launcher("${APP_PUBLISHER}"
 
 # Include directories.
 target_include_directories(${APP_PUBLISHER} PRIVATE ${CMAKE_SOURCE_DIR}/examples/${MODULE_NAME}/${EXAMPLE_NAME}/includes)
+
+# In mingw better do static linking of the libgcc, libwinpthread and libstd.
+if (MINGW)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++ -static -lpthread")
+    target_link_libraries(${APP_PUBLISHER} PRIVATE -static-libgcc -static-libstdc++ -static -lpthread)
+endif()
+
+# Link against LibZMQUtils.
+# NOTE You can comment this and link all launcher using global variable.
+#macro_link_libzmqutils_default(${APP_PUBLISHER} PUBLIC)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # INTERFACE LIBRARY
@@ -85,12 +95,21 @@ macro_setup_launcher("${APP_SUBSCRIBER}"
 # Include directories.
 target_include_directories(${APP_SUBSCRIBER} PRIVATE ${CMAKE_SOURCE_DIR}/examples/${MODULE_NAME}/${EXAMPLE_NAME})
 
+# In mingw better do static linking of the libgcc, libwinpthread and libstd.
+if (MINGW)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++ -static -lpthread")
+    target_link_libraries(${APP_PUBLISHER} PRIVATE -static-libgcc -static-libstdc++ -static -lpthread)
+endif()
+
+# Link against LibZMQUtils.
+# NOTE You can comment this and link all launcher using global variable.
+#macro_link_libzmqutils_default(${APP_SUBSCRIBER} PUBLIC)
+
 # ----------------------------------------------------------------------------------------------------------------------
 # INSTALLATION PROCESS
 
 # Prepare the external library search folders.
-set(ext_libs_loc "${MODULES_GLOBAL_INSTALL_LIB_PATH}"
-                 "${MODULES_GLOBAL_INSTALL_BIN_PATH}")
+set(ext_libs_loc "${ext_libs_loc}" "${MODULES_GLOBAL_INSTALL_LIB_PATH}" "${MODULES_GLOBAL_INSTALL_BIN_PATH}")
 
 # Install the launcher for publisher.
 macro_install_launcher("${APP_PUBLISHER}"
