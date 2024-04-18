@@ -59,7 +59,7 @@
 #include "includes/AmelasControllerClient/amelas_controller_client.h"
 // =====================================================================================================================
 
-// -----------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------------------------
 using zmqutils::serverclient::CommandType;
 using zmqutils::serverclient::CommandReply;
 using zmqutils::serverclient::ServerCommand;
@@ -71,7 +71,7 @@ using amelas::communication::AmelasControllerClient;
 using amelas::communication::common::AmelasServerCommand;
 using amelas::controller::AltAzPos;
 using amelas::controller::AmelasError;
-    // -----------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------------------------
 
 class AmelasClientParser
 {
@@ -114,10 +114,9 @@ public:
         return this->executeCommand(command_id, params);
     }
 
-    zmqutils::serverclient::OperationResult executeCommand(CommandType command_id,
-                                                           const std::vector<std::string> &params)
+    OperationResult executeCommand(CommandType command_id, const std::vector<std::string> &params)
     {
-        zmqutils::serverclient::OperationResult res;
+        OperationResult res;
 
         if (command_id == static_cast<CommandType>(ServerCommand::REQ_CONNECT))
         {
@@ -139,6 +138,11 @@ public:
             std::cout << "Sending REQ_GET_SERVER_TIME command." << std::endl;
             std::string datetime;
             res = this->client_.doGetServerTime(datetime);
+            if(res==OperationResult::COMMAND_OK)
+                std::cout << "GET_SERVER_TIME command executed succesfully. "
+                          << "Server time is: " << datetime << std::endl;
+            else
+                std::cout << "GET_SERVER_TIME command failed." << std::endl;
         }
         else if (command_id == static_cast<CommandType>(AmelasServerCommand::REQ_GET_HOME_POSITION))
         {
@@ -245,7 +249,7 @@ int main(int, char**)
 {
     // Configure the console.
     zmqutils::utils::ConsoleConfig& console_cfg = zmqutils::utils::ConsoleConfig::getInstance();
-    console_cfg.configureConsole(true, false, false);
+    console_cfg.configureConsole(true, false, true);
 
     // Configuration variables.
     unsigned port = 9999;
@@ -285,12 +289,14 @@ int main(int, char**)
     {
         // Get the command and parameters.
         std::cout<<"------------------------------------------------------"<<std::endl;
-        std::cout<<"-- Commands --"<<std::endl;
+        std::cout<<"-- Basic Commands --"<<std::endl;
         std::cout<<"- REQ_CONNECT:          0"<<std::endl;
         std::cout<<"- REQ_DISCONNECT:       1"<<std::endl;
         std::cout<<"- REQ_ALIVE:            2"<<std::endl;
         std::cout<<"- REQ_GET_SERVER_TIME:  3"<<std::endl;
-        std::cout<<"- CUSTOM:         cmd param1 param2 ..."<<std::endl;
+        std::cout<<"-- Specific Commands --"<<std::endl;
+        std::cout<<"- REQ_SET_HOME_POSITION:  33 az el"<<std::endl;
+        std::cout<<"- REQ_GET_HOME_POSITION:  34"<<std::endl;
         std::cout<<"-- Other --"<<std::endl;
         std::cout<<"- Client exit:             exit"<<std::endl;
         std::cout<<"- Enable auto-alive:       auto_alive_en"<<std::endl;

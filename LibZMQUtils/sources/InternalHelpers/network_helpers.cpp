@@ -44,19 +44,18 @@
 #define _WIN32_WINNT 0x0600
 #endif
 #elif __unix__
-#include <sys/socket.h>
-#include <ifaddrs.h>
+#include <unistd.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <unistd.h>
+#include <sys/types.h>
+#include <ifaddrs.h>
+#include <netdb.h>
 #endif
 // =====================================================================================================================
 
 // C++ INCLUDES
 // =====================================================================================================================
-#include <sstream>
 #include <vector>
-#include <iomanip>
 #include <regex>
 // =====================================================================================================================
 
@@ -94,7 +93,13 @@ std::string getHostname()
     name = std::string(buffer);
 
 #elif __unix__
-    // TODO
+
+    char buffer[256];
+    if (gethostname(buffer, sizeof(buffer)) != 0)
+        return "";
+
+    name = std::string(buffer);
+
 #endif
 
     // Return the hostname.
@@ -155,8 +160,45 @@ std::vector<NetworkAdapterInfo> getHostIPsWithInterfaces()
 
         adapter_addrs = adapter_addrs->Next;
     }
+
 #elif __unix__
-    // TODO
+
+    struct ifaddrs *ifaddr, *ifa;
+    int family, s;
+    char host[NI_MAXHOST];
+
+    if (getifaddrs(&ifaddr) == -1)
+    {
+        perror("getifaddrs");
+        return adapters;
+    }
+
+    for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next)
+    {
+        if (ifa->ifa_addr == NULL)
+            continue;
+
+        family = ifa->ifa_addr->sa_family;
+
+        // Check it is IP4
+        // We use IPv4 for simplicity, change to AF_INET6 for IPv6
+        if (family == AF_INET)
+        {
+            s = getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+            if (s != 0)
+                break;
+
+            NetworkAdapterInfo adapter;
+            adapter.id = std::string(ifa->ifa_name);
+            adapter.name = std::string(ifa->ifa_name); // Typically, the friendly name isn't available like in Windows.
+            adapter.descr = "";                        // Description is also typically not available
+            adapter.ip = std::string(host);
+            adapters.push_back(adapter);
+        }
+    }
+
+    freeifaddrs(ifaddr);
+
 #endif
 
     // Return the ip interface maps.
