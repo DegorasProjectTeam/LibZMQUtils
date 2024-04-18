@@ -49,7 +49,7 @@
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
 #include <LibZMQUtils/Modules/CommandServer>
-#include <LibZMQUtils/Modules/Utils>
+#include <LibZMQUtils/Modules/Utilities>
 // =====================================================================================================================
 
 // PROJECT INCLUDES

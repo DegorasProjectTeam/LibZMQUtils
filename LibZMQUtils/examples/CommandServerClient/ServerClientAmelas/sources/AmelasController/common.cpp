@@ -52,12 +52,12 @@ AltAzPos::AltAzPos(double az, double el):
 
 AltAzPos::AltAzPos(): az(-1), el(-1){}
 
-size_t AltAzPos::serialize(zmqutils::utils::BinarySerializer &serializer) const
+size_t AltAzPos::serialize(zmqutils::serializer::BinarySerializer &serializer) const
 {
     return serializer.write(az, el);
 }
 
-void AltAzPos::deserialize(zmqutils::utils::BinarySerializer &serializer)
+void AltAzPos::deserialize(zmqutils::serializer::BinarySerializer &serializer)
 {
     serializer.read(az, el);
 }

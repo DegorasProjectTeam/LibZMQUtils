@@ -49,7 +49,7 @@
 // LIBZMQUTILS INCLUDES
 // =====================================================================================================================
 #include <LibZMQUtils/Modules/Publisher>
-#include <LibZMQUtils/Modules/Utils>
+#include <LibZMQUtils/Modules/Utilities>
 // =====================================================================================================================
 
 // NAMESPACES
@@ -65,13 +65,13 @@ enum class AmelasLogLevel : std::uint32_t
     AMELAS_ERROR = 2
 };
 
-struct AmelasLog : public zmqutils::utils::Serializable
+struct AmelasLog : public zmqutils::serializer::Serializable
 {
-    zmqutils::utils::SizeUnit serialize(zmqutils::utils::BinarySerializer& serializer) const override final;
+    zmqutils::serializer::SizeUnit serialize(zmqutils::serializer::BinarySerializer& serializer) const override final;
 
-    void deserialize(zmqutils::utils::BinarySerializer& serializer) override final;
+    void deserialize(zmqutils::serializer::BinarySerializer& serializer) override final;
 
-    zmqutils::utils::SizeUnit serializedSize() const override final;
+    zmqutils::serializer::SizeUnit serializedSize() const override final;
 
     AmelasLogLevel level;
     std::string str_info;

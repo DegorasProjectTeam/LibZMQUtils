@@ -49,7 +49,7 @@
 // LIBZMQUTILS INCLUDES
 // =====================================================================================================================
 #include <LibZMQUtils/Modules/CommandClient>
-#include <LibZMQUtils/Modules/Utils>
+#include <LibZMQUtils/Modules/Utilities>
 // =====================================================================================================================
 
 // INTERFACE INCLUDES

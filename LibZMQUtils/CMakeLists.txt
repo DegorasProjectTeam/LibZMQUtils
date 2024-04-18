@@ -170,7 +170,7 @@ install(FILES "${CMAKE_SOURCE_DIR}/CMakeLibsConfig/FindLibZMQ.cmake"
 # CONFIGURE THE SUBPROJECTS
 
 # Testing subproject.
-#add_subdirectory(testing)
+add_subdirectory(testing)
 
 # Example subproject.
 add_subdirectory(examples)

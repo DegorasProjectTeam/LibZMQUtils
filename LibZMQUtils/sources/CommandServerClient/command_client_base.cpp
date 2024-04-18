@@ -46,8 +46,8 @@
 
 // ZMQ INCLUDES
 // =====================================================================================================================
-#include <LibZMQ/zmq.hpp>
-#include <LibZMQ/zmq_addon.hpp>
+#include <zmq.hpp>
+#include <zmq_addon.hpp>
 // =====================================================================================================================
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
@@ -433,11 +433,11 @@ OperationResult CommandClientBase::recvFromSocket(CommandReply& reply,
                 zmq::message_t msg_res = multipart_msg.pop();
 
                 // Check the result size.
-                if (msg_res.size() != sizeof(utils::SizeUnit) + sizeof(ResultType))
+                if (msg_res.size() != sizeof(serializer::SizeUnit) + sizeof(ResultType))
                     return OperationResult::INVALID_MSG;
 
                 // Get the command.
-                utils::BinarySerializer::fastDeserialization(msg_res.data(), msg_res.size(), reply.server_result);
+                serializer::BinarySerializer::fastDeserialization(msg_res.data(), msg_res.size(), reply.server_result);
 
                 // If there is still one more part, they are the parameters.
                 if (multipart_msg.size() == 1)
@@ -450,7 +450,7 @@ OperationResult CommandClientBase::recvFromSocket(CommandReply& reply,
                         return OperationResult::EMPTY_PARAMS;
 
                     // Get and store the parameters data.
-                    utils::BinarySerializer serializer(msg_params.data(), msg_params.size());
+                    serializer::BinarySerializer serializer(msg_params.data(), msg_params.size());
                     reply.params_size = serializer.moveUnique(reply.params);
                 }
 
@@ -693,7 +693,7 @@ OperationResult CommandClientBase::doConnect(bool auto_alive)
     CommandReply reply;
 
     // Serializer.
-    utils::BinarySerializer serializer;
+    serializer::BinarySerializer serializer;
 
     // Serialize the parameters data.
     serializer.write(this->client_info_.ip, this->client_info_.pid, this->client_info_.hostname, this->client_name_);
@@ -772,7 +772,7 @@ OperationResult CommandClientBase::doGetServerTime(std::string &datetime)
         return OperationResult::COMMAND_FAILED;
 
     // Get the ISO 8601 datetime string.
-    utils::BinarySerializer::fastDeserialization(std::move(reply.params), reply.params_size, datetime);
+    serializer::BinarySerializer::fastDeserialization(std::move(reply.params), reply.params_size, datetime);
 
     // Return the result.
     return result;
@@ -781,7 +781,7 @@ OperationResult CommandClientBase::doGetServerTime(std::string &datetime)
 zmq::multipart_t CommandClientBase::prepareMessage(const RequestData &request)
 {
     // Serializer.
-    utils::BinarySerializer serializer;
+    serializer::BinarySerializer serializer;
 
     // Prepare the uuid message.
     size_t uuid_size = serializer.write(this->client_info_.uuid.getBytes());

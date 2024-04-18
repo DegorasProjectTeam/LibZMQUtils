@@ -28,17 +28,20 @@
 #include <vector>
 #include <fstream>
 #include <stdio.h>
+#include <chrono>
+#include <omp.h>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/Utils>
+#include <LibZMQUtils/Modules/Utilities>
 #include <LibZMQUtils/Testing/UnitTest>
 // =====================================================================================================================
 
 // =====================================================================================================================
-using zmqutils::utils::BinarySerializer;
-using zmqutils::utils::Serializable;
+using zmqutils::serializer::BinarySerializer;
+using zmqutils::serializer::Serializable;
+using zmqutils::serializer::SizeUnit;
 // =====================================================================================================================
 
 // Basic tests.
@@ -51,6 +54,7 @@ M_DECLARE_UNIT_TEST(BinarySerializer, File)
 
 // Other tests.
 M_DECLARE_UNIT_TEST(BinarySerializer, TrivialIntensive)
+M_DECLARE_UNIT_TEST(BinarySerializer, TrivialIntensiveParrallel)
 
 // Implementations.
 
@@ -72,17 +76,6 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Trivial)
     int r3;
     unsigned r4;
 
-//    serializer.write(n1, n2, n3, n4);
-//    std::cout<<serializer.getDataHexString()<<std::endl;
-
-//    BinarySerializer::BytesSmartPtr data;
-//    BinarySerializer::SizeUnit sz = BinarySerializer::fastSerialization(data, n1, n2, n3, n4);
-//    BinarySerializer serializer_direct_2(&data, sz);
-
-//    std::cout<<serializer_direct_2.getDataHexString()<<std::endl;
-
-
-
     // Write, read.
     serializer.write(n1, n2, n3);
     serializer.write(n4);
@@ -91,8 +84,8 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Trivial)
 
     // Checking.
     M_EXPECTED_EQ(serializer.getDataHexString(), result)
-    M_EXPECTED_EQ(serializer.getSize(), sizeof(double)*2 + sizeof(int) + sizeof(unsigned)
-                                            + 4*sizeof(BinarySerializer::SizeUnit))
+    M_EXPECTED_EQ(serializer.getSize(), sizeof(double)*2 + sizeof(int) + sizeof(unsigned) + 4*sizeof(SizeUnit))
+    M_EXPECTED_EQ(serializer.getSize(), BinarySerializer::calcTotalSize(n1,n2,n3,n4))
     M_EXPECTED_EQ(r1, n1)
     M_EXPECTED_EQ(r2, n2)
     M_EXPECTED_EQ(r3, n3)
@@ -127,7 +120,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Trivial)
     // Fast serialization test and other tests.
     serializer.clearData();
     std::unique_ptr<std::byte[]> data;
-    BinarySerializer::SizeUnit sz = BinarySerializer::fastSerialization(data, n1, n2, n3, n4);
+    SizeUnit sz = BinarySerializer::fastSerialization(data, n1, n2, n3, n4);
 
     std::stringstream ss;
     for(size_t i = 0; i < sz; i++)
@@ -146,7 +139,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Trivial)
     serializer_direct.read(r1, r2, r3, r4);
 
     // Checking.
-    M_EXPECTED_EQ(serializer.getSize(), BinarySerializer::SizeUnit{0})
+    M_EXPECTED_EQ(serializer.getSize(), SizeUnit{0})
     M_EXPECTED_EQ(serializer.allReaded(), true)
     M_EXPECTED_EQ(r1, n1)
     M_EXPECTED_EQ(r2, n2)
@@ -170,7 +163,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, String)
     const std::string in3("123...string...321");
     const std::string in4("");
     std::string out1, out2, out3, out4;
-    size_t size = in1.size() + in2.size() + in3.size() + in4.size() + sizeof(BinarySerializer::SizeUnit)*4;
+    size_t size = in1.size() + in2.size() + in3.size() + in4.size() + sizeof(SizeUnit)*4;
 
     // Write, read.
     serializer.write(in1, in2, in3, in4);
@@ -209,7 +202,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, String)
     serializer.write(iso8601_time);
 
     BinarySerializer::BytesSmartPtr data;
-    BinarySerializer::SizeUnit sz = BinarySerializer::fastSerialization(data, iso8601_time);
+    SizeUnit sz = BinarySerializer::fastSerialization(data, iso8601_time);
 
     BinarySerializer::fastDeserialization(std::move(data), sz, iso8601_res);
 
@@ -264,8 +257,8 @@ M_DEFINE_UNIT_TEST(BinarySerializer, VectorTrivial)
     const std::vector<int> v2 = {-2, -1, 0, 1, 2, 3, 4, 5, 6, 7 ,8 ,9 ,10, 11, 12, -13, -14, -15, -16, 20};
     std::vector<long double> r1;
     std::vector<int> r2;
-    size_t size1 = v1.size()*sizeof(long double) + sizeof(BinarySerializer::SizeUnit)*2;
-    size_t size2 = v2.size()*sizeof(int) + sizeof(BinarySerializer::SizeUnit)*2;
+    size_t size1 = v1.size()*sizeof(long double) + sizeof(SizeUnit)*2;
+    size_t size2 = v2.size()*sizeof(int) + sizeof(SizeUnit)*2;
 
     // Write, read.
     serializer.write(v1);
@@ -290,19 +283,19 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Serializable)
         TestSer(double number, const std::string& str):
             number_(number), str_(str){}
 
-        size_t serialize(zmqutils::utils::BinarySerializer& serializer) const final
+        size_t serialize(zmqutils::serializer::BinarySerializer& serializer) const final
         {
             return serializer.write(this->number_, this->str_);
         }
 
-        void deserialize(zmqutils::utils::BinarySerializer& serializer) final
+        void deserialize(zmqutils::serializer::BinarySerializer& serializer) final
         {
             serializer.read(this->number_, this->str_);
         }
 
         size_t serializedSize() const final
         {
-            return (sizeof(uint64_t)*2 + sizeof(double) + this->str_.length());
+            return Serializable::calcTotalSize(this->number_, this->str_);
         }
 
         inline bool operator ==(const TestSer& other) const
@@ -335,6 +328,8 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Serializable)
     // Checking.
     M_EXPECTED_EQ(test_in, test_out)
     M_EXPECTED_EQ(result, serializer.getDataHexString())
+    M_EXPECTED_EQ(test_in.serializedSize(), test_out.serializedSize())
+    M_EXPECTED_EQ(test_in.serializedSize(), serializer.getSize())
 }
 
 M_DEFINE_UNIT_TEST(BinarySerializer, File)
@@ -380,7 +375,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, File)
 
     // Verify the results.
     M_EXPECTED_EQ(serializer.getDataHexString(), result)
-    M_EXPECTED_EQ(ser_size, sizeof(BinarySerializer::SizeUnit)*2 + file_content.size() + filename.size())
+    M_EXPECTED_EQ(ser_size, sizeof(SizeUnit)*2 + file_content.size() + filename.size())
     M_EXPECTED_EQ(deserialized_content, file_content)
 
     // Delete the file.
@@ -390,33 +385,82 @@ M_DEFINE_UNIT_TEST(BinarySerializer, File)
 
 M_DEFINE_UNIT_TEST(BinarySerializer, TrivialIntensive)
 {
-    // WARNING: This test is not efficient on purpose.
+    // WARNING: TEsting the worst case, so this test is not efficient on purpose.
 
     BinarySerializer serializer;
 
     const size_t count = 50000;
-    std::vector<double> original_numbers(count);
-    std::vector<double> deserialized_numbers(count);
+    std::vector<long double> original_numbers(count);
+    std::vector<long double> deserialized_numbers(count);
 
     // Fill the original numbers with random values
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<> dis(-1000000.0, 1000000.0);
-    for (double &num : original_numbers)
+    for (long double &num : original_numbers)
         num = dis(gen);
 
+    auto now = std::chrono::steady_clock::now();
+
     // Serialize all the numbers
-    for (double num : original_numbers)
+    for (long double num : original_numbers)
         serializer.write(num);
 
+    auto end = std::chrono::steady_clock::now();
+
+    auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - now).count();
+    std::cout << "Elapsed time for serialize: " << elapsed << " microseconds" << std::endl;
+
+    now = std::chrono::steady_clock::now();
+
     // Deserialize the numbers
-    for (double &num : deserialized_numbers)
+    for (long double &num : deserialized_numbers)
         serializer.read(num);
+
+    end = std::chrono::steady_clock::now();
+
+    elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - now).count();
+    std::cout << "Elapsed time for deserialize: " << elapsed << " microseconds" << std::endl;
 
     // Check that the deserialized numbers match the original
     for (size_t i = 0; i < count; i++) {
         M_EXPECTED_EQ(deserialized_numbers[i], original_numbers[i])
     }
+}
+
+M_DEFINE_UNIT_TEST(BinarySerializer, TrivialIntensiveParrallel)
+{
+    // WARNING: Testing intensive in parallel. However, the correct is serialize the vector, not each number.
+
+    const size_t count = 5000000;
+    std::vector<long double> original_numbers(count);
+    std::vector<long double> deserialized_numbers(count);
+
+    // Fill the original numbers with random values
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<> dis(-1000000.0, 1000000.0);
+    for (long double &num : original_numbers)
+        num = dis(gen);
+
+    std::vector<BinarySerializer> serializers;
+    serializers.resize(original_numbers.size());
+
+    auto now = std::chrono::steady_clock::now();
+
+    // Serialize all the numbers
+    omp_set_num_threads(16);
+    #pragma omp parallel for
+    for (size_t i = 0; i < original_numbers.size(); i++)
+    {
+        // Assuming some computation or data retrieval mechanism
+        serializers[i].write(original_numbers[i]);
+    }
+
+    auto end = std::chrono::steady_clock::now();
+
+    auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - now).count();
+    std::cout << "Elapsed time for serialize: " << elapsed << " microseconds" << std::endl;
 }
 
 int main()
@@ -432,6 +476,7 @@ int main()
     M_REGISTER_UNIT_TEST(BinarySerializer, Serializable)
     M_REGISTER_UNIT_TEST(BinarySerializer, File)
     M_REGISTER_UNIT_TEST(BinarySerializer, TrivialIntensive)
+    M_REGISTER_UNIT_TEST(BinarySerializer, TrivialIntensiveParrallel)
 
     // Run the unit tests.
     M_RUN_UNIT_TESTS()

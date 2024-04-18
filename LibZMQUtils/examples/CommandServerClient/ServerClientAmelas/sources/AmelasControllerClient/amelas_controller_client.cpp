@@ -52,7 +52,7 @@ using zmqutils::serverclient::ResultType;
 using zmqutils::serverclient::CommandType;
 using zmqutils::serverclient::CommandReply;
 using zmqutils::serverclient::RequestData;
-using zmqutils::utils::BinarySerializer;
+using zmqutils::serializer::BinarySerializer;
     // -----------------------------------------------------------------------------------------------------------------
 
 AmelasControllerClient::AmelasControllerClient(const std::string& server_endpoint,

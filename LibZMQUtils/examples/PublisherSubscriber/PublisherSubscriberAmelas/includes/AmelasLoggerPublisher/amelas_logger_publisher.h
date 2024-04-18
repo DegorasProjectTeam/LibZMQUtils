@@ -49,7 +49,7 @@
 // LIBZMQUTILS INCLUDES
 // =====================================================================================================================
 #include <LibZMQUtils/Modules/Publisher>
-#include <LibZMQUtils/Modules/Utils>
+#include <LibZMQUtils/Modules/Utilities>
 // =====================================================================================================================
 
 // PROJECT INCLUDES

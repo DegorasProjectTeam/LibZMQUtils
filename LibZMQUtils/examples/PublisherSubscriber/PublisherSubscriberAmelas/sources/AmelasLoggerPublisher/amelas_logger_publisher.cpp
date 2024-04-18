@@ -61,7 +61,7 @@ zmqutils::pubsub::PublisherResult AmelasLoggerPublisher::sendLog(const AmelasLog
 {
     // Containers.
     zmqutils::pubsub::PubSubData data;
-    zmqutils::utils::BinarySerializer serializer;
+    zmqutils::serializer::BinarySerializer serializer;
 
     // Serialize the log and add to the data.
     log.serialize(serializer);
@@ -97,7 +97,7 @@ void AmelasLoggerPublisher::onPublisherStop()
 
 void AmelasLoggerPublisher::onSendingMsg(const zmqutils::pubsub::PubSubData &req)
 {
-    zmqutils::utils::BinarySerializer serializer(req.data.get(), req.data_size);
+    zmqutils::serializer::BinarySerializer serializer(req.data.get(), req.data_size);
     // Log.
     std::cout << std::string(100, '-') << std::endl;
     std::cout << "<"<<this->getName() << ">" << std::endl;

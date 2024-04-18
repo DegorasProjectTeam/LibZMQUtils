@@ -44,8 +44,8 @@
 
 // ZMQ INCLUDES
 // =====================================================================================================================
-#include <LibZMQ/zmq_addon.hpp>
-#include <LibZMQ/zmq.h>
+#include <zmq_addon.hpp>
+#include <zmq.h>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
@@ -239,7 +239,7 @@ OperationResult CommandServerBase::execReqConnect(CommandRequest& cmd_req)
     std::string name;
 
     // Prepare the serializer.
-    utils::BinarySerializer serializer(std::move(cmd_req.params), cmd_req.params_size);
+    serializer::BinarySerializer serializer(std::move(cmd_req.params), cmd_req.params_size);
 
     // Check the parameters.
     if(cmd_req.params_size == 0)
@@ -310,7 +310,7 @@ OperationResult CommandServerBase::execReqGetServerTime(CommandReply& reply)
         return OperationResult::COMMAND_FAILED;
 
     // Serialize the date.
-    reply.params_size = utils::BinarySerializer::fastSerialization(reply.params, date);
+    reply.params_size = serializer::BinarySerializer::fastSerialization(reply.params, date);
 
     // All ok.
     return OperationResult::COMMAND_OK;
@@ -369,7 +369,7 @@ void CommandServerBase::serverWorker()
             this->onSendingResponse(reply);
 
             // Prepare the message.
-            utils::BinarySerializer serializer;
+            serializer::BinarySerializer serializer;
             size_t size_res = serializer.write(result);
             zmq::const_buffer buffer_res(serializer.release(), size_res);
 
@@ -392,7 +392,7 @@ void CommandServerBase::serverWorker()
             this->processCommand(request, reply);
 
             // Binary serializer.
-            utils::BinarySerializer serializer;
+            serializer::BinarySerializer serializer;
 
             // Prepare the multipart msg.
             zmq::multipart_t multipart_msg;
@@ -475,10 +475,10 @@ OperationResult CommandServerBase::recvFromSocket(CommandRequest& request)
         zmq::message_t msg_command = multipart_msg.pop();
 
         // First get the uuid data.
-        if (msg_uuid.size() == UUID::kUUIDSize + sizeof(utils::SizeUnit)*2)
+        if (msg_uuid.size() == UUID::kUUIDSize + sizeof(serializer::SizeUnit)*2)
         {
             std::array<std::byte, 16> uuid_bytes;
-            utils::BinarySerializer::fastDeserialization(msg_uuid.data(), msg_uuid.size(), uuid_bytes);
+            serializer::BinarySerializer::fastDeserialization(msg_uuid.data(), msg_uuid.size(), uuid_bytes);
             request.client_uuid = UUID(uuid_bytes);
         }
         else
@@ -488,13 +488,13 @@ OperationResult CommandServerBase::recvFromSocket(CommandRequest& request)
         this->updateClientLastConnection(request.client_uuid);
 
         // Get the command.
-        if (msg_command.size() == sizeof(utils::SizeUnit) + sizeof(CommandType))
+        if (msg_command.size() == sizeof(serializer::SizeUnit) + sizeof(CommandType))
         {
             // Auxiliar command container.
             std::int32_t raw_command;
 
             // Deserialize.
-            utils::BinarySerializer::fastDeserialization(msg_command.data(), msg_command.size(), raw_command);
+            serializer::BinarySerializer::fastDeserialization(msg_command.data(), msg_command.size(), raw_command);
 
             // Validate the base command or the external command.
             if(CommandServerBase::validateCommand(raw_command))
@@ -523,7 +523,7 @@ OperationResult CommandServerBase::recvFromSocket(CommandRequest& request)
             if(message_params.size() > 0)
             {
                 // Get and store the parameters data.
-                utils::BinarySerializer serializer(message_params.data(), message_params.size());
+                serializer::BinarySerializer serializer(message_params.data(), message_params.size());
                 request.params_size = serializer.moveUnique(request.params);
             }
             else

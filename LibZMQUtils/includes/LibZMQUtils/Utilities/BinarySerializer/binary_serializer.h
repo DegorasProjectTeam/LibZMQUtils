@@ -51,7 +51,7 @@
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
-namespace utils{
+namespace serializer{
 // =====================================================================================================================
 
 class BinarySerializer;
@@ -120,7 +120,11 @@ public:
 
     Serializable(const Serializable&) = default;
 
+    Serializable(Serializable&&) = default;
+
     Serializable& operator =(const Serializable&) = default;
+
+    Serializable& operator =(Serializable&&) = default;
 
     /**
      * @brief Virtual destructor to allow proper cleanup of derived classes.
@@ -223,6 +227,20 @@ public:
         LT_ENDIAN, ///< Little-endian byte order (LSB first).
         BG_ENDIAN     ///< Big-endian byte order (MSB first).
     };
+
+    BinarySerializer(const BinarySerializer&) = delete;
+
+    BinarySerializer(BinarySerializer&& other) :
+        data_(std::move(other.data_)),
+        size_(other.size_.load()),
+        capacity_(other.capacity_.load()),
+        offset_(other.offset_.load()),
+        endianess_(std::move(other.endianess_))
+    {}
+
+    BinarySerializer& operator =(const Serializable&) = delete;
+
+    BinarySerializer& operator =(BinarySerializer&&) = delete;
 
     /**
      * @brief Construct a new ´BinarySerializer´ object with a given capacity.
@@ -488,6 +506,9 @@ public:
     // Size calculator function.
     template<typename T>
     static SizeUnit calcTotalSize(const T& data);
+
+    template<typename... Args>
+    static SizeUnit calcTotalSize(const Args&... args);
 
 protected:
 

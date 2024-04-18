@@ -88,7 +88,7 @@ zmqutils::pubsub::SubscriberResult AmelasLoggerSubscriber::processLogMsg(const z
     // Try to read the parameters data.
     try
     {
-        zmqutils::utils::BinarySerializer serializer(msg.data.data.get(), msg.data.data_size);
+        zmqutils::serializer::BinarySerializer serializer(msg.data.data.get(), msg.data.data_size);
 
         log.deserialize(serializer);
     }
@@ -140,7 +140,7 @@ void AmelasLoggerSubscriber::onSubscriberError(const zmq::error_t &error, const 
 zmqutils::pubsub::SubscriberResult AmelasLoggerSubscriber::onMsgReceived(const zmqutils::pubsub::PubSubMsg& msg)
 {
     // Log.
-    zmqutils::utils::BinarySerializer serializer(msg.data.data.get(), msg.data.data_size);
+    zmqutils::serializer::BinarySerializer serializer(msg.data.data.get(), msg.data.data_size);
     std::cout << std::string(100, '-') << std::endl;
     std::cout << "<LOGGER SUBSCRIBER>" << std::endl;
     std::cout << "-> ON MSG RECEIVED: " << std::endl;
@@ -160,7 +160,7 @@ zmqutils::pubsub::SubscriberResult AmelasLoggerSubscriber::onMsgReceived(const z
 void AmelasLoggerSubscriber::onInvalidMsgReceived(const zmqutils::pubsub::PubSubMsg& msg, zmqutils::pubsub::SubscriberResult)
 {
     // Log.
-    zmqutils::utils::BinarySerializer serializer(msg.data.data.get(), msg.data.data_size);
+    zmqutils::serializer::BinarySerializer serializer(msg.data.data.get(), msg.data.data_size);
     std::cout << std::string(100, '-') << std::endl;
     std::cout << "<LOGGER SUBSCRIBER>" << std::endl;
     std::cout << "-> ON BAD MSG RECEIVED: " << std::endl;

@@ -42,12 +42,13 @@
 #include <cstdlib>
 #include <thread>
 #include <chrono>
+#include <regex>
 // =====================================================================================================================
 
 // ZMQ INCLUDES
 // =====================================================================================================================
-#include <LibZMQ/zmq.hpp>
-#include <LibZMQ/zmq_addon.hpp>
+#include <zmq.hpp>
+#include <zmq_addon.hpp>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
@@ -78,7 +79,6 @@ PublisherBase::PublisherBase(std::string endpoint,
 
     this->pub_info_.name = std::move(name);
     this->pub_info_.uuid = std::move(uuid);
-
 
     // Get the addr of interface for binding. If * symbol is issued, bind to every interface.
     std::string local_addr;
@@ -291,7 +291,7 @@ void PublisherBase::internalStopPublisher()
 zmq::multipart_t PublisherBase::prepareMessage(const PubSubData &data)
 {
     // Serializer.
-    utils::BinarySerializer serializer;
+    serializer::BinarySerializer serializer;
 
     // Prepare the topic. This must come plain, since it is used by ZMQ topic filtering.
     zmq::message_t msg_topic(data.topic);

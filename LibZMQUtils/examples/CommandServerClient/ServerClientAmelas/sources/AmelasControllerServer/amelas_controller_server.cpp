@@ -55,7 +55,7 @@ using zmqutils::serverclient::ResultType;
 using zmqutils::serverclient::CommandRequest;
 using zmqutils::serverclient::CommandReply;
 using zmqutils::serverclient::HostInfo;
-using zmqutils::utils::BinarySerializer;
+using zmqutils::serializer::BinarySerializer;
 // ---------------------------------------------------------------------------------------------------------------------
 
 AmelasControllerServer::AmelasControllerServer(unsigned int port, const std::string &local_addr) :

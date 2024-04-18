@@ -10,7 +10,6 @@ macro(macro_search_file file_name current_path result_var)
     file(GLOB_RECURSE found_files RELATIVE "${current_path}" "${current_path}/*/${file_name}")
     if(found_files)
     else()
-        message(STATUS "  Internal search in: ${current_path}/${file_name}")
         file(GLOB_RECURSE found_files RELATIVE "${current_path}" "${current_path}/${file_name}")
     endif()
 
@@ -142,7 +141,49 @@ if(WIN32)
 
 else()
 
-    message(FATAL_ERROR "  SO not supported." )
+    # GLOB for directories that contain 'LibZMQ' in their names under 'C:/'
+    file(GLOB LIBZMQ_CANDIDATE_DIRS
+        "../LibZMQ*"
+        "../../LibZMQ*"
+        "~/LibZMQ*")
+
+    # List of paths to search.
+    set(HARDCODED_PATHS
+        "/usr/include"
+        "/usr/local"
+        "/usr/lib"
+        NO_DEFAULT_PATH)
+
+    # Check if a forced search path is provided externally
+    if(LIBZMQ_FORCED_SEARCH_PATHS)
+        message(STATUS "Forced LibZMQ search path is set to: ${LIBZMQ_FORCED_SEARCH_PATHS}")
+        set(SEARCH_PATHS ${LIBZMQ_FORCED_SEARCH_PATHS})
+    else()
+       # Combine both lists into one if forced path is not set
+       set(SEARCH_PATHS ${LIBZMQ_CANDIDATE_DIRS} ${HARDCODED_PATHS})
+    endif()
+
+    # Search for includes.
+    macro_search_file_in_paths("LibZMQ/zmq.h" "${SEARCH_PATHS}" LIBZMQ_INCLUDE_DIR FALSE)
+    macro_search_file_in_paths("LibZMQ/zmq.hpp" "${SEARCH_PATHS}" LIBZMQ_INCLUDE_DIR_BINDING FALSE)
+    macro_search_file_in_paths("LibZMQ/zmq_addon.hpp" "${SEARCH_PATHS}" LIBZMQ_INCLUDE_DIR_BINDING_ADDON FALSE)
+
+    # Find the ZMQ library and libsodium.
+    macro_search_file_in_paths("libzmq.so" "${SEARCH_PATHS}" LIBZMQ_LIBRARY TRUE)
+    macro_search_file_in_paths("libzmq.so" "${SEARCH_PATHS}" LIBZMQ_LIBRARY_PATH FALSE)
+
+    # Checks.
+    if(LIBZMQ_INCLUDE_DIR AND LIBZMQ_LIBRARY AND LIBZMQ_INCLUDE_DIR AND
+       LIBZMQ_INCLUDE_DIR_BINDING AND LIBZMQ_INCLUDE_DIR_BINDING_ADDON)
+
+        set(LIBZMQ_FOUND TRUE)
+        set(LIBZMQ_LIBRARIES ${LIBZMQ_LIBRARY})
+        set(LIBZMQ_LIBRARY_DIRS ${LIBZMQ_LIBRARY_PATH})
+        set(LIBZMQ_INCLUDE_DIRS ${LIBZMQ_INCLUDE_DIR})
+
+    else()
+        message(FATAL_ERROR "  Could not find LibZMQ library.")
+    endif()
 
 endif()
 

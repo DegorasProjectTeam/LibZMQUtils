@@ -62,7 +62,7 @@
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
-namespace utils{
+namespace serializer{
 // =====================================================================================================================
 
 template<typename T>
@@ -482,6 +482,11 @@ SizeUnit Serializable::calcTotalSizeHelper(const T& first, const Args&... rest)
     return BinarySerializer::calcTotalSize(first) + Serializable::calcTotalSizeHelper(rest...);
 }
 
+template<typename... Args>
+SizeUnit BinarySerializer::calcTotalSize(const Args&... args)
+{
+    return Serializable::calcTotalSize(args...);
+}
 
 
 }} // END NAMESPACES.

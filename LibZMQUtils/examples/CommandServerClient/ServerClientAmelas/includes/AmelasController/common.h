@@ -49,7 +49,7 @@
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/Modules/Utils>
+#include <LibZMQUtils/Modules/Utilities>
 // =====================================================================================================================
 
 // AMELAS NAMESPACES
@@ -82,15 +82,15 @@ static constexpr std::array<const char*, 3>  ControllerErrorStr
     "UNSAFE_POSITION - The provided position (az/alt) is unsafe."
 };
 
-struct AltAzPos : public zmqutils::utils::Serializable
+struct AltAzPos : public zmqutils::serializer::Serializable
 {
     AltAzPos(double az, double el);
 
     AltAzPos();
 
-    size_t serialize(zmqutils::utils::BinarySerializer& serializer) const final;
+    size_t serialize(zmqutils::serializer::BinarySerializer& serializer) const final;
 
-    void deserialize(zmqutils::utils::BinarySerializer& serializer) final;
+    void deserialize(zmqutils::serializer::BinarySerializer& serializer) final;
 
     size_t serializedSize() const final;
 

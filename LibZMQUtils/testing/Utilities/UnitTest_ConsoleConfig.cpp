@@ -1,15 +1,9 @@
 /***********************************************************************************************************************
- *   LibZMQUtils (ZeroMQ High-Level Utilities C++ Library).                                                            *
+ *   LibZMQUtils (ZMQ Utilitites Library): A libre library with ZMQ related useful utilities.                          *
  *                                                                                                                     *
- *   A modern open-source C++ library with high-level utilities based on the well-known ZeroMQ open-source universal   *
- *   messaging library. Includes custom command based server-client and publisher-subscriber with automatic binary     *
- *   serialization capabilities, specially designed for system infraestructure. Developed as a free software under the *
- *   context of Degoras Project for the Spanish Navy Observatory SLR station (SFEL) in San Fernando and, of course,    *
- *   for any other station that wants to use it!                                                                       *
- *                                                                                                                     *
- *   Copyright (C) 2024 Degoras Project Team                                                                           *
+ *   Copyright (C) 2023 Degoras Project Team                                                                           *
  *                      < Ángel Vera Herrera, avera@roa.es - angeldelaveracruz@gmail.com >                             *
- *                      < Jesús Relinque Madroñal >                                                                    *                                                            *
+ *                      < Jesús Relinque Madroñal >                                                                    *
  *                                                                                                                     *
  *   This file is part of LibZMQUtils.                                                                                 *
  *                                                                                                                     *
@@ -28,62 +22,75 @@
  *   along with this project. If not, see the license at < https://eupl.eu/ >.                                         *
  **********************************************************************************************************************/
 
-/** ********************************************************************************************************************
- * @file zmq_context_handler.h
- * @brief This file contains the declaration of the global `ZMQContextHandler` class.
- * @author Degoras Project Team
- * @copyright EUPL License
-***********************************************************************************************************************/
-
-// =====================================================================================================================
-#pragma once
-// =====================================================================================================================
-
 // C++ INCLUDES
 // =====================================================================================================================
 #include <iostream>
 #include <vector>
-#include <functional>
-#include <mutex>
+#include <fstream>
+#include <stdio.h>
 // =====================================================================================================================
 
-// ZMQ INCLUDES
+// ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <zmq.hpp>
-#include <zmq_addon.hpp>
-// =====================================================================================================================
-
-// ZMQUTILS NAMESPACES
-// =====================================================================================================================
-namespace zmqutils{
+#include <LibZMQUtils/Modules/Utilities>
+#include <LibZMQUtils/Testing/UnitTest>
 // =====================================================================================================================
 
-class ZMQContextHandler
+// =====================================================================================================================
+using zmqutils::utils::ConsoleConfig;
+// =====================================================================================================================
+
+// Basic tests.
+M_DECLARE_UNIT_TEST(ConsoleConfig, BasicTest1)
+M_DECLARE_UNIT_TEST(ConsoleConfig, BasicTest2)
+
+// Implementations.
+
+M_DEFINE_UNIT_TEST(ConsoleConfig, BasicTest1)
 {
+    std::cout << "Start test..." << std::endl;
 
-protected:
+    // Configure the console.
+    zmqutils::utils::ConsoleConfig& console_cfg = zmqutils::utils::ConsoleConfig::getInstance();
+    console_cfg.configureConsole(true, true, false);
 
-    ZMQContextHandler();
+    // Wait for closing as an infinite loop until ctrl-c.
+    console_cfg.waitForClose();
 
-    // Aliases.
-    using ContextHandlerReference = std::reference_wrapper<ZMQContextHandler>;
+    std::cout << "End test..." << std::endl;
 
-    virtual ~ZMQContextHandler();
+    // Restore the console.
+    console_cfg.restoreConsole();
+}
 
-    const std::unique_ptr<zmq::context_t>& getContext();
-    static ZMQContextHandler& getInstance();
+M_DEFINE_UNIT_TEST(ConsoleConfig, BasicTest2)
+{
+    std::cout << "Start test..." << std::endl;
 
-private:
+    // Configure the console.
+    zmqutils::utils::ConsoleConfig& console_cfg = zmqutils::utils::ConsoleConfig::getInstance();
+    console_cfg.configureConsole(true, false, true);
 
-    // Delete constructors.
-    ZMQContextHandler(const ZMQContextHandler&) = delete;
-    ZMQContextHandler& operator=(const ZMQContextHandler&) = delete;
+    // Wait for closing as an infinite loop until ctrl-c.
+    console_cfg.waitForClose();
 
-    // Internal variables and containers.
-    inline static std::mutex mtx_;                                  ///< Safety mutex.
-    inline static std::unique_ptr<zmq::context_t> context_;         ///< ZMQ global context.
-    inline static std::vector<ContextHandlerReference> instances_;  ///< Instances of the ContextHandler.
-};
+    std::cout << "End test..." << std::endl;
 
-} // END NAMESPACES.
-// =====================================================================================================================
+    // Restore the console.
+    console_cfg.restoreConsole();
+}
+
+int main()
+{
+    // ENABLE THIS TEST ONLY IF NECESSARY
+
+    // Start of the session.
+    M_START_UNIT_TEST_SESSION("LibZMQUtils ConsoleConfig Session")
+
+    // Register the tests.
+    //M_REGISTER_UNIT_TEST(ConsoleConfig, BasicTest1)
+    //M_REGISTER_UNIT_TEST(ConsoleConfig, BasicTest2)
+
+    // Run the unit tests.
+    M_RUN_UNIT_TESTS()
+}

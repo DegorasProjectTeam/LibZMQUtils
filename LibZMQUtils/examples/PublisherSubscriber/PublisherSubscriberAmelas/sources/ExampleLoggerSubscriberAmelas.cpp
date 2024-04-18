@@ -50,7 +50,7 @@
 
 // LIBZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/Modules/Utils>
+#include <LibZMQUtils/Modules/Utilities>
 // =====================================================================================================================
 
 // PROJECT INCLUDES
@@ -62,7 +62,7 @@
 
 // ---------------------------------------------------------------------------------------------------------------------
 using zmqutils::pubsub::SubscriberResult;
-using zmqutils::utils::BinarySerializer;
+using zmqutils::serializer::BinarySerializer;
 using amelas::communication::AmelasLoggerSubscriber;
 using amelas::communication::AmelasLoggerTopic;
 using amelas::controller::AmelasLog;

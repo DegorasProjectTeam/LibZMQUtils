@@ -48,7 +48,7 @@
 
 // LIBZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/Modules/Utils>
+#include <LibZMQUtils/Modules/Utilities>
 #include "LibZMQUtils/InternalHelpers/string_helpers.h"
 // =====================================================================================================================
 
@@ -66,7 +66,7 @@ using zmqutils::serverclient::ServerCommand;
 using zmqutils::serverclient::CommandClientBase;
 using zmqutils::serverclient::RequestData;
 using zmqutils::serverclient::OperationResult;
-using zmqutils::utils::BinarySerializer;
+using zmqutils::serializer::BinarySerializer;
 using amelas::communication::AmelasControllerClient;
 using amelas::communication::common::AmelasServerCommand;
 using amelas::controller::AltAzPos;

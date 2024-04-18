@@ -43,8 +43,8 @@
 
 // ZMQ INCLUDES
 // =====================================================================================================================
-#include <LibZMQ/zmq_addon.hpp>
-#include <LibZMQ/zmq.h>
+#include <zmq_addon.hpp>
+#include <zmq.h>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
@@ -336,14 +336,14 @@ SubscriberResult SubscriberBase::recvFromSocket(PubSubMsg& msg)
         msg.data.topic = msg_topic.to_string();
 
         // Get the publisher name.
-        utils::BinarySerializer::fastDeserialization(
+        serializer::BinarySerializer::fastDeserialization(
             msg_pub_name.data(), msg_pub_name.size(), msg.pub_info.name);
 
         // Get the publisher uuid data.
-        if (msg_uuid.size() == utils::UUID::kUUIDSize + sizeof(utils::SizeUnit)*2)
+        if (msg_uuid.size() == utils::UUID::kUUIDSize + sizeof(serializer::SizeUnit)*2)
         {
             std::array<std::byte, 16> uuid_bytes;
-            utils::BinarySerializer::fastDeserialization(msg_uuid.data(), msg_uuid.size(), uuid_bytes);
+            serializer::BinarySerializer::fastDeserialization(msg_uuid.data(), msg_uuid.size(), uuid_bytes);
             msg.pub_info.uuid = utils::UUID(uuid_bytes);
         }
         else
@@ -369,7 +369,7 @@ SubscriberResult SubscriberBase::recvFromSocket(PubSubMsg& msg)
             if(message_data.size() > 0)
             {
                 // Get and store the parameters data.
-                utils::BinarySerializer serializer(message_data.data(), message_data.size());
+                serializer::BinarySerializer serializer(message_data.data(), message_data.size());
                 msg.data.data_size = serializer.moveUnique(msg.data.data);
 
             }
