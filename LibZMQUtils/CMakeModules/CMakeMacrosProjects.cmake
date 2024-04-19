@@ -98,12 +98,12 @@ MACRO(macro_find_package_default package version version_mode extra_search_paths
     if(WIN32)
         set(SEARCH_PATHS
             ${extra_search_paths}
-            "external/${package}"                 # In the same project.
-            "../${package}"                       # As subproject installation
-            "../../${package}"                    # As subproject installation
-            "C:/${package}"                       # In standard root folder.
-            "C:/Program Files/${package}"         # Standard installation.
-            "C:/Program Files (x86)/${package}"   # Standard installation.
+            "external/*${package}*"                 # In the same project.
+            "../*${package}*"                       # As subproject installation
+            "../../*${package}*"                    # As subproject installation
+            "C:/*${package}*"                       # In standard root folder.
+            "C:/Program Files/*${package}*"         # Standard installation.
+            "C:/Program Files (x86)/*${package}*"   # Standard installation.
         )
     else()
         set(SEARCH_PATHS
@@ -140,7 +140,6 @@ MACRO(macro_find_package_default package version version_mode extra_search_paths
                      message(STATUS "  Checking: ${MATCH}/${CONFIG_PATTERN}")
                      if(EXISTS "${MATCH}/${CONFIG_PATTERN}")
                          list(APPEND FOUND_PATHS "${MATCH}")
-                         break()
                      endif()
                  endforeach()
 

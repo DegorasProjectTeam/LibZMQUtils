@@ -58,14 +58,14 @@ macro_cmakemodules_init()
 
 # Base project configuration.
 set(LIB_NAME LibZMQUtils)
-set(LIB_VER 1.6.2)
+set(LIB_VER 1.6.3)
 set(LIB_BUILD_MODE Debug)
 set(LIB_INSTALL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../${LIB_NAME}_product_v${LIB_VER})
 set(LIB_LANGUAGES CXX C)
 
 # Macros global configuration.
 macro_global_set_show_externals(TRUE)
-macro_global_set_force_install_dir(TRUE)
+macro_global_set_force_install_dir(FALSE)
 macro_global_set_install_runtime_deps(TRUE)
 macro_global_set_install_runtime_artifacts(TRUE)
 macro_global_set_exclude_so_libraries(TRUE)
@@ -85,7 +85,7 @@ macro_setup_default_install_dir(${LIB_INSTALL_DIR})
 # SPECIFIC PROJECT CONFIGURATION
 
 # WARNING QT CREATOR BUG
-set(AVOID_QTCREATOR13_DLL_SEARCH_BUG TRUE)
+set(AVOID_QTCREATOR13_DLL_SEARCH_BUG FALSE)
 
 # Specific configuration.
 set(CMAKE_FIND_PACKAGE_PREFER_CONFIG TRUE)
