@@ -84,6 +84,9 @@ macro_setup_default_install_dir(${LIB_INSTALL_DIR})
 # ----------------------------------------------------------------------------------------------------------------------
 # SPECIFIC PROJECT CONFIGURATION
 
+# WARNING QT CREATOR BUG
+set(AVOID_QTCREATOR13_DLL_SEARCH_BUG TRUE)
+
 # Specific configuration.
 set(CMAKE_FIND_PACKAGE_PREFER_CONFIG TRUE)
 set(LIB_INCLUDES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/includes/)
@@ -132,6 +135,13 @@ endif()
 
 # Include the shared library CMake configuration file.
 include(ConfigLibZMQUtils)
+
+# Add libraries to global scope.
+if (WIN32 AND AVOID_QTCREATOR13_DLL_SEARCH_BUG)
+    macro_find_dlls("${LIBZMQ_LIBRARY_DIRS}" DLL_LIBS)
+    macro_global_add_libs_dirs("${DLL_LIBS}")
+    macro_global_add_libs_dirs("${CMAKE_BINARY_DIR}/bin/${LIB_NAME}.dll")
+endif()
 
 # ----------------------------------------------------------------------------------------------------------------------
 # CONFIGURE THE COMPILERS

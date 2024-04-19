@@ -2,6 +2,23 @@
 # Updated 15/03/2024
 # **********************************************************************************************************************
 
+macro(macro_find_dlls paths result_var)
+
+    set(ALL_DLL_FILES "")
+
+    foreach(dir ${paths})
+        file(GLOB_RECURSE DLLS_IN_DIR "${dir}/*.dll")
+        list(APPEND ALL_DLL_FILES ${DLLS_IN_DIR})
+    endforeach()
+
+    list(REMOVE_DUPLICATES ALL_DLL_FILES)
+
+    set(${result_var} "${ALL_DLL_FILES}")
+
+endmacro()
+
+# **********************************************************************************************************************
+
 macro(macro_search_file file_name current_path result_var)
     # Initial search for the file in the current directory
     file(GLOB_RECURSE found_files RELATIVE "${current_path}" "${current_path}/*/${file_name}")

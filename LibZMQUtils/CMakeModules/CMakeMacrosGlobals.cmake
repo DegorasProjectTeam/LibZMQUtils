@@ -25,6 +25,7 @@ MACRO(macro_cmakemodules_init)
     macro_global_set_install_share_path("")
     macro_global_set_install_include_path("")
     macro_global_set_install_include_path("")
+    macro_global_set_libs_dirs("")
     macro_global_set_show_externals(FALSE)
     macro_global_set_force_install_dir(TRUE)
     macro_global_set_install_runtime_deps(FALSE)
@@ -32,6 +33,22 @@ MACRO(macro_cmakemodules_init)
     macro_global_set_exclude_so_libraries(TRUE)
 
 ENDMACRO()
+
+# **********************************************************************************************************************
+
+FUNCTION(macro_global_set_libs_dirs libs_dirs)
+
+    set(MODULES_GLOBAL_LIBS_DIR ${libs_dirs} CACHE STRING "Global list of libraries" FORCE)
+
+ENDFUNCTION()
+
+# **********************************************************************************************************************
+
+FUNCTION(macro_global_add_libs_dirs lib_dir)
+
+    set(MODULES_GLOBAL_LIBS_DIR "${MODULES_GLOBAL_LIBS_DIR};${lib_dir}" CACHE STRING "Global list of libraries" FORCE)
+
+ENDFUNCTION()
 
 # **********************************************************************************************************************
 
