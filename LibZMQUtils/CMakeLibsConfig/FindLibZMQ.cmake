@@ -1,5 +1,5 @@
 # **********************************************************************************************************************
-# Updated 15/04/2024
+# Updated 19/04/2024
 # **********************************************************************************************************************
 
 # **********************************************************************************************************************
@@ -116,9 +116,9 @@ if(WIN32)
     endif()
 
     # Search for includes.
-    macro_search_file_in_paths("LibZMQ/zmq.h" "${SEARCH_PATHS}" LIBZMQ_INCLUDE_DIR FALSE)
-    macro_search_file_in_paths("LibZMQ/zmq.hpp" "${SEARCH_PATHS}" LIBZMQ_INCLUDE_DIR_BINDING FALSE)
-    macro_search_file_in_paths("LibZMQ/zmq_addon.hpp" "${SEARCH_PATHS}" LIBZMQ_INCLUDE_DIR_BINDING_ADDON FALSE)
+    macro_search_file_in_paths("zmq.h" "${SEARCH_PATHS}" LIBZMQ_INCLUDE_DIR FALSE)
+    macro_search_file_in_paths("zmq.hpp" "${SEARCH_PATHS}" LIBZMQ_INCLUDE_DIR_BINDING FALSE)
+    macro_search_file_in_paths("zmq_addon.hpp" "${SEARCH_PATHS}" LIBZMQ_INCLUDE_DIR_BINDING_ADDON FALSE)
 
     # Find the ZMQ library and libsodium.
     macro_search_file_in_paths("libzmq-v142-mt-4_3_4.dll" "${SEARCH_PATHS}" LIBZMQ_LIBRARY TRUE)

@@ -36,16 +36,11 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
-#include <algorithm>
 #include <string>
-#include <iostream>
-#include <map>
-#include <vector>
 #include <cstring>
 #include <chrono>
 #include <array>
 #include <utility>
-#include <functional>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
@@ -90,8 +85,7 @@ std::string getEnumString(Enum value, const std::array<const char*, N>& str_arra
 {
     static_assert(std::is_enum<Enum>::value, "getEnumString - Template argument must be an enum type.");
 
-    using underlying = typename std::underlying_type<Enum>::type;
-    underlying index = static_cast<underlying>(value);
+    unsigned long long index = static_cast<unsigned long long>(value);
 
     if (index < str_array.size())
         return str_array[index];
