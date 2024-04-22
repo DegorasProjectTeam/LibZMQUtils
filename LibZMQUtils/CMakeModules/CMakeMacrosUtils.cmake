@@ -1,19 +1,28 @@
 # **********************************************************************************************************************
-# Updated 15/03/2024
+# Updated 22/04/2024
 # **********************************************************************************************************************
 
-macro(macro_find_dlls paths result_var)
+# **********************************************************************************************************************
 
-    set(ALL_DLL_FILES "")
+macro(macro_find_libs paths result_var)
 
-    foreach(dir ${paths})
-        file(GLOB_RECURSE DLLS_IN_DIR "${dir}/*.dll")
-        list(APPEND ALL_DLL_FILES ${DLLS_IN_DIR})
-    endforeach()
+    set(ALL_LIB_FILES "")
 
-    list(REMOVE_DUPLICATES ALL_DLL_FILES)
+    if (WIN32)
+        foreach(dir ${paths})
+            file(GLOB_RECURSE LIBS_IN_DIR "${dir}/*.dll")
+            list(APPEND ALL_LIB_FILES ${LIBS_IN_DIR})
+        endforeach()
+    elseif(UNIX)
+        foreach(dir ${paths})
+            file(GLOB_RECURSE LIBS_IN_DIR "${dir}/*.so")
+            list(APPEND ALL_LIB_FILES ${LIBS_IN_DIR})
+        endforeach()
+    endif()
 
-    set(${result_var} "${ALL_DLL_FILES}")
+    list(REMOVE_DUPLICATES ALL_LIB_FILES)
+
+    set(${result_var} "${ALL_LIB_FILES}")
 
 endmacro()
 

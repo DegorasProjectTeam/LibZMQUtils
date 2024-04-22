@@ -1,5 +1,5 @@
 # **********************************************************************************************************************
-# Updated 11/03/2024
+# Updated 22/04/2024
 # **********************************************************************************************************************
 
 # **********************************************************************************************************************
@@ -37,23 +37,27 @@ MACRO(macro_setup_launcher launcher_name lib_opt lib_deb)
     set_target_properties(${launcher_name} PROPERTIES MINSIZEREL_OUTPUT_NAME "${launcher_name}${CMAKE_MINSIZEREL_POSTFIX}")
     set_target_properties(${launcher_name} PROPERTIES FOLDER CMAKE_RUNTIME_OUTPUT_DIRECTORY)
 
+    # Add to launcher list.
+    message(STATUS "  Adding to launcher dirs: ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+    macro_global_add_launcher_dirs(${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+
     # WARNING Only for avoid the QTCREATOR 13 BUG WHEN EXECUTING LAUNCHERS.
     if (WIN32 AND AVOID_QTCREATOR13_DLL_SEARCH_BUG)
 
         message(STATUS "  Avoiding QTCREATOR 13 bug for targets: ${launcher_name}")
-        message(STATUS "    Libs dirs: ${MODULES_GLOBAL_LIBS_DIR}")
+        message(STATUS "    Libs dirs: ${MODULES_GLOBAL_LIBS_FULL_PATHS}")
 
-        # Collect all DLL files in the specified directory
-        file(GLOB DLL_FILES "${CMAKE_BINARY_DIR}/bin/*.dll")
-
-        foreach(dll ${MODULES_GLOBAL_LIBS_DIR})
+        foreach(dll ${MODULES_GLOBAL_LIBS_FULL_PATHS})
             message(STATUS "    Adding lib: ${dll}")
+            get_filename_component(dll_name "${dll}" NAME)
             add_custom_command(TARGET ${launcher_name} POST_BUILD
                  COMMAND ${CMAKE_COMMAND} -E copy_if_different
                  $<$<CONFIG:Debug>:${dll}>
                  $<$<CONFIG:Release>:${dll}>
                  ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-         endforeach()
+            set_property(TARGET ${launcher_name} APPEND PROPERTY ADDITIONAL_CLEAN_FILES
+                         "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${dll_name}")
+        endforeach()
 
     endif()
 

@@ -1,5 +1,5 @@
 # **********************************************************************************************************************
-# Updated 11/03/2024
+# Updated 22/04/2024
 # **********************************************************************************************************************
 
 # **********************************************************************************************************************
@@ -100,39 +100,38 @@ MACRO(macro_install_runtime_deps target dependency_set ext_deps_dirs bin_dest pr
         message(STATUS "  Installation path: ${bin_dest}")
         message(STATUS "  Bin installation path: ${CMAKE_CURRENT_BINARY_DIR}")
 
+        # Initialize exclusion lists from parameters
+        set(PRE_EXC ${pre_exc_regexes})
+        set(POST_EXC ${post_exc_regexes})
+
+        # Exclude SO dll and libs.
         if(${MODULES_GLOBAL_EXCLUDE_SO_LIBS})
-
-            # Exclude SO dll and libs.
             if(WIN32)
-
                 message(STATUS "  Excluding Windows SO libraries...")
-                set(PRE_EXC ${pre_exc_regexes} "api-ms-" "ext-ms-")
-                set(POST_EXC ${post_exc_regexes} ".*system32/.*\\.dll")
-
+                list(APPEND POST_EXC ".*system32/.*\\.dll")
             elseif(OS_NAME STREQUAL "Linux/Unix")
-
                 message(STATUS "  Excluding Unix SO libraries...")
-                set(POST_EXC ${post_exc_regexes} "/lib" "usr/lib" "/lib64" "/usr/lib64")
-
+                list(APPEND POST_EXC "/lib" "/usr/lib" "/lib64" "/usr/lib64")
             endif()
-
-        else()
-            set(PRE_EXC ${pre_exc_regexes})
-            set(POST_EXC ${post_exc_regexes})
         endif()
 
         # Mandatory SO dll exclusion.
         if(WIN32)
-            set(PRE_EXC ${pre_exc_regexes} "api-ms-" "ext-ms-")
+            list(APPEND PRE_EXC "api-ms-" "ext-ms-")
         endif()
 
-        # Install runtime dependencies for the set.
-        install(RUNTIME_DEPENDENCY_SET ${dependency_set}
-                PRE_EXCLUDE_REGEXES ${PRE_EXC}
-                POST_EXCLUDE_REGEXES ${POST_EXC}
-                DIRECTORIES ${ext_deps_dirs}
-                DESTINATION ${bin_dest})
-
+        # WARNING Only for avoid the QTCREATOR 13 BUG WHEN EXECUTING LAUNCHERS.
+        if (WIN32 AND AVOID_QTCREATOR13_DLL_SEARCH_BUG)
+            message(STATUS "  Delaying installation due to QTCreator 13 bug.")
+        else()
+            message(STATUS "  Final complete excluding: ${POST_EXC}")
+            # Install runtime dependencies for the set.
+            install(RUNTIME_DEPENDENCY_SET ${dependency_set}
+                    PRE_EXCLUDE_REGEXES ${PRE_EXC}
+                    POST_EXCLUDE_REGEXES ${POST_EXC}
+                    DIRECTORIES ${ext_deps_dirs}
+                    DESTINATION ${bin_dest})
+            endif()
     endif()
 
 ENDMACRO()
@@ -144,6 +143,9 @@ MACRO(macro_install_launcher target bin_dest)
     # Log.
     message(STATUS "Installing executable: ${target}")
     message(STATUS "  Deployment destination: ${bin_dest}")
+
+    # Add the deploy dir.
+    macro_global_add_launcher_deploys_dirs(${bin_dest})
 
     #Deploy binary files
     install(TARGETS ${target}
@@ -228,10 +230,10 @@ ENDMACRO()
 
 # **********************************************************************************************************************
 
-MACRO(macro_default_library_installation lib_name lib_includes_dir ext_deps_dirs)
+MACRO(macro_default_library_installation lib_name lib_includes_dir)
 
     # Set the external dependencies dir.
-    set(external_deps_search_dirs ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} ${ext_deps_dirs})
+    set(external_deps_search_dirs ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} ${MODULES_GLOBAL_LIBS_FOLDERS})
 
     # Default installation process for windows.
     if(WIN32)

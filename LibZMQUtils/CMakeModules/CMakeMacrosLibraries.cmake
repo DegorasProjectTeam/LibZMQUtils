@@ -1,5 +1,5 @@
 # **********************************************************************************************************************
-# Updated 11/03/2024
+# Updated 22/04/2024
 # **********************************************************************************************************************
 
 # **********************************************************************************************************************
@@ -21,12 +21,16 @@ MACRO(macro_setup_shared_lib lib_name lib_includes_dir lib_version)
     get_target_property(extracted_version ${lib_name} VERSION)
     message(STATUS "Setup shared library: ${lib_name}, Version: ${extracted_version}")
 
-   # Append the new library to global.
+   # Append the new library to global scope.
    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
        macro_global_add_libs_debug("${lib_name}")
    else()
        macro_global_add_libs_optimized("${lib_name}")
    endif()
+
+   # Add the new library dir to global scope.
+   macro_global_add_libs_full_paths("${CMAKE_BINARY_DIR}/bin/${LIB_NAME}.dll")
+   macro_global_add_libs_folders("${CMAKE_BINARY_DIR}/bin")
 
    # Define the global dependency set name.
    macro_global_set_main_dep_set_name("${lib_name}_deps")
@@ -93,7 +97,7 @@ MACRO(macro_setup_lib_basic_unit_tests tests_sources_path install_path ignore_pa
     message(STATUS "Setup library unit tests...")
 
     # Configure build path.
-    set(APP_BUILD_FOLDER ${CMAKE_BINARY_DIR}/bin/Tests/)
+    set(APP_BUILD_FOLDER ${CMAKE_BINARY_DIR}/bin/Testing/)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${APP_BUILD_FOLDER})
 
     # Initialize an empty list for the final test sources.
@@ -151,9 +155,9 @@ MACRO(macro_setup_lib_basic_unit_tests tests_sources_path install_path ignore_pa
                                         ${install_path})
 
         # Install the runtime dependencies.
-        macro_install_runtime_deps("${EXAMPLE_NAME}"
+        macro_install_runtime_deps("${TEST_NAME}"
                                    "${MODULES_GLOBAL_MAIN_DEP_SET_NAME}"
-                                   "${ext_libs_loc}"
+                                   "${MODULES_GLOBAL_LIBS_FOLDERS}"
                                    "${install_path}"
                                    "" "")
 

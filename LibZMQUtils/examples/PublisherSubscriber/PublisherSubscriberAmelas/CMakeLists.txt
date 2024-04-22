@@ -109,7 +109,7 @@ endif()
 # INSTALLATION PROCESS
 
 # Prepare the external library search folders.
-set(ext_libs_loc "${ext_libs_loc}" "${MODULES_GLOBAL_INSTALL_LIB_PATH}" "${MODULES_GLOBAL_INSTALL_BIN_PATH}")
+set(ext_libs_loc "${MODULES_GLOBAL_INSTALL_LIB_PATH}" "${MODULES_GLOBAL_INSTALL_BIN_PATH}")
 
 # Install the launcher for publisher.
 macro_install_launcher("${APP_PUBLISHER}"
@@ -132,14 +132,14 @@ macro_install_runtime_artifacts("${APP_SUBSCRIBER}"
 # Install the runtime dependencies for publisher.
 macro_install_runtime_deps("${APP_PUBLISHER}"
                             "${MODULES_GLOBAL_MAIN_DEP_SET_NAME}"
-                            "${ext_libs_loc}"
+                            "${MODULES_GLOBAL_LIBS_FOLDERS}"
                             "${EXAMPLE_INSTALL_PATH}"
                             "" "")
 
 # Install the runtime dependencies for subscriber.
 macro_install_runtime_deps("${APP_SUBSCRIBER}"
                             "${MODULES_GLOBAL_MAIN_DEP_SET_NAME}"
-                            "${ext_libs_loc}"
+                            "${MODULES_GLOBAL_LIBS_FOLDERS}"
                             "${EXAMPLE_INSTALL_PATH}"
                             "" "")
 

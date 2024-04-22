@@ -44,28 +44,27 @@ cmake_minimum_required(VERSION 3.21)
 project(_)
 
 # Set path to additional CMake modules.
-set(CMAKE_MODULE_PATH
-    ${CMAKE_MODULE_PATH}
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
     ${CMAKE_SOURCE_DIR}/CMakeModules
     ${CMAKE_SOURCE_DIR}/CMakeLibsConfig)
 
 # Init CMake modules.
 include(CMakeMacrosGlobals)
-macro_cmakemodules_init()
+macro_cmakemodules_init("24.04.22")
 
 # ----------------------------------------------------------------------------------------------------------------------
 # BASIC PROJECT CONFIGURATION
 
 # Base project configuration.
 set(LIB_NAME LibZMQUtils)
-set(LIB_VER 1.6.3)
+set(LIB_VER 1.6.4)
 set(LIB_BUILD_MODE Debug)
 set(LIB_INSTALL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../${LIB_NAME}_product_v${LIB_VER})
 set(LIB_LANGUAGES CXX C)
 
 # Macros global configuration.
 macro_global_set_show_externals(TRUE)
-macro_global_set_force_install_dir(FALSE)
+macro_global_set_force_install_dir(TRUE)
 macro_global_set_install_runtime_deps(TRUE)
 macro_global_set_install_runtime_artifacts(TRUE)
 macro_global_set_exclude_so_libraries(TRUE)
@@ -85,7 +84,7 @@ macro_setup_default_install_dir(${LIB_INSTALL_DIR})
 # SPECIFIC PROJECT CONFIGURATION
 
 # WARNING QT CREATOR BUG
-set(AVOID_QTCREATOR13_DLL_SEARCH_BUG FALSE)
+set(AVOID_QTCREATOR13_DLL_SEARCH_BUG TRUE)
 
 # Specific configuration.
 set(CMAKE_FIND_PACKAGE_PREFER_CONFIG TRUE)
@@ -94,7 +93,10 @@ set(LIB_SOURCES_DIR ${CMAKE_SOURCE_DIR}/sources)
 
 # Configure the LibZMQ package and set the located paths.
 find_package(LibZMQ REQUIRED)
-set(LIBZMQ_PATHS ${LIBZMQ_INCLUDE_DIRS} ${LIBZMQ_LIBRARY_DIRS})
+
+# Add external libraries to global scope.
+macro_global_add_libs_full_paths("${LIBZMQ_LIBRARIES}")
+macro_global_add_libs_folders("${LIBZMQ_LIBRARY_DIRS}")
 
 # ----------------------------------------------------------------------------------------------------------------------
 # SETUP THE SHARED LIBRARY
@@ -133,15 +135,8 @@ if (WIN32)
     target_link_libraries(${LIB_NAME} PUBLIC ws2_32 iphlpapi)
 endif()
 
-# Include the shared library CMake configuration file.
+# Include the shared library CMake configuration file for show in IDE only.
 include(ConfigLibZMQUtils)
-
-# Add libraries to global scope.
-if (WIN32 AND AVOID_QTCREATOR13_DLL_SEARCH_BUG)
-    macro_find_dlls("${LIBZMQ_LIBRARY_DIRS}" DLL_LIBS)
-    macro_global_add_libs_dirs("${DLL_LIBS}")
-    macro_global_add_libs_dirs("${CMAKE_BINARY_DIR}/bin/${LIB_NAME}.dll")
-endif()
 
 # ----------------------------------------------------------------------------------------------------------------------
 # CONFIGURE THE COMPILERS
@@ -166,11 +161,8 @@ endif()
 # ----------------------------------------------------------------------------------------------------------------------
 # INSTALLATION PROCESS
 
-# External libs locations.
-set(ext_libs_loc ${LIBZMQ_LIBRARY_DIRS})
-
 # Installation process.
-macro_default_library_installation("${LIB_NAME}" "${LIB_INCLUDES_DIR}" "${ext_libs_loc}")
+macro_default_library_installation("${LIB_NAME}" "${LIB_INCLUDES_DIR}")
 
 # Install additional files.
 install(FILES "${CMAKE_SOURCE_DIR}/CMakeLibsConfig/FindLibZMQ.cmake"
@@ -184,5 +176,19 @@ add_subdirectory(testing)
 
 # Example subproject.
 add_subdirectory(examples)
+
+# **********************************************************************************************************************
+
+# WARNING Only for avoid the QTCREATOR 13 BUG WHEN EXECUTING LAUNCHERS.
+if (WIN32 AND AVOID_QTCREATOR13_DLL_SEARCH_BUG)
+    message(STATUS "Re-installing runtime deps due to QTCreator 13 bug...")
+    message(STATUS "  Runtime deps: ${MODULES_GLOBAL_LIBS_FULL_PATHS}")
+    message(STATUS "  Processing library deployment directory: ${MODULES_GLOBAL_INSTALL_BIN_PATH}")
+    install(FILES ${MODULES_GLOBAL_LIBS_FULL_PATHS} DESTINATION "${MODULES_GLOBAL_INSTALL_BIN_PATH}")
+    foreach(deploy_dir ${MODULES_GLOBAL_LAUNCHER_DEPLOYS_DIRS})
+        message(STATUS "  Processing launchers deployment directory: ${deploy_dir}")
+        install(FILES ${MODULES_GLOBAL_LIBS_FULL_PATHS} DESTINATION ${deploy_dir})
+    endforeach()
+endif()
 
 # **********************************************************************************************************************
