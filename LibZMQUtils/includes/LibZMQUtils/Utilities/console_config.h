@@ -56,11 +56,9 @@
 #include <termios.h>
 #include <signal.h>
 #endif
-#include <csignal>
 #include <atomic>
 #include <functional>
 #include <condition_variable>
-#include <iostream>
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
@@ -96,7 +94,7 @@ public:
      * @note Enabling Ctrl handler allows you to capture Ctrl events like Ctrl+C or Ctrl+Break.
      * @note Hiding the cursor can be useful for creating a cleaner console interface.
      */
-    LIBZMQUTILS_EXPORT void configureConsole(bool ctrl_hndlr = false, bool hide_cursor = false, bool allow_in = false);
+    LIBZMQUTILS_EXPORT void configureConsole(bool ctrl_hndlr = false, bool hide_cursor = false, bool allow_in = true);
 
     /**
      * @brief Setter function for the exit callback.

@@ -40,8 +40,6 @@
 // LIBDPSLR INCLUDES
 // =====================================================================================================================
 #include <LibZMQUtils/Utilities/console_config.h>
-#include <iostream>
-#include <ostream>
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
@@ -70,7 +68,7 @@ ConsoleConfig &ConsoleConfig::getInstance()
     return instance;
 }
 
-void ConsoleConfig::configureConsole(bool apply_ctrl_handler, bool hide_cursor, bool input_proc)
+void ConsoleConfig::configureConsole(bool apply_ctrl_handler, bool hide_cursor, bool allow_in)
 {
     // Safe lock.
     std::lock_guard<std::mutex> lock(this->mtx_);
@@ -84,7 +82,7 @@ void ConsoleConfig::configureConsole(bool apply_ctrl_handler, bool hide_cursor, 
         SetConsoleCtrlHandler(StaticConsoleCtrlHandler, TRUE);
 
     // Disable the input proccesing.
-    if(input_proc)
+    if(!allow_in)
     {
         DWORD mode = this->orig_in_mode_ & ~static_cast<DWORD>(ENABLE_LINE_INPUT);
         SetConsoleMode(this->handle_stdin_, mode);
