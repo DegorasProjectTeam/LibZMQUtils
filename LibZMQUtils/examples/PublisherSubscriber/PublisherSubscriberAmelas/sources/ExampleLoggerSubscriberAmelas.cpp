@@ -101,7 +101,7 @@ int main(int, char**)
 {
     // Configure the console.
     zmqutils::utils::ConsoleConfig& console_cfg = zmqutils::utils::ConsoleConfig::getInstance();
-    console_cfg.configureConsole(true, true, true);
+    console_cfg.configureConsole(true, true, false);
 
     // Configure the log processor.
     LogProcessor log_processor;

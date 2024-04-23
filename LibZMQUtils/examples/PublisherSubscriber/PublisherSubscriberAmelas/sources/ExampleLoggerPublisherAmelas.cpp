@@ -141,7 +141,7 @@ int main(int, char**)
 {
     // Configure the console.
     zmqutils::utils::ConsoleConfig& console_cfg = zmqutils::utils::ConsoleConfig::getInstance();
-    console_cfg.configureConsole(true, false, false);
+    console_cfg.configureConsole(true, false, true);
 
     // Configuration variables.
     unsigned port = 9999;
