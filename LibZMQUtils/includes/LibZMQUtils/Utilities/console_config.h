@@ -223,47 +223,12 @@ public:
      * @note Enabling Ctrl handler allows you to capture Ctrl events like Ctrl+C or Ctrl+Break.
      * @note Hiding the cursor can be useful for creating a cleaner console interface.
      */
-    void configureConsole(bool apply_ctrl_handler = false, bool hide_cursor = false, bool allow_in = true)
-    {
-        std::lock_guard<std::mutex> lock(mtx_);
-
-        // Store current settings
-        tcgetattr(STDIN_FILENO, &orig_termios_);
-
-        struct termios new_termios = orig_termios_;
-
-        if (hide_cursor)
-        {
-            std::cout << "\033[?25l"; // ANSI escape code to hide cursor
-        }
-
-        if (!allow_in)
-        {
-            new_termios.c_lflag &= ~ICANON;  // Disable canonical mode
-            new_termios.c_lflag &= ~ECHO;    // Disable echo
-        }
-
-        tcsetattr(STDIN_FILENO, TCSANOW, &new_termios);
-
-        if (apply_ctrl_handler)
-        {
-            struct sigaction sa;
-            sa.sa_handler = StaticSignalHandler;
-            sigemptyset(&sa.sa_mask);
-            sa.sa_flags = 0;
-            sigaction(SIGINT, &sa, nullptr);
-            sigaction(SIGTERM, &sa, nullptr);
-        }
-    }
+    void configureConsole(bool apply_ctrl_handler = false, bool hide_cursor = false, bool allow_in = true);
 
      /**
      * @brief Setter function for the exit callback.
      */
-    void setExitCallback(const ExitConsoleCallback& exit_callback)
-    {
-        std::lock_guard<std::mutex> lock(mtx_);
-        this->exit_callback_ = exit_callback;
-    }
+    void setExitCallback(const ExitConsoleCallback& exit_callback);
 
     /**
      * @brief Restore Console Configuration.
@@ -273,11 +238,7 @@ public:
      *
      * @note Use this function to clean up and restore the console settings before exiting your application.
      */
-    void restoreConsole()
-    {
-        std::lock_guard<std::mutex> lock(mtx_);
-        tcsetattr(STDIN_FILENO, TCSANOW, &orig_termios_);
-    }
+    void restoreConsole();
 
         /**
      * @brief Wait for Console Close Signal.
@@ -286,10 +247,7 @@ public:
      * events like Ctrl+C, Ctrl+Break, or Ctrl+Close. It is useful for waiting until the user chooses to exit
      * the application gracefully.
      */
-    void waitForClose() {
-        std::unique_lock<std::mutex> lock(cv_mtx_);
-        close_cv_.wait(lock, [this]{ return close_flag_.load(); });
-    }
+    void waitForClose();
 
         /**
      * @brief Get Console Close Status.
@@ -297,18 +255,12 @@ public:
      * @return Returns true if a console close signal has been received, indicating that the application should
      * prepare for exit. Returns false otherwise.
      */
-    bool closeStatus() const
-        {
-            return close_flag_.load();
-        }
-
+    bool closeStatus() const;
 
     /**
      * @brief Virtual destructor. Restores the default console configuration.
      */
-        virtual ~ConsoleConfig() {
-            restoreConsole();
-        }
+        virtual ~ConsoleConfig();
 
         // Deleted constructors and assignment operators.
         ConsoleConfig(const ConsoleConfig &) = delete;
@@ -322,23 +274,9 @@ public:
         ConsoleConfig(){}
 
         // Static console handler function trick.
-        static void StaticSignalHandler(int signum)
-        {
-            ConsoleConfig& instance = getInstance();
-            instance.signalHandler(signum);
-        }
+        static void StaticSignalHandler(int signum);
 
-        void signalHandler(int signum)
-        {
-            if (signum == SIGINT || signum == SIGTERM)
-            {
-                close_flag_.store(true);
-                if (exit_callback_) {
-                    exit_callback_();
-                }
-                close_cv_.notify_all();
-            }
-        }
+        void signalHandler(int signum);
 
         // Configuration.
         ExitConsoleCallback exit_callback_;

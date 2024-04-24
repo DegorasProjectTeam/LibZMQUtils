@@ -1,10 +1,33 @@
 # **********************************************************************************************************************
-# Updated 19/04/2024
+# Updated 24/04/2024
 # **********************************************************************************************************************
 
 # **********************************************************************************************************************
 
-macro(macro_search_file file_name current_path result_var)
+# Unset previous final values.
+# You can use this values in your CMakeLists once setted.
+# --
+unset(LIBZMQ_FOUND CACHE)          # Library found flag.
+unset(LIBZMQ_LIBRARIES CACHE)      # List of libraries (full path with names).
+unset(LIBZMQ_INCLUDES CACHE)       # List of includes (full path with names).
+unset(LIBZMQ_LIBRARY_DIRS CACHE)   # List of libraries directories (without names).
+unset(LIBZMQ_INCLUDE_DIRS CACHE)   # List of includes directories (without names).
+
+# Unset previous auxiliar values.
+# --
+unset(LIBZMQ_INCLUDE_PATH CACHE)
+unset(LIBZMQ_BINDING_PATH CACHE)
+unset(LIBZMQ_BINDINGADDON_PATH CACHE)
+unset(LIBZMQ_INCLUDE_FILE CACHE)
+unset(LIBZMQ_BINDING_FILE CACHE)
+unset(LIBZMQ_BINDINGADDON_FILE CACHE)
+unset(LIBZMQ_LIBRARY_PATH CACHE)
+unset(LIBSODIUM_LIBRARY_PATH CACHE)
+unset(LIBZMQ_LIBRARY_FILE CACHE)
+unset(LIBSODIUM_LIBRARY_FILE CACHE)
+# **********************************************************************************************************************
+
+macro(macro_search_file_private file_name current_path result_var)
 
     # Initial search for the file in the current directory
     file(GLOB_RECURSE found_files RELATIVE "${current_path}" "${current_path}/*/${file_name}")
@@ -22,7 +45,7 @@ macro(macro_search_file file_name current_path result_var)
         file(GLOB children RELATIVE "${current_path}" "${current_path}/*")
         foreach(child IN LISTS children)
             if(IS_DIRECTORY "${current_path}/${child}")
-                macro_search_file(${file_name} "${current_path}/${child}" ${result_var})
+                macro_search_file_private(${file_name} "${current_path}/${child}" ${result_var})
                 if(${result_var})
                     break()  # Stop if the file has been found
                 endif()
@@ -33,7 +56,7 @@ endmacro()
 
 # **********************************************************************************************************************
 
-macro(macro_search_file_in_paths file_name paths result_var append_filename)
+macro(macro_search_file_in_paths_private file_name paths result_var_path result_var_file)
     # Split file_name into directory and the actual file name
     string(FIND "${file_name}" "/" last_slash REVERSE)
     if(last_slash GREATER -1)
@@ -52,17 +75,14 @@ macro(macro_search_file_in_paths file_name paths result_var append_filename)
     set(local_result)
     foreach(dir ${paths})
         if(IS_DIRECTORY ${dir})
-            macro_search_file("${actual_file_name}" "${dir}" local_result)
+            macro_search_file_private("${actual_file_name}" "${dir}" local_result)
         endif()
         if(local_result)
-            # Check if the filename should be appended to the result
-            if(${append_filename})
-                set(${result_var} "${local_result}/${file_name}")  # Append filename to path
-            else()
-                # Determine if the sub_path should be removed from the result
-                string(REGEX REPLACE "/${sub_path}$" "" trimmed_path "${local_result}")
-                set(${result_var} ${trimmed_path})  # Just set the directory path
-            endif()
+            string(REGEX REPLACE "/$" "" local_result "${local_result}")
+            set(${result_var_file} "${local_result}/${file_name}")
+            # Determine if the sub_path should be removed from the result
+            string(REGEX REPLACE "/${sub_path}$" "" trimmed_path "${local_result}")
+            set(${result_var_path} ${trimmed_path})  # Just set the directory path
             break()  # Stop if the file has been found
         endif()
     endforeach()
@@ -74,19 +94,6 @@ endmacro()
 
 # Log.
 message(STATUS "Configuring LibZMQ...")
-
-# Unset previous.
-unset(LIBZMQ_INCLUDE_DIR CACHE)
-unset(LIBZMQ_INCLUDE_DIR_BINDING CACHE)
-unset(LIBZMQ_INCLUDE_DIR_BINDING_ADDON CACHE)
-unset(LIBZMQ_LIBRARY CACHE)
-unset(LIBSODIUM_LIBRARY CACHE)
-unset(LIBZMQ_LIBRARY_PATH CACHE)
-unset(LIBSODIUM_LIBRARY_PATH CACHE)
-unset(LIBZMQ_FOUND CACHE)
-unset(LIBZMQ_LIBRARIES CACHE)
-unset(LIBZMQ_INCLUDE_DIRS CACHE)
-unset(LIBZMQ_LIBRARY_DIRS CACHE)
 
 # Find for Windows plattform.
 if(WIN32)
@@ -116,15 +123,13 @@ if(WIN32)
     endif()
 
     # Search for includes.
-    macro_search_file_in_paths("zmq.h" "${SEARCH_PATHS}" LIBZMQ_INCLUDE_DIR FALSE)
-    macro_search_file_in_paths("zmq.hpp" "${SEARCH_PATHS}" LIBZMQ_INCLUDE_DIR_BINDING FALSE)
-    macro_search_file_in_paths("zmq_addon.hpp" "${SEARCH_PATHS}" LIBZMQ_INCLUDE_DIR_BINDING_ADDON FALSE)
+    macro_search_file_in_paths_private("zmq.h" "${SEARCH_PATHS}" LIBZMQ_INCLUDE_PATH FALSE)
+    macro_search_file_in_paths_private("zmq.hpp" "${SEARCH_PATHS}" LIBZMQ_INCLUDE_PATH_BINDING FALSE)
+    macro_search_file_in_paths_private("zmq_addon.hpp" "${SEARCH_PATHS}" LIBZMQ_INCLUDE_PATH_BINDING_ADDON FALSE)
 
     # Find the ZMQ library and libsodium.
-    macro_search_file_in_paths("libzmq-v142-mt-4_3_4.dll" "${SEARCH_PATHS}" LIBZMQ_LIBRARY TRUE)
-    macro_search_file_in_paths("libsodium.dll" "${SEARCH_PATHS}" LIBSODIUM_LIBRARY TRUE)
-    macro_search_file_in_paths("libzmq-v142-mt-4_3_4.dll" "${SEARCH_PATHS}" LIBZMQ_LIBRARY_PATH FALSE)
-    macro_search_file_in_paths("libsodium.dll" "${SEARCH_PATHS}" LIBSODIUM_LIBRARY_PATH FALSE)
+    macro_search_file_in_paths_private("libzmq-v142-mt-4_3_4.dll" "${SEARCH_PATHS}" LIBZMQ_LIBRARY_PATH FALSE)
+    macro_search_file_in_paths_private("libsodium.dll" "${SEARCH_PATHS}" LIBSODIUM_LIBRARY_PATH FALSE)
 
     # Checks.
     if(LIBZMQ_INCLUDE_DIR AND LIBZMQ_LIBRARY AND LIBSODIUM_LIBRARY AND LIBZMQ_INCLUDE_DIR AND
@@ -133,7 +138,7 @@ if(WIN32)
         set(LIBZMQ_FOUND TRUE)
         set(LIBZMQ_LIBRARIES ${LIBZMQ_LIBRARY} ${LIBSODIUM_LIBRARY})
         set(LIBZMQ_LIBRARY_DIRS ${LIBZMQ_LIBRARY_PATH} ${LIBSODIUM_LIBRARY_PATH})
-        set(LIBZMQ_INCLUDE_DIRS ${LIBZMQ_INCLUDE_DIR})
+        set(LIBZMQ_INCLUDE_DIRS ${LIBZMQ_INCLUDE_DIR}/zmq.h)
 
     else()
         message(FATAL_ERROR "  Could not find LibZMQ library.")
@@ -164,22 +169,21 @@ else()
     endif()
 
     # Search for includes.
-    macro_search_file_in_paths("LibZMQ/zmq.h" "${SEARCH_PATHS}" LIBZMQ_INCLUDE_DIR FALSE)
-    macro_search_file_in_paths("LibZMQ/zmq.hpp" "${SEARCH_PATHS}" LIBZMQ_INCLUDE_DIR_BINDING FALSE)
-    macro_search_file_in_paths("LibZMQ/zmq_addon.hpp" "${SEARCH_PATHS}" LIBZMQ_INCLUDE_DIR_BINDING_ADDON FALSE)
+    macro_search_file_in_paths_private("zmq.h" "${SEARCH_PATHS}" LIBZMQ_INCLUDE_PATH LIBZMQ_INCLUDE_FILE)
+    macro_search_file_in_paths_private("zmq.hpp" "${SEARCH_PATHS}" LIBZMQ_BINDING_PATH LIBZMQ_BINDING_FILE)
+    macro_search_file_in_paths_private("zmq_addon.hpp" "${SEARCH_PATHS}" LIBZMQ_BINDINGADDON_PATH LIBZMQ_BINDINGADDON_FILE)
 
-    # Find the ZMQ library and libsodium.
-    macro_search_file_in_paths("libzmq.so" "${SEARCH_PATHS}" LIBZMQ_LIBRARY TRUE)
-    macro_search_file_in_paths("libzmq.so" "${SEARCH_PATHS}" LIBZMQ_LIBRARY_PATH FALSE)
+    # Find the ZMQ library.
+    macro_search_file_in_paths_private("libzmq.so" "${SEARCH_PATHS}" LIBZMQ_LIBRARY_PATH LIBZMQ_LIBRARY_FILE)
 
     # Checks.
-    if(LIBZMQ_INCLUDE_DIR AND LIBZMQ_LIBRARY AND LIBZMQ_INCLUDE_DIR AND
-       LIBZMQ_INCLUDE_DIR_BINDING AND LIBZMQ_INCLUDE_DIR_BINDING_ADDON)
+    if(LIBZMQ_INCLUDE_FILE AND LIBZMQ_BINDING_FILE AND LIBZMQ_BINDINGADDON_FILE AND LIBZMQ_LIBRARY_FILE)
 
         set(LIBZMQ_FOUND TRUE)
-        set(LIBZMQ_LIBRARIES ${LIBZMQ_LIBRARY})
+        set(LIBZMQ_LIBRARIES ${LIBZMQ_LIBRARY_FILE})
         set(LIBZMQ_LIBRARY_DIRS ${LIBZMQ_LIBRARY_PATH})
-        set(LIBZMQ_INCLUDE_DIRS ${LIBZMQ_INCLUDE_DIR})
+        set(LIBZMQ_INCLUDES ${LIBZMQ_INCLUDE_FILE} ${LIBZMQ_BINDING_FILE} ${LIBZMQ_BINDINGADDON_FILE})
+        set(LIBZMQ_INCLUDE_DIRS ${LIBZMQ_INCLUDE_PATH} ${LIBZMQ_BINDING_PATH} ${LIBZMQ_BINDINGADDON_PATH})
 
     else()
         message(FATAL_ERROR "  Could not find LibZMQ library.")
@@ -189,9 +193,13 @@ endif()
 
 # Logs.
 message(STATUS "  LibZMQ information:")
+message(STATUS "    LibZMQ found: ${LIBZMQ_FOUND}")
 message(STATUS "    LibZMQ libraries: ${LIBZMQ_LIBRARIES}" )
-message(STATUS "    LibZMQ libraries dir: ${LIBZMQ_LIBRARY_DIRS}" )
-message(STATUS "    LibZMQ includes dir: ${LIBZMQ_INCLUDE_DIRS}" )
+message(STATUS "    LibZMQ libraries dirs: ${LIBZMQ_LIBRARY_DIRS}")
+message(STATUS "    LibZMQ includes: ${LIBZMQ_INCLUDES}" )
+message(STATUS "    LibZMQ includes dirs: ${LIBZMQ_INCLUDE_DIRS}")
 
 # Mark as advanced.
-mark_as_advanced(LIBZMQ_INCLUDE_DIRS LIBZMQ_LIBRARIES)
+mark_as_advanced(LIBZMQ_LIBRARIES LIBZMQ_INCLUDES LIBZMQ_LIBRARY_DIRS LIBZMQ_INCLUDE_DIRS)
+
+# **********************************************************************************************************************

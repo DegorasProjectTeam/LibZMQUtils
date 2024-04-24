@@ -42,6 +42,11 @@
 #include <LibZMQUtils/Utilities/console_config.h>
 // =====================================================================================================================
 
+// C++ INCLUDES
+// =====================================================================================================================
+#include <iostream>
+// =====================================================================================================================
+
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
@@ -159,7 +164,84 @@ bool ConsoleConfig::closeStatus()
 
 #else
 
-// TODO
+void ConsoleConfig::configureConsole(bool apply_ctrl_handler, bool hide_cursor, bool allow_in)
+{
+    std::lock_guard<std::mutex> lock(mtx_);
+
+    // Store current settings
+    tcgetattr(STDIN_FILENO, &orig_termios_);
+
+    struct termios new_termios = orig_termios_;
+
+    if (hide_cursor)
+    {
+        std::cout << "\033[?25l"; // ANSI escape code to hide cursor
+    }
+
+    if (!allow_in)
+    {
+        new_termios.c_lflag &= ~ICANON;  // Disable canonical mode
+        new_termios.c_lflag &= ~ECHO;    // Disable echo
+    }
+
+    tcsetattr(STDIN_FILENO, TCSANOW, &new_termios);
+
+    if (apply_ctrl_handler)
+    {
+        struct sigaction sa;
+        sa.sa_handler = StaticSignalHandler;
+        sigemptyset(&sa.sa_mask);
+        sa.sa_flags = 0;
+        sigaction(SIGINT, &sa, nullptr);
+        sigaction(SIGTERM, &sa, nullptr);
+    }
+}
+
+void ConsoleConfig::setExitCallback(const ExitConsoleCallback &exit_callback)
+{
+    std::lock_guard<std::mutex> lock(mtx_);
+    this->exit_callback_ = exit_callback;
+}
+
+void ConsoleConfig::restoreConsole()
+{
+    std::lock_guard<std::mutex> lock(mtx_);
+    tcsetattr(STDIN_FILENO, TCSANOW, &orig_termios_);
+}
+
+void ConsoleConfig::waitForClose()
+{
+    std::unique_lock<std::mutex> lock(cv_mtx_);
+    close_cv_.wait(lock, [this]{ return close_flag_.load(); });
+}
+
+bool ConsoleConfig::closeStatus() const
+{
+    return close_flag_.load();
+}
+
+ConsoleConfig::~ConsoleConfig()
+{
+    restoreConsole();
+}
+
+void ConsoleConfig::StaticSignalHandler(int signum)
+{
+    ConsoleConfig& instance = getInstance();
+    instance.signalHandler(signum);
+}
+
+void ConsoleConfig::signalHandler(int signum)
+{
+    if (signum == SIGINT || signum == SIGTERM)
+    {
+        close_flag_.store(true);
+        if (exit_callback_) {
+            exit_callback_();
+        }
+        close_cv_.notify_all();
+    }
+}
 
 #endif
 

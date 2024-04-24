@@ -101,10 +101,6 @@ MACRO(macro_link_libzmqutils_default target visibility)
         file(GLOB_RECURSE EXTERNAL_HEADERS ${LibZMQUtils_INCLUDES}/*)
         target_sources(${target} ${visibility} ${EXTERNAL_HEADERS})
 
-        # LibZMQ
-        file(GLOB_RECURSE EXTERNAL_HEADERS ${LIBZMQ_INCLUDE_DIRS}/*)
-        target_sources(${target} ${visibility} ${EXTERNAL_HEADERS})
-
     endif()
 
 ENDMACRO()
@@ -193,15 +189,15 @@ MACRO(macro_find_package_default_private package version version_mode extra_sear
     else()
         set(SEARCH_PATHS
             ${extra_search_paths}
-            "../${package}"              # As subproject installation
-            "../../${package}"           # As subproject installation
-            "/usr/local/${package}"      # Standard local installation
-            "/usr/lib/${package}"        # Standard library path
-            "/usr/lib/cmake/${package}"  # Standard library path
-            "lib/cmake/${package}"       # Standard library path
-            "lib/${package}"             # Standard library path
-            "/opt/${package}"            # Optional software installations
-            "~/${package}"               # Home directory installation
+            "../"              # As subproject installation
+            "../../"           # As subproject installation
+            "/usr/local/"      # Standard local installation
+            "/usr/lib/"        # Standard library path
+            "/usr/lib/cmake/"  # Standard library path
+            "lib/cmake/"       # Standard library path
+            "lib/"             # Standard library path
+            "/opt/"            # Optional software installations
+            "~/"               # Home directory installation
             )
     endif()
 

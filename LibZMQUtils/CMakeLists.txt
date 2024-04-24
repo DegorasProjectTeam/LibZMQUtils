@@ -29,7 +29,7 @@
 # **********************************************************************************************************************
 
 # **********************************************************************************************************************
-# Updated 15/04/2024
+# Updated 24/04/2024
 # **********************************************************************************************************************
 
 # **********************************************************************************************************************
@@ -57,9 +57,9 @@ macro_cmakemodules_init("24.04.22")
 
 # Base project configuration.
 set(LIB_NAME LibZMQUtils)
-set(LIB_VER 1.6.5)
+set(LIB_VER 1.6.6)
 set(LIB_BUILD_MODE Debug)
-set(LIB_INSTALL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../${LIB_NAME}_product_v${LIB_VER})
+set(LIB_INSTALL_DIR "/opt/${LIB_NAME}_product_v${LIB_VER}")
 set(LIB_LANGUAGES CXX C)
 
 # Macros global configuration.
@@ -84,7 +84,7 @@ macro_setup_default_install_dir(${LIB_INSTALL_DIR})
 # SPECIFIC PROJECT CONFIGURATION
 
 # WARNING QT CREATOR BUG
-set(AVOID_QTCREATOR13_DLL_SEARCH_BUG TRUE)
+set(AVOID_QTCREATOR13_DLL_SEARCH_BUG FALSE)
 
 # Specific configuration.
 set(CMAKE_FIND_PACKAGE_PREFER_CONFIG TRUE)
@@ -121,13 +121,11 @@ macro_setup_shared_lib("${LIB_NAME}" "${LIB_INCLUDES_DIR}" "${LIB_VER}"
 
 # Link with LibZMQ.
 target_link_libraries(${LIB_NAME} PUBLIC ${LIBZMQ_LIBRARIES})
-target_include_directories(${LIB_NAME} PUBLIC ${LIBZMQ_INCLUDE_DIR})
-include_directories(${LIBZMQ_INCLUDE_DIRS})
+target_include_directories(${LIB_NAME} PUBLIC ${LIBZMQ_LIBRARY_DIRS})
 
 # Add external headers.
 if(MODULES_GLOBAL_SHOW_EXTERNALS)
-    file(GLOB_RECURSE EXTERNAL_HEADERS ${LIBZMQ_INCLUDE_DIR}/*)
-    target_sources(${LIB_NAME} PUBLIC ${EXTERNAL_HEADERS})
+    target_sources(${LIB_NAME} PRIVATE ${LIBZMQ_INCLUDES})
 endif()
 
 # Specific links in Windows plattform.
