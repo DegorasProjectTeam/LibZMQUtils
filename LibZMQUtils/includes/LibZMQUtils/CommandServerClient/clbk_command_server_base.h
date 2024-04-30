@@ -50,6 +50,7 @@
 #include "LibZMQUtils/CommandServerClient/common.h"
 #include "LibZMQUtils/CommandServerClient/command_server_base.h"
 #include "LibZMQUtils/Utilities/callback_handler.h"
+#include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
@@ -103,35 +104,120 @@ public:
 
 protected:
 
+    template<typename CallbackType, typename RetT, typename InputTuple, typename OutputTuple>
+    void processClbkRequest(const zmqutils::serverclient::CommandRequest& request,
+                            zmqutils::serverclient::CommandReply& reply)
+    {
+        // Prepare the return type.
+        std::optional<RetT> ret;
+
+        // Input callback case.
+        if constexpr (std::tuple_size<InputTuple>::value > 0 && std::tuple_size<OutputTuple>::value == 0)
+        {
+            if (request.isEmpty())
+            {
+                reply.server_result = zmqutils::serverclient::OperationResult::EMPTY_PARAMS;
+                return;
+            }
+
+            // Prepare the inputs.
+            InputTuple inputs;
+
+            // Deserialize the inputs.
+            try
+            {
+                zmqutils::serializer::BinarySerializer::fastDeserialization(request.params.get(),
+                                                                            request.params_size,
+                                                                            inputs);
+            }
+            catch(...)
+            {
+                reply.server_result = OperationResult::BAD_PARAMETERS;
+                return;
+            }
+
+            // Invoke the callback with unpacked parameters and handle return value
+            ret = std::apply([this, &request, &reply](auto&&... args)
+            {
+                return this->invokeCallback<CallbackType, RetT>(request, reply, std::forward<decltype(args)>(args)...);
+            }, inputs);
+
+            // Serialize the result of the callback if all ok.
+            if(reply.server_result == OperationResult::COMMAND_OK)
+                reply.params_size = zmqutils::serializer::BinarySerializer::fastSerialization(reply.params,
+                                                                                              ret.value());
+        }
+        else if constexpr (std::tuple_size<InputTuple>::value == 0 && std::tuple_size<OutputTuple>::value > 0)
+        {
+            // Prepare the ouputs.
+            OutputTuple outputs;
+
+            // Invoke the callback with unpacked parameters and handle return value
+            ret = std::apply([this, &request, &reply](auto&&... args)
+            {
+                 return this->invokeCallback<CallbackType, RetT>(request, reply, std::forward<decltype(args)>(args)...);
+            }, outputs);
+
+            // Serialize the result of the callback if all ok.
+            if(reply.server_result == OperationResult::COMMAND_OK)
+            {
+                zmqutils::serializer::BinarySerializer serializer;
+                serializer.write(ret.value());
+                serializer.write(outputs);
+                reply.params_size = serializer.moveUnique(reply.params);
+            }
+        }
+        else if constexpr (std::tuple_size<InputTuple>::value > 0 && std::tuple_size<OutputTuple>::value > 0)
+        {
+            // TODO
+        }
+        else
+        {
+            // Invoke the callback that do not require input parameters
+            ret = this->invokeCallback<CallbackType, RetT>(request, reply);
+
+            // Serialize the result of the callback if all ok.
+            if(reply.server_result == zmqutils::serverclient::OperationResult::COMMAND_OK)
+                reply.params_size = zmqutils::serializer::BinarySerializer::fastSerialization(reply.params,
+                                                                                              ret.value());
+        }
+    }
+
+
+
+
+
     /**
      * @brief Parametric method for invoking a registed callback. If no callback is registered, an error is returned.
      * @param msg, the received message.
      * @param args, the args passed to the callback.
      * @return the result of the callback inovocation.
      */
-    template <typename CallbackType, typename RetT = void,  typename... Args>
-    RetT invokeCallback(const CommandRequest& request, CommandReply& reply, const RetT& err_ret, Args&&... args)
+    template <typename CallbackType, typename RetT,  typename... Args>
+    std::optional<RetT> invokeCallback(const CommandRequest& request, CommandReply& reply, Args&&... args)
     {
-        // Get the command.
+        // Get the command and prepare the return.
         ServerCommand cmd = static_cast<ServerCommand>(request.command);
+        std::optional<RetT> ret;
 
         // Check the callback.
         if(!this->hasCallback(cmd))
         {
             reply.server_result = OperationResult::EMPTY_EXT_CALLBACK;
-            return err_ret;
+            return ret;
         }
 
         //Invoke the callback.
         try
         {
-            return CallbackHandler::invokeCallback<CallbackType, RetT>(
-                static_cast<CallbackHandler::CallbackId>(cmd), std::forward<Args>(args)...);
+            ret.emplace(CallbackHandler::invokeCallback<CallbackType, RetT>(
+                            static_cast<CallbackHandler::CallbackId>(cmd), std::forward<Args>(args)...));
+            return ret;
         }
         catch(...)
         {
             reply.server_result = OperationResult::INVALID_EXT_CALLBACK;
-            return err_ret;
+            return ret;
         }
     }
 

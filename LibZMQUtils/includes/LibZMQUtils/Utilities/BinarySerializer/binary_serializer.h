@@ -41,12 +41,20 @@
 #include <atomic>
 #include <memory>
 #include <cstddef>
+#include <tuple>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/Global/libzmqutils_global.h"
 // =====================================================================================================================
+
+// Type trait to check if a type is a std::tuple
+template<typename T>
+struct is_tuple : std::false_type {};
+
+template<typename... Args>
+struct is_tuple<std::tuple<Args...>> : std::true_type {};
 
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
@@ -430,8 +438,12 @@ public:
      * @note The types being deserialized must meet the required conditions, such as being trivially copyable and
      * trivial, directly supported by this class, or being a subclass of the Serializable interface.
      */
-    template<typename T, typename... Args, typename = std::enable_if_t<!trait_has_nullptr_t<T, Args...>::value>>
+    template<typename T, typename... Args,
+             typename = std::enable_if_t<!is_tuple<T>::value && !trait_has_nullptr_t<T, Args...>::value>>
     SizeUnit write(const T& value, const Args&... args);
+
+    template<typename... Args>
+    SizeUnit write(const std::tuple<Args...>& tup);
 
     /**
      * @brief Serializes a file and its associated metadata into the binary stream.
@@ -619,6 +631,17 @@ protected:
     // For vectors of trivial types.
     template<typename T>
     void readSingle(std::vector<T>& v);
+
+    template<typename... Args>
+    void readSingle(std::tuple<Args...>& tup);
+
+    template<std::size_t I = 0, typename... Tp>
+    typename std::enable_if<I == sizeof...(Tp), void>::type
+    readTupleElements(std::tuple<Tp...>&);
+
+    template<std::size_t I = 0, typename... Tp>
+    typename std::enable_if<I < sizeof...(Tp), void>::type
+    readTupleElements(std::tuple<Tp...>& t);
 
     // -----------------------------------------------------------------------------------------------------------------
 

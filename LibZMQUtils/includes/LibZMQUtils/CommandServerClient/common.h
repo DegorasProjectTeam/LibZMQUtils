@@ -242,25 +242,29 @@ struct HostInfo
     utils::SCTimePointStd last_seen;   ///< Host client last connection time. Used by servers.
 };
 
-struct RequestData
+struct LIBZMQUTILS_EXPORT RequestData
 {
-    LIBZMQUTILS_EXPORT RequestData(ServerCommand id);
+    RequestData(ServerCommand id);
 
-    LIBZMQUTILS_EXPORT RequestData();
+    RequestData();
 
     ServerCommand command;                    ///< Command to be sent.
     std::unique_ptr<std::byte[]> params;      ///< Serialized parameters of the command.
     size_t params_size;                       ///< Total serialized parameters size.
+
+    inline bool isEmpty() const {return (this->params_size == 0 || !this->params);}
 };
 
-struct CommandRequest
+struct LIBZMQUTILS_EXPORT CommandRequest
 {
-    LIBZMQUTILS_EXPORT CommandRequest();
+    CommandRequest();
 
     utils::UUID client_uuid;                 ///< Client UUID unique identification.
     ServerCommand command;                   ///< Command to be sent.
     std::unique_ptr<std::byte[]> params;
     size_t params_size;
+
+    inline bool isEmpty() const {return (this->params_size == 0 || !this->params);}
 };
 
 struct CommandReply

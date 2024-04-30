@@ -78,7 +78,7 @@ public:
                                     controller::AmelasController* object,
                                     controller::AmelasControllerCallback<Args...> callback)
     {
-        CallbackHandler::registerCallback(static_cast<CallbackHandler::CallbackId>(command), object, callback);
+        CallbackHandler::registerCallback(command, object, callback);
     }
 
 private:
@@ -86,27 +86,28 @@ private:
     // -----------------------------------------------------------------------------------------------------------------
     using CommandServerBase::registerRequestProcFunc;
     using CallbackHandler::registerCallback;
-    using AmelasRequestProcFunc =
-        void(AmelasControllerServer::*)(const zmqutils::serverclient::CommandRequest&,
-                                        zmqutils::serverclient::CommandReply&);
     // -----------------------------------------------------------------------------------------------------------------
+
+    // -----------------------------------------------------------------------------------------------------------------
+
+    using AmelasRequestProcFunc = void(AmelasControllerServer::*)
+                        (const zmqutils::serverclient::CommandRequest&, zmqutils::serverclient::CommandReply&);
+
+    // -----------------------------------------------------------------------------------------------------------------
+
+    // Sublcass helper for process the requests.
+    template<typename CallbackType, typename InputTuple, typename OutputTuple>
+    void processAmelasRequest(const zmqutils::serverclient::CommandRequest& request,
+                              zmqutils::serverclient::CommandReply& reply)
+    {
+        this->processClbkRequest<CallbackType, controller::AmelasError, InputTuple, OutputTuple>(request, reply);
+    }
 
     // Process functions for all the specific commands.
     void processSetHomePosition(const zmqutils::serverclient::CommandRequest&, zmqutils::serverclient::CommandReply&);
     void processGetHomePosition(const zmqutils::serverclient::CommandRequest&, zmqutils::serverclient::CommandReply&);
 
-    // Subclass register process function helper.
-    void registerRequestProcFunc(common::AmelasServerCommand command, AmelasRequestProcFunc func);
-
-    // Subclass invoke callback helper.
-    template <typename ClbkT, typename... Args>
-    controller::AmelasError invokeCallback(const zmqutils::serverclient::CommandRequest& request,
-                                           zmqutils::serverclient::CommandReply& reply, Args&&... args)
-    {
-        return ClbkCommandServerBase::invokeCallback<ClbkT>(request, reply,
-                                                            controller::AmelasError::INVALID_ERROR,
-                                                            std::forward<Args>(args)...);
-    }
+    // -----------------------------------------------------------------------------------------------------------------
 
     // Internal overrided command validation function.
     virtual bool validateCustomCommand(zmqutils::serverclient::ServerCommand command) final;

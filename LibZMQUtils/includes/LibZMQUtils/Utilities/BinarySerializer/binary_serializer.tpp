@@ -45,7 +45,6 @@
 #include <cstring>
 #include <mutex>
 #include <type_traits>
-#include <atomic>
 #include <iostream>
 // =====================================================================================================================
 
@@ -187,7 +186,6 @@ SizeUnit BinarySerializer::fastSerialization(BytesSmartPtr& out, const Args&... 
     // Do the serialization
     BinarySerializer serializer;
     const SizeUnit size = serializer.write(std::forward<const Args&>(args)...);
-    std::cout<<"Fast internal: "<<serializer.getDataHexString()<<std::endl;
     serializer.moveUnique(out);
     std::stringstream ss;
     for(size_t i = 0; i < size; i++)
@@ -196,7 +194,6 @@ SizeUnit BinarySerializer::fastSerialization(BytesSmartPtr& out, const Args&... 
         if (i < size - 1)
             ss << " ";
     }
-    std::cout<<"Fast internal 2: "<<ss.str()<<std::endl;
     return size;
 }
 
@@ -233,6 +230,28 @@ SizeUnit BinarySerializer::write(const T& value, const Args&... args)
     this->writeRecursive(value, args...);
 
     // Return the writed size.
+    return t_size;
+}
+
+template<typename... Args>
+SizeUnit BinarySerializer::write(const std::tuple<Args...>& tup)
+{
+    // Calculate the total size of all tuple elements
+    const SizeUnit t_size = std::apply([&](const auto&... args)
+    {
+        return (BinarySerializer::calcTotalSize(args) + ...);
+    }, tup);
+
+    // Reserve space in one go
+    this->reserve(this->size_ + t_size);
+
+    // Serialize each element in the tuple
+    std::apply([&](const auto&... args)
+    {
+        (this->writeSingle(args), ...);
+    }, tup);
+
+    // Return the total written size
     return t_size;
 }
 
@@ -469,6 +488,23 @@ void BinarySerializer::readSingle(std::vector<T>& v)
     }
 }
 
+template<typename... Args>
+void BinarySerializer::readSingle(std::tuple<Args...>& tup)
+{
+    readTupleElements(tup);
+}
+
+template<std::size_t I, typename... Tp>
+typename std::enable_if<I == sizeof...(Tp), void>::type
+BinarySerializer::readTupleElements(std::tuple<Tp...>&){}
+
+template<std::size_t I, typename... Tp>
+typename std::enable_if<I < sizeof...(Tp), void>::type
+BinarySerializer::readTupleElements(std::tuple<Tp...>& t)
+{
+    this->readSingle(std::get<I>(t));
+    this->readTupleElements<I + 1, Tp...>(t);
+}
 
 template<typename T>
 SizeUnit Serializable::calcTotalSizeHelper(const T& single)

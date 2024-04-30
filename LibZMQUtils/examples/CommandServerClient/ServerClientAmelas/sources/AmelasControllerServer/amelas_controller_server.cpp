@@ -65,64 +65,45 @@ AmelasControllerServer::AmelasControllerServer(unsigned int port, const std::str
 
     // REQ_SET_HOME_POSITION
     this->registerRequestProcFunc(common::AmelasServerCommand::REQ_SET_HOME_POSITION,
+                                  this,
                                   &AmelasControllerServer::processSetHomePosition);
 
     // REQ_GET_HOME_POSITION.
     this->registerRequestProcFunc(common::AmelasServerCommand::REQ_GET_HOME_POSITION,
+                                  this,
                                   &AmelasControllerServer::processGetHomePosition);
 }
 
 void AmelasControllerServer::processSetHomePosition(const CommandRequest& request, CommandReply& reply)
 {
-    // Auxiliar variables and containers.
-    controller::AmelasError ctrl_err;
 
-    // Position struct.
-    controller::AltAzPos pos;
+    //COMANDO - CALLBACK - INPUTS - OUTPUTS
 
-    // Check the request parameters size.
-    if (request.params_size == 0 || !request.params)
-    {
-        reply.server_result = OperationResult::EMPTY_PARAMS;
-        return;
-    }
-
-    // Try to read the parameters data.
-    try
-    {
-        BinarySerializer::fastDeserialization(request.params.get(), request.params_size, pos);
-    }
-    catch(...)
-    {
-        reply.server_result = OperationResult::BAD_PARAMETERS;
-        return;
-    }
-
-    // Now we will process the command in the controller.
-    ctrl_err = this->invokeCallback<controller::SetHomePositionCallback>(request, reply, pos);
-
-    // Serialize parameters if all ok.
-    if(reply.server_result == OperationResult::COMMAND_OK)
-        reply.params_size = BinarySerializer::fastSerialization(reply.params, ctrl_err);
+    this->processAmelasRequest<controller::SetHomePositionCallback,
+                               std::tuple<controller::AltAzPos>,
+                               std::tuple<>>(request, reply);
 }
 
 void AmelasControllerServer::processGetHomePosition(const CommandRequest& request, CommandReply &reply)
 {
-    // Auxiliar variables and containers.
-    controller::AmelasError ctrl_err;
-    controller::AltAzPos pos;
+    using CommandInputs = std::tuple<>;
+    using CommandOutputs = std::tuple<controller::AltAzPos>;
 
-    // Now we will process the command in the controller.
-    ctrl_err = this->invokeCallback<controller::GetHomePositionCallback>(request, reply, pos);
+    processAmelasRequest<controller::GetHomePositionCallback,
+                         CommandInputs, CommandOutputs>(request, reply);
 
-    // Serialize parameters if all ok.
-    if(reply.server_result == OperationResult::COMMAND_OK)
-        reply.params_size = BinarySerializer::fastSerialization(reply.params, ctrl_err, pos.az, pos.el);
-}
+    //processClbkRequest<controller::GetHomePositionCallback, controller::AmelasError>(request, reply);
 
-void AmelasControllerServer::registerRequestProcFunc(common::AmelasServerCommand command, AmelasRequestProcFunc func)
-{
-    CommandServerBase::registerRequestProcFunc(static_cast<ServerCommand>(command), this, func);
+    // // Auxiliar variables and containers.
+    // controller::AmelasError ctrl_err;
+    // controller::AltAzPos pos;
+
+    // // Now we will process the command in the controller.
+    // ctrl_err = this->invokeCallback<controller::GetHomePositionCallback>(request, reply, pos);
+
+    // // Serialize parameters if all ok.
+    // if(reply.server_result == OperationResult::COMMAND_OK)
+    //     reply.params_size = BinarySerializer::fastSerialization(reply.params, ctrl_err, pos.az, pos.el);
 }
 
 bool AmelasControllerServer::validateCustomCommand(ServerCommand command)

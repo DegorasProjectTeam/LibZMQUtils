@@ -51,6 +51,7 @@ M_DECLARE_UNIT_TEST(BinarySerializer, ArrayTrivial)
 M_DECLARE_UNIT_TEST(BinarySerializer, VectorTrivial)
 M_DECLARE_UNIT_TEST(BinarySerializer, Serializable)
 M_DECLARE_UNIT_TEST(BinarySerializer, File)
+M_DECLARE_UNIT_TEST(BinarySerializer, Tuple)
 
 // Other tests.
 M_DECLARE_UNIT_TEST(BinarySerializer, TrivialIntensive)
@@ -383,6 +384,50 @@ M_DEFINE_UNIT_TEST(BinarySerializer, File)
     remove(filename.c_str());
 }
 
+M_DEFINE_UNIT_TEST(BinarySerializer, Tuple)
+{
+    // Serializer.
+    BinarySerializer serializer;
+
+    // Data and tuple.
+
+    // Data.
+    int in_1 = 42;
+    double in_2 = 3.1415;
+    std::string in_3 = "Hello, World!";
+    std::tuple<int, double, std::string> out_1;
+
+    // Serialize the tuple.
+    serializer.write(in_1, in_2, in_3);
+
+    // Deserialize the tuple.
+    serializer.read(out_1);
+
+    // Checking.
+    M_EXPECTED_EQ(in_1, std::get<0>(out_1))
+    M_EXPECTED_EQ(in_2, std::get<1>(out_1))
+    M_EXPECTED_EQ(in_3, std::get<2>(out_1))
+
+    // Tuple and data.
+
+    // Data
+    std::tuple<std::string, int, double> in_4("Hi, World!", 2, 3.2);
+    std::string out_2;
+    int out_3;
+    double out_4;
+
+    // Serialize the tuple.
+    serializer.write(in_4);
+
+    // Deserialize the data.
+    serializer.read(out_2, out_3, out_4);
+
+    // Checking.
+    M_EXPECTED_EQ(out_2, std::get<0>(in_4))
+    M_EXPECTED_EQ(out_3, std::get<1>(in_4))
+    M_EXPECTED_EQ(out_4, std::get<2>(in_4))
+}
+
 M_DEFINE_UNIT_TEST(BinarySerializer, TrivialIntensive)
 {
     // WARNING: TEsting the worst case, so this test is not efficient on purpose.
@@ -475,6 +520,7 @@ int main()
     M_REGISTER_UNIT_TEST(BinarySerializer, VectorTrivial)
     M_REGISTER_UNIT_TEST(BinarySerializer, Serializable)
     M_REGISTER_UNIT_TEST(BinarySerializer, File)
+    M_REGISTER_UNIT_TEST(BinarySerializer, Tuple)
     M_REGISTER_UNIT_TEST(BinarySerializer, TrivialIntensive)
     M_REGISTER_UNIT_TEST(BinarySerializer, TrivialIntensiveParrallel)
 

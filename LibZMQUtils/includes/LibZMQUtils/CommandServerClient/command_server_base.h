@@ -419,11 +419,12 @@ protected:
      * @warning The `func` function must be a member function of the class pointed to by `obj` and take a constant
      *          reference to a `CommandRequest` object and a reference to a `CommandReply` object as parameters.
      */
-    template <typename ClassT>
-    void registerRequestProcFunc(ServerCommand command, ClassT* obj,
+    template <typename Cmd, typename ClassT>
+    void registerRequestProcFunc(Cmd command, ClassT* obj,
                                  void(ClassT::*func)(const CommandRequest&, CommandReply&))
     {
-        this->process_fnc_map_[command] = [obj, func](const CommandRequest& request, CommandReply& reply)
+        this->process_fnc_map_[static_cast<ServerCommand>(command)] =
+            [obj, func](const CommandRequest& request, CommandReply& reply)
         {
             (obj->*func)(request, reply);
         };

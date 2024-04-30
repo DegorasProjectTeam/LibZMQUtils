@@ -116,11 +116,11 @@ public:
      * @param object - Pointer to the object whose member function is to be registered.
      * @param callback - Member function to be registered as a callback.
      */
-    template<typename ClassT = void, typename RetT = void, typename... Args>
-    void registerCallback(CallbackId id, ClassT* object, RetT(ClassT::*callback)(Args...))
+    template<typename Id, typename ClassT = void, typename RetT = void, typename... Args>
+    void registerCallback(Id id, ClassT* object, RetT(ClassT::*callback)(Args...))
     {
         std::lock_guard<std::mutex> lock(this->mtx_);
-        callback_map_[id] = CallbackHandler::makeCallback(object, callback);
+        callback_map_[static_cast<CallbackId>(id)] = CallbackHandler::makeCallback(object, callback);
     }
 
     /**
