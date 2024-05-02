@@ -209,7 +209,7 @@ static constexpr std::array<const char*, 30>  OperationResultStr
  * process ID (PID), hostname, and an optional client name. It also includes a timestamp to track the last time the
  * host client was seen, which is typically used by servers to monitor client connections.
  */
-struct HostInfo
+struct LIBZMQUTILS_EXPORT HostInfo
 {
     /**
      * @brief Default constructor for HostInfo.
@@ -225,13 +225,13 @@ struct HostInfo
      * @param hostname  Host client hostname.
      * @param name      Optional client name (default is an empty string).
      */
-    LIBZMQUTILS_EXPORT HostInfo(const utils::UUID& uuid, const std::string& ip, const std::string& pid,
-                                const std::string& hostname, const std::string& name = "");
+    HostInfo(const utils::UUID& uuid, const std::string& ip, const std::string& pid,
+             const std::string& hostname, const std::string& name = "");
 
     /**
      * @brief Convert HostInfo to a JSON-formatted string.
      */
-    LIBZMQUTILS_EXPORT std::string toJsonString() const;
+    std::string toJsonString() const;
 
     // Struct data.
     utils::UUID uuid;                  ///< Unique client host UUID.
@@ -267,9 +267,9 @@ struct LIBZMQUTILS_EXPORT CommandRequest
     inline bool isEmpty() const {return (this->params_size == 0 || !this->params);}
 };
 
-struct CommandReply
+struct LIBZMQUTILS_EXPORT CommandReply
 {
-    LIBZMQUTILS_EXPORT CommandReply();
+    CommandReply();
 
     std::unique_ptr<std::byte[]> params;    ///< Serialized parameters of the command.
     size_t params_size;                     ///< Total serialized parameters size.

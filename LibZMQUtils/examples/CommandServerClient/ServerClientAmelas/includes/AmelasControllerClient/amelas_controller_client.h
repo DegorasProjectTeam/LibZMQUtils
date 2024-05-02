@@ -72,11 +72,20 @@ public:
                            const std::string& client_name = "",
                            const std::string interf_name = "");
 
-    zmqutils::serverclient::OperationResult doGetHomePosition(controller::AltAzPos &pos,
+    template<typename CmdId>
+    bool validateCommand(CmdId command) const
+    {
+        return (CommandClientBase::validateCommand(command) ||
+                (static_cast<std::int32_t>(command) >= kMinCmdId && static_cast<std::int32_t>(command) <= kMaxCmdId));
+    }
+
+    zmqutils::serverclient::OperationResult getHomePosition(controller::AltAzPos &pos,
                                                               controller::AmelasError &res);
 
-    zmqutils::serverclient::OperationResult doSetHomePosition(const controller::AltAzPos &pos,
+    zmqutils::serverclient::OperationResult setHomePosition(const controller::AltAzPos &pos,
                                                               controller::AmelasError &res);
+
+    zmqutils::serverclient::OperationResult doOpenSearchTelescope(controller::AmelasError &res);
 
 private:
 

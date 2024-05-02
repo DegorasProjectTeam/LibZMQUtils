@@ -69,7 +69,7 @@ namespace utils{
 
 #ifdef _WIN32
 
-class ConsoleConfig
+class LIBZMQUTILS_EXPORT ConsoleConfig
 {
 public:
 
@@ -79,7 +79,7 @@ public:
     /**
      * @brief Access to the singleton instance
      */
-    LIBZMQUTILS_EXPORT static ConsoleConfig& getInstance();
+    static ConsoleConfig& getInstance();
 
     /**
      * @brief Configure the console settings.
@@ -94,12 +94,12 @@ public:
      * @note Enabling Ctrl handler allows you to capture Ctrl events like Ctrl+C or Ctrl+Break.
      * @note Hiding the cursor can be useful for creating a cleaner console interface.
      */
-    LIBZMQUTILS_EXPORT void configureConsole(bool ctrl_hndlr = false, bool hide_cursor = false, bool allow_in = true);
+    void configureConsole(bool ctrl_hndlr = false, bool hide_cursor = false, bool allow_in = true);
 
     /**
      * @brief Setter function for the exit callback.
      */
-    LIBZMQUTILS_EXPORT void setExitCallback(const ExitConsoleCallback& exit_callback);
+    void setExitCallback(const ExitConsoleCallback& exit_callback);
 
     /**
      * @brief Restore Console Configuration.
@@ -109,7 +109,7 @@ public:
      *
      * @note Use this function to clean up and restore the console settings before exiting your application.
      */
-    LIBZMQUTILS_EXPORT void restoreConsole();
+    void restoreConsole();
 
     /**
      * @brief Wait for Console Close Signal.
@@ -118,7 +118,7 @@ public:
      * events like Ctrl+C, Ctrl+Break, or Ctrl+Close. It is useful for waiting until the user chooses to exit
      * the application gracefully.
      */
-    LIBZMQUTILS_EXPORT void waitForClose();
+    void waitForClose();
 
     /**
      * @brief Get Console Close Status.
@@ -126,7 +126,7 @@ public:
      * @return Returns true if a console close signal has been received, indicating that the application should
      * prepare for exit. Returns false otherwise.
      */
-    LIBZMQUTILS_EXPORT bool closeStatus();
+    bool closeStatus();
 
     /**
      * @brief Custom Console Control Handler.
@@ -157,12 +157,12 @@ public:
      *   };
      * @endcode
      */
-    virtual LIBZMQUTILS_EXPORT BOOL WINAPI consoleCtrlHandler(DWORD dw_ctrl_t);
+    virtual BOOL WINAPI consoleCtrlHandler(DWORD dw_ctrl_t);
 
     /**
      * @brief Virtual destructor. Restores the default console configuration.
      */
-    virtual LIBZMQUTILS_EXPORT ~ConsoleConfig();
+    virtual ~ConsoleConfig();
 
     // Deleted constructors and assignment operators.
     ConsoleConfig(const ConsoleConfig &) = delete;

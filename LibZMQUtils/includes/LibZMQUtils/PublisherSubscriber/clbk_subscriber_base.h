@@ -55,7 +55,7 @@ namespace pubsub{
 /**
  * @brief The ClbkSubscriberBase class implements a Subscriber that includes callback handling for each topic.
  */
-class ClbkSubscriberBase : public SubscriberBase, public utils::CallbackHandler
+class LIBZMQUTILS_EXPORT ClbkSubscriberBase : public SubscriberBase, public utils::CallbackHandler
 {
 
 public:
@@ -63,7 +63,7 @@ public:
     /**
      * @brief ClbkSubscriberBase default constructor.
      */
-    LIBZMQUTILS_EXPORT ClbkSubscriberBase();
+    ClbkSubscriberBase();
 
     /**
      * @brief Template function for registering a callback. This callback will be registered for a specific topic.
@@ -81,19 +81,19 @@ public:
      * @brief Remove the registered callback for a specific topic.
      * @param topic, the topic whose callback will be erased.
      */
-    LIBZMQUTILS_EXPORT void removeCallback(const TopicType &topic);
+    void removeCallback(const TopicType &topic);
 
     /**
      * @brief Check if there is a registered callback for a specific topic.
      * @param topic, the topic whose callback existence will be checked.
      * @return
      */
-    LIBZMQUTILS_EXPORT bool hasCallback(const TopicType &topic);
+    bool hasCallback(const TopicType &topic);
 
     /**
      * @brief Virtual destructor.
      */
-    LIBZMQUTILS_EXPORT virtual ~ClbkSubscriberBase() override;
+    virtual ~ClbkSubscriberBase() override;
 
 protected:
 

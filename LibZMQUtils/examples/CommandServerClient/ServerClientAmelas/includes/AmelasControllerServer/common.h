@@ -50,17 +50,17 @@
 // =====================================================================================================================
 namespace amelas{
 namespace communication{
-namespace common{
 // =====================================================================================================================
 
 // Specific subclass commands (0 to 20 are reserved for the base server).
 // WARNING: In our approach, the server commands must be always in order.
 enum class AmelasServerCommand : zmqutils::serverclient::CommandType
 {
-    REQ_SET_HOME_POSITION = 33,
-    REQ_GET_HOME_POSITION = 34,
-    END_IMPL_COMMANDS     = 35,
-    END_AMELAS_COMMANDS   = 50
+    REQ_SET_HOME_POSITION        = 33,
+    REQ_GET_HOME_POSITION        = 34,
+    REQ_DO_OPEN_SEARCH_TELESCOPE = 35,
+    END_IMPL_COMMANDS            = 36,
+    END_AMELAS_COMMANDS          = 50
 };
 
 // Specific subclass errors (0 to 30 are reserved for the base server).
@@ -73,12 +73,13 @@ enum class AmelasOperationResult : zmqutils::serverclient::ResultType
 // Extend the base command strings with those of the subclass.
 static constexpr auto AmelasServerCommandStr = zmqutils::utils::joinArraysConstexpr(
     zmqutils::serverclient::ServerCommandStr,
-    std::array<const char*, 5>
+    std::array<const char*, 6>
     {
         "FUTURE_EXAMPLE",
         "FUTURE_EXAMPLE",
         "REQ_SET_HOME_POSITION",
         "REQ_GET_HOME_POSITION",
+        "REQ_DO_OPEN_SEARCH_TELESCOPE",
         "END_DRGG_COMMANDS"
     });
 
@@ -92,8 +93,8 @@ static constexpr auto AmelasOperationResultStr = zmqutils::utils::joinArraysCons
     });
 
 // Usefull const expressions.
-constexpr int kMinCmdId = static_cast<int>(zmqutils::serverclient::ServerCommand::END_BASE_COMMANDS) + 1;
-constexpr int kMaxCmdId = static_cast<int>(AmelasServerCommand::END_AMELAS_COMMANDS) - 1;
+constexpr std::int32_t kMinCmdId = static_cast<std::int32_t>(zmqutils::serverclient::ServerCommand::END_BASE_COMMANDS) + 1;
+constexpr std::int32_t kMaxCmdId = static_cast<std::int32_t>(AmelasServerCommand::END_AMELAS_COMMANDS) - 1;
 
-}}} // END NAMESPACES.
+}} // END NAMESPACES.
 // =====================================================================================================================

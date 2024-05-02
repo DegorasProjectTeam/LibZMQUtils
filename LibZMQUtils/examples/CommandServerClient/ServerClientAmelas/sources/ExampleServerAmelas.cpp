@@ -70,8 +70,20 @@ int main(int, char**)
 {
     // Nampesaces.
     using amelas::communication::AmelasControllerServer;
-    using amelas::communication::common::AmelasServerCommand;
+    using amelas::communication::AmelasServerCommand;
     using amelas::controller::AmelasController;
+    using amelas::controller::AltAzPos;
+    // Callbacks
+    using amelas::controller::SetHomePositionFunction;
+    using amelas::controller::SetHomePositionFunctionInArgs;
+    using amelas::controller::SetHomePositionFunctionOutArgs;
+    using amelas::controller::GetHomePositionFunction;
+    using amelas::controller::GetHomePositionFunctionInArgs;
+    using amelas::controller::GetHomePositionFunctionOutArgs;
+    using amelas::controller::DoOpenSearchTelescopeFunction;
+    using amelas::controller::DoOpenSearchTelescopeFunctionInArgs;
+    using amelas::controller::DoOpenSearchTelescopeFunctionOutArgs;
+
 
     // Configure the console.
     zmqutils::utils::ConsoleConfig& console_cfg = zmqutils::utils::ConsoleConfig::getInstance();
@@ -94,13 +106,26 @@ int main(int, char**)
 
     // Set the controller callbacks in the server.
 
-    amelas_server.registerControllerCallback(AmelasServerCommand::REQ_SET_HOME_POSITION,
-                                             &amelas_controller,
-                                             &AmelasController::setHomePosition);
+    amelas_server.registerCallbackAndRequestProcFunc<SetHomePositionFunction,
+                                       SetHomePositionFunctionInArgs,
+                                       SetHomePositionFunctionOutArgs>
+        (AmelasServerCommand::REQ_SET_HOME_POSITION,
+         &amelas_controller,
+         &AmelasController::setHomePosition);
 
-    amelas_server.registerControllerCallback(AmelasServerCommand::REQ_GET_HOME_POSITION,
-                                             &amelas_controller,
-                                             &AmelasController::getHomePosition);
+    amelas_server.registerCallbackAndRequestProcFunc<GetHomePositionFunction,
+                                       GetHomePositionFunctionInArgs,
+                                       GetHomePositionFunctionOutArgs>
+        (AmelasServerCommand::REQ_GET_HOME_POSITION,
+         &amelas_controller,
+         &AmelasController::getHomePosition);
+
+    amelas_server.registerCallbackAndRequestProcFunc<DoOpenSearchTelescopeFunction,
+                                       DoOpenSearchTelescopeFunctionInArgs,
+                                       DoOpenSearchTelescopeFunctionOutArgs>
+        (AmelasServerCommand::REQ_DO_OPEN_SEARCH_TELESCOPE,
+         &amelas_controller,
+         &AmelasController::doOpenSearchTelescope);
 
     // ---------------------------------------
 

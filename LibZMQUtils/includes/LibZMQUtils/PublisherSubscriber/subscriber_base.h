@@ -73,7 +73,7 @@ constexpr std::string_view kReservedExitTopic = "quit";
  * cannot be used by the user, since it is issued internally by the class.
  *
  */
-class SubscriberBase : public ZMQContextHandler
+class LIBZMQUTILS_EXPORT SubscriberBase : public ZMQContextHandler
 {
 
 public:
@@ -81,7 +81,7 @@ public:
     /**
      * @brief Base constructor for SubscriberBase
      */
-    LIBZMQUTILS_EXPORT SubscriberBase();
+    SubscriberBase();
 
 
     /**
@@ -89,8 +89,7 @@ public:
      * no message will be received by the subscriber.
      * @return the set of topic filters applied.
      */
-    LIBZMQUTILS_EXPORT const std::set<TopicType>& getTopicFilters() const;
-
+    const std::set<TopicType>& getTopicFilters() const;
 
     /**
      * @brief Get the future associated with the worker thread.
@@ -101,14 +100,14 @@ public:
      *
      * @return A const reference to the worker thread future.
      */
-    LIBZMQUTILS_EXPORT const std::future<void>& getWorkerFuture() const;
+    const std::future<void>& getWorkerFuture() const;
 
     /**
      * @brief Get a const reference to the map of subscribed publishers.
      *
      * @return A const reference to the map of subscribed publishers.
      */
-    LIBZMQUTILS_EXPORT const std::map<utils::UUID, PublisherInfo>& getSubscribedPublishers() const;
+    const std::map<utils::UUID, PublisherInfo>& getSubscribedPublishers() const;
 
     /**
      * @brief Check if the worker thread is currently active.
@@ -118,7 +117,7 @@ public:
      *
      * @return True if the worker is active, false otherwise.
      */
-    LIBZMQUTILS_EXPORT bool isWorking() const;
+    bool isWorking() const;
 
     /**
      * @brief Starts the subscriber worker thread.
@@ -128,7 +127,7 @@ public:
      *
      * @return True if the worker was successfully started, false otherwise.
      */
-    LIBZMQUTILS_EXPORT bool startSubscriber();
+    bool startSubscriber();
 
     /**
      * @brief Stops the subscriber worker thread.
@@ -136,45 +135,45 @@ public:
      * If the worker is already stopped, this function does nothing. Otherwise, it
      * deletes the ZMQ context and cleans up the subscribed publishers and topic filters.
      */
-    LIBZMQUTILS_EXPORT void stopSubscriber();
+    void stopSubscriber();
 
     /**
      * @brief Subscribe to a publisher defined by its endpoint.
      * @param pub_endpoint, the endpoint URL of the publisher to subscribe.
      */
-    LIBZMQUTILS_EXPORT void subscribe(const std::string &pub_endpoint);
+    void subscribe(const std::string &pub_endpoint);
 
     /**
      * @brief Unsubscribe to a publisher defined by its endpoint.
      * @param pub_endpoint, the endpoint URL of the publisher to unsubscribe.
      */
-    LIBZMQUTILS_EXPORT void unsubscribe(const std::string &pub_endpoint);
+    void unsubscribe(const std::string &pub_endpoint);
 
     /**
      * @brief Adds a topic filter for incoming messages. Empty topic means everything, while no topic means nothing.
      * Reserved exit topic cannot be issued to this function. It will be discarded.
      * @param filter, the topic filter to add.
      */
-    LIBZMQUTILS_EXPORT void addTopicFilter(const TopicType &filter);
+    void addTopicFilter(const TopicType &filter);
 
     /**
      * @brief Removes a topic filter for incoming messages.
      * Reserved exit topic cannot be issued to this function. It will be discarded.
      * @param filter, the filter to remove.
      */
-    LIBZMQUTILS_EXPORT void removeTopicFilter(const TopicType &filter);
+    void removeTopicFilter(const TopicType &filter);
 
     /**
      * @brief Removes every topic filter for incoming messages. This way, no message will be allowed.
      */
-    LIBZMQUTILS_EXPORT void cleanTopicFilters();
+    void cleanTopicFilters();
 
     /**
      * @brief Virtual destructor.
      *
      * This destructor is virtual to ensure proper cleanup when the derived class is destroyed.
      */
-    LIBZMQUTILS_EXPORT virtual ~SubscriberBase() override;
+    virtual ~SubscriberBase() override;
 
 protected:
 

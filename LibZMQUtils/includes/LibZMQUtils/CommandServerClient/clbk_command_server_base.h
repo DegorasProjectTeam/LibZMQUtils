@@ -63,7 +63,7 @@ namespace serverclient{
  * @brief The ClbkCommandServerBase class implements a CommandServer that includes callback handling for each command.
  */
 class ClbkCommandServerBase : public CommandServerBase,
-                              public utils::CallbackHandler
+                              private utils::CallbackHandler
 {
 public:
 
@@ -74,14 +74,70 @@ public:
 
     /**
      * @brief Template function for registering a callback. This callback will be registered for a specific command.
+     *
+     * This template function register a callback for a specific request command. In this case, no request process
+     * function will be register, so, you must program in your subclass ClbkCommandServerBase each function to process
+     * each request and inside those functions, you can call to the register callbacks manually.
+     *
+     * If you want register the callback as well as an automaticed process function for the specific request, you
+     * can use the funticon registerCallbackAndRequestProcFunc.
+     *
      * @param command, the command the callback is applied to.
      * @param object, a parametric object whose method will be called.
      * @param callback, the callback method that will be called.
      */
-    template<typename ClassT, typename RetT = void, typename... Args>
-    void registerCallback(ServerCommand command, ClassT* object, RetT(ClassT::*callback)(Args...))
+    template<typename CmdId, typename ClassT, typename RetT = void, typename... Args>
+    void registerCallback(CmdId command, ClassT* object, RetT(ClassT::*callback)(Args...))
     {
         CallbackHandler::registerCallback(static_cast<CallbackHandler::CallbackId>(command), object, callback);
+    }
+
+    /**
+     * @brief Registers a callback and an associated request processing function for a specific command.
+     *
+     * This function not only registers a callback for a specific command but also sets up an automated
+     * process function to handle requests of that command type. The process function automatically
+     * invokes the registered callback with appropriate parameters extracted from the request.
+     *
+     * This approach simplifies the setup process by automatically linking the command processing logic
+     * with the appropriate callback, thereby reducing manual boilerplate code and potential errors.
+     *
+     * @tparam CallbackType The type of the callback handler, usually determining how the callback will
+     *         be invoked and with what parameters.
+     * @tparam InputTuple A tuple describing the types of data expected as input from the request.
+     *         Used to deserialize and pass data to the callback.
+     * @tparam OutputTuple A tuple describing the types of data that will be output or modified by the
+     *         callback and need serialization into the reply.
+     * @tparam CmdId The type of the command identifier (usually an enum or integral type).
+     * @tparam ClassT The class type on which the member function callback is defined.
+     * @tparam RetT The return type of the callback function. Defaults to void.
+     * @tparam Args Variadic template parameters representing the types of the arguments that the
+     *         callback function accepts.
+     *
+     * @param command The identifier for the command with which this callback and process function are
+     *        associated.
+     * @param object Pointer to the instance of the object on which the callback method will be called.
+     * @param callback Member function pointer to the callback method that will be invoked to process
+     *        the command.
+     */
+    template<typename CallbackType, typename InputTuple = std::tuple<>, typename OutputTuple = std::tuple<>,
+             typename CmdId, typename ClassT, typename RetT = void, typename... Args>
+    void registerCallbackAndRequestProcFunc(CmdId command, ClassT* object, RetT(ClassT::*callback)(Args...))
+    {
+        // Register the callback.
+        CallbackHandler::registerCallback(static_cast<CallbackHandler::CallbackId>(command), object, callback);
+
+        // Process function lambda.
+        auto lambdaProcFunc = [=](const CommandRequest& request, CommandReply& reply)
+        {
+            this->processClbkRequest<CallbackType, RetT, InputTuple, OutputTuple>(request, reply);
+        };
+
+        // Store the lambda func.
+        std::function<void(const CommandRequest&, CommandReply&)> func = lambdaProcFunc;
+
+        // Automatic command process function registration.
+        this->registerRequestProcFunc(static_cast<zmqutils::serverclient::CommandType>(command), func);
     }
 
     /**
@@ -104,6 +160,27 @@ public:
 
 protected:
 
+    /**
+     * @brief Processes a callback request based on the command type and data encapsulated in the request.
+     *
+     * This function processes different types of callback requests by handling input and output parameters
+     * differently depending on their types, which are specified as tuple template parameters.
+     * It supports several scenarios:
+     * - Only input parameters are provided.
+     * - Only output parameters are provided.
+     * - Both input and output parameters are provided.
+     * - Neither input nor output parameters are provided.
+     *
+     * The function deserializes input data from the request, invokes the appropriate callback based on the
+     * template parameters, and serializes the output back into the reply.
+     *
+     * @tparam CallbackType The type of the callback function to be invoked.
+     * @tparam RetT The return type of the callback function.
+     * @tparam InputTuple A tuple containing types of the input parameters.
+     * @tparam OutputTuple A tuple containing types of the output parameters.
+     * @param request A reference to the CommandRequest object containing input data and command details.
+     * @param reply A reference to the CommandReply object to store the results of the callback invocation.
+     */
     template<typename CallbackType, typename RetT, typename InputTuple, typename OutputTuple>
     void processClbkRequest(const zmqutils::serverclient::CommandRequest& request,
                             zmqutils::serverclient::CommandReply& reply)
@@ -183,10 +260,6 @@ protected:
         }
     }
 
-
-
-
-
     /**
      * @brief Parametric method for invoking a registed callback. If no callback is registered, an error is returned.
      * @param msg, the received message.
@@ -224,6 +297,7 @@ protected:
 private:
 
     // Hide the base functions.
+    using CallbackHandler::registerCallback;
     using CallbackHandler::invokeCallback;
     using CallbackHandler::removeCallback;
     using CallbackHandler::hasCallback;

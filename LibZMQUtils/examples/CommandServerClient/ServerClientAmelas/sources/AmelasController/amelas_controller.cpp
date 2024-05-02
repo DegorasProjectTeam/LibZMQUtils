@@ -98,10 +98,18 @@ AmelasError AmelasController::getHomePosition(AltAzPos &pos)
     return AmelasError::SUCCESS;
 }
 
-AmelasError AmelasController::getDatetime(std::string &)
+AmelasError AmelasController::doOpenSearchTelescope()
 {
+    // Log.
+    std::cout << std::string(100, '-') << std::endl;
+    std::cout<<"<AMELAS CONTROLLER>"<<std::endl;
+    std::cout<<"-> DO_OPEN_SEARCH_TELESCOPE"<<std::endl;
+    std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
+    std::cout << std::string(100, '-') << std::endl;
+
     return AmelasError::SUCCESS;
 }
+
 
 // =====================================================================================================================
 

@@ -69,7 +69,7 @@ namespace utils{
  * @warning Remember that the function invokeCallback can throw exceptions.
  *
  */
-class CallbackHandler
+class LIBZMQUTILS_EXPORT CallbackHandler
 {
 public:
 
@@ -127,19 +127,19 @@ public:
      * @brief Remove a callback using its id.
      * @param id - The id of the callback to be removed.
      */
-    LIBZMQUTILS_EXPORT void removeCallback(CallbackId id);
+    void removeCallback(CallbackId id);
 
     /**
      * @brief Check if a callback with the given id exists.
      * @param id - The id of the callback to be checked.
      * @return bool - true if callback exists, false otherwise.
      */
-    LIBZMQUTILS_EXPORT bool hasCallback(CallbackId id) const;
+    bool hasCallback(CallbackId id) const;
 
     /**
      * @brief Remove all registered callbacks.
      */
-    LIBZMQUTILS_EXPORT void clearCallbacks();
+    void clearCallbacks();
 
     /**
      * @brief Invoke a registered callback with the given id.

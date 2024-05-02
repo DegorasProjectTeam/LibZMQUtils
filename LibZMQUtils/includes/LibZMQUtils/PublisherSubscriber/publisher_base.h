@@ -65,7 +65,7 @@ namespace pubsub{
  * This base class can be used without specialization or it can be inherited to provide callbacks for start, stop,
  * message sending and error handling.
  */
-class PublisherBase : public ZMQContextHandler
+class LIBZMQUTILS_EXPORT PublisherBase : public ZMQContextHandler
 {
 
 public:
@@ -75,56 +75,55 @@ public:
      * @param endpoint, the endpoint to bind the publisher to.
      * @param name, optional name of the publisher. It will be sent on messages.
      */
-    LIBZMQUTILS_EXPORT PublisherBase(std::string endpoint,
-                                     std::string name = "");
+    PublisherBase(std::string endpoint, std::string name = "");
     
     /**
      * @brief Start the publisher so it can send messages. It must be started before sending messages.
      * @return true if it was started successfully. False otherwise.
      */
-    LIBZMQUTILS_EXPORT bool startPublisher();
+    bool startPublisher();
 
     /**
      * @brief Stops the publisher and cleans the socket. Messages cannot be sent until publisher is started again.
      */
-    LIBZMQUTILS_EXPORT void stopPublisher();
+    void stopPublisher();
 
     /**
      * @brief Restarts the publisher.
      * @return true if reset was successful, false otherwise.
      */
-    LIBZMQUTILS_EXPORT bool resetPublisher();
+    bool resetPublisher();
 
     /**
      * @brief Get the endpoint that this publisher is bound to.
      * @return the URL of the endpoint that this publisher is bound to.
      */
-    LIBZMQUTILS_EXPORT const std::string& getEndpoint() const;
+    const std::string& getEndpoint() const;
 
     /**
      * @brief Get the name of this publisher.
      * @return the name of the publisher.
      */
-    LIBZMQUTILS_EXPORT const std::string& getName() const;
+    const std::string& getName() const;
 
     /**
      * @brief Get the UUID of this publisher.
      * @return the UUID of the publisher.
      */
-    LIBZMQUTILS_EXPORT const utils::UUID& getUUID() const;
+    const utils::UUID& getUUID() const;
 
     /**
      * @brief Check if the publisher is working, i.e., it was successfully started.
      * @return true if publisher is working, false otherwise.
      */
-    LIBZMQUTILS_EXPORT bool isWorking() const;
+    bool isWorking() const;
 
     /**
      * @brief Sends a PubSubMsg.
      * @param data, the data that will be sent in the msg.
      * @return the result of sending operation.
      */
-    LIBZMQUTILS_EXPORT PublisherResult sendMsg(const PubSubData &data);
+    PublisherResult sendMsg(const PubSubData &data);
 
     /**
      * @brief Get the network adapter information of interfaces that this publisher is bound to.
@@ -134,35 +133,35 @@ public:
      *
      * @return A const reference to a vector of NetworkAdapterInfo objects.
      */
-    LIBZMQUTILS_EXPORT const std::vector<internal_helpers::network::NetworkAdapterInfo> &getBoundInterfaces() const;
+    const std::vector<internal_helpers::network::NetworkAdapterInfo> &getBoundInterfaces() const;
 
     /**
      * @brief Virtual destructor to ensure proper cleanup when the derived class is destroyed.
      * @warning The publisher will stop if is running but in this case the `onPublisherStop` callback can't be executed.
      */
-    LIBZMQUTILS_EXPORT virtual ~PublisherBase() override;
+    virtual ~PublisherBase() override;
 
 protected:
 
     /**
      * @brief Base publisher start callback. Subclasses can override this function.
      */
-    LIBZMQUTILS_EXPORT virtual void onPublisherStart();
+    virtual void onPublisherStart();
 
     /**
      * @brief Base publisher stop callback. Subclasses can override this function.
      */
-    LIBZMQUTILS_EXPORT virtual void onPublisherStop();
+    virtual void onPublisherStop();
 
     /**
      * @brief Base publisher sending message callback. Subclasses can override this function.
      */
-    LIBZMQUTILS_EXPORT virtual void onSendingMsg(const PubSubData&);
+    virtual void onSendingMsg(const PubSubData&);
 
     /**
      * @brief Base publisher error callback. Subclasses can override this function.
      */
-    LIBZMQUTILS_EXPORT virtual void onPublisherError(const zmq::error_t&, const std::string&);
+    virtual void onPublisherError(const zmq::error_t&, const std::string&);
 
 private:
 

@@ -123,22 +123,22 @@ if(WIN32)
     endif()
 
     # Search for includes.
-    macro_search_file_in_paths_private("zmq.h" "${SEARCH_PATHS}" LIBZMQ_INCLUDE_PATH FALSE)
-    macro_search_file_in_paths_private("zmq.hpp" "${SEARCH_PATHS}" LIBZMQ_INCLUDE_PATH_BINDING FALSE)
-    macro_search_file_in_paths_private("zmq_addon.hpp" "${SEARCH_PATHS}" LIBZMQ_INCLUDE_PATH_BINDING_ADDON FALSE)
+    macro_search_file_in_paths_private("zmq.h" "${SEARCH_PATHS}" LIBZMQ_INCLUDE_PATH LIBZMQ_INCLUDE_FILE)
+    macro_search_file_in_paths_private("zmq.hpp" "${SEARCH_PATHS}" LIBZMQ_BINDING_PATH LIBZMQ_BINDING_FILE)
+    macro_search_file_in_paths_private("zmq_addon.hpp" "${SEARCH_PATHS}" LIBZMQ_BINDINGADDON_PATH LIBZMQ_BINDINGADDON_FILE)
 
     # Find the ZMQ library and libsodium.
-    macro_search_file_in_paths_private("libzmq-v142-mt-4_3_4.dll" "${SEARCH_PATHS}" LIBZMQ_LIBRARY_PATH FALSE)
-    macro_search_file_in_paths_private("libsodium.dll" "${SEARCH_PATHS}" LIBSODIUM_LIBRARY_PATH FALSE)
+    macro_search_file_in_paths_private("libzmq-v142-mt-4_3_4.dll" "${SEARCH_PATHS}" LIBZMQ_LIBRARY_PATH LIBZMQ_LIBRARY_FILE)
+    macro_search_file_in_paths_private("libsodium.dll" "${SEARCH_PATHS}" LIBSODIUM_LIBRARY_PATH LIBSODIUM_LIBRARY_FILE)
 
     # Checks.
-    if(LIBZMQ_INCLUDE_DIR AND LIBZMQ_LIBRARY AND LIBSODIUM_LIBRARY AND LIBZMQ_INCLUDE_DIR AND
-            LIBZMQ_INCLUDE_DIR_BINDING AND LIBZMQ_INCLUDE_DIR_BINDING_ADDON)
+    if(LIBZMQ_INCLUDE_FILE AND LIBZMQ_BINDING_FILE AND LIBZMQ_BINDINGADDON_FILE AND LIBZMQ_LIBRARY_FILE AND LIBSODIUM_LIBRARY_FILE)
 
         set(LIBZMQ_FOUND TRUE)
-        set(LIBZMQ_LIBRARIES ${LIBZMQ_LIBRARY} ${LIBSODIUM_LIBRARY})
+        set(LIBZMQ_LIBRARIES ${LIBZMQ_LIBRARY_FILE})
         set(LIBZMQ_LIBRARY_DIRS ${LIBZMQ_LIBRARY_PATH} ${LIBSODIUM_LIBRARY_PATH})
-        set(LIBZMQ_INCLUDE_DIRS ${LIBZMQ_INCLUDE_DIR}/zmq.h)
+        set(LIBZMQ_INCLUDES ${LIBZMQ_INCLUDE_FILE} ${LIBZMQ_BINDING_FILE} ${LIBZMQ_BINDINGADDON_FILE})
+        set(LIBZMQ_INCLUDE_DIRS ${LIBZMQ_INCLUDE_PATH} ${LIBZMQ_BINDING_PATH} ${LIBZMQ_BINDINGADDON_PATH})
 
     else()
         message(FATAL_ERROR "  Could not find LibZMQ library.")

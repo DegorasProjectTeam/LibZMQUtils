@@ -43,7 +43,6 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
-#include <string>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
@@ -73,7 +72,7 @@ public:
 
     AmelasError getHomePosition(AltAzPos& pos);
 
-    AmelasError getDatetime(std::string&);
+    AmelasError doOpenSearchTelescope();
 
 private:
 

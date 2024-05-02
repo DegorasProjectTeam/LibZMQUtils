@@ -74,38 +74,19 @@ public:
 
     // Register callback function helper.
     template<typename... Args>
-    void registerControllerCallback(common::AmelasServerCommand command,
+    void registerControllerCallback(AmelasServerCommand command,
                                     controller::AmelasController* object,
                                     controller::AmelasControllerCallback<Args...> callback)
     {
-        CallbackHandler::registerCallback(command, object, callback);
+        ClbkCommandServerBase::registerCallback(command, object, callback);
     }
 
 private:
 
     // -----------------------------------------------------------------------------------------------------------------
     using CommandServerBase::registerRequestProcFunc;
-    using CallbackHandler::registerCallback;
+    using ClbkCommandServerBase::registerCallback;
     // -----------------------------------------------------------------------------------------------------------------
-
-    // -----------------------------------------------------------------------------------------------------------------
-
-    using AmelasRequestProcFunc = void(AmelasControllerServer::*)
-                        (const zmqutils::serverclient::CommandRequest&, zmqutils::serverclient::CommandReply&);
-
-    // -----------------------------------------------------------------------------------------------------------------
-
-    // Sublcass helper for process the requests.
-    template<typename CallbackType, typename InputTuple, typename OutputTuple>
-    void processAmelasRequest(const zmqutils::serverclient::CommandRequest& request,
-                              zmqutils::serverclient::CommandReply& reply)
-    {
-        this->processClbkRequest<CallbackType, controller::AmelasError, InputTuple, OutputTuple>(request, reply);
-    }
-
-    // Process functions for all the specific commands.
-    void processSetHomePosition(const zmqutils::serverclient::CommandRequest&, zmqutils::serverclient::CommandReply&);
-    void processGetHomePosition(const zmqutils::serverclient::CommandRequest&, zmqutils::serverclient::CommandReply&);
 
     // -----------------------------------------------------------------------------------------------------------------
 

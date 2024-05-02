@@ -57,18 +57,18 @@ namespace utils{
 /**
  * @brief Class to encapsulate the UUID bytes and provide string representation
  */
-class UUID
+class LIBZMQUTILS_EXPORT UUID
 {
 
 public:
 
-    LIBZMQUTILS_EXPORT static inline constexpr unsigned kUUIDSize = 16;  ///< UUID bytes size.
+    static inline constexpr unsigned kUUIDSize = 16;  ///< UUID bytes size.
 
     /**
      * @brief Construct a new UUID object from an array of 16 bytes.
      * @param bytes An array of 16 bytes representing the UUID.
      */
-    LIBZMQUTILS_EXPORT UUID(const std::array<std::byte, 16>& bytes);
+    UUID(const std::array<std::byte, 16>& bytes);
 
     /**
      * @brief Default constructor.
@@ -106,9 +106,9 @@ public:
      *
      * @return String representation of the UUID
      */
-    LIBZMQUTILS_EXPORT std::string toRFC4122String() const;
+    std::string toRFC4122String() const;
 
-    LIBZMQUTILS_EXPORT const std::array<std::byte, 16>& getBytes() const;
+    const std::array<std::byte, 16>& getBytes() const;
 
 
 private:
@@ -189,7 +189,7 @@ LIBZMQUTILS_EXPORT bool operator!=(const UUID& a, const UUID& b);
  * actually provide a non-deterministic random number generator. In such cases, the randomness of the generated UUIDs
  * may be weaker and a random seed will be generated using a timestamp.
  */
-class UUIDGenerator
+class LIBZMQUTILS_EXPORT UUIDGenerator
 {
 public:
 

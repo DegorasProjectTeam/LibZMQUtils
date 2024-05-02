@@ -68,7 +68,7 @@ using zmqutils::serverclient::RequestData;
 using zmqutils::serverclient::OperationResult;
 using zmqutils::serializer::BinarySerializer;
 using amelas::communication::AmelasControllerClient;
-using amelas::communication::common::AmelasServerCommand;
+using amelas::communication::AmelasServerCommand;
 using amelas::controller::AltAzPos;
 using amelas::controller::AmelasError;
 // ---------------------------------------------------------------------------------------------------------------------
@@ -102,7 +102,7 @@ public:
             return OperationResult::UNKNOWN_COMMAND;
         }
 
-        if (!this->validCommand(command_id))
+        if (!this->client_.validateCommand(command_id))
         {
             std::cerr << "Not implemented command." << std::endl;
             return OperationResult::NOT_IMPLEMENTED;
@@ -149,7 +149,7 @@ public:
             std::cout << "Sending GET_HOME_POSITION command." << std::endl;
             AltAzPos pos;
             AmelasError error = AmelasError::INVALID_ERROR;
-            res = this->client_.doGetHomePosition(pos, error);
+            res = this->client_.getHomePosition(pos, error);
             this->processGetHomePosition(res, pos, error);
         }
         else if (command_id == static_cast<CommandType>(AmelasServerCommand::REQ_SET_HOME_POSITION))
@@ -159,10 +159,17 @@ public:
             AmelasError error = AmelasError::INVALID_ERROR;
             bool params_valid = this->parseAltAz(params, pos);
             if (params_valid)
-                res = this->client_.doSetHomePosition(pos, error);
+                res = this->client_.setHomePosition(pos, error);
             else
                 res = OperationResult::BAD_PARAMETERS;
             this->processSetHomePosition(res, error);
+        }
+        else if (command_id == static_cast<CommandType>(AmelasServerCommand::REQ_DO_OPEN_SEARCH_TELESCOPE))
+        {
+            std::cout << "Sending REQ_DO_OPEN_SEARCH_TELESCOPE command." << std::endl;
+            AmelasError error = AmelasError::INVALID_ERROR;
+            res = this->client_.doOpenSearchTelescope(error);
+            this->processDoOpenSearchTelescope(res, error);
         }
         else
         {
@@ -170,14 +177,6 @@ public:
         }
         return res;
 
-    }
-
-    bool validCommand(CommandType command)
-    {
-        return ((command >= static_cast<CommandType>(ServerCommand::REQ_CONNECT) &&
-                 command < static_cast<CommandType>(ServerCommand::END_BASE_COMMANDS)) ||
-                (command >= static_cast<CommandType>(AmelasServerCommand::REQ_SET_HOME_POSITION) &&
-                 command < static_cast<CommandType>(AmelasServerCommand::END_IMPL_COMMANDS)));
     }
 
 private:
@@ -221,6 +220,7 @@ private:
                       << static_cast<int>(res) << std::endl;
         }
     }
+
     void processSetHomePosition(zmqutils::serverclient::OperationResult res, amelas::controller::AmelasError error)
     {
         if (OperationResult::COMMAND_OK == res)
@@ -234,6 +234,23 @@ private:
         else
         {
             std::cerr << "SET_HOME_POSITION command failed. Operation error code is: "
+                      << static_cast<int>(res) << std::endl;
+        }
+    }
+
+    void processDoOpenSearchTelescope(zmqutils::serverclient::OperationResult res, amelas::controller::AmelasError error)
+    {
+        if (OperationResult::COMMAND_OK == res)
+        {
+            if (AmelasError::SUCCESS == error)
+                std::cout << "REQ_DO_OPEN_SEARCH_TELESCOPE command executed succesfully." << std::endl;
+            else
+                std::cerr << "REQ_DO_OPEN_SEARCH_TELESCOPE command failed. Controller Error Code is: "
+                          << static_cast<int>(error) << std::endl;
+        }
+        else
+        {
+            std::cerr << "REQ_DO_OPEN_SEARCH_TELESCOPE command failed. Operation error code is: "
                       << static_cast<int>(res) << std::endl;
         }
     }
@@ -295,8 +312,9 @@ int main(int, char**)
         std::cout<<"- REQ_ALIVE:            2"<<std::endl;
         std::cout<<"- REQ_GET_SERVER_TIME:  3"<<std::endl;
         std::cout<<"-- Specific Commands --"<<std::endl;
-        std::cout<<"- REQ_SET_HOME_POSITION:  33 az el"<<std::endl;
-        std::cout<<"- REQ_GET_HOME_POSITION:  34"<<std::endl;
+        std::cout<<"- REQ_SET_HOME_POSITION:        33 az el"<<std::endl;
+        std::cout<<"- REQ_GET_HOME_POSITION:        34"<<std::endl;
+        std::cout<<"- REQ_DO_OPEN_SEARCH_TELESCOPE: 35"<<std::endl;
         std::cout<<"-- Other --"<<std::endl;
         std::cout<<"- Client exit:             exit"<<std::endl;
         std::cout<<"- Enable auto-alive:       auto_alive_en"<<std::endl;

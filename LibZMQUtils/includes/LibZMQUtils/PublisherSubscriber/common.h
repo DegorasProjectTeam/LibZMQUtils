@@ -185,7 +185,7 @@ static constexpr std::array<const char*, 31>  PublisherResultStr
 /**
  * @brief The PublisherInfo struct holds the information of a specific publisher.
  */
-struct PublisherInfo
+struct LIBZMQUTILS_EXPORT PublisherInfo
 {
 
     /**
@@ -194,7 +194,7 @@ struct PublisherInfo
      * @param endpoint
      * @param name
      */
-    LIBZMQUTILS_EXPORT PublisherInfo(utils::UUID uuid, std::string endpoint, std::string name = "");
+    PublisherInfo(utils::UUID uuid, std::string endpoint, std::string name = "");
 
     // Default constructor, copy and move
     PublisherInfo() = default;
@@ -220,9 +220,9 @@ struct PublisherInfo
 /**
  * @brief The PubSubData struct contains the data of a message exchanged between publisher and subscribers.
  */
-struct PubSubData
+struct LIBZMQUTILS_EXPORT PubSubData
 {
-    LIBZMQUTILS_EXPORT PubSubData();
+    PubSubData();
 
     TopicType topic;
     std::unique_ptr<std::byte[]> data;
@@ -233,10 +233,10 @@ struct PubSubData
  * @brief The PubSubMsg struct represents a message exchanged between publisher and subscribers. It includes data and
  * publisher info.
  */
-struct PubSubMsg
+struct LIBZMQUTILS_EXPORT PubSubMsg
 {
 
-    LIBZMQUTILS_EXPORT PubSubMsg(const PublisherInfo &pub_info);
+    PubSubMsg(const PublisherInfo &pub_info);
 
     PubSubMsg() = default;
 

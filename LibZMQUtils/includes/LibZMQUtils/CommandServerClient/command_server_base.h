@@ -218,7 +218,7 @@ namespace serverclient{
  *
  * @see ServerCommand, OperationResult, CommandRequest, CommandReply, CommandClientBase, onCustomCommandReceived
  */
-class CommandServerBase : public ZMQContextHandler
+class LIBZMQUTILS_EXPORT CommandServerBase : public ZMQContextHandler
 {
 
 public:
@@ -246,21 +246,19 @@ public:
      * @warning When specifying the `local_addr`, ensure it is a valid IP address present on the system.
      *          Incorrect or unavailable addresses may result in connection failures.
      */
-    LIBZMQUTILS_EXPORT CommandServerBase(unsigned port,
-                                         const std::string& local_addr = "*",
-                                         const std::string& server_name = "");
+    CommandServerBase(unsigned port, const std::string& local_addr = "*", const std::string& server_name = "");
 
     /**
      * @brief Get the port number used by the server for incoming connections.
      * @return A const reference to the port number of the server.
      */
-    LIBZMQUTILS_EXPORT const unsigned& getServerPort() const;
+    const unsigned& getServerPort() const;
 
     /**
      * @brief Get the server name.
      * @return A const reference to the name of the server.
      */
-    LIBZMQUTILS_EXPORT const std::string& getServerName() const;
+    const std::string& getServerName() const;
 
     /**
      * @brief Get the network adapter addresses used by the server.
@@ -270,7 +268,7 @@ public:
      *
      * @return A const reference to a vector of NetworkAdapterInfo objects.
      */
-    LIBZMQUTILS_EXPORT const std::vector<internal_helpers::network::NetworkAdapterInfo> &getServerAddresses() const;
+    const std::vector<internal_helpers::network::NetworkAdapterInfo> &getServerAddresses() const;
 
     /**
      * @brief Get the endpoint of the server.
@@ -280,7 +278,7 @@ public:
      *
      * @return A const reference to the server's endpoint.
      */
-    LIBZMQUTILS_EXPORT const std::string& getServerEndpoint() const;
+    const std::string& getServerEndpoint() const;
 
     /**
      * @brief Get the future associated with the server's worker thread.
@@ -291,7 +289,7 @@ public:
      *
      * @return A const reference to the server's worker thread future.
      */
-    LIBZMQUTILS_EXPORT const std::future<void>& getServerWorkerFuture() const;
+    const std::future<void>& getServerWorkerFuture() const;
 
     /**
      * @brief Get a const reference to the map of connected clients.
@@ -302,7 +300,7 @@ public:
      *
      * @return A const reference to the map of connected clients.
      */
-    LIBZMQUTILS_EXPORT const std::map<utils::UUID, HostInfo>& getConnectedClients() const;
+    const std::map<utils::UUID, HostInfo>& getConnectedClients() const;
 
     /**
      * @brief Check if the server is currently working.
@@ -313,7 +311,7 @@ public:
      *
      * @return True if the server is working, false otherwise.
      */
-    LIBZMQUTILS_EXPORT bool isWorking() const;
+    bool isWorking() const;
 
     /**
      * @brief Sets the client alive timeout.
@@ -327,7 +325,7 @@ public:
      * @note A value of 0 automatically disables the client alive checks, but for enable the alive checking, you must
      * always use the function `setClientStatusCheck`.
      */
-    LIBZMQUTILS_EXPORT void setClientAliveTimeout(unsigned timeout_ms);
+    void setClientAliveTimeout(unsigned timeout_ms);
 
     /**
      * @brief Sets the number of reconnection attempts.
@@ -339,7 +337,7 @@ public:
      *
      * @note A value of 0 means no reconnection attempts will be made.
      */
-    LIBZMQUTILS_EXPORT void setReconectionAttempts(unsigned attempts);
+    void setReconectionAttempts(unsigned attempts);
 
     /**
      * @brief Enables or disables the client's alive status checking.
@@ -353,7 +351,7 @@ public:
      *          that usually use this kind of servers. Disabling the client alive status check could result in
      *          unexpected behavior or system instability in case of sudden client disconnections or failures.
      */
-    LIBZMQUTILS_EXPORT void setClientStatusCheck(bool);
+    void setClientStatusCheck(bool);
 
     /**
      * @brief Enables or disables the server callbacks when an alive message is received.
@@ -367,7 +365,7 @@ public:
      *
      * @param [in] enabled Boolean flag that determines whether callbacks are enabled (true) or disabled (false).
      */
-    LIBZMQUTILS_EXPORT void setAliveCallbacksEnabled(bool);
+    void setAliveCallbacksEnabled(bool);
 
     /**
      * @brief Starts the command server.
@@ -377,7 +375,7 @@ public:
      *
      * @return True if the server started, false otherwise.
      */
-    LIBZMQUTILS_EXPORT bool startServer();
+    bool startServer();
 
     /**
      * @brief Stops the command server.
@@ -385,14 +383,14 @@ public:
      * If the server is already stopped, the function does nothing. Otherwise
      * deletes the ZMQ context and cleans up the connected clients.
      */
-    LIBZMQUTILS_EXPORT void stopServer();
+    void stopServer();
 
     /**
      * @brief Virtual destructor.
      *
      * This destructor is virtual to ensure proper cleanup when the derived class is destroyed.
      */
-    LIBZMQUTILS_EXPORT virtual ~CommandServerBase() override;
+    virtual ~CommandServerBase() override;
 
 protected:
 
@@ -408,9 +406,8 @@ protected:
      * server command. The process function must take two parameters: a constant reference to a `CommandRequest` object
      * and a reference to a `CommandReply` object.
      *
-     * The registered function will be called automatically when a request with a custom command arrives at the server.
-     *
-     * @tparam ClassT The class type of the object that contains the member function to be called.
+     * The registered function will be invoked automatically when a request for the specified command
+     * is received by the server.
      *
      * @param command The custom server command that the function will process replies for.
      * @param obj A pointer to the instance of the object that contains the member function to be called.
@@ -431,6 +428,29 @@ protected:
     }
 
     /**
+     * @brief Register a function to process `CommandRequest` request from a custom server command.
+     *
+     * This function allows you to register a std::function that will process incoming `CommandRequest`
+     * requests associated with a specified server command. The std::function must take two parameters:
+     * a constant reference to a `CommandRequest` object and a reference to a `CommandReply` object.
+     *
+     * The function object is flexible and can encapsulate a lambda, free function, functor, or a bound
+     * member function, providing significant flexibility in how the request is processed.
+     *
+     * The registered function will be invoked automatically when a request for the specified command
+     * is received by the server.
+     *
+     * @param command The custom server command that the function will process requests for.
+     * @param func The function object to call when the server command receives a request. This function
+     *        object must match the signature `void(const CommandRequest&, CommandReply&)`.
+     */
+    template <typename Cmd>
+    void registerRequestProcFunc(Cmd command, std::function<void(const CommandRequest&, CommandReply&)> func)
+    {
+        this->process_fnc_map_[static_cast<ServerCommand>(command)] = func;
+    }
+
+    /**
      * @brief Validates a custom command.
      *
      * This function checks if a custom command is valid. The validation is implementation-specific and
@@ -444,7 +464,7 @@ protected:
      *
      * @return Returns true if the command is valid; false otherwise.
      */
-    LIBZMQUTILS_EXPORT virtual  bool validateCustomCommand(ServerCommand) = 0;
+    virtual  bool validateCustomCommand(ServerCommand) = 0;
 
     /**
      * @brief Base server start callback. Subclasses must override this function.
@@ -455,7 +475,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    LIBZMQUTILS_EXPORT virtual void onServerStart() = 0;
+    virtual void onServerStart() = 0;
 
     /**
      * @brief Base server stop callback. Subclasses must override this function.
@@ -466,7 +486,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    LIBZMQUTILS_EXPORT virtual void onServerStop() = 0;
+    virtual void onServerStop() = 0;
 
     /**
      * @brief Base waiting command callback. Subclasses must override this function.
@@ -481,7 +501,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    LIBZMQUTILS_EXPORT virtual void onWaitingCommand() = 0;
+    virtual void onWaitingCommand() = 0;
 
     /**
      * @brief Base connected callback. Subclasses must override this function.
@@ -494,7 +514,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    LIBZMQUTILS_EXPORT virtual void onConnected(const HostInfo&) = 0;
+    virtual void onConnected(const HostInfo&) = 0;
 
     /**
      * @brief Base disconnected callback. Subclasses must override this function.
@@ -507,7 +527,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    LIBZMQUTILS_EXPORT virtual void onDisconnected(const HostInfo&) = 0;
+    virtual void onDisconnected(const HostInfo&) = 0;
 
     /**
      * @brief Base dead client callback. Subclasses must override this function.
@@ -520,7 +540,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    LIBZMQUTILS_EXPORT virtual void onDeadClient(const HostInfo&) = 0;
+    virtual void onDeadClient(const HostInfo&) = 0;
 
     /**
      * @brief Base invalid message received callback. Subclasses must override this function.
@@ -533,7 +553,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    LIBZMQUTILS_EXPORT virtual void onInvalidMsgReceived(const CommandRequest&) = 0;
+    virtual void onInvalidMsgReceived(const CommandRequest&) = 0;
 
     /**
      * @brief Base command received callback. Subclasses must override this function.
@@ -549,7 +569,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    LIBZMQUTILS_EXPORT virtual void onCommandReceived(const CommandRequest&) = 0;
+    virtual void onCommandReceived(const CommandRequest&) = 0;
 
     /**
      * @brief Base custom command received callback. Subclasses must override this function.
@@ -570,7 +590,7 @@ protected:
      *          to avoid blocking the server's main thread. Consider using separate threads or
      *          asynchronous mechanisms to handle time-consuming tasks.
      */
-    LIBZMQUTILS_EXPORT virtual void onCustomCommandReceived(CommandRequest&, CommandReply&);
+    virtual void onCustomCommandReceived(CommandRequest&, CommandReply&);
 
     /**
      * @brief Base server error callback. Subclasses must override this function.
@@ -591,7 +611,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    LIBZMQUTILS_EXPORT virtual void onServerError(const zmq::error_t &error, const std::string& ext_info = "") = 0;
+    virtual void onServerError(const zmq::error_t &error, const std::string& ext_info = "") = 0;
 
     /**
      * @brief Base sending response callback. Subclasses must override this function.
@@ -604,7 +624,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    LIBZMQUTILS_EXPORT virtual void onSendingResponse(const CommandReply&) = 0;
+    virtual void onSendingResponse(const CommandReply&) = 0;
 
 private:
 

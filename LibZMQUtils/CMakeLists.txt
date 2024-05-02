@@ -57,11 +57,16 @@ macro_cmakemodules_init("24.04.22")
 
 # Base project configuration.
 set(LIB_NAME LibZMQUtils)
-set(LIB_VER 1.7.1)
+set(LIB_VER 1.7.2)
 set(LIB_BUILD_MODE Debug)
-#set(LIB_INSTALL_DIR "/opt/${LIB_NAME}_product_v${LIB_VER}")
-set(LIB_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/.../${LIB_NAME}_product_v${LIB_VER}")
 set(LIB_LANGUAGES CXX C)
+
+# Installation dir.
+if (WIN32)
+    set(LIB_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../${LIB_NAME}_product_v${LIB_VER}")
+else()
+    set(LIB_INSTALL_DIR "/opt/${LIB_NAME}_product_v${LIB_VER}")
+endif()
 
 # Macros global configuration.
 macro_global_set_show_externals(TRUE)
@@ -122,7 +127,7 @@ macro_setup_shared_lib("${LIB_NAME}" "${LIB_INCLUDES_DIR}" "${LIB_VER}"
 
 # Link with LibZMQ.
 target_link_libraries(${LIB_NAME} PUBLIC ${LIBZMQ_LIBRARIES})
-target_include_directories(${LIB_NAME} PUBLIC ${LIBZMQ_LIBRARY_DIRS})
+target_include_directories(${LIB_NAME} PUBLIC ${LIBZMQ_INCLUDE_DIRS})
 
 # Add external headers.
 if(MODULES_GLOBAL_SHOW_EXTERNALS)

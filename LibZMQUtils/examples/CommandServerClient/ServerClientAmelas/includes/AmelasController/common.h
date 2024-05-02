@@ -103,10 +103,19 @@ template<typename... Args>
 using AmelasControllerCallback = controller::AmelasError(AmelasController::*)(Args...);
 
 // Callback function type aliases
-using SetHomePositionCallback = std::function<AmelasError(const AltAzPos&)>;
-using GetHomePositionCallback = std::function<AmelasError(AltAzPos&)>;
-using GetDatetimeCallback = std::function<AmelasError(std::string&)>;
+using SetHomePositionFunction = std::function<AmelasError(const AltAzPos&)>;
+using GetHomePositionFunction = std::function<AmelasError(AltAzPos&)>;
+using DoOpenSearchTelescopeFunction = std::function<AmelasError()>;
 
+// Callback function arguments type aliases
+using SetHomePositionFunctionInArgs = std::tuple<AltAzPos>;
+using SetHomePositionFunctionOutArgs = std::tuple<>;
+//
+using GetHomePositionFunctionInArgs = std::tuple<>;
+using GetHomePositionFunctionOutArgs = std::tuple<AltAzPos>;
+//
+using DoOpenSearchTelescopeFunctionInArgs = std::tuple<>;
+using DoOpenSearchTelescopeFunctionOutArgs = std::tuple<>;
 // =====================================================================================================================
 
 }} // END NAMESPACES.
