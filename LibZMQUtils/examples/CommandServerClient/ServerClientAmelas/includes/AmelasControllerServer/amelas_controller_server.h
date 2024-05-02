@@ -54,9 +54,6 @@
 
 // PROJECT INCLUDES
 // =====================================================================================================================
-#include "includes/AmelasController/amelas_controller.h"
-#include "includes/AmelasController/common.h"
-#include "includes/AmelasControllerServer/common.h"
 // =====================================================================================================================
 
 // AMELAS NAMESPACES
@@ -71,15 +68,6 @@ class AmelasControllerServer : public zmqutils::serverclient::ClbkCommandServerB
 public:
 
     AmelasControllerServer(unsigned port, const std::string& local_addr = "*");
-
-    // Register callback function helper.
-    template<typename... Args>
-    void registerControllerCallback(AmelasServerCommand command,
-                                    controller::AmelasController* object,
-                                    controller::AmelasControllerCallback<Args...> callback)
-    {
-        ClbkCommandServerBase::registerCallback(command, object, callback);
-    }
 
 private:
 

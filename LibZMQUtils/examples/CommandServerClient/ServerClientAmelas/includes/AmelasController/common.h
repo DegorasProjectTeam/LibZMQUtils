@@ -65,8 +65,6 @@ namespace controller{
 // CONVENIENT ALIAS, ENUMERATIONS AND CONSTEXPR
 // =====================================================================================================================
 
-class AmelasController;
-
 enum class AmelasError : std::int32_t
 {
     INVALID_ERROR = -1,
@@ -98,24 +96,6 @@ struct AltAzPos : public zmqutils::serializer::Serializable
     double el;
 };
 
-// Generic callback.
-template<typename... Args>
-using AmelasControllerCallback = controller::AmelasError(AmelasController::*)(Args...);
-
-// Callback function type aliases
-using SetHomePositionFunction = std::function<AmelasError(const AltAzPos&)>;
-using GetHomePositionFunction = std::function<AmelasError(AltAzPos&)>;
-using DoOpenSearchTelescopeFunction = std::function<AmelasError()>;
-
-// Callback function arguments type aliases
-using SetHomePositionFunctionInArgs = std::tuple<AltAzPos>;
-using SetHomePositionFunctionOutArgs = std::tuple<>;
-//
-using GetHomePositionFunctionInArgs = std::tuple<>;
-using GetHomePositionFunctionOutArgs = std::tuple<AltAzPos>;
-//
-using DoOpenSearchTelescopeFunctionInArgs = std::tuple<>;
-using DoOpenSearchTelescopeFunctionOutArgs = std::tuple<>;
 // =====================================================================================================================
 
 }} // END NAMESPACES.

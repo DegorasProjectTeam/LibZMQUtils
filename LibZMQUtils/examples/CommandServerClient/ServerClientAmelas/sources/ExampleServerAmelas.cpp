@@ -58,6 +58,7 @@
 // =====================================================================================================================
 #include "includes/AmelasControllerServer/amelas_controller_server.h"
 #include "includes/AmelasController/amelas_controller.h"
+#include "includes/AmelasControllerServer/common.h"
 // =====================================================================================================================
 
 /**
@@ -72,7 +73,6 @@ int main(int, char**)
     using amelas::communication::AmelasControllerServer;
     using amelas::communication::AmelasServerCommand;
     using amelas::controller::AmelasController;
-    using amelas::controller::AltAzPos;
     // Callbacks
     using amelas::controller::SetHomePositionFunction;
     using amelas::controller::SetHomePositionFunctionInArgs;

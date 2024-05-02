@@ -80,5 +80,20 @@ private:
 
 };
 
+// Callback function type aliases
+using SetHomePositionFunction = std::function<AmelasError(const AltAzPos&)>;
+using GetHomePositionFunction = std::function<AmelasError(AltAzPos&)>;
+using DoOpenSearchTelescopeFunction = std::function<AmelasError()>;
+
+// Callback function arguments type aliases
+using SetHomePositionFunctionInArgs = std::tuple<AltAzPos>;
+using SetHomePositionFunctionOutArgs = std::tuple<>;
+//
+using GetHomePositionFunctionInArgs = std::tuple<>;
+using GetHomePositionFunctionOutArgs = std::tuple<AltAzPos>;
+//
+using DoOpenSearchTelescopeFunctionInArgs = std::tuple<>;
+using DoOpenSearchTelescopeFunctionOutArgs = std::tuple<>;
+
 }} // END NAMESPACES.
 // =====================================================================================================================

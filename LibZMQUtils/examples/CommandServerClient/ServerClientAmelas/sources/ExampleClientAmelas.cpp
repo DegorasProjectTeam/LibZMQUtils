@@ -49,7 +49,7 @@
 // LIBZMQUTILS INCLUDES
 // =====================================================================================================================
 #include <LibZMQUtils/Modules/Utilities>
-#include "LibZMQUtils/InternalHelpers/string_helpers.h"
+#include <LibZMQUtils/InternalHelpers/string_helpers.h>
 // =====================================================================================================================
 
 // PROJECT INCLUDES
@@ -66,7 +66,6 @@ using zmqutils::serverclient::ServerCommand;
 using zmqutils::serverclient::CommandClientBase;
 using zmqutils::serverclient::RequestData;
 using zmqutils::serverclient::OperationResult;
-using zmqutils::serializer::BinarySerializer;
 using amelas::communication::AmelasControllerClient;
 using amelas::communication::AmelasServerCommand;
 using amelas::controller::AltAzPos;
@@ -271,11 +270,12 @@ int main(int, char**)
     // Configuration variables.
     unsigned port = 9999;
     std::string ip = "127.0.0.1";
-
     std::string endpoint = "tcp://" + ip + ":" + std::to_string(port);
     
+    // Instanciate the client.
     AmelasControllerClient client(endpoint, "AMELAS EXAMPLE CLIENT");
 
+    // Prepare the auxiliar testing parser.
     AmelasClientParser client_parser(client);
 
     // Configure the client.
@@ -290,8 +290,10 @@ int main(int, char**)
                 client.stopClient();
             });
 
+    // Start the client.
     bool started = client.startClient();
 
+    // Check if all ok.
     if(!started)
     {
         std::cout<<"Unable to start the client.";

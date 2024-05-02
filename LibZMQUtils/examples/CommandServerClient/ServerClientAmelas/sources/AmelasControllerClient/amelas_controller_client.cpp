@@ -41,7 +41,7 @@ namespace amelas{
 namespace communication{
 // =====================================================================================================================
 
-// -----------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------------------------
 using zmqutils::serverclient::ServerCommand;
 using zmqutils::serverclient::OperationResult;
 using zmqutils::serverclient::ResultType;
@@ -49,7 +49,7 @@ using zmqutils::serverclient::CommandType;
 using zmqutils::serverclient::CommandReply;
 using zmqutils::serverclient::RequestData;
 using zmqutils::serializer::BinarySerializer;
-    // -----------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------------------------
 
 AmelasControllerClient::AmelasControllerClient(const std::string& server_endpoint,
                            const std::string& client_name,
@@ -141,7 +141,7 @@ void AmelasControllerClient::onDisconnected()
 {
     // Log.
     std::cout << std::string(100, '-') << std::endl;
-    std::cout<<"<AMELAS SERVER>"<<std::endl;
+    std::cout<<"<"<<this->getClientName()<<">"<<std::endl;
     std::cout<<"-> ON DISCONNECTED: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
     std::cout << std::string(100, '-') << std::endl;
@@ -193,7 +193,7 @@ void AmelasControllerClient::onClientError(const zmq::error_t& error, const std:
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void amelas::communication::AmelasControllerClient::onInvalidMsgReceived(const CommandReply &) {}
+void AmelasControllerClient::onInvalidMsgReceived(const CommandReply &) {}
 
 
 

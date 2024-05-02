@@ -40,6 +40,7 @@
 // PROJECT INCLUDES
 // =====================================================================================================================
 #include "includes/AmelasControllerServer/amelas_controller_server.h"
+#include "includes/AmelasControllerServer/common.h"
 // =====================================================================================================================
 
 // AMELAS NAMESPACES
@@ -64,13 +65,8 @@ AmelasControllerServer::AmelasControllerServer(unsigned int port, const std::str
 
 bool AmelasControllerServer::validateCustomCommand(ServerCommand command)
 {
-    // Auxiliar variables.
-    bool result = false;
     zmqutils::serverclient::CommandType cmd = static_cast<zmqutils::serverclient::CommandType>(command);
-    // Check if the command is within the range of implemented custom commands.
-    if (cmd >= kMinCmdId && cmd <= kMaxCmdId)
-        result = true;
-    return result;
+    return (cmd >= kMinCmdId && cmd <= kMaxCmdId) ? true : false;
 }
 
 void AmelasControllerServer::onCustomCommandReceived(CommandRequest& request, CommandReply& reply)
