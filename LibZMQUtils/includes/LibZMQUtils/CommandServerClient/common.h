@@ -59,23 +59,14 @@ namespace zmqutils{
 namespace serverclient{
 // =====================================================================================================================
 
-// CONSTANTS
-// =====================================================================================================================
-constexpr unsigned kDefaultClientAliveTimeoutMsec = 10000;    ///< Default timeout for consider a client dead (msec).
-constexpr unsigned kDefaultServerAliveTimeoutMsec = 10000;    ///< Default timeout for consider a server dead (msec).
-constexpr unsigned kServerReconnAttempts = 5;                 ///< Server reconnection default number of attempts.
-constexpr unsigned kClientAlivePeriodMsec = 5000;             ///< Default period for sending alive commands.
-// =====================================================================================================================
-
 // CONVENIENT ALIAS, ENUMERATIONS AND CONSTEXPR
 // =====================================================================================================================
-
 using CommandType = std::int32_t;   ///< Type used for the BaseServerCommand enumeration.
 using ResultType = std::int32_t;    ///< Type used for the BaseOperationResult enumeration.
+// =====================================================================================================================
 
 // TODO getServerInfo
 // TODO Control the maximum number of clients.
-// TODO Dinamic configuration for the constants.
 
 /**
  * @enum ServerCommand
@@ -121,6 +112,7 @@ enum class OperationResult : ResultType
     INVALID_EXT_CALLBACK   = 17, ///< The associated external callback is invalid. Used in ClbkCommandServerBase.
     INVALID_CLIENT_UUID    = 18, ///< The client UUID is invalid (could be invalid, missing or empty).
     CLIENT_STOPPED         = 19, ///< The client is stopped.
+    MAX_CLIENTS_REACH      = 20, ///< The server has reached the maximum number of clients allowed.
     END_BASE_RESULTS       = 30  ///< Sentinel value indicating the end of the base server results.
 };
 
@@ -185,7 +177,7 @@ static constexpr std::array<const char*, 30>  OperationResultStr
     "INVALID_EXT_CALLBACK - The associated external callback for the command is invalid.",
     "INVALID_CLIENT_UUID - The client UUID is invalid (could be invalid, missing or empty).",
     "CLIENT_STOPPED - The client is stopped.",
-    "RESERVED_BASE_RESULT",
+    "MAX_CLIENTS_REACH - The server has reached the maximum number of clients allowed.",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",

@@ -64,6 +64,12 @@ namespace zmqutils{
 namespace serverclient{
 // =====================================================================================================================
 
+// CONSTANTS
+// =====================================================================================================================
+constexpr unsigned kDefaultServerAliveTimeoutMsec = 10000;     ///< Default timeout for consider a server dead (msec).
+constexpr unsigned kDefaultClientSendAlivePeriodMsec = 5000;   ///< Default period for sending alive commands (msec).
+// =====================================================================================================================
+
 /**
  * @brief The CommandClientBase class implements a base class for a Command Client.
  */

@@ -61,8 +61,10 @@ namespace pubsub{
 // CONVENIENT ALIAS, ENUMERATIONS AND CONSTEXPR
 // =====================================================================================================================
 
+// =====================================================================================================================
 using ResultType = std::int32_t;    ///< Type used for the BaseServerResult enumeration.
-using TopicType = std::string;
+using TopicType = std::string;      ///< Type used for `Topics.
+// =====================================================================================================================
 
 /**
  * @enum SubscriberResult

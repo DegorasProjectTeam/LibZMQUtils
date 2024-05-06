@@ -79,7 +79,8 @@ CommandServerBase::CommandServerBase(unsigned port,
     flag_check_clients_alive_(true),
     flag_alive_callbacks_(true),
     client_alive_timeout_(kDefaultClientAliveTimeoutMsec),
-    server_reconn_attempts_(kServerReconnAttempts)
+    server_reconn_attempts_(kDefaultServerReconnAttempts),
+    max_connected_clients_(kDefaultMaxNumberOfClients)
 {
     // Get the adapters.
     std::vector<NetworkAdapterInfo> interfcs = internal_helpers::network::getHostIPsWithInterfaces();
@@ -100,12 +101,20 @@ CommandServerBase::CommandServerBase(unsigned port,
         throw std::invalid_argument("CommandServerBase: No interfaces found for address <" + local_addr + ">.");
 }
 
-const std::future<void> &CommandServerBase::getServerWorkerFuture() const {return this->fut_server_worker_;}
+const std::future<void> &CommandServerBase::getServerWorkerFuture() const
+{
+    return this->fut_server_worker_;
+}
 
 const std::map<UUID, HostInfo> &CommandServerBase::getConnectedClients() const
-{return this->connected_clients_;}
+{
+    return this->connected_clients_;
+}
 
-bool CommandServerBase::isWorking() const{return this->flag_server_working_;}
+bool CommandServerBase::isWorking() const
+{
+    return this->flag_server_working_;
+}
 
 void CommandServerBase::setClientAliveTimeout(unsigned timeout_ms)
 {
@@ -117,6 +126,12 @@ void CommandServerBase::setClientAliveTimeout(unsigned timeout_ms)
 void CommandServerBase::setReconectionAttempts(unsigned attempts)
 {
     this->server_reconn_attempts_ = attempts;
+}
+
+void CommandServerBase::setMaxNumberOfClients(unsigned clients)
+{
+    if(!this->isWorking())
+        this->max_connected_clients_ = clients;
 }
 
 void CommandServerBase::setClientStatusCheck(bool enable)
@@ -263,6 +278,10 @@ OperationResult CommandServerBase::execReqConnect(CommandRequest& cmd_req)
     auto it = this->connected_clients_.find(cmd_req.client_uuid);
     if(it != this->connected_clients_.end())
         return OperationResult::ALREADY_CONNECTED;
+
+    // Check the maximum number of connections.
+    if(this->connected_clients_.size() >= this->max_connected_clients_)
+        return OperationResult::MAX_CLIENTS_REACH;
 
     // Store the client.
     HostInfo client_info(cmd_req.client_uuid, ip, pid, hostname, name);

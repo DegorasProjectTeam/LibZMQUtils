@@ -76,7 +76,7 @@ CommandClientBase::CommandClientBase(const std::string& server_endpoint,
     flag_autoalive_enabled_(false),
     flag_alive_callbacks_(false),
     server_alive_timeout_(kDefaultServerAliveTimeoutMsec),
-    send_alive_period_(kClientAlivePeriodMsec)
+    send_alive_period_(kDefaultClientSendAlivePeriodMsec)
 {    
     // Auxiliar variables and containers.
     std::string ip, hostname, pid;

@@ -55,16 +55,26 @@
 #include "LibZMQUtils/Utilities/uuid_generator.h"
 // =====================================================================================================================
 
+// ZMQ NAMESPACES
+// =====================================================================================================================
 namespace zmq
 {
     class socket_t;
     class error_t;
 }
+// =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
 namespace serverclient{
+// =====================================================================================================================
+
+// CONSTANTS
+// =====================================================================================================================
+constexpr unsigned kDefaultClientAliveTimeoutMsec = 10000;    ///< Default timeout for consider a client dead (msec).
+constexpr unsigned kDefaultServerReconnAttempts = 5;          ///< Default server reconnection number of attempts.
+constexpr unsigned kDefaultMaxNumberOfClients = 1000;         ///< Default maximum number of connected clients.
 // =====================================================================================================================
 
 /**
@@ -331,13 +341,26 @@ public:
      * @brief Sets the number of reconnection attempts.
      *
      * This function sets the number of attempts to reconnect when a connection is lost or fails. When a connection
-     * attempt fails, the server will retry the connection until the specified number of attempts is reached.
+     * attempt fails, the server will retry the connection until the specified number of attempts is reached. A value
+     * of 0 means no reconnection attempts will be made.
      *
      * @param attempts The number of reconnection attempts.
      *
      * @note A value of 0 means no reconnection attempts will be made.
      */
     void setReconectionAttempts(unsigned attempts);
+
+    /**
+     * @brief Sets the maximum number of allowed client connections.
+     *
+     * This function sets the maximum number of allowed client connections. This value will only be modified if
+     * the server is stopped. A value of 0 means no limits.
+     *
+     * @param clients Maximum number of allowed client connections at the same time.
+     *
+     * @note A value of 0 means no limits.
+     */
+    void setMaxNumberOfClients(unsigned clients);
 
     /**
      * @brief Enables or disables the client's alive status checking.
@@ -702,8 +725,10 @@ private:
     std::atomic_bool flag_alive_callbacks_;      ///< Flag that enables and disables the callbacks for alive messages.
 
     // Server confg parameters.
-    std::atomic_uint client_alive_timeout_;      ///< Tiemout for consider a client dead (in msec).
-    std::atomic_uint server_reconn_attempts_;    ///< Server reconnection number of attempts.
+    std::atomic_uint client_alive_timeout_;     ///< Tiemout for consider a client dead (in msec).
+    std::atomic_uint server_reconn_attempts_;   ///< Server reconnection number of attempts.
+    std::atomic_uint max_connected_clients_;    ///< Maximum number of connected clients.
+
 };
 
 }} // END NAMESPACES.

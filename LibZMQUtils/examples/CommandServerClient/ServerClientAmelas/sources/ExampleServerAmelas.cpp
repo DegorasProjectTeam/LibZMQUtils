@@ -92,6 +92,9 @@ int main(int, char**)
     // Configuration variables.
     unsigned port = 9999;
     bool client_status_check = true;
+    unsigned max_client_connections = 2;
+    unsigned recconn_attempts = 2;
+    unsigned alive_timeout_ms = 10000;
 
     // Instantiate the Amelas controller.
     AmelasController amelas_controller;
@@ -99,8 +102,11 @@ int main(int, char**)
     // Instantiate the server.
     AmelasControllerServer amelas_server(port);
 
-    // Disable or enables the client status checking.
+    // Configure the server.
     amelas_server.setClientStatusCheck(client_status_check);
+    amelas_server.setClientAliveTimeout(alive_timeout_ms);
+    amelas_server.setReconectionAttempts(recconn_attempts);
+    amelas_server.setMaxNumberOfClients(max_client_connections);
 
     // ---------------------------------------
 
