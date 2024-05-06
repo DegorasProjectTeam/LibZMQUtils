@@ -63,7 +63,7 @@ endif()
 
 # Auxiliar interface library.
 add_library(${INTERFACE_SERVER} INTERFACE)
-target_sources(${INTERFACE_SERVER} INTERFACE ${EXAMPLE_DIR}/sources/AmelasController/common.cpp)
+target_sources(${INTERFACE_SERVER} INTERFACE ${EXAMPLE_DIR}/sources/AmelasController/amelas_controller_data.cpp)
 target_include_directories(${INTERFACE_SERVER} INTERFACE ${EXAMPLE_DIR}/includes/)
 
 # Add the interface library to the libraries list.

@@ -58,7 +58,7 @@
 // =====================================================================================================================
 #include "includes/AmelasControllerServer/amelas_controller_server.h"
 #include "includes/AmelasController/amelas_controller.h"
-#include "includes/AmelasControllerServer/common.h"
+#include "includes/AmelasControllerServer/amelas_controller_server_data.h"
 // =====================================================================================================================
 
 /**

@@ -54,8 +54,8 @@
 
 // INTERFACE INCLUDES
 // =====================================================================================================================
-#include <AmelasController/common.h>
-#include <AmelasControllerServer/common.h>
+#include <AmelasController/amelas_controller_data.h>
+#include <AmelasControllerServer/amelas_controller_server_data.h>
 // =====================================================================================================================
 
 // AMELAS NAMESPACES

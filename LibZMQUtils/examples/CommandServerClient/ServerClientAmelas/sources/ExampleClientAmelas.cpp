@@ -54,8 +54,8 @@
 
 // PROJECT INCLUDES
 // =====================================================================================================================
-#include "includes/AmelasController/common.h"
-#include "includes/AmelasControllerServer/common.h"
+#include "includes/AmelasController/amelas_controller_data.h"
+#include "includes/AmelasControllerServer/amelas_controller_server_data.h"
 #include "includes/AmelasControllerClient/amelas_controller_client.h"
 // =====================================================================================================================
 

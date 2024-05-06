@@ -31,70 +31,46 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file common.h
- * @brief EXAMPLE FILE - This file contains common elements for the example AmelasServer module.
+ * @file common.cpp
+ * @brief EXAMPLE FILE - This file contains the implementation of common elements for the AmelasController module.
  * @author Degoras Project Team
  * @copyright EUPL License
 ***********************************************************************************************************************/
 
+// PROJECT INCLUDES
 // =====================================================================================================================
-#pragma once
-// =====================================================================================================================
-
-// ZMQUTILS INCLUDES
-// =====================================================================================================================
-#include <LibZMQUtils/Modules/CommandServer>
+#include "includes/AmelasController/amelas_controller_data.h"
 // =====================================================================================================================
 
 // AMELAS NAMESPACES
 // =====================================================================================================================
 namespace amelas{
-namespace communication{
+namespace controller{
+
+AltAzPos::AltAzPos(double az, double el):
+    az(az), el(el){}
+
+AltAzPos::AltAzPos(): az(-1), el(-1){}
+
+size_t AltAzPos::serialize(zmqutils::serializer::BinarySerializer &serializer) const
+{
+    return serializer.write(az, el);
+}
+
+void AltAzPos::deserialize(zmqutils::serializer::BinarySerializer &serializer)
+{
+    serializer.read(az, el);
+}
+
+size_t AltAzPos::serializedSize() const
+{
+    return (2*sizeof(uint64_t) + sizeof(double)*2);
+}
+
 // =====================================================================================================================
 
-// Specific subclass commands (0 to 20 are reserved for the base server).
-// WARNING: In our approach, the server commands must be always in order.
-enum class AmelasServerCommand : zmqutils::serverclient::CommandType
-{
-    REQ_SET_HOME_POSITION        = 33,
-    REQ_GET_HOME_POSITION        = 34,
-    REQ_DO_OPEN_SEARCH_TELESCOPE = 35,
-    END_IMPL_COMMANDS            = 36,
-    END_AMELAS_COMMANDS          = 50
-};
 
-// Specific subclass errors (0 to 30 are reserved for the base server).
-enum class AmelasOperationResult : zmqutils::serverclient::ResultType
-{
-    EMPTY_CALLBACK = 31,
-    INVALID_CALLBACK = 32
-};
-
-// Extend the base command strings with those of the subclass.
-static constexpr auto AmelasServerCommandStr = zmqutils::utils::joinArraysConstexpr(
-    zmqutils::serverclient::ServerCommandStr,
-    std::array<const char*, 6>
-    {
-        "FUTURE_EXAMPLE",
-        "FUTURE_EXAMPLE",
-        "REQ_SET_HOME_POSITION",
-        "REQ_GET_HOME_POSITION",
-        "REQ_DO_OPEN_SEARCH_TELESCOPE",
-        "END_DRGG_COMMANDS"
-    });
-
-// Extend the base result strings with those of the subclass.
-static constexpr auto AmelasOperationResultStr = zmqutils::utils::joinArraysConstexpr(
-    zmqutils::serverclient::OperationResultStr,
-    std::array<const char*, 2>
-    {
-        "EMPTY_CALLBACK - The external callback for the command is empty.",
-        "INVALID_CALLBACK - The external callback for the command is invalid."
-    });
-
-// Usefull const expressions.
-constexpr std::int32_t kMinCmdId = static_cast<std::int32_t>(zmqutils::serverclient::ServerCommand::END_BASE_COMMANDS) + 1;
-constexpr std::int32_t kMaxCmdId = static_cast<std::int32_t>(AmelasServerCommand::END_AMELAS_COMMANDS) - 1;
 
 }} // END NAMESPACES.
 // =====================================================================================================================
+

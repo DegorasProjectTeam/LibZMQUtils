@@ -40,7 +40,7 @@
 // PROJECT INCLUDES
 // =====================================================================================================================
 #include "includes/AmelasControllerServer/amelas_controller_server.h"
-#include "includes/AmelasControllerServer/common.h"
+#include "includes/AmelasControllerServer/amelas_controller_server_data.h"
 // =====================================================================================================================
 
 // AMELAS NAMESPACES

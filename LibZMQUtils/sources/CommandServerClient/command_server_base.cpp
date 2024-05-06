@@ -634,7 +634,6 @@ void CommandServerBase::checkClientsAliveStatus()
         if(since_last_conn >= timeout)
         {
             // If dead, call the onDead callback and quit the client from the map.
-            this->onDeadClient(client.second);
             dead_clients.push_back(client.first);
         }
         else
@@ -646,9 +645,11 @@ void CommandServerBase::checkClientsAliveStatus()
     }
 
     // Remove dead clients from the map.
-    for(auto& client : dead_clients)
+    for(auto& client_uuid : dead_clients)
     {
-        this->connected_clients_.erase(client);
+        const auto tmp_client = this->connected_clients_.at(client_uuid);
+        this->connected_clients_.erase(client_uuid);
+        this->onDeadClient(tmp_client);
     }
 
     // Disable the timeout if no clients remains or set the socket timeout
