@@ -67,3 +67,17 @@ ClbkSubscriberBase::~ClbkSubscriberBase() { }
 
 }} // END NAMESPACES.
 // =====================================================================================================================
+
+
+void zmqutils::pubsub::ClbkSubscriberBase::onInvalidMsgReceived(const PubSubMsg &msg, SubscriberResult res)
+{
+    this->invokeErrorCallback(msg, res);
+}
+
+void zmqutils::pubsub::ClbkSubscriberBase::onMsgReceived(const PubSubMsg &msg, SubscriberResult &res)
+{
+    SubscriberBase::onMsgReceived(msg, res);
+
+    if (SubscriberResult::MSG_OK != res)
+        this->invokeErrorCallback(msg, res);
+}

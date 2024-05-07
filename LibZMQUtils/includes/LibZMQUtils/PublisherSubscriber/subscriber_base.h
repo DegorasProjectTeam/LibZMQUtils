@@ -178,7 +178,7 @@ public:
 protected:
 
     // -----------------------------------------------------------------------------------------------------------------
-    using ProcessFunction = std::function<SubscriberResult(const PubSubMsg&)>;   ///< Process function alias.
+    using ProcessFunction = std::function<void(const PubSubMsg&)>;   ///< Process function alias.
     using ProcessFunctionsMap = std::unordered_map<TopicType, ProcessFunction>;  ///< Process function map alias.
     // -----------------------------------------------------------------------------------------------------------------
 
@@ -194,12 +194,24 @@ protected:
      */
     template <typename ClassT>
     void registerRequestProcFunc(const TopicType &topic, ClassT* obj,
-                                 SubscriberResult(ClassT::*func)(const PubSubMsg&))
+                                 void(ClassT::*func)(const PubSubMsg&))
     {
         this->process_fnc_map_[topic] = [obj, func](const PubSubMsg& msg)
         {
             return (obj->*func)(msg);
         };
+    }
+
+    /**
+     * @brief Register a function to process a `PubSubMsg` object.
+     *
+     * @param topic The topic that the function will process replies for.
+     * @param func The member function to call when the msg is received.
+     *
+     */
+    void registerRequestProcFunc(const TopicType &topic, std::function<void(const PubSubMsg&)> func)
+    {
+        this->process_fnc_map_[topic] = func;
     }
 
     /**
@@ -248,7 +260,7 @@ protected:
      *          perform them asynchronously to avoid blocking the subscriber's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    LIBZMQUTILS_EXPORT virtual SubscriberResult onMsgReceived(const PubSubMsg&);
+    LIBZMQUTILS_EXPORT virtual void onMsgReceived(const PubSubMsg&, SubscriberResult &res);
 
     /**
      * @brief Base subscriber error callback. Subclasses must override this function.

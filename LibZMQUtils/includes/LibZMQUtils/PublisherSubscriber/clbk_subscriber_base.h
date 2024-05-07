@@ -44,6 +44,7 @@
 #include "LibZMQUtils/Global/libzmqutils_global.h"
 #include "LibZMQUtils/PublisherSubscriber/subscriber_base.h"
 #include "LibZMQUtils/Utilities/callback_handler.h"
+#include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
@@ -78,6 +79,59 @@ public:
     }
 
     /**
+     * @brief Template function for setting an error callback. This callback will called whenever a subscriber error
+     *        is issued.
+     * @param object, a parametric object whose method will be called.
+     * @param callback, the error callback method that will be called.
+     */
+    template<typename ClassT, typename RetT = void>
+    void setErrorCallback(ClassT* object, RetT(ClassT::*error_callback)(const PubSubMsg &, SubscriberResult))
+    {
+        this->error_callback_ = [object, error_callback](const PubSubMsg &msg, SubscriberResult res)
+        {(object->*error_callback)(msg, res);};
+    }
+
+    /**
+     * @brief Registers a callback and an associated request processing function for a specific topic.
+     *
+     * This function not only registers a callback for a specific topic but also sets up an automated
+     * process function to handle message with that topic. The process function automatically
+     * invokes the registered callback with appropriate parameters extracted from the message.
+     *
+     * This approach simplifies the setup process by automatically linking the message processing logic
+     * with the appropriate callback, thereby reducing manual boilerplate code and potential errors.
+     *
+     * @tparam CallbackType The type of the callback handler, usually determining how the callback will
+     *         be invoked and with what parameters.
+     * @tparam InputTuple A tuple describing the types of data expected as input from the request.
+     *         Used to deserialize and pass data to the callback.
+     * @tparam ClassT The class type on which the member function callback is defined.
+     * @tparam RetT The return type of the callback function. Defaults to void.
+     * @tparam Args Variadic template parameters representing the types of the arguments that the
+     *         callback function accepts.
+     *
+     * @param topic The identifier for the topic this callback and process function are associated with.
+     * @param object Pointer to the instance of the object on which the callback method will be called.
+     * @param callback Member function pointer to the callback method that will be invoked to process
+     *        the command.
+     */
+    template<typename CallbackType, typename ClassT, typename RetT = void, typename... Args>
+    void registerCallbackAndRequestProcFunc(const TopicType& topic, ClassT* object, RetT(ClassT::*callback)(Args...))
+    {
+        // Register the callback.
+        this->registerCallback(topic, object, callback);
+
+        // Process function lambda.
+        auto lambdaProcFunc = [this](const PubSubMsg& msg)
+        {
+            this->processClbkRequest<CallbackType, RetT, Args...>(msg);
+        };
+
+        // Automatic command process function registration.
+        this->registerRequestProcFunc(topic, lambdaProcFunc);
+    }
+
+    /**
      * @brief Remove the registered callback for a specific topic.
      * @param topic, the topic whose callback will be erased.
      */
@@ -98,13 +152,36 @@ public:
 protected:
 
     /**
-     * @brief Parametric method for invoking a registed callback. If no callback is registered, an error is returned.
+     * @brief Override onInvalidMsgReceived to call error callback.
+     */
+    void onInvalidMsgReceived(const PubSubMsg &, SubscriberResult) override;
+
+    /**
+     * @brief Override onMsgReceived to call error callback if necessary.
+     * @return the subscriber result associated with the message received.
+     */
+    void onMsgReceived(const PubSubMsg &, SubscriberResult &res) override;
+
+    /**
+     * @brief Invokes error callback, if defined, passing the subscriber result.
+     * @param res, the subscriber result with the error.
+     */
+    void invokeErrorCallback(const PubSubMsg &msg, SubscriberResult res)
+    {
+        if (this->error_callback_)
+            this->error_callback_(msg, res);
+    }
+    /**
+     * @brief Parametric method for invoking a registered callback. If no callback is registered, the function will
+     * try to invoke error callback.
      * @param msg, the received message.
+     * @param res, the subscriber result associated with callback invocation
      * @param args, the args passed to the callback.
-     * @return the result of the callback inovocation.
+     * @return the result of the callback inovocation or nothing, if callback was not invoked.
      */
     template <typename CallbackType, typename RetT = void,  typename... Args>
-    RetT invokeCallback(const PubSubMsg& msg, Args&&... args)
+    std::conditional<std::is_void_v<RetT>, void, std::optional<RetT>>
+    invokeCallback(const PubSubMsg& msg, SubscriberResult& res, Args&&... args)
     {
         // Get the command.
         TopicType topic = msg.data.topic;
@@ -112,27 +189,106 @@ protected:
         // Check the callback.
         if(!this->hasCallback(topic))
         {
-            return SubscriberResult::EMPTY_EXT_CALLBACK;
+            // If there is no callback, try to execute error callback.
+            res = SubscriberResult::EMPTY_EXT_CALLBACK;
+            this->invokeErrorCallback(msg, res);
+            return{};
         }
 
         //Invoke the callback.
         try
         {
-            return CallbackHandler::invokeCallback<CallbackType, RetT>(
-                std::hash<TopicType>{}(topic), std::forward<Args>(args)...);
+            if constexpr (std::is_void_v<RetT>)
+            {
+                CallbackHandler::invokeCallback<CallbackType, RetT>(
+                    std::hash<TopicType>{}(topic), std::forward<Args>(args)...);
+                return {};
+            }
+
+            else
+            {
+                return CallbackHandler::invokeCallback<CallbackType, RetT>(
+                    std::hash<TopicType>{}(topic), std::forward<Args>(args)...);
+            }
         }
         catch(...)
         {
-            return SubscriberResult::INVALID_EXT_CALLBACK;
+            // If an error rises, try to execute error callback.
+            res = SubscriberResult::INVALID_EXT_CALLBACK;
+            this->invokeErrorCallback(msg, res);
+            return {};
         }
     }
 
+    /**
+     * @brief Processes a callback request based on the command type and data encapsulated in the request.
+     *
+     * This function processes different types of callback requests by handling input parameters.
+     *
+     * The function deserializes input data from the request and invokes the appropriate callback based on the
+     * template parameters.
+     *
+     * @tparam CallbackType The type of the callback function to be invoked.
+     * @tparam RetT The return type of the callback function.
+     * @tparam InputTuple A tuple containing types of the input parameters.
+     * @param msg A reference to the PubSubMsg object containing the received message.
+     */
+    template<typename CallbackType, typename RetT, typename ...Args>
+    void processClbkRequest(const PubSubMsg& msg)
+    {
+
+        SubscriberResult res;
+        // Input callback case.
+        if constexpr (sizeof...(Args) > 0)
+        {
+            // If there are no parameters, but they are required, execute error callback
+            if (0 == msg.data.data_size)
+            {
+                this->invokeErrorCallback(msg, SubscriberResult::EMPTY_PARAMS);
+                return;
+            }
+
+
+            std::tuple<std::remove_cv_t<std::remove_reference_t<Args>>...> args;
+
+            // Deserialize the inputs.
+            try
+            {
+                zmqutils::serializer::BinarySerializer::fastDeserialization(msg.data.data.get(),
+                                                                            msg.data.data_size,
+                                                                            args);
+            }
+            catch(...)
+            {
+                this->invokeErrorCallback(msg, SubscriberResult::BAD_PARAMETERS);
+                return;
+            }
+
+
+            // Invoke the callback with unpacked parameters
+            std::apply([this, &msg, &res](auto&&... args)
+            {
+                this->invokeCallback<CallbackType, RetT>(msg, res, std::forward<decltype(args)>(args)...);
+            }, args);
+
+        }
+        else
+        {
+            // Invoke the callback that do not require input parameters
+            this->invokeCallback<CallbackType, RetT>(msg, res);
+        }
+    }
+
+
 private:
+
+    std::function<void(const PubSubMsg&, SubscriberResult)> error_callback_;    ///< Map storing error callbacks against their topics.
 
     // Hide the base functions.
     using CallbackHandler::invokeCallback;
     using CallbackHandler::removeCallback;
     using CallbackHandler::hasCallback;
+
 };
 
 }} // END NAMESPACES.

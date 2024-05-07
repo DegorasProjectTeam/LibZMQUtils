@@ -238,18 +238,19 @@ SubscriberBase::~SubscriberBase()
     this->internalStopSubscriber();
 }
 
-SubscriberResult SubscriberBase::onMsgReceived(const PubSubMsg &msg)
+void SubscriberBase::onMsgReceived(const PubSubMsg &msg, SubscriberResult &res)
 {
     auto iter = process_fnc_map_.find(msg.data.topic);
     if(iter != process_fnc_map_.end())
     {
         // Invoke the function.
-        return iter->second(msg);
+        iter->second(msg);
+        res = SubscriberResult::MSG_OK;
     }
     else
     {
         // Command not found in the map.
-        return SubscriberResult::NOT_IMPLEMENTED;
+        res = SubscriberResult::NOT_IMPLEMENTED;
     }
 }
 
@@ -283,7 +284,7 @@ void SubscriberBase::startWorker()
         else if (result == SubscriberResult::MSG_OK)
         {
             // Call callback for msg received.
-            result = this->onMsgReceived(msg);
+            this->onMsgReceived(msg, result);
 
             // If processing was not succesful, call invalid msg callback.
             if (result != SubscriberResult::MSG_OK)

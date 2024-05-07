@@ -54,19 +54,6 @@ using namespace controller;
 
 AmelasLoggerSubscriber::AmelasLoggerSubscriber()
 {
-    // Register each internal specific process function in the base subscriber.
-
-    // Process log info
-    this->registerRequestProcFunc("LOG_INFO", this,
-                                  &AmelasLoggerSubscriber::processLogMsg);
-
-    // Process log info
-    this->registerRequestProcFunc("LOG_WARNING", this,
-                                  &AmelasLoggerSubscriber::processLogMsg);
-
-    // Process log info
-    this->registerRequestProcFunc("LOG_ERROR", this,
-                                  &AmelasLoggerSubscriber::processLogMsg);
 
 }
 
@@ -74,33 +61,6 @@ void AmelasLoggerSubscriber::addTopicFilter(const controller::AmelasLogLevel &lo
 {
     zmqutils::pubsub::SubscriberBase::addTopicFilter(AmelasLoggerTopic[static_cast<size_t>(log_level)]);
 }
-
-zmqutils::pubsub::SubscriberResult AmelasLoggerSubscriber::processLogMsg(const zmqutils::pubsub::PubSubMsg& msg)
-{
-    // Check the request parameters size.
-    if (msg.data.data_size == 0 || !msg.data.data)
-    {
-        return zmqutils::pubsub::SubscriberResult::EMPTY_PARAMS;
-    }
-
-    AmelasLog log;
-
-    // Try to read the parameters data.
-    try
-    {
-        zmqutils::serializer::BinarySerializer serializer(msg.data.data.get(), msg.data.data_size);
-
-        log.deserialize(serializer);
-    }
-    catch(...)
-    {
-        return zmqutils::pubsub::SubscriberResult::INVALID_MSG;
-    }
-
-    // Now we will process the command in the controller.
-    return this->invokeCallback<LogMsgCallback, zmqutils::pubsub::SubscriberResult>(msg, log);
-}
-
 
 
 void AmelasLoggerSubscriber::onSubscriberStart()
@@ -137,7 +97,8 @@ void AmelasLoggerSubscriber::onSubscriberError(const zmq::error_t &error, const 
     std::cout << std::string(100, '-') << std::endl;
 }
 
-zmqutils::pubsub::SubscriberResult AmelasLoggerSubscriber::onMsgReceived(const zmqutils::pubsub::PubSubMsg& msg)
+void AmelasLoggerSubscriber::onMsgReceived(const zmqutils::pubsub::PubSubMsg& msg,
+                                           zmqutils::pubsub::SubscriberResult &res)
 {
     // Log.
     zmqutils::serializer::BinarySerializer serializer(msg.data.data.get(), msg.data.data_size);
@@ -150,14 +111,14 @@ zmqutils::pubsub::SubscriberResult AmelasLoggerSubscriber::onMsgReceived(const z
     std::cout << "Params Hex: " << serializer.getDataHexString() << std::endl;
     std::cout << std::string(100, '-') << std::endl;
 
-    auto result = SubscriberBase::onMsgReceived(msg);
+    // Call father method to execute error callback
+    ClbkSubscriberBase::onMsgReceived(msg, res);
 
-    std::cout << "Result on message processing is: " << static_cast<int>(result) << std::endl;
-
-    return result;
+    std::cout << "Result on message processing is: " << static_cast<int>(res) << std::endl;
 }
 
-void AmelasLoggerSubscriber::onInvalidMsgReceived(const zmqutils::pubsub::PubSubMsg& msg, zmqutils::pubsub::SubscriberResult)
+void AmelasLoggerSubscriber::onInvalidMsgReceived(const zmqutils::pubsub::PubSubMsg& msg,
+                                                  zmqutils::pubsub::SubscriberResult res)
 {
     // Log.
     zmqutils::serializer::BinarySerializer serializer(msg.data.data.get(), msg.data.data_size);
@@ -169,6 +130,9 @@ void AmelasLoggerSubscriber::onInvalidMsgReceived(const zmqutils::pubsub::PubSub
     std::cout << "Params Size: " << msg.data.data_size << std::endl;
     std::cout << "Params Hex: " << serializer.getDataHexString() << std::endl;
     std::cout << std::string(100, '-') << std::endl;
+
+    // Call father method to execute error callback
+    ClbkSubscriberBase::onInvalidMsgReceived(msg, res);
 }
 
 }} // END NAMESPACES.

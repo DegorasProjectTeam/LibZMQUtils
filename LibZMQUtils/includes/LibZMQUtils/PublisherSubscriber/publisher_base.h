@@ -51,6 +51,7 @@
 #include "LibZMQUtils/Global/zmq_context_handler.h"
 #include "LibZMQUtils/PublisherSubscriber/common.h"
 #include "LibZMQUtils/InternalHelpers/network_helpers.h"
+#include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
@@ -124,6 +125,25 @@ public:
      * @return the result of sending operation.
      */
     PublisherResult sendMsg(const PubSubData &data);
+
+    /**
+     * @brief Sends a PubSubMsg serializing the arguments.
+     * @param topic, the topic of the msg.
+     * @param args, the arguments to serialize into the message.
+     * @return the result of the sending operation.
+     */
+    template <typename Topic, typename... Args>
+    PublisherResult sendMsg(const Topic &topic, const Args&... args)
+    {
+        PubSubData data;
+        data.topic = static_cast<TopicType>(topic);
+
+        if constexpr (sizeof...(args) > 0)
+            data.data_size = zmqutils::serializer::BinarySerializer::fastSerialization(
+                data.data, std::forward<const Args&>(args)...);
+
+        return this->sendMsg(data);
+    }
 
     /**
      * @brief Get the network adapter information of interfaces that this publisher is bound to.

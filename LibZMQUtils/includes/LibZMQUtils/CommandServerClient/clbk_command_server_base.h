@@ -125,19 +125,16 @@ public:
     void registerCallbackAndRequestProcFunc(CmdId command, ClassT* object, RetT(ClassT::*callback)(Args...))
     {
         // Register the callback.
-        CallbackHandler::registerCallback(static_cast<CallbackHandler::CallbackId>(command), object, callback);
+        this->registerCallback(command, object, callback);
 
         // Process function lambda.
-        auto lambdaProcFunc = [=](const CommandRequest& request, CommandReply& reply)
+        auto lambdaProcFunc = [this](const CommandRequest& request, CommandReply& reply)
         {
             this->processClbkRequest<CallbackType, RetT, InputTuple, OutputTuple>(request, reply);
         };
 
-        // Store the lambda func.
-        std::function<void(const CommandRequest&, CommandReply&)> func = lambdaProcFunc;
-
         // Automatic command process function registration.
-        this->registerRequestProcFunc(static_cast<zmqutils::serverclient::CommandType>(command), func);
+        this->registerRequestProcFunc(static_cast<zmqutils::serverclient::CommandType>(command), lambdaProcFunc);
     }
 
     /**
@@ -261,7 +258,7 @@ protected:
     }
 
     /**
-     * @brief Parametric method for invoking a registed callback. If no callback is registered, an error is returned.
+     * @brief Parametric method for invoking a registered callback. If no callback is registered, an error is returned.
      * @param msg, the received message.
      * @param args, the args passed to the callback.
      * @return the result of the callback inovocation.
@@ -289,6 +286,7 @@ protected:
         }
         catch(...)
         {
+            // TODO: it should be assigned to ret?
             reply.server_result = OperationResult::INVALID_EXT_CALLBACK;
             return ret;
         }

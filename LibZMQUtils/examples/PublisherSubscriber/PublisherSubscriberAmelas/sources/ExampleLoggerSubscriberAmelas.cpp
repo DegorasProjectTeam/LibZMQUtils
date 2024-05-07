@@ -75,22 +75,24 @@ class LogProcessor
 
 public:
 
-    SubscriberResult processLogInfo(const AmelasLog &log)
+    void processLogInfo(const AmelasLog &log)
     {
         std::cout << "[INFO] - " << log.str_info << ". Size of log: " << log.serializedSize() << std::endl;
-        return SubscriberResult::MSG_OK;
     }
 
-    SubscriberResult processLogWarning(const AmelasLog &log)
+    void processLogWarning(const AmelasLog &log)
     {
         std::cout << "[WARNING] - " << log.str_info << std::endl;
-        return zmqutils::pubsub::SubscriberResult::MSG_OK;
     }
 
-    zmqutils::pubsub::SubscriberResult processLogError(const AmelasLog &log)
+    void processLogError(const AmelasLog &log)
     {
         std::cout << "[ERROR] - " << log.str_info << std::endl;
-        return zmqutils::pubsub::SubscriberResult::MSG_OK;
+    }
+
+    void processReceivedLogError(const zmqutils::pubsub::PubSubMsg &, SubscriberResult res)
+    {
+        std::cout << "Received bad log. Error code is: " << static_cast<zmqutils::pubsub::ResultType>(res) << std::endl;
     }
 };
 
@@ -114,9 +116,17 @@ int main(int, char**)
     subscriber.addTopicFilter(AmelasLogLevel::AMELAS_ERROR);
 
     // Set the callbacks in the subscriber.
-    subscriber.registerCallback(AmelasLogLevel::AMELAS_INFO, &log_processor, &LogProcessor::processLogInfo);
-    subscriber.registerCallback(AmelasLogLevel::AMELAS_WARNING, &log_processor, &LogProcessor::processLogWarning);
-    subscriber.registerCallback(AmelasLogLevel::AMELAS_ERROR, &log_processor, &LogProcessor::processLogError);
+    subscriber.registerCallbackAndRequestProcFunc(AmelasLogLevel::AMELAS_INFO,
+                                                  &log_processor, &LogProcessor::processLogInfo);
+    subscriber.registerCallbackAndRequestProcFunc(AmelasLogLevel::AMELAS_WARNING,
+                                                  &log_processor, &LogProcessor::processLogWarning);
+
+    // Commented to test error callback. If you send and error log, it should say that it is not implemented.
+    // subscriber.registerCallbackAndRequestProcFunc(AmelasLogLevel::AMELAS_ERROR,
+    //                                               &log_processor, &LogProcessor::processLogError);
+
+    subscriber.setErrorCallback(&log_processor, &LogProcessor::processReceivedLogError);
+
 
     // Start the subscriber.
     bool started = subscriber.startSubscriber();

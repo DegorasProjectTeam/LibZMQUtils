@@ -80,18 +80,25 @@ public:
 
     void addTopicFilter(const controller::AmelasLogLevel& log_level);
 
-    using LogMsgCallback = std::function<zmqutils::pubsub::SubscriberResult(const controller::AmelasLog&)>;
+    using LogMsgCallback = std::function<void(const controller::AmelasLog&)>;
+
+    template<typename CallbackType = LogMsgCallback, typename ClassT, typename RetT = void, typename... Args>
+    void registerCallbackAndRequestProcFunc(const controller::AmelasLogLevel &log_level, ClassT* object,
+                                            RetT(ClassT::*callback)(Args...))
+    {
+        zmqutils::pubsub::ClbkSubscriberBase::registerCallbackAndRequestProcFunc<CallbackType, ClassT, RetT, Args...>(
+            zmqutils::pubsub::TopicType(AmelasLoggerTopic[static_cast<size_t>(log_level)]), object, callback);
+    }
 
 private:
 
     // -----------------------------------------------------------------------------------------------------------------
     using SubscriberBase::registerRequestProcFunc;
     using CallbackHandler::registerCallback;
+    using zmqutils::pubsub::ClbkSubscriberBase::registerCallbackAndRequestProcFunc;
     using zmqutils::pubsub::ClbkSubscriberBase::registerCallback;
     using zmqutils::pubsub::SubscriberBase::addTopicFilter;
     // -----------------------------------------------------------------------------------------------------------------
-
-    zmqutils::pubsub::SubscriberResult processLogMsg(const zmqutils::pubsub::PubSubMsg&);
 
     // Internal overrided start callback.
     virtual void onSubscriberStart() override final;
@@ -100,7 +107,8 @@ private:
     virtual void onSubscriberStop() override final;
 
     // Internal overrided command received callback.
-    virtual zmqutils::pubsub::SubscriberResult onMsgReceived(const zmqutils::pubsub::PubSubMsg&) override final;
+    virtual void onMsgReceived(const zmqutils::pubsub::PubSubMsg&,
+                               zmqutils::pubsub::SubscriberResult &res) override final;
 
     // Internal overrided bad command received callback.
     virtual void onInvalidMsgReceived(const zmqutils::pubsub::PubSubMsg&,

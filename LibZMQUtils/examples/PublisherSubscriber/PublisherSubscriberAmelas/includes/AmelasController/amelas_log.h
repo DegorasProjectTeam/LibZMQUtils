@@ -67,6 +67,13 @@ enum class AmelasLogLevel : std::uint32_t
 
 struct AmelasLog : public zmqutils::serializer::Serializable
 {
+    AmelasLog() = default;
+
+    AmelasLog(const AmelasLog&) = default;
+    AmelasLog(AmelasLog&&) = default;
+    AmelasLog& operator=(const AmelasLog&) = default;
+    AmelasLog& operator=(AmelasLog&&) = default;
+
     zmqutils::serializer::SizeUnit serialize(zmqutils::serializer::BinarySerializer& serializer) const override final;
 
     void deserialize(zmqutils::serializer::BinarySerializer& serializer) override final;
