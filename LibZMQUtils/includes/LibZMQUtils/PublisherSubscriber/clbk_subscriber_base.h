@@ -68,6 +68,9 @@ public:
 
     /**
      * @brief Template function for registering a callback. This callback will be registered for a specific topic.
+     * @tparam ClassT, the class of the object that contains the callback.
+     * @tparam RetT, the return type of the callback function.
+     * @tparam Args, variadic template parameters passed to the callback function.
      * @param topic, the topic the callback is applied to.
      * @param object, a parametric object whose method will be called.
      * @param callback, the callback method that will be called.
@@ -81,14 +84,26 @@ public:
     /**
      * @brief Template function for setting an error callback. This callback will called whenever a subscriber error
      *        is issued.
-     * @param object, a parametric object whose method will be called.
+     *
+     * @param ClassT, the class of the object that contains the method used as error callback.
+     * @param object, a object whose method will be called.
      * @param callback, the error callback method that will be called.
      */
-    template<typename ClassT, typename RetT = void>
-    void setErrorCallback(ClassT* object, RetT(ClassT::*error_callback)(const PubSubMsg &, SubscriberResult))
+    template<typename ClassT>
+    void setErrorCallback(ClassT* object, void(ClassT::*error_callback)(const PubSubMsg &, SubscriberResult))
     {
         this->error_callback_ = [object, error_callback](const PubSubMsg &msg, SubscriberResult res)
         {(object->*error_callback)(msg, res);};
+    }
+
+    /**
+     * @brief Function for setting an error callback. This callback will called whenever a subscriber error
+     *        is issued.
+     * @param functor, the error callback method that will be called.
+     */
+    void setErrorCallback(std::function<void(const PubSubMsg &, SubscriberResult)> functor)
+    {
+        this->error_callback_ = functor;
     }
 
     /**
@@ -103,8 +118,6 @@ public:
      *
      * @tparam CallbackType The type of the callback handler, usually determining how the callback will
      *         be invoked and with what parameters.
-     * @tparam InputTuple A tuple describing the types of data expected as input from the request.
-     *         Used to deserialize and pass data to the callback.
      * @tparam ClassT The class type on which the member function callback is defined.
      * @tparam RetT The return type of the callback function. Defaults to void.
      * @tparam Args Variadic template parameters representing the types of the arguments that the
@@ -113,7 +126,7 @@ public:
      * @param topic The identifier for the topic this callback and process function are associated with.
      * @param object Pointer to the instance of the object on which the callback method will be called.
      * @param callback Member function pointer to the callback method that will be invoked to process
-     *        the command.
+     *        the message.
      */
     template<typename CallbackType, typename ClassT, typename RetT = void, typename... Args>
     void registerCallbackAndRequestProcFunc(const TopicType& topic, ClassT* object, RetT(ClassT::*callback)(Args...))
@@ -163,7 +176,8 @@ protected:
     void onMsgReceived(const PubSubMsg &, SubscriberResult &res) override;
 
     /**
-     * @brief Invokes error callback, if defined, passing the subscriber result.
+     * @brief Invokes error callback, if defined.
+     * @param msg, the message that caused the error.
      * @param res, the subscriber result with the error.
      */
     void invokeErrorCallback(const PubSubMsg &msg, SubscriberResult res)
@@ -173,14 +187,17 @@ protected:
     }
     /**
      * @brief Parametric method for invoking a registered callback. If no callback is registered, the function will
-     * try to invoke error callback.
+     *        try to invoke error callback.
+     * @tparam CallbackType The type of the callback function to be invoked.
+     * @tparam RetT The return type of the callback function.
+     * @tparam Args Variadic template parameters passed to the callback function.
      * @param msg, the received message.
      * @param res, the subscriber result associated with callback invocation
      * @param args, the args passed to the callback.
-     * @return the result of the callback inovocation or nothing, if callback was not invoked.
+     * @return the result of the callback inovocation or nothing, if callback was not invoked or has void return.
      */
     template <typename CallbackType, typename RetT = void,  typename... Args>
-    std::conditional<std::is_void_v<RetT>, void, std::optional<RetT>>
+    std::conditional_t<std::is_void_v<RetT>, void, std::optional<RetT>>
     invokeCallback(const PubSubMsg& msg, SubscriberResult& res, Args&&... args)
     {
         // Get the command.
@@ -192,7 +209,7 @@ protected:
             // If there is no callback, try to execute error callback.
             res = SubscriberResult::EMPTY_EXT_CALLBACK;
             this->invokeErrorCallback(msg, res);
-            return{};
+            return RetT();
         }
 
         //Invoke the callback.
@@ -202,7 +219,7 @@ protected:
             {
                 CallbackHandler::invokeCallback<CallbackType, RetT>(
                     std::hash<TopicType>{}(topic), std::forward<Args>(args)...);
-                return {};
+                return;
             }
 
             else
@@ -216,12 +233,12 @@ protected:
             // If an error rises, try to execute error callback.
             res = SubscriberResult::INVALID_EXT_CALLBACK;
             this->invokeErrorCallback(msg, res);
-            return {};
+            return RetT();
         }
     }
 
     /**
-     * @brief Processes a callback request based on the command type and data encapsulated in the request.
+     * @brief Processes a callback request based on the topic and the data contained in the message received.
      *
      * This function processes different types of callback requests by handling input parameters.
      *
@@ -230,7 +247,7 @@ protected:
      *
      * @tparam CallbackType The type of the callback function to be invoked.
      * @tparam RetT The return type of the callback function.
-     * @tparam InputTuple A tuple containing types of the input parameters.
+     * @tparam Args Variadic template parameters passed to the callback function.
      * @param msg A reference to the PubSubMsg object containing the received message.
      */
     template<typename CallbackType, typename RetT, typename ...Args>
@@ -282,7 +299,8 @@ protected:
 
 private:
 
-    std::function<void(const PubSubMsg&, SubscriberResult)> error_callback_;    ///< Map storing error callbacks against their topics.
+    ///< Error callback functor.
+    std::function<void(const PubSubMsg&, SubscriberResult)> error_callback_;
 
     // Hide the base functions.
     using CallbackHandler::invokeCallback;

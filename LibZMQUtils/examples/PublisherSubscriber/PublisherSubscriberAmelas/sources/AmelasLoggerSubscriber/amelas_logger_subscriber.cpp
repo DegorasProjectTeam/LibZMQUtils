@@ -62,6 +62,11 @@ void AmelasLoggerSubscriber::addTopicFilter(const controller::AmelasLogLevel &lo
     zmqutils::pubsub::SubscriberBase::addTopicFilter(AmelasLoggerTopic[static_cast<size_t>(log_level)]);
 }
 
+void AmelasLoggerSubscriber::removeTopicFilter(const controller::AmelasLogLevel &log_level)
+{
+    zmqutils::pubsub::SubscriberBase::removeTopicFilter(AmelasLoggerTopic[static_cast<size_t>(log_level)]);
+}
+
 
 void AmelasLoggerSubscriber::onSubscriberStart()
 {

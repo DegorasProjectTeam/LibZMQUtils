@@ -69,8 +69,35 @@ class AmelasLoggerSubscriber : public zmqutils::pubsub::ClbkSubscriberBase
 {
 public:
 
+    using LogMsgCallback = std::function<void(const controller::AmelasLog&)>;
+
+    /**
+     * @brief Default constructor for AmelasLoggerSubscriber.
+     */
     AmelasLoggerSubscriber();
 
+    /**
+     * @brief Adds topic filter based on log level. Upon subscriber creation, no topic is allowed in, so this function
+     *        must be called to start receiving logs.
+     * @param log_level, the log level to allow in.
+     */
+    void addTopicFilter(const controller::AmelasLogLevel& log_level);
+
+    /**
+     * @brief Removes topic filter based on log level.
+     * @param log_level, the log level to NOT allow in.
+     */
+    void removeTopicFilter(const controller::AmelasLogLevel& log_level);
+
+    /**
+     * @brief Register callback function for each log level.
+     * @tparam ClassT, the class of the object that contains the callback.
+     * @tparam RetT, the return type of the callback.
+     * @tparam Variadic template parameters passed to the callback function.
+     * @param log_level, the log level to apply the callback.
+     * @param object, the object that contains the callback.
+     * @param callback, the callback function called when a message with log_level comes.
+     */
     template<typename ClassT, typename RetT = void, typename... Args>
     void registerCallback(const controller::AmelasLogLevel &log_level, ClassT* object, RetT(ClassT::*callback)(Args...))
     {
@@ -78,10 +105,16 @@ public:
             AmelasLoggerTopic[static_cast<size_t>(log_level)], object, callback);
     }
 
-    void addTopicFilter(const controller::AmelasLogLevel& log_level);
-
-    using LogMsgCallback = std::function<void(const controller::AmelasLog&)>;
-
+    /**
+     * @brief Register callback and processing function for each log level.
+     * @tparam CallbackType, the signature of the callback.
+     * @tparam ClassT, the class of the object that contains the callback.
+     * @tparam RetT, the return type of the callback.
+     * @tparam Variadic template parameters passed to the callback function.
+     * @param log_level, the log level to apply the callback and processing function.
+     * @param object, the object that contains the callback.
+     * @param callback, the callback function called when a message with log_level comes.
+     */
     template<typename CallbackType = LogMsgCallback, typename ClassT, typename RetT = void, typename... Args>
     void registerCallbackAndRequestProcFunc(const controller::AmelasLogLevel &log_level, ClassT* object,
                                             RetT(ClassT::*callback)(Args...))
@@ -98,6 +131,7 @@ private:
     using zmqutils::pubsub::ClbkSubscriberBase::registerCallbackAndRequestProcFunc;
     using zmqutils::pubsub::ClbkSubscriberBase::registerCallback;
     using zmqutils::pubsub::SubscriberBase::addTopicFilter;
+    using zmqutils::pubsub::SubscriberBase::removeTopicFilter;
     // -----------------------------------------------------------------------------------------------------------------
 
     // Internal overrided start callback.
