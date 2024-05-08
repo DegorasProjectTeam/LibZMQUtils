@@ -23,8 +23,8 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file container_helpers.h
- * @brief This file contains several helper tools related with containers.
+ * @file tuple_helpers.h
+ * @brief This file contains several helper tools related with tuples.
  * @warning Not exported. Only for internal library usage.
  * @author Degoras Project Team.
  * @copyright EUPL License
@@ -37,8 +37,7 @@
 
 // C++ INCLUDES
 //======================================================================================================================
-#include <string>
-#include <vector>
+#include <tuple>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
@@ -49,41 +48,85 @@
 // =====================================================================================================================
 namespace zmqutils{
 namespace internal_helpers{
-namespace containers{
-// =====================================================================================================================
+namespace tuple{
 
-// Custom search closest.
-template <typename T>
-std::size_t searchClosest(const std::vector<T>& sorted_array, T x);
+/**
+ * @brief Implememtation of tuple split. This version performs the split by movement.
+ *
+ * @tparam N1, the sequence for the first subtuple.
+ * @tparam N2, the sequence for the second subtuple.
+ * @tparam Ts, the types of the tuple to split.
 
-// Custom push back.
-template <class Container>
-void insert(Container& a, const Container& b);
+ * @param t, the tuple to split.
+ */
+template <std::size_t... N1 , std::size_t ...N2, typename... Ts>
+auto tuple_split_impl(std::index_sequence<N1...> , std::index_sequence<N2...>, std::tuple<Ts...> &&t)
+{
+    return std::make_tuple(std::make_tuple(std::get<N1>(std::move(t))...),
+                           std::make_tuple(std::get<N2 + sizeof...(N1)>(std::move(t))...));
+}
 
-// Custom contains helper.
-template <typename Container, typename T>
-bool contains(const Container& container, T elem);
+/**
+ * @brief Split one tuple into two subtuples. The types of subtuples concatenated must be the same as the concatenated.
+ *        This version performs the split by movement.
+ *
+ * @tparam TypesCat, the types of the tuple to split.
+ * @tparam Types1, the types of the first subtuple.
+ * @tparam Types2, the types of the second subtuple.
+ * @param cat, the tuple to split.
+ * @param t1, the first subtuple.
+ * @param t2, the second subtuple.
+ */
+template <typename ...TypesCat, typename ...Types1, typename ...Types2>
+void tuple_split(std::tuple<TypesCat...> &&cat, std::tuple<Types1...> &t1, std::tuple<Types2...> &t2)
+{
+    static_assert(std::is_same_v<std::tuple<TypesCat...>, std::tuple<Types1..., Types2...>>,
+                  "The types of t1 and t2 concatenated must be the same as cat" );
 
-template <typename Container, typename T>
-bool find(const Container& container, const T  & elem, int& pos);
+    std::tie(t1,t2) = tuple_split_impl(std::make_index_sequence<sizeof...(Types1)>(),
+                                        std::make_index_sequence<sizeof...(Types2)>(), std::move(cat));
+}
 
-// Extract from a vector the input indexes.
-template<typename T>
-std::vector<T> extract(const std::vector<T>& data, const std::vector<size_t>& indexes);
+/**
+ * @brief Implememtation of tuple split. This version performs the split by copy.
+ *
+ * @tparam N1, the sequence for the first subtuple.
+ * @tparam N2, the sequence for the second subtuple.
+ * @tparam Ts, the types of the tuple to split.
 
-template<typename T>
-std::vector<T> dataBetween(const std::vector<T>& v, T lower, T upper);
+ * @param t, the tuple to split.
+ */
+template <std::size_t... N1 , std::size_t ...N2, typename... Ts>
+auto tuple_split_impl(std::index_sequence<N1...> , std::index_sequence<N2...>, const std::tuple<Ts...> &t)
+{
+    return std::make_tuple(std::make_tuple(std::get<N1>(t)...),
+                           std::make_tuple(std::get<N2 + sizeof...(N1)>(t)...));
+}
 
-template <class T>
-std::ostream& operator<<(std::ostream& out, const std::vector<T>& v);
+/**
+ * @brief Split one tuple into two subtuples. The types of subtuples concatenated must be the same as the concatenated.
+ *        This version performs the split by copy.
+ *
+ * @tparam TypesCat, the types of the tuple to split.
+ * @tparam Types1, the types of the first subtuple.
+ * @tparam Types2, the types of the second subtuple.
+ * @param cat, the tuple to split.
+ * @param t1, the first subtuple.
+ * @param t2, the second subtuple.
+ */
+template <typename ...TypesCat, typename ...Types1, typename ...Types2>
+void tuple_split(const std::tuple<TypesCat...> &cat, std::tuple<Types1...> &t1, std::tuple<Types2...> &t2)
+{
+    static_assert(std::is_same_v<std::tuple<TypesCat...>, std::tuple<Types1..., Types2...>>,
+                  "The types of t1 and t2 concatenated must be the same as cat" );
 
-template <typename Container>
-std::vector<typename Container::key_type> getMapKeys(const Container& container);
+    std::tie(t1,t2) = tuple_split_impl(std::make_index_sequence<sizeof...(Types1)>(),
+                                        std::make_index_sequence<sizeof...(Types2)>(), cat);
+
+}
+
+
+
 
 }}} // END NAMESPACES.
-// =====================================================================================================================
-
-// TEMPLATES INCLUDES
-// =====================================================================================================================
-#include "LibZMQUtils/InternalHelpers/container_helpers.tpp"
 // =====================================================================================================================

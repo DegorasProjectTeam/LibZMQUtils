@@ -51,6 +51,7 @@
 #include "LibZMQUtils/CommandServerClient/command_server_base.h"
 #include "LibZMQUtils/Utilities/callback_handler.h"
 #include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
+#include "LibZMQUtils/InternalHelpers/tuple_helpers.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
@@ -58,35 +59,6 @@
 namespace zmqutils{
 namespace serverclient{
 // =====================================================================================================================
-
-template <std::size_t... N1 , std::size_t ...N2, typename... Ts>
-auto tuple_split_impl(std::index_sequence<N1...> , std::index_sequence<N2...>, std::tuple<Ts...> &&t)
-{
-    return std::make_tuple(std::make_tuple( std::get<N1>(std::move(t))... ), std::make_tuple(std::get<N2 + sizeof...(N1)>(std::move(t))...));
-}
-
-template <typename ...TypesCat, typename ...Types1, typename ...Types2>
-void tuple_split(std::tuple<TypesCat...> &&cat, std::tuple<Types1...> &t1, std::tuple<Types2...> &t2)
-{
-    static_assert(sizeof...(TypesCat) == sizeof...(Types1) + sizeof...(Types2));
-
-    std::tie(t1,t2) = tuple_split_impl(std::make_index_sequence<sizeof...(Types1)>(), std::make_index_sequence<sizeof...(Types2)>(), std::move(cat));
-}
-
-
-template <std::size_t... N1 , std::size_t ...N2, typename... Ts>
-auto tuple_split_impl(std::index_sequence<N1...> , std::index_sequence<N2...>, const std::tuple<Ts...> &t)
-{
-    return std::make_tuple(std::make_tuple( std::get<N1>(t)... ), std::make_tuple(std::get<N2 + sizeof...(N1)>(t)...));
-}
-
-template <typename ...TypesCat, typename ...Types1, typename ...Types2>
-void tuple_split(const std::tuple<TypesCat...> &cat, std::tuple<Types1...> &t1, std::tuple<Types2...> &t2)
-{
-    static_assert(sizeof...(TypesCat) == sizeof...(Types1) + sizeof...(Types2));
-
-    std::tie(t1,t2) = tuple_split_impl(std::make_index_sequence<sizeof...(Types1)>(), std::make_index_sequence<sizeof...(Types2)>(), cat);
-}
 
 /**
  * @brief The ClbkCommandServerBase class implements a CommandServer that includes callback handling for each command.
@@ -255,7 +227,7 @@ protected:
             if constexpr (std::tuple_size_v<OutputTuple> > 0)
             {
                 // Get the output parameters from the parameters tuple.
-                tuple_split(std::move(args), inputs, outputs);
+                internal_helpers::tuple::tuple_split(std::move(args), inputs, outputs);
 
                 // Serialize the output parameters.
                 zmqutils::serializer::BinarySerializer serializer;
@@ -282,7 +254,7 @@ protected:
             if constexpr (std::tuple_size_v<OutputTuple> > 0)
             {
                 // Get the output parameters from the parameters tuple
-                tuple_split(std::move(args), inputs, outputs);
+                internal_helpers::tuple::tuple_split(std::move(args), inputs, outputs);
 
                 // Serialize the output parameters.
                 serializer.write(outputs);
