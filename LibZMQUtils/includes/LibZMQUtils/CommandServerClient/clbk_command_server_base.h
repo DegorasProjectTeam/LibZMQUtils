@@ -239,7 +239,6 @@ protected:
         // If there are return type at callback, send it before output parameters.
         else
         {
-
             // Invoke the callback with parameters and handle return value
             auto ret = std::apply([this, &request, &reply](auto&&... args)
             {
