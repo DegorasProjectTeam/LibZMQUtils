@@ -80,18 +80,18 @@ LIBZMQUTILS_EXPORT std::string timePointToIso8601(const TimePointStd& tp,
 
 LIBZMQUTILS_EXPORT std::string currentISO8601Date(bool add_ms = true, bool add_ns = false, bool utc = true);
 
-template<typename Enum, std::size_t N>
-std::string getEnumString(Enum value, const std::array<const char*, N>& str_array)
-{
-    static_assert(std::is_enum<Enum>::value, "getEnumString - Template argument must be an enum type.");
+// template<typename Enum, std::size_t N>
+// std::string getEnumString(Enum value, const std::array<const char*, N>& str_array)
+// {
+//     static_assert(std::is_enum<Enum>::value, "getEnumString - Template argument must be an enum type.");
 
-    unsigned long long index = static_cast<unsigned long long>(value);
+//     unsigned long long index = static_cast<unsigned long long>(value);
 
-    if (index < str_array.size())
-        return str_array[index];
+//     if (index < str_array.size())
+//         return str_array[index];
 
-    return "Unknown value.";
-}
+//     return "Unknown value.";
+// }
 
 namespace internal
 {

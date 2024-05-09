@@ -116,6 +116,7 @@ enum class OperationResult : ResultType
     MAX_CLIENTS_REACH       = 20, ///< The server has reached the maximum number of clients allowed.
     COMMAND_NOT_ALLOWED     = 21, ///< The command is not allowed to be executed.                                  TODO
     CLIENT_VERSION_NOT_COMP = 22, ///< The version of the client is not compatible with the server version.        TODO
+    CLIENT_DEAD_FOR_SERVER  = 23, ///< The client was considered dead by the server, so it is neccesary a reconnection.
     END_BASE_RESULTS        = 50  ///< Sentinel value indicating the end of the base server results.
 };
 
@@ -204,8 +205,8 @@ static constexpr std::array<const char*, 50>  OperationResultStr
     "CLIENT_STOPPED - The client is stopped.",
     "MAX_CLIENTS_REACH - The server has reached the maximum number of clients allowed.",
     "COMMAND_NOT_ALLOWED - The command is not allowed to be executed.",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
+    "CLIENT_VERSION_NOT_COMP - The version of the client is not compatible with the server version.",
+    "CLIENT_DEAD_FOR_SERVER - The client was considered dead by the server, so it is neccesary a reconnection.",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
@@ -374,18 +375,6 @@ struct LIBZMQUTILS_EXPORT CommandReply
 
 /**
  * @brief Retrieve a server command string based on the given server command identifier.
- * @param cmd The command identifier (of type `CmdId`) to look up.
- * @return The server command string associated with the identifier, or "UNKNOWN_SERVER_COMMAND" if is out of bounds.
- */
-template <typename CmdId>
-std::string serverCommandStr(CmdId cmd)
-{
-    std::uint32_t id = static_cast<std::uint32_t>(cmd);
-    return (id < ServerCommandStr.size()) ? ServerCommandStr[id] : "UNKNOWN_SERVER_COMMAND";
-}
-
-/**
- * @brief Retrieve a server command string based on the given server command identifier.
  * @param arr Array of const char * to search the command string.
  * @param cmd The command identifier (of type `CmdId`) to look up.
  * @return The server command string associated with the identifier, or "UNKNOWN_SERVER_COMMAND" if is out of bounds.
@@ -393,8 +382,15 @@ std::string serverCommandStr(CmdId cmd)
 template <std::size_t N, typename CmdId>
 std::string serverCommandStr(const std::array<const char*, N>& arr, CmdId cmd)
 {
-    std::uint32_t id = static_cast<std::uint32_t>(cmd);
-    return (id < arr.size()) ? arr[id] : "UNKNOWN_SERVER_COMMAND";
+    CommandType id = static_cast<CommandType>(cmd);
+    return (static_cast<size_t>(id) < arr.size()) ? arr[static_cast<size_t>(id)] : "UNKNOWN_SERVER_COMMAND";
+}
+
+template <std::size_t N, typename OperationId>
+std::string operationResultStr(const std::array<const char*, N>& arr, OperationId operation)
+{
+    ResultType id = static_cast<ResultType>(operation);
+    return (static_cast<size_t>(id) < arr.size()) ? arr[static_cast<size_t>(id)] : "UNKNOWN_OPERATION_RESULT";
 }
 
 // =====================================================================================================================

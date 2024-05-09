@@ -1,6 +1,24 @@
 LibZMQUtils TODOs
 
+
+PRIORITY:
+
+- Improve concurrency control in client.
+
+- Add a toolchain to facilitate the compilation for ARM (like RPi devices or FPGAs).
+
+- Add security with CURVE and encryption.
+
+- Cancel client operation functionality.
+
+- Non blocking senmdMsg operation mode with futures. 
+
 - In HostInfo, add to the JSONString the last seen as readable string.
+
+
+NO PRIORITY:
+ 
+- Add public IP for client and server (configurable for remote and local only). 
 
 - Add a system to allow certains clients (only locals for example) to have access to certain commands.
 
@@ -12,13 +30,10 @@ LibZMQUtils TODOs
 
 - Add a command to close the server (by external client with access to that operation).
 
-- Add serialization to HostInfo and ServerInfo classes.
-
-- Add security with CURVE and encryption.
-
 - Add a function to, in the server, check the version of the client and check compatibility with current server version.
 
-- Get the version name and version when connect.
+- Get the server name and version when connect.
+
 
 
 

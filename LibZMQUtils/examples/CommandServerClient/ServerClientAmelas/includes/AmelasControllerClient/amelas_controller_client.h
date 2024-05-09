@@ -103,9 +103,9 @@ private:
 
     virtual void onDisconnected(const zmqutils::serverclient::ServerInfo&) override final;
 
-    virtual void onInvalidMsgReceived(const zmqutils::serverclient::CommandReply&) override final;
+    virtual void onBadOperation(const zmqutils::serverclient::CommandReply&) override final;
 
-    virtual void onReplyReceived(const zmqutils::serverclient::CommandReply& reply) override final;
+    virtual void onReplyReceived(const zmqutils::serverclient::CommandReply&) override final;
 
     virtual void onSendingCommand(const zmqutils::serverclient::RequestData&) override final;
 

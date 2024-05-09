@@ -66,8 +66,8 @@ namespace serverclient{
 
 // CONSTANTS
 // =====================================================================================================================
-constexpr unsigned kDefaultServerAliveTimeoutMsec = 10000;     ///< Default timeout for consider a server dead (msec).
-constexpr unsigned kDefaultClientSendAlivePeriodMsec = 5000;   ///< Default period for sending alive commands (msec).
+constexpr unsigned kDefaultServerAliveTimeoutMsec = 2000;     ///< Default timeout for consider a server dead (msec).
+constexpr unsigned kDefaultClientSendAlivePeriodMsec = 1000;   ///< Default period for sending alive commands (msec).
 // =====================================================================================================================
 
 /**
@@ -286,10 +286,10 @@ protected:
     virtual void onDisconnected(const ServerInfo&) = 0;
 
     /**
-     * @brief onInvalidMsgReceived will be called when an invalid message is received as reply. Must be overriden.
+     * @brief onBadOperation will be called when an invalid message is received as reply. Must be overriden.
      * @param rep, the faulty reply received.
      */
-    virtual void onInvalidMsgReceived(const CommandReply& rep) = 0;
+    virtual void onBadOperation(const CommandReply& rep) = 0;
 
     /**
      * @brief onReplyReceived will be called when a reply is received. Must be overriden.
@@ -311,7 +311,7 @@ protected:
     virtual void onClientError(const zmq::error_t& error, const std::string& ext_info) = 0;
 
     template <typename CmdId, typename... Args>
-    zmqutils::serverclient::RequestData prepareRequest(CmdId command, const Args&... args)
+    static zmqutils::serverclient::RequestData prepareRequest(CmdId command, const Args&... args)
     {
         zmqutils::serverclient::RequestData command_msg(static_cast<zmqutils::serverclient::ServerCommand>(command));
 
@@ -347,7 +347,7 @@ protected:
 
 private:
 
-    OperationResult recvFromSocket(CommandReply&repl, zmq::socket_t *recv_socket, zmq::socket_t *close_socket);
+    void recvFromSocket(CommandReply&repl, zmq::socket_t *recv_socket, zmq::socket_t *close_socket);
 
     void deleteSockets();
 
@@ -381,8 +381,8 @@ private:
     mutable std::mutex client_close_mtx_;       ///< Safety mutex for closing client.
 
     // Futures for receiving response from send command and auto alive
-    std::future<OperationResult> fut_recv_send_;   ///< Future that stores the recv status for send command.
-    std::future<OperationResult> fut_recv_alive_;  ///< Future that stores the recv status for auto alive.
+    std::future<void> fut_recv_send_;   ///< Future that stores the recv status for send command.
+    std::future<void> fut_recv_alive_;  ///< Future that stores the recv status for auto alive.
 
     // Auto alive functionality.
     std::future<void> auto_alive_future_;
