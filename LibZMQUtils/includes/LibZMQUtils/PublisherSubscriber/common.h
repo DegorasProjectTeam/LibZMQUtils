@@ -82,8 +82,8 @@ enum class SubscriberResult : ResultType
     INVALID_MSG            = 10, ///< The message is invalid.
     BAD_PARAMETERS         = 13, ///< The parameters sent are not valid.
     NOT_IMPLEMENTED        = 15, ///< The message process function is not implemented.
-    EMPTY_EXT_CALLBACK     = 17, ///< The associated external callback is empty. Used in ClbkCommandServerBase.
-    INVALID_EXT_CALLBACK   = 18, ///< The associated external callback is invalid. Used in ClbkCommandServerBase.
+    EMPTY_EXT_CALLBACK     = 17, ///< The associated external callback is empty.
+    INVALID_EXT_CALLBACK   = 18, ///< The associated external callback is invalid.
     INVALID_PUB_UUID       = 19, ///< The publisher UUID is invalid (could be invalid, missing or empty).
     END_BASE_RESULTS       = 30  ///< Sentinel value indicating the end of the base server results.
 };
@@ -103,7 +103,6 @@ enum class PublisherResult : ResultType
     INVALID_MSG            = 10,  ///< The message is invalid.
     PUBLISHER_STOPPED      = 17,  ///< The publisher is stopped.
     END_BASE_RESULTS       = 30   ///< Sentinel value indicating the end of the base publisher results.
-
 };
 
 /**
@@ -212,14 +211,15 @@ struct LIBZMQUTILS_EXPORT PublisherInfo
      * @brief Converts publisher info into a Json string.
      * @return a Json string representing the publisher info.
      */
-    LIBZMQUTILS_EXPORT std::string toJsonString() const;
+    std::string toJsonString() const;
 
-    // Identifier.
-    utils::UUID uuid;                  ///< Unique publisher host UUID.
-    // Basic information
-    std::string endpoint;              ///< Publisher endpoint.
-    std::string name;                  ///< Publisher name, optional.
-
+    // Struct data.
+    utils::UUID uuid;         ///< Unique publisher host UUID.
+    std::string endpoint;     ///< Publisher endpoint.
+    std::string name;         ///< Publisher name, optional.
+    std::string info;         ///< Publisher information, optional.
+    std::string version;      ///< Publisher version, optional.
+    // TODO IPS
 };
 
 /**

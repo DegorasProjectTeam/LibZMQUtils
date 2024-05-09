@@ -79,32 +79,33 @@ class LIBZMQUTILS_EXPORT CommandClientBase : public ZMQContextHandler
 public:
     
     /**
-     * @brief CommandClientBase constructor.
-     * @param server_endpoint, the URL endpoint of the server
-     * @param client_name, this client name.
-     * @param interf_name, this name of the interface to output commands. If empty, this class will look for the best one.
+     * @brief Base constructor for a ZeroMQ command client.
+     *
+     *
+     * @param server_endpoint The URL endpoint of the server with the port.
+     * @param net_interface Name of the network interface to be used. If empty, the class will look for the best one.
+     * @param client_name Optional parameter to specify the server name. By default is empty.
+     * @param client_version Optional parameter to specify the server version (like "1.1.1"). By default is empty.
+     * @param client_info Optional parameter to specify the server information. By default is empty.
+     *
      */
     CommandClientBase(const std::string& server_endpoint,
-                                         const std::string& client_name = "",
-                                         const std::string& interf_name = "");
+                      const std::string& client_name = "",
+                      const std::string& client_version = "",
+                      const std::string& client_info = "",
+                      const std::string& net_interface = "");
     
     /**
      * @brief Get the client info.
      * @return the client info.
      */
-    const HostInfo& getClientInfo() const;
+    const ClientInfo& getClientInfo() const;
 
     /**
      * @brief Get the server endpoint.
      * @return the server endpoint.
      */
     const std::string& getServerEndpoint() const;
-
-    /**
-     * @brief Get the client name.
-     * @return the client name.
-     */
-    const std::string& getClientName() const;
 
     /**
      * @brief Check if client is working, i.e., it was started successfully.
@@ -155,24 +156,6 @@ public:
     void disableAutoAlive();
 
     /**
-     * @brief Validates the given command against predefined command ranges.
-     *
-     * This function checks if the specified command is within the valid range
-     * defined by `ServerCommand::INVALID_COMMAND` and `ServerCommand::END_BASE_COMMANDS`.
-     * Commands within this range are considered valid.
-     *
-     * @param command The command to validate, typically received as input or parsed from a message.
-     * @return true If the command is within the valid range.
-     * @return false If the command is outside the valid range.
-     */
-    template<typename CmdId>
-    bool validateCommand(CmdId command) const
-    {
-        return (static_cast<ServerCommand>(command) > ServerCommand::INVALID_COMMAND &&
-                static_cast<ServerCommand>(command) < ServerCommand::END_BASE_COMMANDS);
-    }
-
-    /**
      * @brief Try to connect to the Command Server.
      * @param auto_alive, true to enable the auto alive sending, false to disable.
      * @return the OperationResult.
@@ -210,37 +193,97 @@ public:
      */
     virtual ~CommandClientBase() override;
 
+    /**
+     * @brief Validates the given command against predefined command ranges.
+     *
+     * This function checks if the specified command is within the valid range
+     * defined by `ServerCommand::INVALID_COMMAND` and `ServerCommand::END_BASE_COMMANDS`.
+     * Commands within this range are considered valid.
+     *
+     * @param command The command to validate, typically received as input or parsed from a message.
+     * @return true If the command is within the valid range.
+     * @return false If the command is outside the valid range.
+     */
+    template<typename CmdId>
+    bool validateCommand(CmdId command) const
+    {
+        return (static_cast<ServerCommand>(command) > ServerCommand::INVALID_COMMAND &&
+                static_cast<ServerCommand>(command) < ServerCommand::END_BASE_COMMANDS);
+    }
+
 protected:
 
     /**
-     * @brief onClientStart will be called when the client starts. Must be overriden.
+     * @brief Base client start callback. Subclasses must override this function.
+     *
+     * @warning The overrided callback must be non-blocking and have minimal computation time. Blocking or
+     *          computationally intensive operations within internal callbacks can significantly affect the
+     *          server's performance and responsiveness. If complex tasks are required, it is recommended to
+     *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
+     *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
     virtual void onClientStart() = 0;
 
     /**
-     * @brief onClientStop will be called when the client stops. Must be overriden.
+     * @brief Base client stop callback. Subclasses must override this function.
+     *
+     * @warning The overrided callback must be non-blocking and have minimal computation time. Blocking or
+     *          computationally intensive operations within internal callbacks can significantly affect the
+     *          server's performance and responsiveness. If complex tasks are required, it is recommended to
+     *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
+     *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
     virtual void onClientStop() = 0;
 
     /**
-     * @brief onWaitingReply will be called when the client sends a command and it is waiting for reply. Must be overriden.
+     * @brief Base waiting reply callback. Subclasses must override this function.
+     *
+     * @warning The overrided callback must be non-blocking and have minimal computation time. Blocking or
+     *          computationally intensive operations within internal callbacks can significantly affect the
+     *          server's performance and responsiveness. If complex tasks are required, it is recommended to
+     *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
+     *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
     virtual void onWaitingReply() = 0;
 
     /**
-     * @brief onDeadServer will be called when the server response timeout is exceeded. Must be overriden.
+     * @brief Base dead server callback. Subclasses must override this function.
+     *
+     * @param The ServerInfo object representing the dead server.
+     *
+     * @warning The overridden callback must be non-blocking and have minimal computation time. Blocking or
+     *          computationally intensive operations within internal callbacks can significantly affect the
+     *          server's performance and responsiveness. If complex tasks are required, it is recommended to
+     *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
+     *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onDeadServer() = 0;
+    virtual void onDeadServer(const ServerInfo&) = 0;
 
     /**
-     * @brief onConnected will be called when the client is connected to a server. Must be overriden.
+     * @brief Base connected callback. Subclasses must override this function.
+     *
+     * @param The ServerInfo object representing the server where the client is connected.
+     *
+     * @warning The overrided callback must be non-blocking and have minimal computation time. Blocking or
+     *          computationally intensive operations within internal callbacks can significantly affect the
+     *          server's performance and responsiveness. If complex tasks are required, it is recommended to
+     *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
+     *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onConnected() = 0;
+    virtual void onConnected(const ServerInfo&) = 0;
 
     /**
-     * @brief onDisconnected will be called when the client is disconnected from a server. Must be overriden.
+     * @brief Base disconnected callback. Subclasses must override this function.
+     *
+     * @param The ServerInfo object representing the server where the client is connected.
+     *
+     * @warning The overrided callback must be non-blocking and have minimal computation time. Blocking or
+     *          computationally intensive operations within internal callbacks can significantly affect the
+     *          server's performance and responsiveness. If complex tasks are required, it is recommended to
+     *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
+     *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onDisconnected() = 0;
+    virtual void onDisconnected(const ServerInfo&) = 0;
 
     /**
      * @brief onInvalidMsgReceived will be called when an invalid message is received as reply. Must be overriden.
@@ -321,11 +364,10 @@ private:
     zmq::multipart_t prepareMessage(const RequestData &msg);
 
     // Internal client identification.
-    HostInfo client_info_;       ///< External client information for identification.
-    std::string client_name_;            ///< Internal client name. Will not be use as id.
+    ClientInfo client_info_;       ///< External client information for identification.
 
     // ZMQ sockets and endpoint.
-    std::string server_endpoint_;        ///< Server endpoint.
+    const std::string server_endpoint_;  ///< Server endpoint.
     zmq::socket_t *client_socket_;       ///< ZMQ client socket.
     zmq::socket_t *recv_close_socket_;   ///< ZMQ auxiliar socket for requesting to close.
     zmq::socket_t *req_close_socket_;    ///< ZMQ auxiliar socket for receiving the close request.
@@ -347,9 +389,10 @@ private:
     std::condition_variable auto_alive_cv_;
 
     // Usefull flags.
-    std::atomic_bool flag_client_working_;    ///< Flag for check the client working status.
-    std::atomic_bool flag_autoalive_enabled_; ///< Flag for enables or disables the automatic sending of alive messages.
-    std::atomic_bool flag_alive_callbacks_;   ///< Flag for enables or disables the callbacks for alive messages.
+    std::atomic_bool flag_client_working_;     ///< Flag for check the client working status.
+    std::atomic_bool flag_autoalive_enabled_;  ///< Flag for enables or disables the automatic sending of alive messages.
+    std::atomic_bool flag_alive_callbacks_;    ///< Flag for enables or disables the callbacks for alive messages.
+    std::atomic_bool flag_server_connected_;   ///< Flag for check if, in a certain momment, the client was alive.
 
     // Configurable parameters.
     std::atomic_uint server_alive_timeout_;    ///< Tiemout for consider a server dead (in msec).

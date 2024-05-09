@@ -70,7 +70,7 @@ using amelas::controller::AmelasLogLevel;
 // ---------------------------------------------------------------------------------------------------------------------
 
 // Helper log processor class.
-class LogProcessor
+class AmelasLogProcessor
 {
 
 public:
@@ -106,7 +106,7 @@ int main(int, char**)
     console_cfg.configureConsole(true, true, false);
 
     // Configure the log processor.
-    LogProcessor log_processor;
+    AmelasLogProcessor log_processor;
 
     // Instantiate and configure subscriber.
     AmelasLoggerSubscriber subscriber;
@@ -117,15 +117,21 @@ int main(int, char**)
 
     // Set the callbacks in the subscriber.
     subscriber.registerCallbackAndRequestProcFunc(AmelasLogLevel::AMELAS_INFO,
-                                                  &log_processor, &LogProcessor::processLogInfo);
+                                                  &log_processor,
+                                                  &AmelasLogProcessor::processLogInfo);
+
+
+
     subscriber.registerCallbackAndRequestProcFunc(AmelasLogLevel::AMELAS_WARNING,
-                                                  &log_processor, &LogProcessor::processLogWarning);
+                                                  &log_processor,
+                                                  &AmelasLogProcessor::processLogWarning);
 
-    // Commented to test error callback. If you send and error log, it should say that it is not implemented.
-    // subscriber.registerCallbackAndRequestProcFunc(AmelasLogLevel::AMELAS_ERROR,
-    //                                               &log_processor, &LogProcessor::processLogError);
+    subscriber.registerCallbackAndRequestProcFunc(AmelasLogLevel::AMELAS_ERROR,
+                                                  &log_processor,
+                                                  &AmelasLogProcessor::processLogError);
 
-    subscriber.setErrorCallback(&log_processor, &LogProcessor::processReceivedLogError);
+    subscriber.setErrorCallback(&log_processor,
+                                &AmelasLogProcessor::processReceivedLogError);
 
 
     // Start the subscriber.

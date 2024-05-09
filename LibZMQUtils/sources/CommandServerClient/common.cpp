@@ -30,7 +30,7 @@
 
 /** ********************************************************************************************************************
  * @file common.cpp
- * @brief This file contains common elements for the Command Server Client module.
+ * @brief This file contains the implementation common elements for the CommandServerClient module.
  * @author Degoras Project Team
  * @copyright EUPL License
 ***********************************************************************************************************************/
@@ -51,28 +51,48 @@ namespace zmqutils{
 namespace serverclient{
 // =====================================================================================================================
 
-HostInfo::HostInfo(const utils::UUID& uuid,
-                   const std::string& ip,
-                   const std::string& pid,
-                   const std::string& hostname,
-                   const std::string& name ):
+ClientInfo::ClientInfo(const utils::UUID& uuid, const std::string& ip, const std::string& pid,
+                       const std::string& hostname, const std::string& name , const std::string& info,
+                       const std::string& version):
     uuid(uuid),
     ip(ip),
     pid(pid),
     hostname(hostname),
-    name(name)
+    name(name),
+    info(info),
+    version(version)
 {}
 
-std::string HostInfo::toJsonString() const
+size_t ClientInfo::serialize(serializer::BinarySerializer &serializer) const
+{
+    return serializer.write(this->uuid, this->ip, this->pid, this->hostname, this->name, this->info, this->version);
+}
+
+void ClientInfo::deserialize(serializer::BinarySerializer &serializer)
+{
+    serializer.read(this->uuid, this->ip, this->pid, this->hostname, this->name, this->info, this->version);
+}
+
+size_t ClientInfo::serializedSize() const
+{
+    return Serializable::calcTotalSize(this->uuid, this->ip, this->pid, this->hostname,
+                                       this->name, this->info, this->version);
+}
+
+std::string ClientInfo::toJsonString() const
 {
     std::stringstream ss;
-    ss << "{\n"
-       << "\t\"uuid\": \"" << this->uuid.toRFC4122String() << "\",\n"
-       << "\t\"ip\": \"" << this->ip << "\",\n"
-       << "\t\"pid\": \"" << this->pid << "\",\n"
-       << "\t\"hostname\": " << this->hostname << ",\n"
-       << "\t\"name\": \"" << this->name << "\"\n"
+
+    ss << "{"
+       << "\"uuid\":\"" << this->uuid.toRFC4122String() << "\","
+       << "\"ip\":\"" << this->ip << "\","
+       << "\"pid\":\"" << this->pid << "\","
+       << "\"hostname\":\"" << this->hostname << "\","
+       << "\"name\":\"" << this->name << "\","
+       << "\"info\":\"" << this->info << "\","
+       << "\"version\":\"" << this->version << "\""
        << "}";
+
     return ss.str();
 }
 
@@ -86,8 +106,6 @@ RequestData::RequestData() :
     params(nullptr),
     params_size(0){}
 
-
-
 CommandRequest::CommandRequest():
     command(ServerCommand::INVALID_COMMAND),
     params(nullptr),
@@ -99,6 +117,42 @@ CommandReply::CommandReply():
     params_size(0),
     server_result(OperationResult::COMMAND_OK)
 {}
+
+ServerInfo::ServerInfo(unsigned int port, const std::string &endpoint, const std::string &hostname,
+                       const std::string &name, const std::string &info, const std::string &version,
+                       const std::vector<std::string> &ips) :
+    port(port),
+    endpoint(endpoint),
+    hostname(hostname),
+    name(name),
+    info(info),
+    version(version),
+    ips(ips)
+{}
+
+std::string ServerInfo::toJsonString() const
+{
+    std::stringstream ss;
+
+    ss << "{"
+       << "\"port\":" << this->port << ","
+       << "\"endpoint\":\"" << this->endpoint << "\","
+       << "\"hostname\":\"" << this->hostname << "\","
+       << "\"name\":\"" << this->name << "\","
+       << "\"info\":\"" << this->info << "\","
+       << "\"version\":\"" << this->version << "\","
+       << "\"ips\":[";
+
+    // Add each IP address in the "ips" vector to the JSON array
+    for (size_t i = 0; i < this->ips.size(); ++i)
+    {
+        ss << "\"" << this->ips[i] << "\"";
+        if (i != this->ips.size() - 1)
+            ss << ",";
+    }
+    ss << "]" << "}";
+    return ss.str();
+}
 
 }} // END NAMESPACES.
 // =====================================================================================================================

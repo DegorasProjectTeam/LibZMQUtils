@@ -50,8 +50,12 @@
 namespace zmqutils{
 namespace serverclient{
 
-ClbkCommandServerBase::ClbkCommandServerBase(unsigned int port, const std::string &local_addr) :
-    CommandServerBase(port, local_addr),
+ClbkCommandServerBase::ClbkCommandServerBase(unsigned int port,
+                                             const std::string &local_addr,
+                                             const std::string &server_name,
+                                             const std::string &server_version,
+                                             const std::string &server_info) :
+    CommandServerBase(port, local_addr, server_name, server_version, server_info),
     CallbackHandler()
 {}
 

@@ -29,7 +29,7 @@
 # **********************************************************************************************************************
 
 # **********************************************************************************************************************
-# Updated 24/04/2024
+# Updated 09/05/2024
 # **********************************************************************************************************************
 
 # **********************************************************************************************************************
@@ -57,7 +57,7 @@ macro_cmakemodules_init("24.04.22")
 
 # Base project configuration.
 set(LIB_NAME LibZMQUtils)
-set(LIB_VER 1.7.4)
+set(LIB_VER 1.7.6)
 set(LIB_BUILD_MODE Debug)
 set(LIB_LANGUAGES CXX C)
 
@@ -69,7 +69,7 @@ else()
 endif()
 
 # Macros global configuration.
-macro_global_set_show_externals(TRUE)
+macro_global_set_show_externals(FALSE)
 macro_global_set_force_install_dir(TRUE)
 macro_global_set_install_runtime_deps(TRUE)
 macro_global_set_install_runtime_artifacts(TRUE)

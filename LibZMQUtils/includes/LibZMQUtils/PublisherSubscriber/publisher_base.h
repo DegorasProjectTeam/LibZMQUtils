@@ -102,10 +102,10 @@ public:
     const std::string& getEndpoint() const;
 
     /**
-     * @brief Get the name of this publisher.
-     * @return the name of the publisher.
+     * @brief Get all the publisher information.
+     * @return A const reference to the PublisherInfo struct that contains all the server information.
      */
-    const std::string& getName() const;
+    const PublisherInfo& getPublisherInfo() const;
 
     /**
      * @brief Get the UUID of this publisher.

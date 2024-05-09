@@ -72,24 +72,23 @@ using amelas::controller::AltAzPos;
 using amelas::controller::AmelasError;
 // ---------------------------------------------------------------------------------------------------------------------
 
-class AmelasClientParser
+class AmelasClientCmdParser
 {
 public:
 
-    AmelasClientParser(AmelasControllerClient &client) : client_(client)
+    AmelasClientCmdParser(AmelasControllerClient &client) : client_(client)
     {}
 
     zmqutils::serverclient::OperationResult parseCommand(const std::string &command)
     {
+        CommandType command_id;
         auto tokens = zmqutils::internal_helpers::strings::split<std::vector<std::string>>(command, " ", false);
 
         if (tokens.empty())
         {
-            std::cerr << "Not a valid command." << std::endl;
+            std::cout << "Not a valid command." << std::endl;
             return OperationResult::UNKNOWN_COMMAND;
         }
-
-        CommandType command_id;
 
         try
         {
@@ -97,13 +96,13 @@ public:
         }
         catch (...)
         {
-            std::cerr << "Not a valid command." << std::endl;
+            std::cout << "Not a valid command." << std::endl;
             return OperationResult::UNKNOWN_COMMAND;
         }
 
         if (!this->client_.validateCommand(command_id))
         {
-            std::cerr << "Not implemented command." << std::endl;
+            std::cout << "Not implemented command." << std::endl;
             return OperationResult::NOT_IMPLEMENTED;
         }
 
@@ -170,6 +169,13 @@ public:
             res = this->client_.doOpenSearchTelescope(error);
             this->processDoOpenSearchTelescope(res, error);
         }
+        else if (command_id == static_cast<CommandType>(AmelasServerCommand::REQ_DO_EXAMPLE_NOT_IMP))
+        {
+            std::cout << "Sending REQ_DO_EXAMPLE_NOT_IMP command." << std::endl;
+            AmelasError error = AmelasError::INVALID_ERROR;
+            res = this->client_.doExampleNotImp(error);
+            this->processDoExampleNotImp(res, error);
+        }
         else
         {
             res = OperationResult::NOT_IMPLEMENTED;
@@ -201,7 +207,8 @@ private:
 
     }
 
-    void processGetHomePosition(zmqutils::serverclient::OperationResult res, const amelas::controller::AltAzPos &pos,
+    void processGetHomePosition(zmqutils::serverclient::OperationResult res,
+                                const amelas::controller::AltAzPos &pos,
                                 amelas::controller::AmelasError error)
     {
         if (OperationResult::COMMAND_OK == res)
@@ -220,7 +227,8 @@ private:
         }
     }
 
-    void processSetHomePosition(zmqutils::serverclient::OperationResult res, amelas::controller::AmelasError error)
+    void processSetHomePosition(zmqutils::serverclient::OperationResult res,
+                                amelas::controller::AmelasError error)
     {
         if (OperationResult::COMMAND_OK == res)
         {
@@ -237,7 +245,8 @@ private:
         }
     }
 
-    void processDoOpenSearchTelescope(zmqutils::serverclient::OperationResult res, amelas::controller::AmelasError error)
+    void processDoOpenSearchTelescope(zmqutils::serverclient::OperationResult res,
+                                      amelas::controller::AmelasError error)
     {
         if (OperationResult::COMMAND_OK == res)
         {
@@ -254,7 +263,25 @@ private:
         }
     }
 
-    AmelasControllerClient &client_;
+    void processDoExampleNotImp(zmqutils::serverclient::OperationResult res,
+                                amelas::controller::AmelasError error)
+    {
+        if (OperationResult::COMMAND_OK == res)
+        {
+            if (AmelasError::SUCCESS == error)
+                std::cout << "REQ_DO_EXAMPLE_NOT_IMP command executed succesfully." << std::endl;
+            else
+                std::cerr << "REQ_DO_EXAMPLE_NOT_IMP command failed. Controller Error Code is: "
+                          << static_cast<int>(error) << std::endl;
+        }
+        else
+        {
+            std::cerr << "REQ_DO_EXAMPLE_NOT_IMP command failed. Operation error code is: "
+                      << static_cast<int>(res) << std::endl;
+        }
+    }
+
+    AmelasControllerClient& client_;
 };
 
 
@@ -273,10 +300,10 @@ int main(int, char**)
     std::string endpoint = "tcp://" + ip + ":" + std::to_string(port);
     
     // Instanciate the client.
-    AmelasControllerClient client(endpoint, "AMELAS EXAMPLE CLIENT");
+    AmelasControllerClient client(endpoint, "AMELAS EXAMPLE CLIENT", "1.7.6", "This is the AMELAS client.");
 
     // Prepare the auxiliar testing parser.
-    AmelasClientParser client_parser(client);
+    AmelasClientCmdParser client_parser(client);
 
     // Configure the client.
     client.setAliveCallbacksEnabled(false);
@@ -314,9 +341,10 @@ int main(int, char**)
         std::cout<<"- REQ_ALIVE:            2"<<std::endl;
         std::cout<<"- REQ_GET_SERVER_TIME:  3"<<std::endl;
         std::cout<<"-- Specific Commands --"<<std::endl;
-        std::cout<<"- REQ_SET_HOME_POSITION:        33 az el"<<std::endl;
-        std::cout<<"- REQ_GET_HOME_POSITION:        34"<<std::endl;
-        std::cout<<"- REQ_DO_OPEN_SEARCH_TELESCOPE: 35"<<std::endl;
+        std::cout<<"- REQ_SET_HOME_POSITION:        51 az el"<<std::endl;
+        std::cout<<"- REQ_GET_HOME_POSITION:        52"<<std::endl;
+        std::cout<<"- REQ_DO_OPEN_SEARCH_TELESCOPE: 53"<<std::endl;
+        std::cout<<"- REQ_DO_EXAMPLE_NOT_IMP:       54"<<std::endl;
         std::cout<<"-- Other --"<<std::endl;
         std::cout<<"- Client exit:             exit"<<std::endl;
         std::cout<<"- Enable auto-alive:       auto_alive_en"<<std::endl;
@@ -377,6 +405,7 @@ int main(int, char**)
     // Restore the console.
     console_cfg.restoreConsole();
 
+    // Return.
 	return 0;
 }
 

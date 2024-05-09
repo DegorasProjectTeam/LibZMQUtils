@@ -61,8 +61,9 @@ namespace controller{
 enum class AmelasLogLevel : std::uint32_t
 {
     AMELAS_INFO = 0,
-    AMELAS_WARNING = 1,
-    AMELAS_ERROR = 2
+    AMELAS_DEBUG = 1,
+    AMELAS_WARNING = 2,
+    AMELAS_ERROR = 3
 };
 
 struct AmelasLog : public zmqutils::serializer::Serializable

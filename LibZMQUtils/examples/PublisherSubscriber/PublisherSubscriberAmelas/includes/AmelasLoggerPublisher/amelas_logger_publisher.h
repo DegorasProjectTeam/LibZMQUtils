@@ -63,9 +63,10 @@ namespace amelas{
 namespace communication{
 // =====================================================================================================================
 
-static constexpr std::array<const char*, 3>  AmelasLoggerTopic
+static constexpr std::array<const char*, 4>  AmelasLoggerTopic
 {
     "LOG_INFO",
+    "LOG_DEBUG",
     "LOG_WARNING",
     "LOG_ERROR"
 };
@@ -74,11 +75,15 @@ class AmelasLoggerPublisher : public zmqutils::pubsub::PublisherBase
 {
 public:
 
-    AmelasLoggerPublisher(std::string endpoint, std::string name = "");
+    // Use the constructor of PublisherBase becaouse we don't need to do anything more.
+    using zmqutils::pubsub::PublisherBase::PublisherBase;
 
+    // Function to allow easily send logs.
     zmqutils::pubsub::PublisherResult sendLog(const controller::AmelasLog& log);
 
 private:
+
+    using zmqutils::pubsub::PublisherBase::sendMsg;
 
     virtual void onPublisherStart() override final;
 

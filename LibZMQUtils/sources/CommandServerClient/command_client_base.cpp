@@ -64,9 +64,10 @@ namespace serverclient {
 // =====================================================================================================================
 
 CommandClientBase::CommandClientBase(const std::string& server_endpoint,
-                                     const std::string& client_name,
-                                     const std::string& interf_name) :
-    client_name_(client_name),
+                                     const std::string& client_name ,
+                                     const std::string& client_version,
+                                     const std::string& client_info,
+                                     const std::string& net_interface) :
     server_endpoint_(server_endpoint),
     client_socket_(nullptr),
     recv_close_socket_(nullptr),
@@ -75,6 +76,7 @@ CommandClientBase::CommandClientBase(const std::string& server_endpoint,
     flag_client_working_(false),
     flag_autoalive_enabled_(false),
     flag_alive_callbacks_(false),
+    flag_server_connected_(false),
     server_alive_timeout_(kDefaultServerAliveTimeoutMsec),
     send_alive_period_(kDefaultClientSendAlivePeriodMsec)
 {    
@@ -91,10 +93,13 @@ CommandClientBase::CommandClientBase(const std::string& server_endpoint,
 
     // Check if we have active interfaces.
     if(interfcs.empty())
-        throw std::invalid_argument("CommandClientBase: No active network interfaces found.");
+    {
+        std::string module = "[LibZMQUtils,CommandServerClient,CommandClientBase] ";
+        throw std::invalid_argument(module + "No active network interfaces found.");
+    }
 
     // If no interface name provided, use the first active one.
-    if (interf_name.empty())
+    if (net_interface.empty())
     {
         // Store the interface.
         sel_interf = interfcs.front();
@@ -103,12 +108,15 @@ CommandClientBase::CommandClientBase(const std::string& server_endpoint,
     {
         // Search the interface we need.
         auto it = std::find_if(interfcs.begin(), interfcs.end(),
-                               [&interf_name](const internal_helpers::network::NetworkAdapterInfo& info)
-                               {return info.name == interf_name;});
+                               [&net_interface](const internal_helpers::network::NetworkAdapterInfo& info)
+                               {return info.name == net_interface;});
 
         // Check if the interface exists.
         if (it == interfcs.end())
-            throw std::invalid_argument("CommandClientBase: Network interface not found <" + interf_name + ">.");
+        {
+            std::string module = "[LibZMQUtils,CommandServerClient,CommandClientBase] ";
+            throw std::invalid_argument(module + "Network interface not found <" + net_interface + ">.");
+        }
 
         // Store the interface.
         sel_interf = *it;
@@ -120,7 +128,7 @@ CommandClientBase::CommandClientBase(const std::string& server_endpoint,
     pid = std::to_string(internal_helpers::network::getCurrentPID());
 
     // Store all the client info.
-    this->client_info_ = HostInfo(uuid, ip, pid, hostname, this->client_name_);
+    this->client_info_ = ClientInfo(uuid, ip, pid, hostname, client_name, client_version, client_info);
 }
 
 CommandClientBase::~CommandClientBase()
@@ -130,7 +138,7 @@ CommandClientBase::~CommandClientBase()
     this->internalStopClient();
 }
 
-const HostInfo &CommandClientBase::getClientInfo() const
+const ClientInfo &CommandClientBase::getClientInfo() const
 {
     return this->client_info_;
 }
@@ -249,12 +257,6 @@ const std::string &CommandClientBase::getServerEndpoint() const
     return this->server_endpoint_;
 }
 
-const std::string &CommandClientBase::getClientName() const
-{
-    // NOTE: Mutex is not neccesary here.
-    return this->client_name_;
-}
-
 bool CommandClientBase::isWorking() const{return this->flag_client_working_;}
 
 void CommandClientBase::startAutoAlive()
@@ -358,9 +360,14 @@ OperationResult CommandClientBase::sendCommand(const RequestData& request, Comma
     // Check if was a timeout.
     if (result == OperationResult::TIMEOUT_REACHED)
     {
-        // Call to the internall callback and reset the socket.
+        // Call to the internall callback.
+        // TODO ADD SERVER
+        if(this->flag_server_connected_)
+        {
+            this->onDeadServer({});
+            this->flag_server_connected_ = false;
+        }
         // NOTE: The client reset is neccesary for flush the ZMQ internal
-        this->onDeadServer();
         this->internalResetClient();
     }
 
@@ -376,11 +383,17 @@ OperationResult CommandClientBase::sendCommand(const RequestData& request, Comma
         this->onInvalidMsgReceived(reply);
     }
 
+    // Update the result.
+    result = reply.server_result;
+
+    // Update the last seen momment.
+    //this->mtx_.lock();
+    this->client_info_.last_seen = std::chrono::steady_clock::now();
+    //this->mtx_.unlock();
+
     // Return the result.
     return result;
 }
-
-
 
 OperationResult CommandClientBase::recvFromSocket(CommandReply& reply,
                                                zmq::socket_t* recv_socket,
@@ -453,10 +466,6 @@ OperationResult CommandClientBase::recvFromSocket(CommandReply& reply,
                     serializer::BinarySerializer serializer(msg_params.data(), msg_params.size());
                     reply.params_size = serializer.moveUnique(reply.params);
                 }
-
-                // TODO Actualizar aqui el client result según el server result?
-                // TODO REVISAR PORQUE PUEDE SER NECESARIO.
-
 
                 // All ok.
                 return OperationResult::COMMAND_OK;
@@ -656,12 +665,14 @@ void CommandClientBase::aliveWorker()
         {
             // Call to the internall callback and reset the socket.
             // NOTE: The client reset is neccesary for flush the ZMQ internal
-            this->onDeadServer();
+            // TODO ADD SERVER DATA
+            this->onDeadServer({});
             this->flag_autoalive_enabled_ = false;
             this->internalResetClient();
         }
         else if(result == OperationResult::COMMAND_OK)
         {
+            // Call to the internal callback.
             if(this->flag_alive_callbacks_)
                 this->onReplyReceived(reply);
         }
@@ -696,7 +707,7 @@ OperationResult CommandClientBase::doConnect(bool auto_alive)
     serializer::BinarySerializer serializer;
 
     // Serialize the parameters data.
-    serializer.write(this->client_info_.ip, this->client_info_.pid, this->client_info_.hostname, this->client_name_);
+    serializer.write(this->client_info_);
 
     // Update the request.
     request.command = ServerCommand::REQ_CONNECT;
@@ -705,8 +716,17 @@ OperationResult CommandClientBase::doConnect(bool auto_alive)
     // Send the command.
     result = this->sendCommand(request, reply);
 
+
     if(result == OperationResult::COMMAND_OK && reply.server_result == OperationResult::COMMAND_OK && auto_alive)
         this->startAutoAlive();
+
+    // Call to the callback and update flag..
+    // TODO ADD SERVER
+    if(result == OperationResult::COMMAND_OK)
+    {
+        this->flag_server_connected_ = true;
+        this->onConnected({});
+    }
 
     // Return the result.
     return result;
@@ -728,7 +748,18 @@ OperationResult CommandClientBase::doDisconnect()
     request.command = ServerCommand::REQ_DISCONNECT;
 
     // Send the command.
-    return this->sendCommand(request, reply);
+    OperationResult res = this->sendCommand(request, reply);
+
+    // Call the callback and update flag.
+    if(res == OperationResult::COMMAND_OK)
+    {
+        // TODO ADD SERVER DATA
+        this->flag_server_connected_ = false;
+        this->onDisconnected({});
+    }
+
+    // Return the result
+    return res;
 }
 
 OperationResult CommandClientBase::doAlive()

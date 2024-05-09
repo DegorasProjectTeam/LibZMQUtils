@@ -171,10 +171,10 @@ const std::string &PublisherBase::getEndpoint() const
     return this->endpoint_;
 }
 
-const std::string &PublisherBase::getName() const
+const PublisherInfo& PublisherBase::getPublisherInfo() const
 {
     // NOTE: Mutex is not neccesary here.
-    return this->pub_info_.name;
+    return this->pub_info_;
 }
 
 const utils::UUID &PublisherBase::getUUID() const

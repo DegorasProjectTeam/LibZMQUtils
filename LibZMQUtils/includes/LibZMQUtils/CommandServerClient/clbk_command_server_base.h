@@ -71,7 +71,11 @@ public:
     /**
      * @brief ClbkCommandServerBase default constructor.
      */
-    LIBZMQUTILS_EXPORT ClbkCommandServerBase(unsigned port, const std::string& local_addr = "*");
+    LIBZMQUTILS_EXPORT ClbkCommandServerBase(unsigned port,
+                                             const std::string& local_addr = "*",
+                                             const std::string& server_name = "",
+                                             const std::string& server_version = "",
+                                             const std::string& server_info = "");
 
     /**
      * @brief Template function for registering a callback. This callback will be registered for a specific command.

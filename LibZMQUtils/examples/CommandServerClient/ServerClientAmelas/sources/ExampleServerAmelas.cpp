@@ -84,7 +84,6 @@ int main(int, char**)
     using amelas::controller::DoOpenSearchTelescopeFunctionInArgs;
     using amelas::controller::DoOpenSearchTelescopeFunctionOutArgs;
 
-
     // Configure the console.
     zmqutils::utils::ConsoleConfig& console_cfg = zmqutils::utils::ConsoleConfig::getInstance();
     console_cfg.configureConsole(true, true, false);
@@ -100,7 +99,7 @@ int main(int, char**)
     AmelasController amelas_controller;
 
     // Instantiate the server.
-    AmelasControllerServer amelas_server(port);
+    AmelasControllerServer amelas_server(port, "*", "AMELAS EXAMPLE SERVER", "1.7.6", "This is the AMELAS server.");
 
     // Configure the server.
     amelas_server.setClientStatusCheck(client_status_check);

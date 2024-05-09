@@ -52,34 +52,33 @@ namespace amelas{
 namespace communication{
 // =====================================================================================================================
 
-// Specific subclass commands (0 to 30 are reserved for the base server).
+// Specific subclass commands (0 to 50 are reserved for the base server).
 // WARNING: In our approach, the server commands must be always in order.
 enum class AmelasServerCommand : zmqutils::serverclient::CommandType
 {
-    REQ_SET_HOME_POSITION        = 33,
-    REQ_GET_HOME_POSITION        = 34,
-    REQ_DO_OPEN_SEARCH_TELESCOPE = 35,
-    END_IMPL_COMMANDS            = 36,
-    END_AMELAS_COMMANDS          = 50
+    REQ_SET_HOME_POSITION        = 51,
+    REQ_GET_HOME_POSITION        = 52,
+    REQ_DO_OPEN_SEARCH_TELESCOPE = 53,
+    REQ_DO_EXAMPLE_NOT_IMP       = 54,
+    END_AMELAS_COMMANDS          = 55
 };
 
-// Specific subclass errors (0 to 30 are reserved for the base server).
+// Specific subclass errors (0 to 50 are reserved for the base server).
 enum class AmelasOperationResult : zmqutils::serverclient::ResultType
 {
-    EMPTY_CALLBACK = 31,
-    INVALID_CALLBACK = 32
+    EMPTY_CALLBACK = 51,
+    INVALID_CALLBACK = 52
 };
 
 // Extend the base command strings with those of the subclass.
 static constexpr auto AmelasServerCommandStr = zmqutils::utils::joinArraysConstexpr(
     zmqutils::serverclient::ServerCommandStr,
-    std::array<const char*, 6>
+    std::array<const char*, 5>
     {
-        "FUTURE_EXAMPLE",
-        "FUTURE_EXAMPLE",
         "REQ_SET_HOME_POSITION",
         "REQ_GET_HOME_POSITION",
         "REQ_DO_OPEN_SEARCH_TELESCOPE",
+        "REQ_DO_EXAMPLE_NOT_IMP",
         "END_DRGG_COMMANDS"
     });
 

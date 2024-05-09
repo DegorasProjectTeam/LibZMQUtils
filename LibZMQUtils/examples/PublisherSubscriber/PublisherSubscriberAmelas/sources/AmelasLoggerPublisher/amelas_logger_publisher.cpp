@@ -48,39 +48,21 @@ namespace amelas{
 namespace communication{
 // =====================================================================================================================
 
-// ---------------------------------------------------------------------------------------------------------------------
-using namespace controller;
-// ---------------------------------------------------------------------------------------------------------------------
-
-AmelasLoggerPublisher::AmelasLoggerPublisher(std::string endpoint,
-                                 std::string name) :
-    PublisherBase(std::move(endpoint), std::move(name))
-{}
-
-zmqutils::pubsub::PublisherResult AmelasLoggerPublisher::sendLog(const AmelasLog &log)
+zmqutils::pubsub::PublisherResult AmelasLoggerPublisher::sendLog(const controller::AmelasLog &log)
 {
-    // Containers.
-    zmqutils::pubsub::PubSubData data;
-    zmqutils::serializer::BinarySerializer serializer;
-
-    // Serialize the log and add to the data.
-    log.serialize(serializer);
-    data.topic = AmelasLoggerTopic[static_cast<std::size_t>(log.level)];
-    data.data_size = serializer.moveUnique(data.data);
-
-    // Send the log data.
-    return this->sendMsg(data);
+    std::string log_topic = AmelasLoggerTopic[static_cast<size_t>(log.level)];
+    return this->sendMsg(log_topic, log);
 }
 
 void AmelasLoggerPublisher::onPublisherStart()
 {
     // Log.
     std::cout << std::string(100, '-') << std::endl;
-    std::cout << "<"<<this->getName() << ">" <<std::endl;
+    std::cout << "<"<<this->getPublisherInfo().name << ">" <<std::endl;
     std::cout << "-> ON PUBLISHER START: " << std::endl;
     std::cout << "Time: " << zmqutils::utils::currentISO8601Date()<<std::endl;
     std::cout << "Endpoint: " << this->getEndpoint() << std::endl;
-    std::cout << "Name: " << this->getName() << std::endl;
+    std::cout << "Name: " << this->getPublisherInfo().name << std::endl;
     std::cout << "UUID: " << this->getUUID().toRFC4122String() << std::endl;
     std::cout << std::string(100, '-') << std::endl;
 }
@@ -89,7 +71,7 @@ void AmelasLoggerPublisher::onPublisherStop()
 {
     // Log.
     std::cout << std::string(100, '-') << std::endl;
-    std::cout<<"<"<<this->getName()<<">"<<std::endl;
+    std::cout << "<"<<this->getPublisherInfo().name << ">" <<std::endl;
     std::cout<<"-> ON PUBLISHER STOP: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
     std::cout << std::string(100, '-') << std::endl;
@@ -100,7 +82,7 @@ void AmelasLoggerPublisher::onSendingMsg(const zmqutils::pubsub::PubSubData &req
     zmqutils::serializer::BinarySerializer serializer(req.data.get(), req.data_size);
     // Log.
     std::cout << std::string(100, '-') << std::endl;
-    std::cout << "<"<<this->getName() << ">" << std::endl;
+    std::cout << "<"<<this->getPublisherInfo().name << ">" <<std::endl;
     std::cout << "-> ON PUBLISHER SEND COMMAND: " << std::endl;
     std::cout << "Time: " << zmqutils::utils::currentISO8601Date() << std::endl;
     std::cout << "Topic: " << req.topic << std::endl;
@@ -113,7 +95,7 @@ void AmelasLoggerPublisher::onPublisherError(const zmq::error_t& error, const st
 {
     // Log.
     std::cout << std::string(100, '-') << std::endl;
-    std::cout<<"<"<<this->getName()<<">"<<std::endl;
+    std::cout << "<"<<this->getPublisherInfo().name << ">" <<std::endl;
     std::cout<<"-> ON PUBLISHER ERROR: "<<std::endl;
     std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
     std::cout<<"Code: "<<error.num()<<std::endl;

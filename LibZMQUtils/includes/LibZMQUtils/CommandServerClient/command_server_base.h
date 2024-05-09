@@ -241,34 +241,29 @@ public:
      * connections. By default, the server will accept connections on all available local addresses.
      *
      * @param port The port number on which the server will listen for incoming requests.
-     *
-     * @param local_addr Optional parameter to specify the local addresses on which the server will accept
-     *                   connections. By default, it is set to "*", which means the server will accept
-     *                   connections on all available local addresses.
-     *
+     * @param local_addr Optional parameter to specify the local addresses on which the server will accept connections.
+     *        By default, it is set to "*", which means the server will accept connections on all available local
+     *        addresses.
      * @param server_name Optional parameter to specify the server name. By default is empty.
+     * @param server_version Optional parameter to specify the server version (like "1.1.1"). By default is empty.
+     * @param server_info Optional parameter to specify the server information. By default is empty.
      *
      * @note The server created with this constructor will be a base server and it doesn't have the complete
-     *       implementation of specific request-response logic. It is intended to be subclassed to provide
-     *       custom request handling. You can implement the `onCustomCommandReceived` function as an internal
-     *       callback in the subclass to handle incoming requests and provide the desired response logic.
+     * implementation of specific request-response logic. It is intended to be subclassed to provide custom request
+     * handling. You can implement the `onCustomCommandReceived` function as an internal callback in the subclass to
+     * handle incoming requests and provide the desired response logic.
      *
-     * @warning When specifying the `local_addr`, ensure it is a valid IP address present on the system.
-     *          Incorrect or unavailable addresses may result in connection failures.
+     * @warning When specifying the `local_addr`, ensure it is a valid IP address present on the system. Incorrect or
+     * unavailable addresses may result in connection failures.
      */
-    CommandServerBase(unsigned port, const std::string& local_addr = "*", const std::string& server_name = "");
+    CommandServerBase(unsigned port, const std::string& local_addr = "*", const std::string& server_name = "",
+                      const std::string& server_version = "", const std::string& server_info = "");
 
     /**
-     * @brief Get the port number used by the server for incoming connections.
-     * @return A const reference to the port number of the server.
+     * @brief Get all the server information.
+     * @return A const reference to the ServerInfo struct that contains all the server information.
      */
-    const unsigned& getServerPort() const;
-
-    /**
-     * @brief Get the server name.
-     * @return A const reference to the name of the server.
-     */
-    const std::string& getServerName() const;
+    const ServerInfo& getServerInfo() const;
 
     /**
      * @brief Get the network adapter addresses used by the server.
@@ -278,17 +273,29 @@ public:
      *
      * @return A const reference to a vector of NetworkAdapterInfo objects.
      */
-    const std::vector<internal_helpers::network::NetworkAdapterInfo> &getServerAddresses() const;
+    const std::vector<internal_helpers::network::NetworkAdapterInfo>& getServerAddresses() const;
 
     /**
-     * @brief Get the endpoint of the server.
+     * @brief Retrieve a concatenated string of server IP addresses.
      *
-     * This function returns a const reference to a string representing the server's
-     * endpoint. The endpoint typically includes the IP address and port number.
+     * This function generates a string that contains all server IP addresses from
+     * the listen interfaces, separated by the specified separator. The list of IPs
+     * is obtained from the server addresses provided by the `getServerAddresses()` function.
      *
-     * @return A const reference to the server's endpoint.
+     * @param separator A string used to separate each IP address in the resulting concatenated string.
+     * @return std::string A string containing all server IPs, separated by the specified separator.
      */
-    const std::string& getServerEndpoint() const;
+    std::string getServerIpsStr(const std::string& separator) const;
+
+    /**
+     * @brief Retrieve a list of server IP addresses.
+     *
+     * This function gathers all server IP addresses from the listening interfaces
+     * returned by the `getServerAddresses` method and stores them in a `std::vector`.
+     *
+     * @return std::vector<std::string> A vector containing all server IP addresses as strings.
+     */
+    std::vector<std::string> getServerIps() const;
 
     /**
      * @brief Get the future associated with the server's worker thread.
@@ -310,7 +317,7 @@ public:
      *
      * @return A const reference to the map of connected clients.
      */
-    const std::map<utils::UUID, HostInfo>& getConnectedClients() const;
+    const std::map<utils::UUID, ClientInfo>& getConnectedClients() const;
 
     /**
      * @brief Check if the server is currently working.
@@ -537,7 +544,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onConnected(const HostInfo&) = 0;
+    virtual void onConnected(const ClientInfo&) = 0;
 
     /**
      * @brief Base disconnected callback. Subclasses must override this function.
@@ -550,7 +557,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onDisconnected(const HostInfo&) = 0;
+    virtual void onDisconnected(const ClientInfo&) = 0;
 
     /**
      * @brief Base dead client callback. Subclasses must override this function.
@@ -563,7 +570,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onDeadClient(const HostInfo&) = 0;
+    virtual void onDeadClient(const ClientInfo&) = 0;
 
     /**
      * @brief Base invalid message received callback. Subclasses must override this function.
@@ -651,8 +658,14 @@ protected:
 
 private:
 
+    // Helper aliases.
+    using NetworkAdapterInfoV = std::vector<internal_helpers::network::NetworkAdapterInfo>;
+
     // Helper for check if the base command is valid.
     static bool validateCommand(int raw_command);
+
+    // Intermal helper to get the server addresses.
+    const NetworkAdapterInfoV &internalGetServerAddresses() const;
 
     // Internal helper for stop the server.
     void internalStopServer();
@@ -698,12 +711,8 @@ private:
     zmq::socket_t* server_socket_;    ///< ZMQ server socket.
 
     // Endpoint data and server info.
-    std::vector<internal_helpers::network::NetworkAdapterInfo> server_adapters_;   ///< Listen server adapters.
-    unsigned server_port_;                              ///< Server port.
-    std::string server_endpoint_;                       ///< Final server endpoint.
-    std::string server_name_;                           ///< Server name. Will not be use as id.
-    std::string server_info_;                           ///< Detailed server information.
-    std::string server_vers_;                           ///< Server version.
+    NetworkAdapterInfoV server_adapters_;   ///< Listen server adapters.
+    ServerInfo server_info_;                ///< Server information.
 
     // Mutex.
     mutable std::mutex mtx_;        ///< Safety mutex.
@@ -714,7 +723,7 @@ private:
     std::condition_variable cv_server_depl_;  ///< Condition variable to notify the deployment status of the server.
 
     // Clients container.
-    std::map<utils::UUID, HostInfo> connected_clients_;   ///< Dictionary with the connected clients.
+    std::map<utils::UUID, ClientInfo> connected_clients_;   ///< Dictionary with the connected clients.
 
     // Process functions container.
     ProcessFunctionsMap process_fnc_map_;        ///< Container with the internal factory process function.
@@ -728,7 +737,6 @@ private:
     std::atomic_uint client_alive_timeout_;     ///< Tiemout for consider a client dead (in msec).
     std::atomic_uint server_reconn_attempts_;   ///< Server reconnection number of attempts.
     std::atomic_uint max_connected_clients_;    ///< Maximum number of connected clients.
-
 };
 
 }} // END NAMESPACES.

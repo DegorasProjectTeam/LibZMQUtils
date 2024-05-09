@@ -70,11 +70,10 @@ namespace serverclient{
 
 CommandServerBase::CommandServerBase(unsigned port,
                                      const std::string& local_addr,
-                                     const std::string &server_name) :
+                                     const std::string &server_name,
+                                     const std::string& server_version,
+                                     const std::string& server_info) :
     server_socket_(nullptr),
-    server_port_(port),
-    server_endpoint_("tcp://" + local_addr + ":" + std::to_string(port)),
-    server_name_(server_name),
     flag_server_working_(false),
     flag_check_clients_alive_(true),
     flag_alive_callbacks_(true),
@@ -84,6 +83,7 @@ CommandServerBase::CommandServerBase(unsigned port,
 {
     // Get the adapters.
     std::vector<NetworkAdapterInfo> interfcs = internal_helpers::network::getHostIPsWithInterfaces();
+
     // Store the adapters.
     if(local_addr == "*")
         this->server_adapters_ = interfcs;
@@ -98,16 +98,30 @@ CommandServerBase::CommandServerBase(unsigned port,
 
     // Check for valid configuration.
     if(this->server_adapters_.empty())
-        throw std::invalid_argument("CommandServerBase: No interfaces found for address <" + local_addr + ">.");
+    {
+        std::string module = "[LibZMQUtils,CommandServerClient,CommandServerBase] ";
+        throw std::invalid_argument(module + "No interfaces found for address <" + local_addr + ">.");
+    }
+
+    // Update the server information.
+    this->server_info_.name = server_name;
+    this->server_info_.port = port;
+    this->server_info_.version = server_version;
+    this->server_info_.info = server_info;
+    this->server_info_.endpoint = "tcp://" + local_addr + ":" + std::to_string(port);
+    this->server_info_.ips = this->getServerIps();
+    this->server_info_.hostname = internal_helpers::network::getHostname();
 }
 
 const std::future<void> &CommandServerBase::getServerWorkerFuture() const
 {
+    std::unique_lock<std::mutex> lock(this->mtx_);
     return this->fut_server_worker_;
 }
 
-const std::map<UUID, HostInfo> &CommandServerBase::getConnectedClients() const
+const std::map<UUID, ClientInfo> &CommandServerBase::getConnectedClients() const
 {
+    std::unique_lock<std::mutex> lock(this->mtx_);
     return this->connected_clients_;
 }
 
@@ -149,18 +163,45 @@ void CommandServerBase::setClientStatusCheck(bool enable)
     }
 }
 
-void CommandServerBase::setAliveCallbacksEnabled(bool flag){this->flag_alive_callbacks_ = flag;}
+void CommandServerBase::setAliveCallbacksEnabled(bool flag)
+{
+    this->flag_alive_callbacks_ = flag;
+}
 
-const unsigned& CommandServerBase::getServerPort() const {return this->server_port_;}
-
-const std::string &CommandServerBase::getServerName() const{return this->server_name_;}
+const ServerInfo &CommandServerBase::getServerInfo() const
+{
+    std::unique_lock<std::mutex> lock(this->mtx_);
+    return this->server_info_;
+}
 
 const std::vector<NetworkAdapterInfo>& CommandServerBase::getServerAddresses() const
 {
+    std::unique_lock<std::mutex> lock(this->mtx_);
     return this->server_adapters_;
 }
 
-const std::string& CommandServerBase::getServerEndpoint() const {return this->server_endpoint_;}
+std::string CommandServerBase::getServerIpsStr(const std::string &separator) const
+{
+    std::unique_lock<std::mutex> lock(this->mtx_);
+    std::string ips;
+    for(const auto& intrfc : this->internalGetServerAddresses())
+    {
+        ips.append(intrfc.ip);
+        ips.append(separator);
+    }
+    if (!ips.empty() && separator.length() > 0)
+        ips.erase(ips.size() - separator.size(), separator.size());
+    return ips;
+}
+
+std::vector<std::string> CommandServerBase::getServerIps() const
+{
+    std::unique_lock<std::mutex> lock(this->mtx_);
+    std::vector<std::string> ips;
+    for(const auto& intrfc : this->internalGetServerAddresses())
+        ips.push_back(intrfc.ip);
+    return ips;
+}
 
 bool CommandServerBase::startServer()
 {
@@ -184,11 +225,18 @@ bool CommandServerBase::startServer()
 
 void CommandServerBase::stopServer()
 {
-    // Safe mutex lock
-    std::unique_lock<std::mutex> lock(this->mtx_);
+    // If server is already stopped, do nothing
+    if (!this->flag_server_working_)
+        return ;
 
-    // Call to the internal stop.
-    this->internalStopServer();
+    {
+        // Lock and stop the server.
+        std::unique_lock<std::mutex> lock(this->mtx_);
+        this->internalStopServer();
+    }
+
+    // Call to the internal callback.
+    this->onServerStop();
 }
 
 void CommandServerBase::internalStopServer()
@@ -205,7 +253,7 @@ void CommandServerBase::internalStopServer()
         this->fut_server_worker_.wait_for(std::chrono::seconds(0)) == std::future_status::timeout)
     {
         // Auxiliar endpoint.
-        std::string endpoint = this->server_endpoint_;
+        std::string endpoint = this->server_info_.endpoint;
         std::size_t found = endpoint.find("*");
         if (found != std::string::npos)
             endpoint.replace(found, 1, "127.0.0.1");
@@ -248,10 +296,7 @@ CommandServerBase::~CommandServerBase()
 OperationResult CommandServerBase::execReqConnect(CommandRequest& cmd_req)
 {
     // Auxiliar containers.
-    std::string ip;
-    std::string pid;
-    std::string hostname;
-    std::string name;
+    ClientInfo client_info;
 
     // Prepare the serializer.
     serializer::BinarySerializer serializer(std::move(cmd_req.params), cmd_req.params_size);
@@ -263,10 +308,11 @@ OperationResult CommandServerBase::execReqConnect(CommandRequest& cmd_req)
     // Get the parameters.
     try
     {
-        serializer.read(ip, pid, hostname, name);
+        // Deserialize the client data.
+        serializer.read(client_info);
 
         // Check the parameters.
-        if(!internal_helpers::network::isValidIP(ip))
+        if(!internal_helpers::network::isValidIP(client_info.ip))
             return OperationResult::INVALID_CLIENT_IP;
     }
     catch (...)
@@ -274,25 +320,29 @@ OperationResult CommandServerBase::execReqConnect(CommandRequest& cmd_req)
         return OperationResult::BAD_PARAMETERS;
     }
 
-    // Check if the client is already connected.
-    auto it = this->connected_clients_.find(cmd_req.client_uuid);
-    if(it != this->connected_clients_.end())
-        return OperationResult::ALREADY_CONNECTED;
+    // Lock zone.
+    {
+        std::unique_lock<std::mutex> lock(this->mtx_);
 
-    // Check the maximum number of connections.
-    if(this->connected_clients_.size() >= this->max_connected_clients_)
-        return OperationResult::MAX_CLIENTS_REACH;
+        // Check if the client is already connected.
+        auto it = this->connected_clients_.find(cmd_req.client_uuid);
+        if(it != this->connected_clients_.end())
+            return OperationResult::ALREADY_CONNECTED;
 
-    // Store the client.
-    HostInfo client_info(cmd_req.client_uuid, ip, pid, hostname, name);
-    client_info.last_seen = std::chrono::steady_clock::now();
+        // Check the maximum number of connections.
+        if(this->connected_clients_.size() >= this->max_connected_clients_)
+            return OperationResult::MAX_CLIENTS_REACH;
 
-    // Add the new client.
-    this->connected_clients_[cmd_req.client_uuid] = client_info;
+        // Store the client.
+        client_info.last_seen = std::chrono::steady_clock::now();
 
-    // Update the timeout of the main socket.
-    if(this->flag_check_clients_alive_)
-        this->updateServerTimeout();
+        // Add the new client.
+        this->connected_clients_[cmd_req.client_uuid] = client_info;
+
+        // Update the timeout of the main socket.
+        if(this->flag_check_clients_alive_)
+            this->updateServerTimeout();
+    }
 
     // Call to the internal callback.
     this->onConnected(client_info);
@@ -303,18 +353,30 @@ OperationResult CommandServerBase::execReqConnect(CommandRequest& cmd_req)
 
 OperationResult CommandServerBase::execReqDisconnect(const CommandRequest& cmd_req)
 {
-    // Get the client.
-    auto it = this->connected_clients_.find(cmd_req.client_uuid);
+    // Temporal container.
+    ClientInfo tmp_host;
+
+    // Lock zone.
+    {
+        std::unique_lock<std::mutex> lock(this->mtx_);
+
+        // Get the client.
+        auto it = this->connected_clients_.find(cmd_req.client_uuid);
+
+        // Temporal client.
+        tmp_host = it->second;
+
+        // Remove the client from the map of connected clients.
+        this->connected_clients_.erase(it);
+
+        // Update the timeout of the main socket.
+        if(this->flag_check_clients_alive_)
+            this->updateServerTimeout();
+
+    }
 
     // Call to the internal callback.
-    this->onDisconnected(it->second);
-
-    // Remove the client from the map of connected clients.
-    this->connected_clients_.erase(it);
-
-    // Update the timeout of the main socket.
-    if(this->flag_check_clients_alive_)
-        this->updateServerTimeout();
+    this->onDisconnected(tmp_host);
 
     // All ok.
     return OperationResult::COMMAND_OK;
@@ -368,10 +430,7 @@ void CommandServerBase::serverWorker()
 
         // Process the data.
         if(result == OperationResult::COMMAND_OK && !this->flag_server_working_)
-        {
-            // In this case, we will close the server. Call to the internal callback.
-            this->onServerStop();
-        }
+        {}
         else if(result == OperationResult::TIMEOUT_REACHED && this->flag_check_clients_alive_)
         {
             this->checkClientsAliveStatus();
@@ -560,7 +619,7 @@ bool CommandServerBase::validateCommand(int raw_command)
 {
     // Auxiliar variables.
     bool result = false;
-    int reserved_cmd = static_cast<int>(ServerCommand::RESERVED_COMMANDS);
+    int reserved_cmd = static_cast<int>(ServerCommand::END_IMPL_COMMANDS);
     int end_base_cmd = static_cast<int>(ServerCommand::END_BASE_COMMANDS);
     // Check if the command is valid.
     if (raw_command >= kMinBaseCmdId && raw_command < reserved_cmd)
@@ -568,6 +627,11 @@ bool CommandServerBase::validateCommand(int raw_command)
     else if(raw_command > end_base_cmd)
         result = true;
     return result;
+}
+
+const CommandServerBase::NetworkAdapterInfoV &CommandServerBase::internalGetServerAddresses() const
+{
+    return this->server_adapters_;
 }
 
 void CommandServerBase::processCommand(CommandRequest& request, CommandReply& reply)
@@ -632,55 +696,62 @@ void CommandServerBase::processCustomCommand(CommandRequest& request, CommandRep
 
 void CommandServerBase::checkClientsAliveStatus()
 {
-    // Safe mutex lock
-    std::unique_lock<std::mutex> lock(this->mtx_);
-
     // Auxiliar containers.
     std::vector<UUID> dead_clients;
     std::chrono::milliseconds timeout(this->client_alive_timeout_);
     std::chrono::milliseconds min_remaining_time = timeout;
+    std::vector<ClientInfo> deleted_clients;
 
     // Get the current time.
     utils::SCTimePointStd now = std::chrono::steady_clock::now();
 
-    // Check each connection.
-    for(auto& client : this->connected_clients_)
+    // Lock zone.
     {
-        // Get the last connection time.
-        const auto& last_conn = client.second.last_seen;
-        // Check if the client reaches the timeout checking the last connection time.
-        auto since_last_conn = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_conn);
-        if(since_last_conn >= timeout)
+        std::unique_lock<std::mutex> lock(this->mtx_);
+
+        // Check each connection.
+        for(const auto& client : this->connected_clients_)
         {
-            // If dead, call the onDead callback and quit the client from the map.
-            dead_clients.push_back(client.first);
+            // Get the last connection time.
+            const auto& last_conn = client.second.last_seen;
+            // Check if the client reaches the timeout checking the last connection time.
+            auto since_last_conn = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_conn);
+            if(since_last_conn >= timeout)
+            {
+                // If dead, call the onDead callback and quit the client from the map.
+                dead_clients.push_back(client.first);
+            }
+            else
+            {
+                // If the client is not dead, check the minor timeout of the client to set
+                // with the remain time to reach the timeout.
+                min_remaining_time = std::min(min_remaining_time, timeout - since_last_conn);
+            }
+        }
+
+        // Remove dead clients from the map.
+        for(const auto& client_uuid : dead_clients)
+        {
+            const auto tmp_client = this->connected_clients_.at(client_uuid);
+            this->connected_clients_.erase(client_uuid);
+            deleted_clients.push_back(tmp_client);
+        }
+
+        // Disable the timeout if no clients remains or set the socket timeout
+        // to the minimum remaining time to the timeout among all clients.
+        if(this->connected_clients_.empty())
+        {
+            this->server_socket_->set(zmq::sockopt::rcvtimeo, -1);
         }
         else
         {
-            // If the client is not dead, check the minor timeout of the client to set
-            // with the remain time to reach the timeout.
-            min_remaining_time = std::min(min_remaining_time, timeout - since_last_conn);
+            this->server_socket_->set(zmq::sockopt::rcvtimeo, static_cast<int>(min_remaining_time.count()));
         }
     }
 
-    // Remove dead clients from the map.
-    for(auto& client_uuid : dead_clients)
-    {
-        const auto tmp_client = this->connected_clients_.at(client_uuid);
-        this->connected_clients_.erase(client_uuid);
-        this->onDeadClient(tmp_client);
-    }
-
-    // Disable the timeout if no clients remains or set the socket timeout
-    // to the minimum remaining time to the timeout among all clients.
-    if(this->connected_clients_.empty())
-    {
-        this->server_socket_->set(zmq::sockopt::rcvtimeo, -1);
-    }
-    else
-    {
-        this->server_socket_->set(zmq::sockopt::rcvtimeo, static_cast<int>(min_remaining_time.count()));
-    }
+    // Call to the internal callback.
+    for(const auto& client : deleted_clients)
+        this->onDeadClient(client);
 }
 
 void CommandServerBase::updateClientLastConnection(const UUID& uuid)
@@ -722,7 +793,7 @@ void CommandServerBase::resetSocket()
     // Auxiliar variables.
     int last_error_code = 0;
     const zmq::error_t* last_error;
-    int reconnect_count = this->server_reconn_attempts_;
+    int reconnect_count = static_cast<int>(this->server_reconn_attempts_);
 
     // Stop the socket.
     this->internalStopServer();
@@ -735,13 +806,13 @@ void CommandServerBase::resetSocket()
             // Create the ZMQ rep socket.
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
             this->server_socket_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::rep);
-            this->server_socket_->bind(this->server_endpoint_);
+            this->server_socket_->bind(this->server_info_.endpoint);
             this->server_socket_->set(zmq::sockopt::linger, 0);
 
             // Update the working flag and calls to the callback.
-            this->onServerStart();
             this->flag_server_working_ = true;
             this->cv_server_depl_.notify_all();
+            this->onServerStart();
         }
         catch (const zmq::error_t& error)
         {
@@ -758,9 +829,9 @@ void CommandServerBase::resetSocket()
             if (reconnect_count <= 0 || last_error_code != EADDRINUSE)
             {
                 // Update the working flag and calls to the callback.
-                this->onServerError(*last_error, "Error during socket creation.");
                 this->flag_server_working_ = false;
                 this->cv_server_depl_.notify_all();
+                this->onServerError(*last_error, "Error during socket creation.");
                 return;
             }
         }

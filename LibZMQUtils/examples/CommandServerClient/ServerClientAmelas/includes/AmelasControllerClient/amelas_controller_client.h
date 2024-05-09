@@ -68,9 +68,8 @@ class AmelasControllerClient : public zmqutils::serverclient::CommandClientBase
 {
 public:
 
-    AmelasControllerClient(const std::string& server_endpoint,
-                           const std::string& client_name = "",
-                           const std::string interf_name = "");
+    // Use the constructor of CommandClientBase becaouse we don't need to do anything more.
+    using zmqutils::serverclient::CommandClientBase::CommandClientBase;
 
     template<typename CmdId>
     bool validateCommand(CmdId command) const
@@ -87,6 +86,9 @@ public:
 
     zmqutils::serverclient::OperationResult doOpenSearchTelescope(controller::AmelasError &res);
 
+    zmqutils::serverclient::OperationResult doExampleNotImp(controller::AmelasError &res);
+
+
 private:
 
     virtual void onClientStart() override final;
@@ -95,11 +97,11 @@ private:
 
     virtual void onWaitingReply() override final;
 
-    virtual void onDeadServer() override final;
+    virtual void onDeadServer(const zmqutils::serverclient::ServerInfo&) override final;
 
-    virtual void onConnected() override final;
+    virtual void onConnected(const zmqutils::serverclient::ServerInfo&) override final;
 
-    virtual void onDisconnected() override final;
+    virtual void onDisconnected(const zmqutils::serverclient::ServerInfo&) override final;
 
     virtual void onInvalidMsgReceived(const zmqutils::serverclient::CommandReply&) override final;
 

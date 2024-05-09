@@ -67,15 +67,14 @@ class AmelasControllerServer : public zmqutils::serverclient::ClbkCommandServerB
 {
 public:
 
-    AmelasControllerServer(unsigned port, const std::string& local_addr = "*");
+    // Use the constructor of ClbkCommandServerBase becaouse we don't need to do anything more.
+    using zmqutils::serverclient::ClbkCommandServerBase::ClbkCommandServerBase;
 
 private:
 
     // -----------------------------------------------------------------------------------------------------------------
     using CommandServerBase::registerRequestProcFunc;
     using ClbkCommandServerBase::registerCallback;
-    // -----------------------------------------------------------------------------------------------------------------
-
     // -----------------------------------------------------------------------------------------------------------------
 
     // Internal overrided command validation function.
@@ -95,13 +94,13 @@ private:
     virtual void onWaitingCommand() final;
 
     // Internal dead client callback.
-    virtual void onDeadClient(const zmqutils::serverclient::HostInfo&) final;
+    virtual void onDeadClient(const zmqutils::serverclient::ClientInfo&) final;
 
     // Internal overrided connect callback.
-    virtual void onConnected(const zmqutils::serverclient::HostInfo&) final;
+    virtual void onConnected(const zmqutils::serverclient::ClientInfo&) final;
 
     // Internal overrided disconnect callback.
-    virtual void onDisconnected(const zmqutils::serverclient::HostInfo&) final;
+    virtual void onDisconnected(const zmqutils::serverclient::ClientInfo&) final;
 
     // Internal overrided command received callback.
     virtual void onCommandReceived(const zmqutils::serverclient::CommandRequest&) final;

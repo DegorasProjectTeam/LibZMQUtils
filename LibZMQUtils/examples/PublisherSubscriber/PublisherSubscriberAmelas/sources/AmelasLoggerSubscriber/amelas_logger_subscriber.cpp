@@ -53,9 +53,7 @@ using namespace controller;
 // ---------------------------------------------------------------------------------------------------------------------
 
 AmelasLoggerSubscriber::AmelasLoggerSubscriber()
-{
-
-}
+{}
 
 void AmelasLoggerSubscriber::addTopicFilter(const controller::AmelasLogLevel &log_level)
 {
@@ -66,7 +64,6 @@ void AmelasLoggerSubscriber::removeTopicFilter(const controller::AmelasLogLevel 
 {
     zmqutils::pubsub::SubscriberBase::removeTopicFilter(AmelasLoggerTopic[static_cast<size_t>(log_level)]);
 }
-
 
 void AmelasLoggerSubscriber::onSubscriberStart()
 {

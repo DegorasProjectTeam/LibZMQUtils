@@ -54,17 +54,17 @@ AltAzPos::AltAzPos(): az(-1), el(-1){}
 
 size_t AltAzPos::serialize(zmqutils::serializer::BinarySerializer &serializer) const
 {
-    return serializer.write(az, el);
+    return serializer.write(this->az, this->el);
 }
 
 void AltAzPos::deserialize(zmqutils::serializer::BinarySerializer &serializer)
 {
-    serializer.read(az, el);
+    serializer.read(this->az, this->el);
 }
 
 size_t AltAzPos::serializedSize() const
 {
-    return (2*sizeof(uint64_t) + sizeof(double)*2);
+    return Serializable::calcTotalSize(this->az, this->el);
 }
 
 // =====================================================================================================================
