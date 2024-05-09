@@ -389,8 +389,8 @@ OperationResult CommandClientBase::sendCommand(const RequestData& request, Comma
     }
     else if(reply.server_result == OperationResult::CLIENT_NOT_CONNECTED && this->flag_server_connected_)
     {
-        // In this case the server consider the client dead (or force the disconnection).
-        reply.server_result = OperationResult::CLIENT_DEAD_FOR_SERVER;
+        // In this case the server force the disconnection.
+        reply.server_result = OperationResult::DISCONNECTED_FROM_SERVER;
         this->flag_server_connected_ = false;
         // Internal callbacks.
         this->onDisconnected({});

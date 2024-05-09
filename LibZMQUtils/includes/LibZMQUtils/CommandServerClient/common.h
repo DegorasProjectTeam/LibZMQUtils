@@ -95,29 +95,29 @@ enum class ServerCommand : CommandType
  */
 enum class OperationResult : ResultType
 {
-    COMMAND_OK              = 0,  ///< The command was executed successfully.
-    INTERNAL_ZMQ_ERROR      = 1,  ///< An internal ZeroMQ error occurred.
-    EMPTY_MSG               = 2,  ///< The message is empty.
-    INVALID_CLIENT_IP       = 3,  ///< The client IP is invalid. TODO
-    EMPTY_PARAMS            = 6,  ///< The command parameters are missing or empty.
-    TIMEOUT_REACHED         = 7,  ///< The operation timed out, the client could be dead.
-    INVALID_PARTS           = 8,  ///< The message has invalid parts.
-    UNKNOWN_COMMAND         = 9,  ///< The command is not recognized.
-    INVALID_MSG             = 10, ///< The message is invalid.
-    CLIENT_NOT_CONNECTED    = 11, ///< Not connected to the target.
-    ALREADY_CONNECTED       = 12, ///< Already connected to the target.
-    BAD_PARAMETERS          = 13, ///< The provided parameters are invalid (deserialization fail).
-    COMMAND_FAILED          = 14, ///< The command execution failed in the server (internal error).
-    NOT_IMPLEMENTED         = 15, ///< The command is known but not implemented.
-    EMPTY_EXT_CALLBACK      = 16, ///< The associated external callback is empty. Used in ClbkCommandServerBase.
-    INVALID_EXT_CALLBACK    = 17, ///< The associated external callback is invalid. Used in ClbkCommandServerBase.
-    INVALID_CLIENT_UUID     = 18, ///< The client UUID is invalid (could be invalid, missing or empty).
-    CLIENT_STOPPED          = 19, ///< The client is stopped.
-    MAX_CLIENTS_REACH       = 20, ///< The server has reached the maximum number of clients allowed.
-    COMMAND_NOT_ALLOWED     = 21, ///< The command is not allowed to be executed.                                  TODO
-    CLIENT_VERSION_NOT_COMP = 22, ///< The version of the client is not compatible with the server version.        TODO
-    CLIENT_DEAD_FOR_SERVER  = 23, ///< The client was considered dead by the server, so it is neccesary a reconnection.
-    END_BASE_RESULTS        = 50  ///< Sentinel value indicating the end of the base server results.
+    COMMAND_OK               = 0,  ///< The command was executed successfully.
+    INTERNAL_ZMQ_ERROR       = 1,  ///< An internal ZeroMQ error occurred.
+    EMPTY_MSG                = 2,  ///< The message is empty.
+    INVALID_CLIENT_IP        = 3,  ///< The client IP is invalid. TODO
+    EMPTY_PARAMS             = 6,  ///< The command parameters are missing or empty.
+    TIMEOUT_REACHED          = 7,  ///< The operation timed out, the client could be dead.
+    INVALID_PARTS            = 8,  ///< The message has invalid parts.
+    UNKNOWN_COMMAND          = 9,  ///< The command is not recognized.
+    INVALID_MSG              = 10, ///< The message is invalid.
+    CLIENT_NOT_CONNECTED     = 11, ///< Not connected to the target.
+    ALREADY_CONNECTED        = 12, ///< Already connected to the target.
+    BAD_PARAMETERS           = 13, ///< The provided parameters are invalid (deserialization fail).
+    COMMAND_FAILED           = 14, ///< The command execution failed in the server (internal error).
+    NOT_IMPLEMENTED          = 15, ///< The command is known but not implemented.
+    EMPTY_EXT_CALLBACK       = 16, ///< The associated external callback is empty. Used in ClbkCommandServerBase.
+    INVALID_EXT_CALLBACK     = 17, ///< The associated external callback is invalid. Used in ClbkCommandServerBase.
+    INVALID_CLIENT_UUID      = 18, ///< The client UUID is invalid (could be invalid, missing or empty).
+    CLIENT_STOPPED           = 19, ///< The client is stopped.
+    MAX_CLIENTS_REACH        = 20, ///< The server has reached the maximum number of clients allowed.
+    COMMAND_NOT_ALLOWED      = 21, ///< The command is not allowed to be executed.                                  TODO
+    CLIENT_VERSION_NOT_COMP  = 22, ///< The version of the client is not compatible with the server version.        TODO
+    DISCONNECTED_FROM_SERVER = 23, ///< The server forced the client disconnection (for example due to dead condition).
+    END_BASE_RESULTS         = 50  ///< Sentinel value indicating the end of the base server results.
 };
 
 // Usefull const expressions.
@@ -206,7 +206,7 @@ static constexpr std::array<const char*, 50>  OperationResultStr
     "MAX_CLIENTS_REACH - The server has reached the maximum number of clients allowed.",
     "COMMAND_NOT_ALLOWED - The command is not allowed to be executed.",
     "CLIENT_VERSION_NOT_COMP - The version of the client is not compatible with the server version.",
-    "CLIENT_DEAD_FOR_SERVER - The client was considered dead by the server, so it is neccesary a reconnection.",
+    "DISCONNECTED_FROM_SERVER - The server forced the client disconnection (for example due to dead condition).",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
