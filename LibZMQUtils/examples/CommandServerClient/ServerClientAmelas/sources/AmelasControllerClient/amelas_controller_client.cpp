@@ -114,39 +114,53 @@ void AmelasControllerClient::onWaitingReply()
     std::cout<< std::string(100, '-')                             << std::endl;
 }
 
-void AmelasControllerClient::onDeadServer(const zmqutils::serverclient::ServerInfo&)
+void AmelasControllerClient::onDeadServer(const zmqutils::serverclient::ServerInfo& server)
 {
     // Log.
-    std::cout<< std::string(100, '-')                             << std::endl;
-    std::cout<< "<" << this->getClientInfo().name<<">"            << std::endl;
-    std::cout<< "-> ON DEAD SERVER: "                             << std::endl;
-    std::cout<< "Time: " << zmqutils::utils::currentISO8601Date() << std::endl;
-    std::cout<< std::string(100, '-')                             << std::endl;
+    std::cout<< std::string(100, '-')                                        << std::endl;
+    std::cout<< "<" << this->getClientInfo().name << ">"                     << std::endl;
+    std::cout<< "-> ON DEAD SERVER: "                                        << std::endl;
+    std::cout<< "Time:            " << zmqutils::utils::currentISO8601Date() << std::endl;
+    std::cout<< "Server Port:     " << server.port                           << std::endl;
+    std::cout<< "Server Name:     " << server.endpoint                       << std::endl;
+    std::cout<< "Server Hostname: " << server.hostname                       << std::endl;
+    std::cout<< "Server Name:     " << server.name                           << std::endl;
+    std::cout<< "Server Info:     " << server.info                           << std::endl;
+    std::cout<< "Server Version:  " << server.version                        << std::endl;
+    std::cout<< std::string(100, '-')                                        << std::endl;
 }
 
-void AmelasControllerClient::onConnected(const zmqutils::serverclient::ServerInfo&)
+void AmelasControllerClient::onConnected(const zmqutils::serverclient::ServerInfo& server)
 {
     // TODO In base get server info when connected.
     // Log.
-    std::cout<< std::string(100, '-')                             << std::endl;
-    std::cout<< "<" << this->getClientInfo().name<<">"            << std::endl;
-    std::cout<< "-> ON CONNECTED: "                               << std::endl;
-    std::cout<< "Time: " << zmqutils::utils::currentISO8601Date() << std::endl;
-    std::cout<< "Endpoint: "<<this->getServerEndpoint()           << std::endl;
-    std::cout<< "Server Name: "                                   << std::endl;
-    std::cout<< "Server Version: "                                << std::endl;
-    std::cout<< "Server Info: "                                   << std::endl;
-    std::cout<< std::string(100, '-')                             << std::endl;
+    std::cout<< std::string(100, '-')                                        << std::endl;
+    std::cout<< "<" << this->getClientInfo().name << ">"                     << std::endl;
+    std::cout<< "-> ON CONNECTED: "                                          << std::endl;
+    std::cout<< "Time:            " << zmqutils::utils::currentISO8601Date() << std::endl;
+    std::cout<< "Server Port:     " << server.port                           << std::endl;
+    std::cout<< "Server Name:     " << server.endpoint                       << std::endl;
+    std::cout<< "Server Hostname: " << server.hostname                       << std::endl;
+    std::cout<< "Server Name:     " << server.name                           << std::endl;
+    std::cout<< "Server Info:     " << server.info                           << std::endl;
+    std::cout<< "Server Version:  " << server.version                        << std::endl;
+    std::cout<< std::string(100, '-')                                        << std::endl;
 }
 
-void AmelasControllerClient::onDisconnected(const zmqutils::serverclient::ServerInfo&)
+void AmelasControllerClient::onDisconnected(const zmqutils::serverclient::ServerInfo& server)
 {
     // Log.
-    std::cout << std::string(100, '-') << std::endl;
-    std::cout<<"<"<<this->getClientInfo().name<<">"<<std::endl;
-    std::cout<<"-> ON DISCONNECTED: "<<std::endl;
-    std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
-    std::cout << std::string(100, '-') << std::endl;
+    std::cout<< std::string(100, '-')                                        << std::endl;
+    std::cout<< "<" << this->getClientInfo().name << ">"                     << std::endl;
+    std::cout<< "-> ON DISCONNECTED: "                                       << std::endl;
+    std::cout<< "Time:            " << zmqutils::utils::currentISO8601Date() << std::endl;
+    std::cout<< "Server Port:     " << server.port                           << std::endl;
+    std::cout<< "Server Name:     " << server.endpoint                       << std::endl;
+    std::cout<< "Server Hostname: " << server.hostname                       << std::endl;
+    std::cout<< "Server Name:     " << server.name                           << std::endl;
+    std::cout<< "Server Info:     " << server.info                           << std::endl;
+    std::cout<< "Server Version:  " << server.version                        << std::endl;
+    std::cout<< std::string(100, '-')                                        << std::endl;
 }
 
 void AmelasControllerClient::onReplyReceived(const CommandReply &reply)

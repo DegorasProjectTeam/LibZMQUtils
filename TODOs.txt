@@ -18,6 +18,8 @@ PRIORITY:
 
 NO PRIORITY:
 
+- Multiple endpoints to the same port.
+
 - Add a function to known the ping value in msec (connection delay).
  
 - Add public IP for client and server (configurable for remote and local only). 

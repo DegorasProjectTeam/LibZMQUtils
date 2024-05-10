@@ -697,7 +697,7 @@ private:
     // INTERNAL COMMANDS.
 
     // Internal connect execution process.
-    OperationResult execReqConnect(CommandRequest&);
+    OperationResult execReqConnect(CommandRequest&, CommandReply &reply);
 
     // Internal disconnect execution process.
     OperationResult execReqDisconnect(const CommandRequest&);

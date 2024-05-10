@@ -293,7 +293,7 @@ CommandServerBase::~CommandServerBase()
     this->internalStopServer();
 }
 
-OperationResult CommandServerBase::execReqConnect(CommandRequest& cmd_req)
+OperationResult CommandServerBase::execReqConnect(CommandRequest& cmd_req, CommandReply& reply)
 {
     // Auxiliar containers.
     ClientInfo client_info;
@@ -342,6 +342,10 @@ OperationResult CommandServerBase::execReqConnect(CommandRequest& cmd_req)
         // Update the timeout of the main socket.
         if(this->flag_check_clients_alive_)
             this->updateServerTimeout();
+
+        // Prepare the reply.
+        reply.params_size = serializer::BinarySerializer::fastSerialization(reply.params, this->server_info_.hostname,
+            this->server_info_.name, this->server_info_.info, this->server_info_.version);
     }
 
     // Call to the internal callback.
@@ -646,7 +650,7 @@ void CommandServerBase::processCommand(CommandRequest& request, CommandReply& re
     // 4 - If valid, process the rest of the base commands or the custom command.
     if (ServerCommand::REQ_CONNECT == request.command)
     {
-        reply.server_result = this->execReqConnect(request);
+        reply.server_result = this->execReqConnect(request, reply);
     }
     else if(this->connected_clients_.find(request.client_uuid) == this->connected_clients_.end())
     {
