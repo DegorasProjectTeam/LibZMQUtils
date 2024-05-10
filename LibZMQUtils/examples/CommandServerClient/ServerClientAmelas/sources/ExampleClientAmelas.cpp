@@ -49,7 +49,6 @@
 // LIBZMQUTILS INCLUDES
 // =====================================================================================================================
 #include <LibZMQUtils/Modules/Utilities>
-#include <LibZMQUtils/InternalHelpers/string_helpers.h>
 // =====================================================================================================================
 
 // PROJECT INCLUDES
@@ -72,6 +71,7 @@ using amelas::controller::AltAzPos;
 using amelas::controller::AmelasError;
 // ---------------------------------------------------------------------------------------------------------------------
 
+// Helper class to parse the terminal commands.
 class AmelasClientCmdParser
 {
 public:
@@ -284,6 +284,7 @@ private:
     AmelasControllerClient& client_;
 };
 
+// ---------------------------------------------------------------------------------------------------------------------
 
 /**
  * @brief Main entry point of the program `ExampleClientAmelas`.
@@ -295,10 +296,11 @@ int main(int, char**)
     console_cfg.configureConsole(true, false, true);
 
     // Configuration variables.
-    unsigned port = 9999;
-    std::string ip = "127.0.0.1";
-    std::string endpoint = "tcp://" + ip + ":" + std::to_string(port);
-    
+    std::string endpoint = "tcp://127.0.0.1:9999";          // Client endpoint.
+    bool enable_alive_callbacks = false;                    // Disable or enable the alive callbacks.
+    std::chrono::milliseconds alive_timeout_ms = 2000ms;    // Timeout to consider a client dead.
+    std::chrono::milliseconds alive_period_ms = 1000ms;     // Timeout to consider a client dead.
+
     // Instanciate the client.
     AmelasControllerClient client(endpoint, "AMELAS EXAMPLE CLIENT", "1.7.6", "This is the AMELAS client.");
 
@@ -306,7 +308,9 @@ int main(int, char**)
     AmelasClientCmdParser client_parser(client);
 
     // Configure the client.
-    client.setAliveCallbacksEnabled(false);
+    client.setAliveCallbacksEnabled(enable_alive_callbacks);
+    client.setServerAliveTimeout(alive_timeout_ms);
+    client.setSendAlivePeriod(alive_period_ms);
 
     // Set the exit callback to the console handler for safety.
     console_cfg.setExitCallback(

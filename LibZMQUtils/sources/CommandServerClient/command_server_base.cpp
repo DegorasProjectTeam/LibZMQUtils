@@ -130,10 +130,10 @@ bool CommandServerBase::isWorking() const
     return this->flag_server_working_;
 }
 
-void CommandServerBase::setClientAliveTimeout(unsigned timeout_ms)
+void CommandServerBase::setClientAliveTimeout(const std::chrono::milliseconds& timeout)
 {
-    this->client_alive_timeout_ = timeout_ms;
-    if(timeout_ms == 0)
+    this->client_alive_timeout_ = static_cast<unsigned>(timeout.count());
+    if(client_alive_timeout_ == 0)
         this->setClientStatusCheck(false);
 }
 

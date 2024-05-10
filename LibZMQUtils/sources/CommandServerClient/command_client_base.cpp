@@ -232,20 +232,19 @@ bool CommandClientBase::internalResetClient()
     return true;
 }
 
-
 void CommandClientBase::setAliveCallbacksEnabled(bool enable)
 {
     this->flag_alive_callbacks_ = enable;
 }
 
-void CommandClientBase::setServerAliveTimeout(unsigned timeout_msec)
+void CommandClientBase::setServerAliveTimeout(const std::chrono::milliseconds &timeout)
 {
-    this->server_alive_timeout_ = timeout_msec;
+    this->server_alive_timeout_ = static_cast<unsigned>(timeout.count());
 }
 
-void CommandClientBase::setSendAlivePeriod(unsigned int period_msec)
+void CommandClientBase::setSendAlivePeriod(const std::chrono::milliseconds &period)
 {
-    this->send_alive_period_ = period_msec;
+    this->send_alive_period_ = static_cast<unsigned>(period.count());
 }
 
 void CommandClientBase::disableAutoAlive()
@@ -303,9 +302,6 @@ void CommandClientBase::stopAutoAlive()
 
 OperationResult CommandClientBase::sendCommand(const RequestData& request, CommandReply& reply)
 {
-    // Namespaces.
-    using namespace std::chrono_literals;
-
     // Clean the reply.
     reply = CommandReply();
 
@@ -428,7 +424,7 @@ void CommandClientBase::recvFromSocket(CommandReply& reply,
         try
         {
             // Use zmq::poll to set a timeout for receiving a message
-            zmq::poll(items.data(), items.size(), std::chrono::milliseconds(this->server_alive_timeout_));
+            zmq::poll(items.data(), items.size(), std::chrono::milliseconds(10));
 
             // Check if we must to close.
             if(!this->flag_client_working_ || (items[1].revents & ZMQ_POLLIN))
@@ -579,9 +575,6 @@ void CommandClientBase::internalStopClient()
 
 void CommandClientBase::aliveWorker()
 {
-    // Namespaces.
-    using namespace std::chrono_literals;
-
     // Request and reply.
     RequestData request;
     CommandReply reply;

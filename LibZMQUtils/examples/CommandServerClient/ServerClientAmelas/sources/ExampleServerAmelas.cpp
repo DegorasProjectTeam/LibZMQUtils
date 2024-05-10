@@ -89,11 +89,12 @@ int main(int, char**)
     console_cfg.configureConsole(true, true, false);
 
     // Configuration variables.
-    unsigned port = 9999;
-    bool client_status_check = true;
-    unsigned max_client_connections = 2;
-    unsigned recconn_attempts = 2;
-    unsigned alive_timeout_ms = 10000;
+    std::string endpoint = "*";                                 // Server endpoint.
+    unsigned port = 9999;                                       // Server connection port.
+    bool client_status_check = true;                            // Disable or enable the clients alive status.
+    unsigned max_client_connections = 2;                        // Maximum number of client connections.
+    unsigned recconn_attempts = 2;                              // Reconnection attempts for the server.
+    std::chrono::milliseconds alive_timeout_ms = 10000ms;       // Timeout to consider a client dead.
 
     // Instantiate the Amelas controller.
     AmelasController amelas_controller;

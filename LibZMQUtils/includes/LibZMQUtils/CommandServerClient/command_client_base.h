@@ -139,15 +139,15 @@ public:
 
     /**
      * @brief Set the timeout to consider a connected server dead.
-     * @param timeout_msec, the timeout in millliseconds.
+     * @param timeout, the timeout in millliseconds.
      */
-    void setServerAliveTimeout(unsigned timeout_msec);
+    void setServerAliveTimeout(const std::chrono::milliseconds& timeout);
 
     /**
      * @brief Set the period for automatically sending alive messages if active.
-     * @param period_msec, the period in milliseconds.
+     * @param period, the period in milliseconds.
      */
-    void setSendAlivePeriod(unsigned period_msec);
+    void setSendAlivePeriod(const std::chrono::milliseconds& period);
 
     /**
      * @brief If auto alive sending was enabled when connecting, stop the process.

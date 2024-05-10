@@ -337,12 +337,12 @@ public:
      * remains inactive for longer than this timeout, it will be considered dead. This can be useful for managing idle
      * client connections.
      *
-     * @param timeout_ms The timeout value in milliseconds.
+     * @param timeout The timeout value in milliseconds.
      *
      * @note A value of 0 automatically disables the client alive checks, but for enable the alive checking, you must
      * always use the function `setClientStatusCheck`.
      */
-    void setClientAliveTimeout(unsigned timeout_ms);
+    void setClientAliveTimeout(const std::chrono::milliseconds& timeout);
 
     /**
      * @brief Sets the number of reconnection attempts.
