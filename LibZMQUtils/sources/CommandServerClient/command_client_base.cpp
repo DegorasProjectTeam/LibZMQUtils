@@ -129,6 +129,11 @@ CommandClientBase::CommandClientBase(const std::string& server_endpoint,
 
     // Store all the client info.
     this->client_info_ = ClientInfo(uuid, ip, pid, hostname, client_name, client_version, client_info);
+
+    // Update the server info.
+    unsigned port = static_cast<unsigned>(std::stoi(server_endpoint.substr(server_endpoint.rfind(':') + 1)));
+    this->connected_server_info_.endpoint = server_endpoint;
+    this->connected_server_info_.port = port;
 }
 
 CommandClientBase::~CommandClientBase()
@@ -359,20 +364,17 @@ OperationResult CommandClientBase::sendCommand(const RequestData& request, Comma
     if (reply.server_result == OperationResult::TIMEOUT_REACHED)
     {
         // Call to the internall callback.
-        this->onDeadServer(this->connected_server_info_.value());
+        this->onDeadServer(this->connected_server_info_);
 
         // If was  connected, call to the disconnected callback.
         if(this->flag_server_connected_)
         {
-            this->onDisconnected(this->connected_server_info_.value());
+            this->onDisconnected(this->connected_server_info_);
             this->flag_server_connected_ = false;
         }
 
         // NOTE: The client reset is neccesary for flush the ZMQ internal
         this->internalResetClient();
-
-        // Delete the server.
-        this->connected_server_info_.reset();
 
         // Return the result.
         return reply.server_result;
@@ -699,12 +701,12 @@ void CommandClientBase::aliveWorker()
         else if(reply.server_result == OperationResult::TIMEOUT_REACHED)
         {
             // Call to the internall callback.
-            this->onDeadServer(this->connected_server_info_.value());
+            this->onDeadServer(this->connected_server_info_);
 
             // If was  connected, call to the disconnected callback.
             if(this->flag_server_connected_)
             {
-                this->onDisconnected(this->connected_server_info_.value());
+                this->onDisconnected(this->connected_server_info_);
                 this->flag_server_connected_ = false;
             }
 
@@ -713,9 +715,6 @@ void CommandClientBase::aliveWorker()
 
             // NOTE: The client reset is neccesary for flush the ZMQ internal
             this->internalResetClient();
-
-            // Delete the server.
-            this->connected_server_info_.reset();
         }
         else if(reply.server_result == OperationResult::COMMAND_OK)
         {
@@ -769,21 +768,13 @@ OperationResult CommandClientBase::doConnect(bool auto_alive)
     if(result == OperationResult::COMMAND_OK)
     {
         // Deserialize the server data.
-        std::string hostname, name, info, version;
         serializer::BinarySerializer::fastDeserialization(std::move(reply.params), reply.params_size,
-            hostname, name, info, version);
-
-        // Get the server port.
-        const std::string& endpoint = this->server_endpoint_;
-        unsigned port = static_cast<unsigned>(std::stoi(endpoint.substr(endpoint.rfind(':') + 1)));
-
-        // Emplace the server info.
-        ServerInfo server_info(port, endpoint, hostname, name, info, version, std::vector<std::string>());
-        this->connected_server_info_.emplace(server_info);
+            this->connected_server_info_.hostname, this->connected_server_info_.name,
+            this->connected_server_info_.info, this->connected_server_info_.version);
 
         // Update the flag and call to the internal callback.
         this->flag_server_connected_ = true;
-        this->onConnected(this->connected_server_info_.value());
+        this->onConnected(this->connected_server_info_);
     }
 
     // Return the result.
@@ -809,10 +800,7 @@ OperationResult CommandClientBase::doDisconnect()
     if(res == OperationResult::COMMAND_OK && this->flag_server_connected_)
     {
         this->flag_server_connected_ = false;
-        this->onDisconnected(this->connected_server_info_.value());
-
-        // Delete the server.
-        this->connected_server_info_.reset();
+        this->onDisconnected(this->connected_server_info_);
     }
 
     // Return the result

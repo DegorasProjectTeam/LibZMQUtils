@@ -367,7 +367,7 @@ private:
     ClientInfo client_info_;       ///< External client information for identification.
 
     // Server information.
-    std::optional<ServerInfo> connected_server_info_;  ///< Connected server information.
+    ServerInfo connected_server_info_;  ///< Connected server information.
 
     // ZMQ sockets and endpoint.
     const std::string server_endpoint_;  ///< Server endpoint.
