@@ -81,8 +81,9 @@ public:
     /**
      * @brief Base constructor for SubscriberBase
      */
-    SubscriberBase();
-
+    SubscriberBase(const std::string& subscriber_name = "",
+                   const std::string& subscriber_version = "",
+                   const std::string& subscriber_info = "");
 
     /**
      * @brief Get the topic filters that are allowed in this subscriber at a specific time. If there is no topic, then
@@ -296,7 +297,6 @@ private:
 
     // Function for resetting the socket.
     void resetSocket();
-
 
     // -----------------------------------------------------
 

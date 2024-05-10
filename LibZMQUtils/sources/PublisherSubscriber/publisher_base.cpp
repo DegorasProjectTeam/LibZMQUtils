@@ -68,47 +68,47 @@ namespace zmqutils{
 namespace pubsub{
 // =====================================================================================================================
 
-PublisherBase::PublisherBase(std::string endpoint,
-                             std::string name) :
-    endpoint_(std::move(endpoint)),
+PublisherBase::PublisherBase(unsigned port,
+                             const std::string& ip_address,
+                             const std::string& publisher_name,
+                             const std::string& publisher_version,
+                             const std::string& publisher_info) :
     socket_(nullptr),
     flag_working_(false)
 {
     // Generate a unique UUID (v4) for the publisher.
     utils::UUID uuid = utils::UUIDGenerator::getInstance().generateUUIDv4();
 
-    this->pub_info_.name = std::move(name);
-    this->pub_info_.uuid = std::move(uuid);
+    // Get the adapters.
+    std::vector<NetworkAdapterInfo> interfcs = internal_helpers::network::getHostIPsWithInterfaces();
 
-    // Get the addr of interface for binding. If * symbol is issued, bind to every interface.
-    std::string local_addr;
-    std::regex addr_regexp(R"(://(.*):)");
-    std::smatch match;
-    std::regex_search(this->endpoint_, match, addr_regexp);
-
-    if (2 == match.size())
-        local_addr = match[1];
-
-    // If addr was found, find the selected interface(s)
-    if (!local_addr.empty())
+    // Store the adapters.
+    if(ip_address == "*")
+        this->server_adapters_ = interfcs;
+    else
     {
-        std::vector<NetworkAdapterInfo> ifaces = internal_helpers::network::getHostIPsWithInterfaces();
-        // Store the adapters.
-        if(local_addr == "*")
-            this->bound_ifaces_ = ifaces;
-        else
+        for(const auto& intrfc : interfcs)
         {
-            for(const auto& iface : ifaces)
-            {
-                if(iface.ip == local_addr)
-                    this->bound_ifaces_.push_back(iface);
-            }
+            if(intrfc.ip == ip_address)
+                this->server_adapters_.push_back(intrfc);
         }
     }
 
     // Check for valid configuration.
-    if(this->bound_ifaces_.empty())
-        throw std::invalid_argument("PublisherBase: No interfaces found for address <" + local_addr + ">.");
+    if(this->server_adapters_.empty())
+    {
+        std::string module = "[LibZMQUtils,PublisherSubscriber,PublisherBase] ";
+        throw std::invalid_argument(module + "No interfaces found for address <" + ip_address + ">.");
+    }
+
+    // Update the publisher information.
+    this->pub_info_.port = port;
+    this->pub_info_.uuid = uuid;
+    this->pub_info_.endpoint = "tcp://" + ip_address + ":" + std::to_string(port);
+    this->pub_info_.hostname = internal_helpers::network::getHostname();
+    this->pub_info_.name = publisher_name;
+    this->pub_info_.info = publisher_info;
+    this->pub_info_.version = publisher_version;
 }
 
 PublisherBase::~PublisherBase()
@@ -168,7 +168,7 @@ bool PublisherBase::resetPublisher()
 const std::string &PublisherBase::getEndpoint() const
 {
     // NOTE: Mutex is not neccesary here.
-    return this->endpoint_;
+    return this->pub_info_.endpoint;
 }
 
 const PublisherInfo& PublisherBase::getPublisherInfo() const
@@ -227,7 +227,7 @@ PublisherResult PublisherBase::sendMsg(const PubSubData& request)
 
 const std::vector<NetworkAdapterInfo> &PublisherBase::getBoundInterfaces() const
 {
-    return this->bound_ifaces_;
+    return this->server_adapters_;
 }
 
 bool PublisherBase::internalResetPublisher()
@@ -240,7 +240,7 @@ bool PublisherBase::internalResetPublisher()
     {
         // Zmq publisher socket.
         this->socket_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::pub);
-        this->socket_->bind(this->endpoint_);
+        this->socket_->bind(this->pub_info_.endpoint);
         this->socket_->set(zmq::sockopt::linger, 0);
 
         // Update the working flag.

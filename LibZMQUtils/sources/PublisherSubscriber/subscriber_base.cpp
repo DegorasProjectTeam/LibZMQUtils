@@ -51,6 +51,7 @@
 // =====================================================================================================================
 #include "LibZMQUtils/PublisherSubscriber/subscriber_base.h"
 #include "LibZMQUtils/Global/constants.h"
+#include "LibZMQUtils/InternalHelpers/network_helpers.h"
 #include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
 // =====================================================================================================================
 
@@ -60,14 +61,26 @@ namespace zmqutils{
 namespace pubsub{
 // =====================================================================================================================
 
-SubscriberBase::SubscriberBase() :
+SubscriberBase::SubscriberBase(const std::string& subscriber_name,
+                               const std::string& subscriber_version ,
+                               const std::string& subscriber_info) :
     socket_(nullptr),
     socket_pub_close_(nullptr),
     sub_uuid_(utils::UUIDGenerator::getInstance().generateUUIDv4()),
     flag_working_(false)
-
 {
+    // Get the client interfaces.
+    std::vector<internal_helpers::network::NetworkAdapterInfo> interfcs =
+        internal_helpers::network::getHostIPsWithInterfaces();
 
+    // Check if we have active interfaces.
+    if(interfcs.empty())
+    {
+        std::string module = "[LibZMQUtils,PublisherSubscriber,SubscriberBase] ";
+        throw std::invalid_argument(module + "No active network interfaces found.");
+    }
+
+    // Update the subscriber info.
 }
 
 const std::set<TopicType> &SubscriberBase::getTopicFilters() const
@@ -142,7 +155,6 @@ void SubscriberBase::subscribe(const std::string &pub_endpoint)
         if (this->flag_working_)
             this->resetSocket();
     }
-
 }
 
 void SubscriberBase::unsubscribe(const std::string &pub_endpoint)
@@ -162,7 +174,6 @@ void SubscriberBase::unsubscribe(const std::string &pub_endpoint)
         if (this->flag_working_)
             this->resetSocket();
     }
-
 }
 
 void SubscriberBase::addTopicFilter(const TopicType &filter)

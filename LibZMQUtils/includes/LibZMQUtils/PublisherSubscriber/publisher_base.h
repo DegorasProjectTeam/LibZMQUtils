@@ -60,23 +60,36 @@ namespace zmqutils{
 namespace pubsub{
 // =====================================================================================================================
 
-/**
- * @brief The PublisherBase class represents a base publisher that binds to and endpoint and can send PubSubMsg messages.
- *
- * This base class can be used without specialization or it can be inherited to provide callbacks for start, stop,
- * message sending and error handling.
- */
+
 class LIBZMQUTILS_EXPORT PublisherBase : public ZMQContextHandler
 {
 
 public:
     
     /**
-     * @brief PublisherBase constructor.
-     * @param endpoint, the endpoint to bind the publisher to.
-     * @param name, optional name of the publisher. It will be sent on messages.
+     * @brief Constructs a ZeroMQ-based publisher with specific parameters.
+     *
+     * This constructor initializes a ZeroMQ-based publisher, setting the port for listening, the IP address for
+     * binding connections, and other metadata such as the publisher name, version, and additional information.
+     *
+     * @param port              The port number on which the publisher will listen for incoming connections.
+     * @param ip_address        The IP address on which the publisher will accept connections. By default, it listens
+     *                              on all available interfaces ("*").
+     * @param publisher_name    Optional parameter to specify the publisher name. By default is empty.
+     * @param publisher_version Optional parameter to specify the publisher version (like "1.1.1"). By default is empty.
+     * @param publisher_info    Optional parameter to specify the publisher information. By default is empty.
+     *
+     * @throws std::invalid_argument If no network interfaces matching the specified IP address are found.
+     *
+     * @note The publisher requires at least one valid IP address to function properly. If "ip_address" is set to "*",
+     * it will listen on all available local interfaces. Otherwise, the publisher will only bind to the specified IP
+     * address if it matches a valid interface.
+     *
+     * @warning When specifying the `ip_address`, ensure it is a valid IP address present on the system. Incorrect or
+     * unavailable addresses may result in connection failures.
      */
-    PublisherBase(std::string endpoint, std::string name = "");
+    PublisherBase(unsigned port, const std::string& ip_address = "*", const std::string& publisher_name = "",
+                  const std::string& publisher_version = "", const std::string& publisher_info = "");
     
     /**
      * @brief Start the publisher so it can send messages. It must be started before sending messages.
@@ -185,6 +198,9 @@ protected:
 
 private:
 
+    // Helper aliases.
+    using NetworkAdapterInfoV = std::vector<internal_helpers::network::NetworkAdapterInfo>;
+
     void deleteSockets();
 
     void internalStopPublisher();
@@ -193,23 +209,18 @@ private:
 
     zmq::multipart_t prepareMessage(const PubSubData &data);
 
-    // Internal publisher identification.
+    // Endpoint data and publisher info.
     PublisherInfo pub_info_;
+    NetworkAdapterInfoV server_adapters_;  ///< Interfaces bound by publisher.
 
     // ZMQ sockets and endpoint.
-    std::string endpoint_;        ///< Publisher endpoint.
     zmq::socket_t *socket_;       ///< ZMQ publisher socket.
-
 
     // Mutex.
     mutable std::mutex mtx_;      ///< Safety mutex.
 
-    // Bound interfaces
-    std::vector<internal_helpers::network::NetworkAdapterInfo> bound_ifaces_;  ///< Interfaces bound by publisher.
-
-
     // Usefull flags.
-    std::atomic_bool flag_working_;           ///< Flag for check the working status.
+    std::atomic_bool flag_working_;  ///< Flag for check the working status.
 };
 
 }} // END NAMESPACES.

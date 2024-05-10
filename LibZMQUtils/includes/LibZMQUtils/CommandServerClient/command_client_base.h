@@ -81,13 +81,11 @@ public:
     /**
      * @brief Base constructor for a ZeroMQ command client.
      *
-     *
      * @param server_endpoint The URL endpoint of the server with the port.
      * @param net_interface Name of the network interface to be used. If empty, the class will look for the best one.
      * @param client_name Optional parameter to specify the server name. By default is empty.
      * @param client_version Optional parameter to specify the server version (like "1.1.1"). By default is empty.
      * @param client_info Optional parameter to specify the server information. By default is empty.
-     *
      */
     CommandClientBase(const std::string& server_endpoint,
                       const std::string& client_name = "",
@@ -310,6 +308,16 @@ protected:
      */
     virtual void onClientError(const zmq::error_t& error, const std::string& ext_info) = 0;
 
+    /**
+     * @brief Prepare a request with command and optional parameters.
+     *
+     * This function creates a `RequestData` object with a specific command and optional parameters. The command and
+     * parameters are serialized into a `RequestData` object, which can be sent to a server.
+     *
+     * @param command The command identifier to be included in the request.
+     * @param args Additional arguments that will be serialized into the `RequestData` object.
+     * @return The RequestData struct containing the command and its parameters.
+     */
     template <typename CmdId, typename... Args>
     static zmqutils::serverclient::RequestData prepareRequest(CmdId command, const Args&... args)
     {
@@ -322,6 +330,17 @@ protected:
         return command_msg;
     }
 
+    /**
+     * @brief Execute a command by sending a prepared request and handling the response.
+     *
+     * This function sends a previously prepared `RequestData` to the server and processes the returned response. If
+     * the command execution is successful (`COMMAND_OK`), the returned parameters are deserialized into the provided
+     * arguments. The function returns the OperationResult value.
+     *
+     * @param request The `RequestData` object representing the command to be executed.
+     * @param args Output parameters where the deserialized response data will be stored.
+     * @return The result of the command execution.
+     */
     template <typename... Args>
     zmqutils::serverclient::OperationResult executeCommand(const zmqutils::serverclient::RequestData &request,
                                                            Args&... args)

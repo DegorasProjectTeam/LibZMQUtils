@@ -89,7 +89,7 @@ int main(int, char**)
     console_cfg.configureConsole(true, true, false);
 
     // Configuration variables.
-    std::string endpoint = "*";                                 // Server endpoint.
+    std::string ip = "*";                                       // Server Ip.
     unsigned port = 9999;                                       // Server connection port.
     bool client_status_check = true;                            // Disable or enable the clients alive status.
     unsigned max_client_connections = 2;                        // Maximum number of client connections.
@@ -100,7 +100,7 @@ int main(int, char**)
     AmelasController amelas_controller;
 
     // Instantiate the server.
-    AmelasControllerServer amelas_server(port, "*", "AMELAS EXAMPLE SERVER", "1.7.6", "This is the AMELAS server.");
+    AmelasControllerServer amelas_server(port, ip, "AMELAS EXAMPLE SERVER", "1.7.6", "This is the AMELAS server.");
 
     // Configure the server.
     amelas_server.setClientStatusCheck(client_status_check);

@@ -240,23 +240,28 @@ public:
      * incoming requests. Additionally, it allows specifying local addresses on which the server will accept
      * connections. By default, the server will accept connections on all available local addresses.
      *
-     * @param port The port number on which the server will listen for incoming requests.
-     * @param local_addr Optional parameter to specify the local addresses on which the server will accept connections.
-     *        By default, it is set to "*", which means the server will accept connections on all available local
-     *        addresses.
-     * @param server_name Optional parameter to specify the server name. By default is empty.
+     * @param port           The port number on which the server will listen for incoming requests.
+     * @param ip_address     The IP address on which the server will accept connections. By default, it listens on all
+     *                          available interfaces ("*").
+     * @param server_name    Optional parameter to specify the server name. By default is empty.
      * @param server_version Optional parameter to specify the server version (like "1.1.1"). By default is empty.
-     * @param server_info Optional parameter to specify the server information. By default is empty.
+     * @param server_info    Optional parameter to specify the server information. By default is empty.
+     *
+     * @throws std::invalid_argument If no network interfaces matching the specified IP address are found.
+     *
+     * @note The server requires at least one valid IP address to function properly. If "ip_address" is set to "*",
+     * it will listen on all available local interfaces. Otherwise, the server will only bind to the specified IP
+     * address if it matches a valid interface.
      *
      * @note The server created with this constructor will be a base server and it doesn't have the complete
      * implementation of specific request-response logic. It is intended to be subclassed to provide custom request
      * handling. You can implement the `onCustomCommandReceived` function as an internal callback in the subclass to
      * handle incoming requests and provide the desired response logic.
      *
-     * @warning When specifying the `local_addr`, ensure it is a valid IP address present on the system. Incorrect or
+     * @warning When specifying the `ip_address`, ensure it is a valid IP address present on the system. Incorrect or
      * unavailable addresses may result in connection failures.
      */
-    CommandServerBase(unsigned port, const std::string& local_addr = "*", const std::string& server_name = "",
+    CommandServerBase(unsigned port, const std::string& ip_address = "*", const std::string& server_name = "",
                       const std::string& server_version = "", const std::string& server_info = "");
 
     /**

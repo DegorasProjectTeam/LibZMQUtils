@@ -214,12 +214,39 @@ struct LIBZMQUTILS_EXPORT PublisherInfo
     std::string toJsonString() const;
 
     // Struct data.
-    utils::UUID uuid;         ///< Unique publisher host UUID.
-    std::string endpoint;     ///< Publisher endpoint.
-    std::string name;         ///< Publisher name, optional.
-    std::string info;         ///< Publisher information, optional.
-    std::string version;      ///< Publisher version, optional.
-    // TODO IPS
+    unsigned port;                 ///< Publisher port.
+    utils::UUID uuid;              ///< Unique publisher host UUID.
+    std::string endpoint;          ///< Final publisher endpoint.
+    std::string hostname;          ///< Host publisher name.
+    std::string name;              ///< Publisher name, optional.
+    std::string info;              ///< Publisher information, optional.
+    std::string version;           ///< Publisher version, optional.
+    //std::vector<std::string> ips;  ///< Vector of publisher ips.
+};
+
+/**
+ * @brief The SubscriberInfo struct holds the information of a specific subscriber.
+ */
+struct LIBZMQUTILS_EXPORT SubscriberInfo
+{
+    // Default constructor, copy and move
+    SubscriberInfo() = default;
+    SubscriberInfo(const SubscriberInfo&) = default;
+    SubscriberInfo(SubscriberInfo&&) = default;
+    SubscriberInfo& operator=(const SubscriberInfo&) = default;
+    SubscriberInfo& operator=(SubscriberInfo&&) = default;
+
+    /**
+     * @brief Converts subscriber info into a Json string.
+     * @return a Json string representing the publisher info.
+     */
+    std::string toJsonString() const;
+
+    // Struct data.
+    std::string name;              ///< Subscriber name, optional.
+    std::string info;              ///< Subscriber information, optional.
+    std::string version;           ///< Subscriber version, optional.
+    //std::vector<std::string> ips;  ///< Vector of publisher ips.
 };
 
 /**

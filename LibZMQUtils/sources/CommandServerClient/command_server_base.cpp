@@ -69,7 +69,7 @@ namespace serverclient{
 // =====================================================================================================================
 
 CommandServerBase::CommandServerBase(unsigned port,
-                                     const std::string& local_addr,
+                                     const std::string& ip_address,
                                      const std::string &server_name,
                                      const std::string& server_version,
                                      const std::string& server_info) :
@@ -85,13 +85,13 @@ CommandServerBase::CommandServerBase(unsigned port,
     std::vector<NetworkAdapterInfo> interfcs = internal_helpers::network::getHostIPsWithInterfaces();
 
     // Store the adapters.
-    if(local_addr == "*")
+    if(ip_address == "*")
         this->server_adapters_ = interfcs;
     else
     {
         for(const auto& intrfc : interfcs)
         {
-            if(intrfc.ip == local_addr)
+            if(intrfc.ip == ip_address)
                 this->server_adapters_.push_back(intrfc);
         }
     }
@@ -100,7 +100,7 @@ CommandServerBase::CommandServerBase(unsigned port,
     if(this->server_adapters_.empty())
     {
         std::string module = "[LibZMQUtils,CommandServerClient,CommandServerBase] ";
-        throw std::invalid_argument(module + "No interfaces found for address <" + local_addr + ">.");
+        throw std::invalid_argument(module + "No interfaces found for address <" + ip_address + ">.");
     }
 
     // Update the server information.
@@ -108,7 +108,7 @@ CommandServerBase::CommandServerBase(unsigned port,
     this->server_info_.port = port;
     this->server_info_.version = server_version;
     this->server_info_.info = server_info;
-    this->server_info_.endpoint = "tcp://" + local_addr + ":" + std::to_string(port);
+    this->server_info_.endpoint = "tcp://" + ip_address + ":" + std::to_string(port);
     this->server_info_.ips = this->getServerIps();
     this->server_info_.hostname = internal_helpers::network::getHostname();
 }

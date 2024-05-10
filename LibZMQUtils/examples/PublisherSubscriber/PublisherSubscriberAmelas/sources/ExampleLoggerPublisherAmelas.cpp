@@ -161,12 +161,11 @@ int main(int, char**)
     console_cfg.configureConsole(true, false, true);
 
     // Configuration variables.
+    std::string ip = "*";
     unsigned port = 9999;
-    std::string ip = "127.0.0.1";
-    std::string endpoint = "tcp://" + ip + ":" + std::to_string(port);
-    
+
     // Instanciate the publisher.
-    AmelasLoggerPublisher pub(endpoint, "AMELAS LOGGER PUBLISHER");
+    AmelasLoggerPublisher pub(port, ip, "AMELAS EXAMPLE PUBLISHER", "1.7.6", "This is the AMELAS PUBLISHER.");
 
     // Prepare the auxiliar testing parser.
     AmelasLoggerPublisherCmdParser publisher_parser(pub);

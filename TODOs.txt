@@ -15,6 +15,8 @@ PRIORITY:
 
 - In HostInfo, add to the JSONString the last seen as readable string.
 
+- Add a comman to get server info.
+
 
 NO PRIORITY:
 
@@ -28,16 +30,11 @@ NO PRIORITY:
 
 - Add a system to allow always the connection of a local client for administrative operations.
 
-- Add a comman to get server info and enable/disable the access to this command by clients.
-
 - Add a command to get all the info of connected clients and enable/disable the access to this command by clients.
 
 - Add a command to close the server (by external client with access to that operation).
 
 - Add a function to, in the server, check the version of the client and check compatibility with current server version.
-
-- Get the server name and version when connect.
-
 
 
 
