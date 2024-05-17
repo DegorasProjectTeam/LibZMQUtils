@@ -29,5 +29,6 @@
  **********************************************************************************************************************/
 
 #include <LibZMQUtils/PublisherSubscriber/subscriber_base.h>
+#include <LibZMQUtils/PublisherSubscriber/clbk_subscriber_base.h>
 #include <LibZMQUtils/PublisherSubscriber/common.h>
 

@@ -189,6 +189,9 @@ bool PublisherBase::isWorking() const
 
 PublisherResult PublisherBase::sendMsg(const PubSubData& request)
 {
+    // Safe mutex lock
+    std::unique_lock<std::mutex> lock(this->mtx_);
+
     // Result.
     PublisherResult result = PublisherResult::MSG_OK;
 

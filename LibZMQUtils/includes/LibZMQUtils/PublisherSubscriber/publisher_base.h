@@ -136,6 +136,8 @@ public:
      * @brief Sends a PubSubMsg.
      * @param data, the data that will be sent in the msg.
      * @return the result of sending operation.
+     * @note This method is thread-safe, since it is protected by a mutex.
+     * @todo Maybe the mutex should be changed by a queue that sends the messages to the thread of the socket.
      */
     PublisherResult sendMsg(const PubSubData &data);
 

@@ -15,7 +15,7 @@ PRIORITY:
 
 - In HostInfo, add to the JSONString the last seen as readable string.
 
-- Add a comman to get server info.
+- Add a command to get server info.
 
 
 NO PRIORITY:
