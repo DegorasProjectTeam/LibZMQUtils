@@ -43,7 +43,7 @@
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/Modules/CommandServer>
+#include <LibZMQUtils/Modules/CommandServerClient>
 // =====================================================================================================================
 
 // AMELAS NAMESPACES
@@ -54,45 +54,27 @@ namespace communication{
 
 // Specific subclass commands (0 to 50 are reserved for the base server).
 // WARNING: In our approach, the server commands must be always in order.
-enum class AmelasServerCommand : zmqutils::serverclient::CommandType
+enum class AmelasServerCommand : zmqutils::reqrep::CommandType
 {
     REQ_SET_HOME_POSITION        = 51,
     REQ_GET_HOME_POSITION        = 52,
     REQ_DO_OPEN_SEARCH_TELESCOPE = 53,
     REQ_DO_EXAMPLE_NOT_IMP       = 54,
-    END_AMELAS_COMMANDS          = 55
-};
-
-// Specific subclass errors (0 to 50 are reserved for the base server).
-enum class AmelasOperationResult : zmqutils::serverclient::ResultType
-{
-    EMPTY_CALLBACK = 51,
-    INVALID_CALLBACK = 52
+    END_AMELAS_COMMANDS          = 80
 };
 
 // Extend the base command strings with those of the subclass.
-static constexpr auto AmelasServerCommandStr = zmqutils::utils::joinArraysConstexpr(
-    zmqutils::serverclient::ServerCommandStr,
-    std::array<const char*, 5>
-    {
-        "REQ_SET_HOME_POSITION",
-        "REQ_GET_HOME_POSITION",
-        "REQ_DO_OPEN_SEARCH_TELESCOPE",
-        "REQ_DO_EXAMPLE_NOT_IMP",
-        "END_DRGG_COMMANDS"
-    });
-
-// Extend the base result strings with those of the subclass.
-static constexpr auto AmelasOperationResultStr = zmqutils::utils::joinArraysConstexpr(
-    zmqutils::serverclient::OperationResultStr,
-    std::array<const char*, 2>
-    {
-        "EMPTY_CALLBACK - The external callback for the command is empty.",
-        "INVALID_CALLBACK - The external callback for the command is invalid."
-    });
+static constexpr std::array<const char*, 5> AmelasServerCommandStr
+{
+    "REQ_SET_HOME_POSITION",
+    "REQ_GET_HOME_POSITION",
+    "REQ_DO_OPEN_SEARCH_TELESCOPE",
+    "REQ_DO_EXAMPLE_NOT_IMP",
+    "END_AMELAS_COMMANDS"
+};
 
 // Usefull const expressions.
-constexpr std::int32_t kMinCmdId = static_cast<std::int32_t>(zmqutils::serverclient::ServerCommand::END_BASE_COMMANDS) + 1;
+constexpr std::int32_t kMinCmdId = static_cast<std::int32_t>(zmqutils::reqrep::ServerCommand::END_BASE_COMMANDS) + 1;
 constexpr std::int32_t kMaxCmdId = static_cast<std::int32_t>(AmelasServerCommand::END_AMELAS_COMMANDS) - 1;
 
 }} // END NAMESPACES.

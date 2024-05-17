@@ -50,7 +50,7 @@
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/CommandServerClient/command_server_base.h"
+#include "LibZMQUtils/CommandServerClient/command_server/command_server_base.h"
 #include "LibZMQUtils/Global/constants.h"
 #include "LibZMQUtils/Utilities/utils.h"
 #include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
@@ -65,7 +65,7 @@ using zmqutils::internal_helpers::network::NetworkAdapterInfo;
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
-namespace serverclient{
+namespace reqrep{
 // =====================================================================================================================
 
 CommandServerBase::CommandServerBase(unsigned port,
@@ -119,7 +119,7 @@ const std::future<void> &CommandServerBase::getServerWorkerFuture() const
     return this->fut_server_worker_;
 }
 
-const std::map<UUID, ClientInfo> &CommandServerBase::getConnectedClients() const
+const std::map<UUID, CommandClientInfo> &CommandServerBase::getConnectedClients() const
 {
     std::unique_lock<std::mutex> lock(this->mtx_);
     return this->connected_clients_;
@@ -168,7 +168,7 @@ void CommandServerBase::setAliveCallbacksEnabled(bool flag)
     this->flag_alive_callbacks_ = flag;
 }
 
-const ServerInfo &CommandServerBase::getServerInfo() const
+const CommandServerInfo &CommandServerBase::getServerInfo() const
 {
     std::unique_lock<std::mutex> lock(this->mtx_);
     return this->server_info_;
@@ -205,17 +205,15 @@ std::vector<std::string> CommandServerBase::getServerIps() const
 
 bool CommandServerBase::startServer()
 {
-    // Safe mutex lock
-    std::unique_lock<std::mutex> lock(this->mtx_);
-
     // If server is already started, do nothing
     if (this->flag_server_working_)
         return true;
 
-    // Launch server worker in other thread.
+     // Launch server worker in other thread.
     this->fut_server_worker_ = std::async(std::launch::async, &CommandServerBase::serverWorker, this);
 
     // Wait for the server deployment.
+
     std::unique_lock<std::mutex> depl_lock(this->depl_mtx_);
     this->cv_server_depl_.wait(depl_lock);
 
@@ -229,14 +227,65 @@ void CommandServerBase::stopServer()
     if (!this->flag_server_working_)
         return ;
 
+    // Mutex lock zone.
     {
-        // Lock and stop the server.
+        // Lock.
         std::unique_lock<std::mutex> lock(this->mtx_);
+
+        // Stop the server.
         this->internalStopServer();
     }
 
     // Call to the internal callback.
     this->onServerStop();
+}
+
+std::string CommandServerBase::serverCommandToString(ServerCommand command) const
+{
+    // Mutex.
+    std::unique_lock<std::mutex> lock(this->mtx_);
+
+    // Containers.
+    std::int32_t enum_val = static_cast<std::int32_t>(command);
+    std::size_t idx = static_cast<std::size_t>(command);
+    std::string cmd_str = "UNKNOWN_COMMAND";
+
+    // Call to the internal registered function.
+    if(this->command_to_string_function_)
+        cmd_str = this->command_to_string_function_(command);
+    else if (enum_val < 0)
+        cmd_str = "INVALID_COMMAND";
+    else if (idx < std::size(ServerCommandStr))
+        cmd_str = ServerCommandStr[idx];
+    return cmd_str;
+}
+
+std::string CommandServerBase::serverCommandToString(CommandType command) const
+{
+    return this->serverCommandToString(static_cast<ServerCommand>(command));
+}
+
+std::string CommandServerBase::operationResultToString(OperationResult result) const
+{
+    // Mutex.
+    std::unique_lock<std::mutex> lock(this->mtx_);
+
+    // Containers.
+    std::int32_t enum_val = static_cast<std::int32_t>(result);
+    std::size_t idx = static_cast<std::size_t>(result);
+    std::string op_str = "UNKNOWN_OPERATION_RESULT";
+
+    // Check the index.
+    if (enum_val < 0)
+        op_str = "INVALID_OPERATION_RESULT";
+    else if (idx < std::size(OperationResultStr))
+        op_str = OperationResultStr[idx];
+    return op_str;
+}
+
+std::string CommandServerBase::operationResultToString(ResultType result) const
+{
+    return this->operationResultToString(static_cast<OperationResult>(result));
 }
 
 void CommandServerBase::internalStopServer()
@@ -296,13 +345,13 @@ CommandServerBase::~CommandServerBase()
 OperationResult CommandServerBase::execReqConnect(CommandRequest& cmd_req, CommandReply& reply)
 {
     // Auxiliar containers.
-    ClientInfo client_info;
+    CommandClientInfo client_info;
 
     // Prepare the serializer.
-    serializer::BinarySerializer serializer(std::move(cmd_req.params), cmd_req.params_size);
+    serializer::BinarySerializer serializer(std::move(cmd_req.data.bytes), cmd_req.data.size);
 
     // Check the parameters.
-    if(cmd_req.params_size == 0)
+    if(cmd_req.data.size == 0)
         return OperationResult::EMPTY_PARAMS;
 
     // Get the parameters.
@@ -333,8 +382,9 @@ OperationResult CommandServerBase::execReqConnect(CommandRequest& cmd_req, Comma
         if(this->connected_clients_.size() >= this->max_connected_clients_)
             return OperationResult::MAX_CLIENTS_REACH;
 
-        // Store the client.
-        client_info.last_seen = std::chrono::steady_clock::now();
+        // Store the client last seen time.
+        client_info.last_seen = std::chrono::high_resolution_clock::now();
+        client_info.last_seen_steady = std::chrono::steady_clock::now();
 
         // Add the new client.
         this->connected_clients_[cmd_req.client_uuid] = client_info;
@@ -344,8 +394,8 @@ OperationResult CommandServerBase::execReqConnect(CommandRequest& cmd_req, Comma
             this->updateServerTimeout();
 
         // Prepare the reply.
-        reply.params_size = serializer::BinarySerializer::fastSerialization(reply.params, this->server_info_.hostname,
-            this->server_info_.name, this->server_info_.info, this->server_info_.version);
+        reply.data.size = serializer::BinarySerializer::fastSerialization(reply.data.bytes,
+            this->server_info_.hostname, this->server_info_.name, this->server_info_.info, this->server_info_.version);
     }
 
     // Call to the internal callback.
@@ -358,7 +408,7 @@ OperationResult CommandServerBase::execReqConnect(CommandRequest& cmd_req, Comma
 OperationResult CommandServerBase::execReqDisconnect(const CommandRequest& cmd_req)
 {
     // Temporal container.
-    ClientInfo tmp_host;
+    CommandClientInfo tmp_host;
 
     // Lock zone.
     {
@@ -395,7 +445,7 @@ OperationResult CommandServerBase::execReqGetServerTime(CommandReply& reply)
         return OperationResult::COMMAND_FAILED;
 
     // Serialize the date.
-    reply.params_size = serializer::BinarySerializer::fastSerialization(reply.params, date);
+    reply.data.size = serializer::BinarySerializer::fastSerialization(reply.data.bytes, date);
 
     // All ok.
     return OperationResult::COMMAND_OK;
@@ -404,12 +454,29 @@ OperationResult CommandServerBase::execReqGetServerTime(CommandReply& reply)
 void CommandServerBase::serverWorker()
 {
     // Containers.
-    OperationResult result;
     CommandRequest request;
     CommandReply reply;
+    OperationResult op_res;
 
-    // Start server socket
-    this->resetSocket();
+    // Start server socket inside a lock zone.
+    {
+        std::unique_lock<std::mutex> lock(this->mtx_);
+        this->resetSocket();
+    }
+
+    // Check the socket status and call to the internal callbacks.
+    if(this->flag_server_working_)
+    {
+        this->onServerStart();
+    }
+    else
+    {
+        std::string module = "[LibZMQUtils,CommandServerClient,CommandServerBase] ";
+        this->onServerError(this->last_zmq_error_, module + "Error during socket creation.");
+    }
+
+    // Notify all the deployment.
+    this->cv_server_depl_.notify_all();
 
     // Server worker loop.
     // If there is no client connected wait for a client to connect or for an exit message. If there
@@ -417,6 +484,10 @@ void CommandServerBase::serverWorker()
     // for each client. The loop can be stopped (in a safe way) if using the stopServer() function.
     while(this->server_socket_ && this->flag_server_working_)
     {
+        // Resets all the containers.
+        request.clear();
+        reply.clear();
+
         // Call to the internal waiting command callback (check first the last request).
         if (request.command != ServerCommand::REQ_ALIVE || this->flag_alive_callbacks_)
             this->onWaitingCommand();
@@ -426,33 +497,36 @@ void CommandServerBase::serverWorker()
         reply = CommandReply();
 
         // Receive the data.
-        result = this->recvFromSocket(request);
+        op_res = this->recvFromSocket(request);
 
         // Check all the clients status.
-        if(result == OperationResult::COMMAND_OK && this->flag_server_working_ && this->flag_check_clients_alive_ )
+        if(op_res == OperationResult::COMMAND_OK && this->flag_server_working_ && this->flag_check_clients_alive_ )
             this->checkClientsAliveStatus();
 
         // Process the data.
-        if(result == OperationResult::COMMAND_OK && !this->flag_server_working_)
-        {}
-        else if(result == OperationResult::TIMEOUT_REACHED && this->flag_check_clients_alive_)
+        if(op_res == OperationResult::COMMAND_OK && !this->flag_server_working_)
+        {
+            // Nothing to do, we want close the server.
+        }
+        else if(op_res == OperationResult::TIMEOUT_REACHED && this->flag_check_clients_alive_)
         {
             this->checkClientsAliveStatus();
         }
-        else if (result != OperationResult::COMMAND_OK)
+        else if (op_res != OperationResult::COMMAND_OK)
         {
+            // Store the result
+            reply.result = op_res;
+            reply.command = request.command;
+
             // Internal callback.
             this->onInvalidMsgReceived(request);
-
-            // Store the reply result..
-            reply.server_result = result;
 
             // Send response callback.
             this->onSendingResponse(reply);
 
             // Prepare the message.
             serializer::BinarySerializer serializer;
-            size_t size_res = serializer.write(result);
+            size_t size_res = serializer.write(reply.result);
             zmq::const_buffer buffer_res(serializer.release(), size_res);
 
             // Send the response.
@@ -462,14 +536,23 @@ void CommandServerBase::serverWorker()
             }
             catch (const zmq::error_t &error)
             {
+                // Store the last error.
+                this->last_zmq_error_ = error;
+
                 // Check if we want to close the server.
                 // The error code is for ZMQ EFSM error.
                 if(!(error.num() == kZmqEFSMError && !this->flag_server_working_))
-                    this->onServerError(error, "CommandServerBase: Error while sending a response.");
+                {
+                    std::string module = "[LibZMQUtils,CommandServerClient,CommandServerBase] ";
+                    this->onServerError(this->last_zmq_error_, module + "Error while sending a response.");
+                }
             }
         }
-        else if (result == OperationResult::COMMAND_OK)
+        else if (op_res == OperationResult::COMMAND_OK)
         {
+            // Store the command.
+            reply.command = request.command;
+
             // Execute the command.
             this->processCommand(request, reply);
 
@@ -480,14 +563,14 @@ void CommandServerBase::serverWorker()
             zmq::multipart_t multipart_msg;
 
             // Prepare the command result.
-            size_t size = serializer.write(reply.server_result);
+            size_t size = serializer.write(reply.command, reply.result);
             multipart_msg.addmem(serializer.release(), size);
 
             // Specific data.
-            if(reply.server_result == OperationResult::COMMAND_OK && reply.params_size != 0)
+            if(reply.result == OperationResult::COMMAND_OK && reply.data.size != 0)
             {
                 // Prepare the custom response.
-                zmq::message_t message_rep_custom(reply.params.get(), reply.params_size);
+                zmq::message_t message_rep_custom(reply.data.bytes.get(), reply.data.size);
                 multipart_msg.add(std::move(message_rep_custom));
             }
 
@@ -502,10 +585,16 @@ void CommandServerBase::serverWorker()
             }
             catch (const zmq::error_t &error)
             {
+                // Store the last error.
+                this->last_zmq_error_ = error;
+
                 // Check if we want to close the server.
                 // The error code is for ZMQ EFSM error.
                 if(!(error.num() == kZmqEFSMError && !this->flag_server_working_))
-                    this->onServerError(error, "CommandServerBase: Error while sending a response.");
+                {
+                    std::string module = "[LibZMQUtils,CommandServerClient,CommandServerBase] ";
+                    this->onServerError(this->last_zmq_error_, module + "Error while sending a response.");
+                }
             }
         }
     }
@@ -560,7 +649,7 @@ OperationResult CommandServerBase::recvFromSocket(CommandRequest& request)
         if (msg_uuid.size() == UUID::kUUIDSize + sizeof(serializer::SizeUnit)*2)
         {
             std::array<std::byte, 16> uuid_bytes;
-            serializer::BinarySerializer::fastDeserialization(msg_uuid.data(), msg_uuid.size(), uuid_bytes);
+            serializer::BinarySerializer::fastDeserialization(std::move(msg_uuid.data()), msg_uuid.size(), uuid_bytes);
             request.client_uuid = UUID(uuid_bytes);
         }
         else
@@ -606,7 +695,7 @@ OperationResult CommandServerBase::recvFromSocket(CommandRequest& request)
             {
                 // Get and store the parameters data.
                 serializer::BinarySerializer serializer(message_params.data(), message_params.size());
-                request.params_size = serializer.moveUnique(request.params);
+                request.data.size = serializer.moveUnique(request.data.bytes);
             }
             else
                 return OperationResult::EMPTY_PARAMS;
@@ -650,36 +739,35 @@ void CommandServerBase::processCommand(CommandRequest& request, CommandReply& re
     // 4 - If valid, process the rest of the base commands or the custom command.
     if (ServerCommand::REQ_CONNECT == request.command)
     {
-        reply.server_result = this->execReqConnect(request, reply);
+        reply.result = this->execReqConnect(request, reply);
     }
     else if(this->connected_clients_.find(request.client_uuid) == this->connected_clients_.end())
     {
-        reply.server_result = OperationResult::CLIENT_NOT_CONNECTED;
+        reply.result = OperationResult::CLIENT_NOT_CONNECTED;
     }
     else if (ServerCommand::REQ_DISCONNECT == request.command)
     {
-        reply.server_result = this->execReqDisconnect(request);
+        reply.result = this->execReqDisconnect(request);
     }
     else if (ServerCommand::REQ_ALIVE == request.command)
     {
-        reply.server_result = OperationResult::COMMAND_OK;
+        reply.result = OperationResult::COMMAND_OK;
     }
     else if(ServerCommand::REQ_GET_SERVER_TIME == request.command)
     {
-        reply.server_result = this->execReqGetServerTime(reply);
+        reply.result = this->execReqGetServerTime(reply);
+    }
+    else if(this->validateCustomRequest(request))
+    {
+        // Call the internal callback.
+        this->onCustomCommandReceived(request);
+
+        // Custom command, so call to the custom process.
+        this->processCustomCommand(request, reply);
     }
     else
     {
-        // Validate the custom command.
-        if(!this->validateCustomCommand(request.command))
-            reply.server_result = OperationResult::UNKNOWN_COMMAND;
-
-        // Custom command, so call the internal callback.
-        this->onCustomCommandReceived(request, reply);
-
-        // Chek for an invalid msg.
-        if(reply.server_result == OperationResult::INVALID_MSG)
-            this->onInvalidMsgReceived(request);
+        reply.result = OperationResult::UNKNOWN_COMMAND;
     }
 }
 
@@ -694,7 +782,7 @@ void CommandServerBase::processCustomCommand(CommandRequest& request, CommandRep
     else
     {
         // Command not found in the map.
-        reply.server_result = OperationResult::NOT_IMPLEMENTED;
+        reply.result = OperationResult::NOT_IMPLEMENTED;
     }
 }
 
@@ -704,7 +792,7 @@ void CommandServerBase::checkClientsAliveStatus()
     std::vector<UUID> dead_clients;
     std::chrono::milliseconds timeout(this->client_alive_timeout_);
     std::chrono::milliseconds min_remaining_time = timeout;
-    std::vector<ClientInfo> deleted_clients;
+    std::vector<CommandClientInfo> deleted_clients;
 
     // Get the current time.
     utils::SCTimePointStd now = std::chrono::steady_clock::now();
@@ -717,7 +805,7 @@ void CommandServerBase::checkClientsAliveStatus()
         for(const auto& client : this->connected_clients_)
         {
             // Get the last connection time.
-            const auto& last_conn = client.second.last_seen;
+            const auto& last_conn = client.second.last_seen_steady;
             // Check if the client reaches the timeout checking the last connection time.
             auto since_last_conn = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_conn);
             if(since_last_conn >= timeout)
@@ -763,7 +851,10 @@ void CommandServerBase::updateClientLastConnection(const UUID& uuid)
     // Update the client last connection.
     auto client_itr = this->connected_clients_.find(uuid);
     if(client_itr != this->connected_clients_.end())
-        client_itr->second.last_seen = std::chrono::steady_clock::now();
+    {
+        client_itr->second.last_seen = std::chrono::high_resolution_clock::now();
+        client_itr->second.last_seen_steady = std::chrono::steady_clock::now();
+    }
 }
 
 void CommandServerBase::updateServerTimeout()
@@ -773,9 +864,9 @@ void CommandServerBase::updateServerTimeout()
         [](const auto& a, const auto& b)
         {
         auto diff_a = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - a.second.last_seen);
+            std::chrono::steady_clock::now() - a.second.last_seen_steady);
         auto diff_b = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - b.second.last_seen);
+            std::chrono::steady_clock::now() - b.second.last_seen_steady);
         return diff_a.count() < diff_b.count();
         });
 
@@ -783,7 +874,7 @@ void CommandServerBase::updateServerTimeout()
     {
         auto remain_time = this->client_alive_timeout_ -
                            std::chrono::duration_cast<std::chrono::milliseconds>(
-                                       std::chrono::steady_clock::now() - min_timeout->second.last_seen).count();
+                                       std::chrono::steady_clock::now() - min_timeout->second.last_seen_steady).count();
         this->server_socket_->set(zmq::sockopt::rcvtimeo, std::max(0, static_cast<int>(remain_time)));
     }
     else
@@ -796,7 +887,6 @@ void CommandServerBase::resetSocket()
 {
     // Auxiliar variables.
     int last_error_code = 0;
-    const zmq::error_t* last_error;
     int reconnect_count = static_cast<int>(this->server_reconn_attempts_);
 
     // Stop the socket.
@@ -813,10 +903,8 @@ void CommandServerBase::resetSocket()
             this->server_socket_->bind(this->server_info_.endpoint);
             this->server_socket_->set(zmq::sockopt::linger, 0);
 
-            // Update the working flag and calls to the callback.
+            // Update the working flag.
             this->flag_server_working_ = true;
-            this->cv_server_depl_.notify_all();
-            this->onServerStart();
         }
         catch (const zmq::error_t& error)
         {
@@ -826,7 +914,10 @@ void CommandServerBase::resetSocket()
                 delete this->server_socket_;
                 this->server_socket_ = nullptr;
             }
-            last_error = &error;
+
+            // Store the last error.
+            this->last_zmq_error_ = error;
+
             last_error_code = error.num();
             reconnect_count--;
 
@@ -834,17 +925,10 @@ void CommandServerBase::resetSocket()
             {
                 // Update the working flag and calls to the callback.
                 this->flag_server_working_ = false;
-                this->cv_server_depl_.notify_all();
-                this->onServerError(*last_error, "Error during socket creation.");
                 return;
             }
         }
     } while (reconnect_count > 0 && !this->flag_server_working_);
-}
-
-void CommandServerBase::onCustomCommandReceived(CommandRequest& req, CommandReply& rep)
-{
-    CommandServerBase::processCustomCommand(req, rep);
 }
 
 }} // END NAMESPACES.

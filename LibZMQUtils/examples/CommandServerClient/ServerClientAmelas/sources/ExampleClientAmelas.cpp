@@ -59,12 +59,12 @@
 // =====================================================================================================================
 
 // ---------------------------------------------------------------------------------------------------------------------
-using zmqutils::serverclient::CommandType;
-using zmqutils::serverclient::CommandReply;
-using zmqutils::serverclient::ServerCommand;
-using zmqutils::serverclient::CommandClientBase;
-using zmqutils::serverclient::RequestData;
-using zmqutils::serverclient::OperationResult;
+using zmqutils::reqrep::CommandType;
+using zmqutils::reqrep::CommandReply;
+using zmqutils::reqrep::ServerCommand;
+using zmqutils::reqrep::CommandClientBase;
+using zmqutils::reqrep::RequestData;
+using zmqutils::reqrep::OperationResult;
 using amelas::communication::AmelasControllerClient;
 using amelas::communication::AmelasServerCommand;
 using amelas::controller::AltAzPos;
@@ -79,7 +79,7 @@ public:
     AmelasClientCmdParser(AmelasControllerClient &client) : client_(client)
     {}
 
-    zmqutils::serverclient::OperationResult parseCommand(const std::string &command)
+    zmqutils::reqrep::OperationResult parseCommand(const std::string &command)
     {
         CommandType command_id;
         auto tokens = zmqutils::internal_helpers::strings::split<std::vector<std::string>>(command, " ", false);
@@ -207,7 +207,7 @@ private:
 
     }
 
-    void processGetHomePosition(zmqutils::serverclient::OperationResult res,
+    void processGetHomePosition(zmqutils::reqrep::OperationResult res,
                                 const amelas::controller::AltAzPos &pos,
                                 amelas::controller::AmelasError error)
     {
@@ -227,7 +227,7 @@ private:
         }
     }
 
-    void processSetHomePosition(zmqutils::serverclient::OperationResult res,
+    void processSetHomePosition(zmqutils::reqrep::OperationResult res,
                                 amelas::controller::AmelasError error)
     {
         if (OperationResult::COMMAND_OK == res)
@@ -245,7 +245,7 @@ private:
         }
     }
 
-    void processDoOpenSearchTelescope(zmqutils::serverclient::OperationResult res,
+    void processDoOpenSearchTelescope(zmqutils::reqrep::OperationResult res,
                                       amelas::controller::AmelasError error)
     {
         if (OperationResult::COMMAND_OK == res)
@@ -263,7 +263,7 @@ private:
         }
     }
 
-    void processDoExampleNotImp(zmqutils::serverclient::OperationResult res,
+    void processDoExampleNotImp(zmqutils::reqrep::OperationResult res,
                                 amelas::controller::AmelasError error)
     {
         if (OperationResult::COMMAND_OK == res)

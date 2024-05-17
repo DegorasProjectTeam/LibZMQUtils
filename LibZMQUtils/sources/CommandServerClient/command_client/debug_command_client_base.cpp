@@ -29,130 +29,139 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file common.cpp
- * @brief This file contains the implementation common elements for the CommandServerClient module.
+ * @file debug_command_server_base.cpp
+ * @brief This file contains the implementation of the DebugCommandServerBase class and related.
  * @author Degoras Project Team
  * @copyright EUPL License
 ***********************************************************************************************************************/
 
 // C++ INCLUDES
 // =====================================================================================================================
-#include <sstream>
+#include <string>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/CommandServerClient/common.h"
+#include "LibZMQUtils/CommandServerClient/command_client/debug_command_client_base.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
-namespace serverclient{
+namespace reqrep{
 // =====================================================================================================================
 
-ClientInfo::ClientInfo(const utils::UUID& uuid, const std::string& ip, const std::string& pid,
-                       const std::string& hostname, const std::string& name , const std::string& info,
-                       const std::string& version):
-    uuid(uuid),
-    ip(ip),
-    pid(pid),
-    hostname(hostname),
-    name(name),
-    info(info),
-    version(version)
-{}
+// ---------------------------------------------------------------------------------------------------------------------
+using zmqutils::reqrep::ServerCommand;
+using zmqutils::reqrep::OperationResult;
+using zmqutils::reqrep::ResultType;
+using zmqutils::reqrep::CommandType;
+using zmqutils::reqrep::CommandRequest;
+using zmqutils::reqrep::CommandReply;
+using zmqutils::reqrep::CommandClientInfo;
+using zmqutils::serializer::BinarySerializer;
+// ---------------------------------------------------------------------------------------------------------------------
 
-size_t ClientInfo::serialize(serializer::BinarySerializer &serializer) const
-{
-    return serializer.write(this->uuid, this->ip, this->pid, this->hostname, this->name, this->info, this->version);
-}
-
-void ClientInfo::deserialize(serializer::BinarySerializer &serializer)
-{
-    serializer.read(this->uuid, this->ip, this->pid, this->hostname, this->name, this->info, this->version);
-}
-
-size_t ClientInfo::serializedSize() const
-{
-    return Serializable::calcTotalSize(this->uuid, this->ip, this->pid, this->hostname,
-                                       this->name, this->info, this->version);
-}
-
-std::string ClientInfo::toJsonString() const
+std::string DebugCommandClientBase::generateStringHeader(const std::string &clbk_name,
+                                                         const std::vector<std::string>& data)
 {
     std::stringstream ss;
-
-    ss << "{"
-       << "\"uuid\":\"" << this->uuid.toRFC4122String() << "\","
-       << "\"ip\":\"" << this->ip << "\","
-       << "\"pid\":\"" << this->pid << "\","
-       << "\"hostname\":\"" << this->hostname << "\","
-       << "\"name\":\"" << this->name << "\","
-       << "\"info\":\"" << this->info << "\","
-       << "\"version\":\"" << this->version << "\""
-       << "}";
-
-    return ss.str();
-}
-
-RequestData::RequestData(ServerCommand id) :
-    command(id),
-    params(nullptr),
-    params_size(0){}
-
-RequestData::RequestData() :
-    command(ServerCommand::INVALID_COMMAND),
-    params(nullptr),
-    params_size(0){}
-
-CommandRequest::CommandRequest():
-    command(ServerCommand::INVALID_COMMAND),
-    params(nullptr),
-    params_size(0)
-{}
-
-CommandReply::CommandReply():
-    params(nullptr),
-    params_size(0),
-    server_result(OperationResult::COMMAND_OK)
-{}
-
-ServerInfo::ServerInfo(unsigned int port, const std::string &endpoint, const std::string &hostname,
-                       const std::string &name, const std::string &info, const std::string &version,
-                       const std::vector<std::string> &ips) :
-    port(port),
-    endpoint(endpoint),
-    hostname(hostname),
-    name(name),
-    info(info),
-    version(version),
-    ips(ips)
-{}
-
-std::string ServerInfo::toJsonString() const
-{
-    std::stringstream ss;
-
-    ss << "{"
-       << "\"port\":" << this->port << ","
-       << "\"endpoint\":\"" << this->endpoint << "\","
-       << "\"hostname\":\"" << this->hostname << "\","
-       << "\"name\":\"" << this->name << "\","
-       << "\"info\":\"" << this->info << "\","
-       << "\"version\":\"" << this->version << "\","
-       << "\"ips\":[";
-
-    // Add each IP address in the "ips" vector to the JSON array
-    for (size_t i = 0; i < this->ips.size(); ++i)
+    ss << std::string(100, '-') << std::endl;
+    ss << "<" << this->getClientInfo().name << ">" << std::endl;
+    ss << "-> TIME: " << zmqutils::utils::currentISO8601Date() << std::endl;
+    ss << "-> " << clbk_name << std::endl;
+    for(const auto& str : data)
     {
-        ss << "\"" << this->ips[i] << "\"";
-        if (i != this->ips.size() - 1)
-            ss << ",";
+        ss << std::string(20, '-') << std::endl;
+        ss << str << std::endl;
     }
-    ss << "]" << "}";
+    ss << std::string(100, '-') << std::endl;
     return ss.str();
+}
+
+void DebugCommandClientBase::onClientStart()
+{
+    // Log.
+    std::cout << this->generateStringHeader("ON CLIENT START", {this->getClientInfo().toString()});
+}
+
+void DebugCommandClientBase::onClientStop()
+{
+    // Log.
+    std::cout << this->generateStringHeader("ON CLIENT STOP", {});
+}
+
+void DebugCommandClientBase::onWaitingReply()
+{
+    // Log.
+    std::cout << this->generateStringHeader("ON WAITING REPLY", {});
+}
+
+void DebugCommandClientBase::onDeadServer(const CommandServerInfo& server)
+{
+    std::cout << this->generateStringHeader("ON DEAD SERVER", {server.toString()});
+}
+
+void DebugCommandClientBase::onConnected(const CommandServerInfo& server)
+{
+    // Log.
+    std::cout << this->generateStringHeader("ON CONNECTED", {server.toString()});
+}
+
+void DebugCommandClientBase::onDisconnected(const CommandServerInfo& server)
+{
+    // Log.
+    std::cout << this->generateStringHeader("ON DISCONNECTED", {server.toJsonString()});
+}
+
+void DebugCommandClientBase::onBadOperation(const CommandReply &rep)
+{
+    // Log.
+    std::stringstream data;
+    data << "Server Command: " << std::to_string(static_cast<CommandType>(rep.command))
+         << " (" << this->serverCommandToString(rep.command) << ")" << std::endl;
+    data << "Result: " << static_cast<ResultType>(rep.result)
+         << " (" << this->operationResultToString(rep.result) << ")";
+    std::cout << this->generateStringHeader("ON BAD OPERATION", {data.str()});
+}
+
+void DebugCommandClientBase::onReplyReceived(const CommandReply &rep)
+{
+    // Log.
+    BinarySerializer serializer(rep.data.bytes.get(), rep.data.size);
+    std::stringstream data;
+    data << "Server Command: " << std::to_string(static_cast<CommandType>(rep.command))
+         << " (" << this->serverCommandToString(rep.command) << ")" << std::endl;
+    data << "Result: " << static_cast<ResultType>(rep.result)
+         << " (" << operationResultToString(rep.result) << ")" << std::endl;
+    data << "Params Size: " << rep.data.size << std::endl;
+    data << "Params Hex:  " << serializer.getDataHexString();
+    std::cout << this->generateStringHeader("ON REPLY RECEIVED", {data.str()});
+}
+
+void DebugCommandClientBase::onSendingCommand(const CommandRequest &req)
+{
+    // Log.
+    BinarySerializer serializer(req.data.bytes.get(), req.data.size);
+    std::stringstream data;
+    data << "Command:     " << static_cast<CommandType>(req.command)
+         << " (" <<  this->serverCommandToString(req.command) << ")"     << std::endl;
+    data << "Params size: " << req.data.size                             << std::endl;
+    data << "Params Hex:  " << serializer.getDataHexString();
+    std::cout << this->generateStringHeader("ON SENDING COMMAND", {data.str()});
+}
+
+void DebugCommandClientBase::onClientError(const zmq::error_t &error, const std::string &ext_info)
+{
+    // Log.
+    std::stringstream data;
+    data << "Code:  " << std::to_string(error.num()) << std::endl;
+    data << "Error: " << error.what() << std::endl;
+    data << "Info:  " << ext_info;
+    std::cout << this->generateStringHeader("ON CLIENT ERROR", {data.str()});
 }
 
 }} // END NAMESPACES.
 // =====================================================================================================================
+
+

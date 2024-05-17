@@ -43,12 +43,11 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
-#include <string>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/Modules/CallbackCommandServer>
+#include <LibZMQUtils/Modules/CommandServerClient>
 #include <LibZMQUtils/Modules/Utilities>
 // =====================================================================================================================
 
@@ -62,57 +61,29 @@ namespace amelas{
 namespace communication{
 // =====================================================================================================================
 
-// Example of creating a command server from the base.
-class AmelasControllerServer : public zmqutils::serverclient::ClbkCommandServerBase
+// Example of creating a command server from the base. We are using the debug version becaouse that versión will
+// automatically print each internal callback with all the data, so we can see easily all data for debugging and
+// development. In real scenarios we need to use the ClbkCommandServerBase instead and implement each internal
+// callbacks. However, these implementations will be very simple and may not even perform any function.
+class AmelasControllerServer : public zmqutils::reqrep::DebugClbkCommandServerBase
 {
 public:
 
-    // Use the constructor of ClbkCommandServerBase becaouse we don't need to do anything more.
-    using zmqutils::serverclient::ClbkCommandServerBase::ClbkCommandServerBase;
+    AmelasControllerServer(unsigned port, const std::string& local_addr = "*", const std::string& server_name = "",
+                           const std::string& server_version = "", const std::string& server_info = "");
 
 private:
 
     // -----------------------------------------------------------------------------------------------------------------
-    using CommandServerBase::registerRequestProcFunc;
+    using CommandServerBase::registerReqProcFunc;
     using ClbkCommandServerBase::registerCallback;
     // -----------------------------------------------------------------------------------------------------------------
 
     // Internal overrided command validation function.
-    virtual bool validateCustomCommand(zmqutils::serverclient::ServerCommand command) final;
+    virtual bool validateCustomRequest(const zmqutils::reqrep::CommandRequest& command) const final;
 
-    // Internal overrided custom command received callback.
-    virtual void onCustomCommandReceived(zmqutils::serverclient::CommandRequest&,
-                                         zmqutils::serverclient::CommandReply&) final;
-
-    // Internal overrided start callback.
-    virtual void onServerStart() final;
-
-    // Internal overrided close callback.
-    virtual void onServerStop() final;
-
-    // Internal waiting command callback.
-    virtual void onWaitingCommand() final;
-
-    // Internal dead client callback.
-    virtual void onDeadClient(const zmqutils::serverclient::ClientInfo&) final;
-
-    // Internal overrided connect callback.
-    virtual void onConnected(const zmqutils::serverclient::ClientInfo&) final;
-
-    // Internal overrided disconnect callback.
-    virtual void onDisconnected(const zmqutils::serverclient::ClientInfo&) final;
-
-    // Internal overrided command received callback.
-    virtual void onCommandReceived(const zmqutils::serverclient::CommandRequest&) final;
-
-    // Internal overrided bad command received callback.
-    virtual void onInvalidMsgReceived(const zmqutils::serverclient::CommandRequest&) final;
-
-    // Internal overrided sending response callback.
-    virtual void onSendingResponse(const zmqutils::serverclient::CommandReply&) final;
-
-    // Internal overrided server error callback.
-    virtual void onServerError(const zmq::error_t&, const std::string& ext_info) final;
+    // In real scenarios, we need to implement each ClbkCommandServerBase internal callbacks.
+    // [...]
 };
 
 }} // END NAMESPACES.

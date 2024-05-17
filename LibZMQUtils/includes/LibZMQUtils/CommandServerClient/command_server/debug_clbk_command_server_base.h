@@ -29,11 +29,15 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file clbk_command_server_base.cpp
- * @brief This file contains the implementation of the ClbkCommandServerBase class and related.
+ * @file debug_clbk_command_server_base.h
+ * @brief This file contains the declaration of the DebugClbkCommandServerBase class and related.
  * @author Degoras Project Team
  * @copyright EUPL License
 ***********************************************************************************************************************/
+
+// =====================================================================================================================
+#pragma once
+// =====================================================================================================================
 
 // C++ INCLUDES
 // =====================================================================================================================
@@ -42,36 +46,73 @@
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/CommandServerClient/clbk_command_server_base.h"
+#include "LibZMQUtils/CommandServerClient/command_server/clbk_command_server_base.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
-namespace serverclient{
-
-ClbkCommandServerBase::ClbkCommandServerBase(unsigned int port,
-                                             const std::string &local_addr,
-                                             const std::string &server_name,
-                                             const std::string &server_version,
-                                             const std::string &server_info) :
-    CommandServerBase(port, local_addr, server_name, server_version, server_info),
-    CallbackHandler()
-{}
-
-void ClbkCommandServerBase::removeCallback(ServerCommand command)
-{
-    CallbackHandler::removeCallback(static_cast<CallbackHandler::CallbackId>(command));
-}
-
-bool ClbkCommandServerBase::hasCallback(ServerCommand command)
-{
-    return CallbackHandler::hasCallback(static_cast<CallbackHandler::CallbackId>(command));
-}
-
-ClbkCommandServerBase::~ClbkCommandServerBase() { }
-
+namespace reqrep{
 // =====================================================================================================================
+
+/**
+ * @brief The DebugClbkCommandServerBase class implements a ClbkCommandServerBase that includes internal callbacks that
+ * prints all the input and output data in each internal callback call to facilitate debugging and development. At any
+ * time you can toggle inheritance between DebugClbkCommandServerBase and the original ClbkCommandServerBase one to
+ * monitor what is happening on the screen. This class is for support and does not imply that a robust logging system
+ * should not be used in the override implementation of the system being developed.
+ */
+class LIBZMQUTILS_EXPORT DebugClbkCommandServerBase : public ClbkCommandServerBase
+{
+public:
+
+    DebugClbkCommandServerBase(unsigned port, const std::string& local_addr = "*", const std::string& server_name = "",
+                               const std::string& server_version = "", const std::string& server_info = "");
+
+protected:
+
+    // -----------------------------------------------------------------------------------------------------------------
+    using CommandServerBase::registerReqProcFunc;
+    using ClbkCommandServerBase::registerCallback;
+    // -----------------------------------------------------------------------------------------------------------------
+
+    // Internal overrided custom command received callback.
+    virtual void onCustomCommandReceived(zmqutils::reqrep::CommandRequest&) override;
+
+    // Internal overrided start callback.
+    virtual void onServerStart() override;
+
+    // Internal overrided close callback.
+    virtual void onServerStop() override;
+
+    // Internal waiting command callback.
+    virtual void onWaitingCommand() override;
+
+    // Internal dead client callback.
+    virtual void onDeadClient(const zmqutils::reqrep::CommandClientInfo&) override;
+
+    // Internal overrided connect callback.
+    virtual void onConnected(const zmqutils::reqrep::CommandClientInfo&) override;
+
+    // Internal overrided disconnect callback.
+    virtual void onDisconnected(const zmqutils::reqrep::CommandClientInfo&) override;
+
+    // Internal overrided command received callback.
+    virtual void onCommandReceived(const zmqutils::reqrep::CommandRequest&) override;
+
+    // Internal overrided bad command received callback.
+    virtual void onInvalidMsgReceived(const zmqutils::reqrep::CommandRequest&) override;
+
+    // Internal overrided sending response callback.
+    virtual void onSendingResponse(const zmqutils::reqrep::CommandReply&) override;
+
+    // Internal overrided server error callback.
+    virtual void onServerError(const zmq::error_t&, const std::string& ext_info) override;
+
+private:
+
+    std::string generateStringHeader(const std::string& clbk_name, const std::vector<std::string>& data);
+};
 
 }} // END NAMESPACES.
 // =====================================================================================================================

@@ -72,7 +72,11 @@ struct trait_has_nullptr_t : std::disjunction<std::is_same<std::nullptr_t, Ts>..
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-using SizeUnit = std::uint64_t;                      ///< Alias for the size unit.
+using SizeUnit = std::uint64_t;               ///< Alias for the size unit.
+using Bytes = std::byte[];                    ///< Type used for representing an array of std bytes,
+using BytesDataPtr = std::unique_ptr<Bytes>;  ///< Type use for represent a unique pointer that contains bytes.
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 /**
  * @class Serializable
@@ -171,6 +175,31 @@ private:
 
     template<typename T, typename... Args>
     static SizeUnit calcTotalSizeHelper(const T& first, const Args&... rest);
+};
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+struct LIBZMQUTILS_EXPORT BinarySerializedData
+{
+    /**
+     * @brief Default constructor for creating an empty serialized data.
+     */
+    BinarySerializedData();
+
+    /**
+     * @brief Checks if the serialized data is empty.
+     * @return True if the struct no contains binary data or if the binary data size is zero, false otherwise.
+     */
+    bool isEmpty() const;
+
+    /**
+     * @brief Resets the serialized data to an empty state, clearing the internal buffer and setting size to zero.
+     */
+    void clear();
+
+    // Struct data.
+    BytesDataPtr bytes;  ///< Serialized request data parameters associated to the command as pointer of bytes.
+    SizeUnit size;       ///< Total binary serialized data size.
 };
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -370,6 +399,7 @@ public:
      */
     template<typename... Args>
     static SizeUnit fastSerialization(BytesSmartPtr& out, const Args&... args);
+
 
     /**
      * @brief A static function that deserializes binary data into its original data items.

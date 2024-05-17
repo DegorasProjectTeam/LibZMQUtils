@@ -51,7 +51,7 @@
 // =====================================================================================================================
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/CommandServerClient/command_client_base.h"
+#include "LibZMQUtils/CommandServerClient/command_client/command_client_base.h"
 #include "LibZMQUtils/InternalHelpers/network_helpers.h"
 #include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
 #include "LibZMQUtils/Global/constants.h"
@@ -60,7 +60,7 @@
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils {
-namespace serverclient {
+namespace reqrep {
 // =====================================================================================================================
 
 CommandClientBase::CommandClientBase(const std::string& server_endpoint,
@@ -128,7 +128,7 @@ CommandClientBase::CommandClientBase(const std::string& server_endpoint,
     pid = std::to_string(internal_helpers::network::getCurrentPID());
 
     // Store all the client info.
-    this->client_info_ = ClientInfo(uuid, ip, pid, hostname, client_name, client_version, client_info);
+    this->client_info_ = CommandClientInfo(uuid, ip, pid, hostname, client_name, client_version, client_info);
 
     // Update the server info.
     unsigned port = static_cast<unsigned>(std::stoi(server_endpoint.substr(server_endpoint.rfind(':') + 1)));
@@ -143,8 +143,9 @@ CommandClientBase::~CommandClientBase()
     this->internalStopClient();
 }
 
-const ClientInfo &CommandClientBase::getClientInfo() const
+const CommandClientInfo &CommandClientBase::getClientInfo() const
 {
+    std::unique_lock<std::mutex> lock(this->mtx_);
     return this->client_info_;
 }
 
@@ -305,10 +306,13 @@ void CommandClientBase::stopAutoAlive()
     }
 }
 
-OperationResult CommandClientBase::sendCommand(const RequestData& request, CommandReply& reply)
+OperationResult CommandClientBase::sendCommand(ServerCommand command, RequestData& request_data, CommandReply& reply)
 {
     // Clean the reply.
     reply = CommandReply();
+
+    // Prepare the CommandRequest.
+    CommandRequest command_request(command, this->client_info_.uuid, std::move(request_data));
 
     // Check if we start the client.
     if (!this->client_socket_)
@@ -318,11 +322,11 @@ OperationResult CommandClientBase::sendCommand(const RequestData& request, Comma
     try
     {
         // Prepare the multipart msg.
-        zmq::multipart_t multipart_msg(this->prepareMessage(request));
+        zmq::multipart_t multipart_msg(this->prepareMessage(command_request));
 
         // Call to the internal sending command callback.
-        if (static_cast<ServerCommand>(request.command) != ServerCommand::REQ_ALIVE || this->flag_alive_callbacks_)
-            this->onSendingCommand(request);
+        if (command_request.command != ServerCommand::REQ_ALIVE || this->flag_alive_callbacks_)
+            this->onSendingCommand(command_request);
 
         // Send the msg.
         multipart_msg.send(*this->client_socket_);
@@ -338,7 +342,7 @@ OperationResult CommandClientBase::sendCommand(const RequestData& request, Comma
     // Now we need to wait the server response.
 
     // Call to the internal waiting command callback.
-    if (static_cast<ServerCommand>(request.command) != ServerCommand::REQ_ALIVE || this->flag_alive_callbacks_)
+    if (command_request.command != ServerCommand::REQ_ALIVE || this->flag_alive_callbacks_)
         this->onWaitingReply();
 
     // Receive the data.
@@ -346,22 +350,22 @@ OperationResult CommandClientBase::sendCommand(const RequestData& request, Comma
                                       std::ref(reply), this->client_socket_, this->recv_close_socket_);
 
     // Retrieve the result and reset the future
-    while (this->fut_recv_send_.wait_for(10ms) != std::future_status::ready);
+    while (this->fut_recv_send_.wait_for(std::chrono::milliseconds(10)) != std::future_status::ready);
 
     // Use the cv for notify the auto alive worker.
     if (this->flag_autoalive_enabled_)
         this->auto_alive_cv_.notify_one();
 
     // Check if the client stopped.
-    if (reply.server_result == OperationResult::CLIENT_STOPPED ||
-        reply.server_result == OperationResult::INTERNAL_ZMQ_ERROR)
+    if (reply.result == OperationResult::CLIENT_STOPPED ||
+        reply.result == OperationResult::INTERNAL_ZMQ_ERROR)
     {
         this->flag_autoalive_enabled_ = false;
-        return reply.server_result;
+        return reply.result;
     }
 
     // Check if was a timeout.
-    if (reply.server_result == OperationResult::TIMEOUT_REACHED)
+    if (reply.result == OperationResult::TIMEOUT_REACHED)
     {
         // Call to the internall callback.
         this->onDeadServer(this->connected_server_info_);
@@ -377,22 +381,22 @@ OperationResult CommandClientBase::sendCommand(const RequestData& request, Comma
         this->internalResetClient();
 
         // Return the result.
-        return reply.server_result;
+        return reply.result;
     }
 
     // Check if was ok.
-    if(reply.server_result == OperationResult::COMMAND_OK)
+    if(reply.result == OperationResult::COMMAND_OK)
     {
         // Internal callback.
         this->onReplyReceived(reply);
     }
-    else if(reply.server_result == OperationResult::CLIENT_NOT_CONNECTED && this->flag_server_connected_)
+    else if(reply.result == OperationResult::CLIENT_NOT_CONNECTED && this->flag_server_connected_)
     {
         // In this case the server force the disconnection.
-        reply.server_result = OperationResult::DISCONNECTED_FROM_SERVER;
+        reply.result = OperationResult::DISCONNECTED_FROM_SERVER;
         this->flag_server_connected_ = false;
         // Internal callbacks.
-        this->onDisconnected({});
+        this->onDisconnected(this->connected_server_info_);
         this->onBadOperation(reply);
     }
     else
@@ -403,10 +407,84 @@ OperationResult CommandClientBase::sendCommand(const RequestData& request, Comma
 
     // Update the last seen momment.
     std::unique_lock<std::mutex> lock(this->mtx_);
-    this->client_info_.last_seen = std::chrono::steady_clock::now();
+
+    // Store the times.
+    this->client_info_.last_seen = std::chrono::high_resolution_clock::now();
+    this->client_info_.last_seen_steady = std::chrono::steady_clock::now();
 
     // Return the result.
-    return reply.server_result;
+    return reply.result;
+}
+
+OperationResult CommandClientBase::sendCommand(ServerCommand command, CommandReply &reply)
+{
+    RequestData empty_data;
+    return this->sendCommand(command, empty_data, reply);
+}
+
+OperationResult CommandClientBase::sendCommand(ServerCommand command)
+{
+    RequestData empty_req_data;
+    CommandReply empty_rep_data;
+    return this->sendCommand(command, empty_req_data, empty_rep_data);
+}
+
+std::string CommandClientBase::serverCommandToString(ServerCommand command) const
+{
+    // Mutex.
+    std::unique_lock<std::mutex> lock(this->mtx_);
+
+    // Containers.
+    std::int32_t enum_val = static_cast<std::int32_t>(command);
+    std::size_t idx = static_cast<std::size_t>(command);
+    std::string cmd_str = "UNKNOWN_COMMAND";
+
+    // Call to the internal registered function.
+    if(this->command_to_string_function_)
+        cmd_str = this->command_to_string_function_(command);
+    else if (enum_val < 0)
+        cmd_str = "INVALID_COMMAND";
+    else if (idx < std::size(ServerCommandStr))
+        cmd_str = ServerCommandStr[idx];
+    return cmd_str;
+}
+
+std::string CommandClientBase::serverCommandToString(CommandType command) const
+{
+    return this->serverCommandToString(static_cast<ServerCommand>(command));
+}
+
+std::string CommandClientBase::operationResultToString(OperationResult result) const
+{
+    // Mutex.
+    std::unique_lock<std::mutex> lock(this->mtx_);
+
+    // Containers.
+    std::int32_t enum_val = static_cast<std::int32_t>(result);
+    std::size_t idx = static_cast<std::size_t>(result);
+    std::string op_str = "UNKNOWN_OPERATION_RESULT";
+
+    // Check the index.
+    if (enum_val < 0)
+        op_str = "INVALID_OPERATION_RESULT";
+    else if (idx < std::size(OperationResultStr))
+        op_str = OperationResultStr[idx];
+    return op_str;
+}
+
+std::string CommandClientBase::operationResultToString(ResultType result) const
+{
+    return this->operationResultToString(static_cast<OperationResult>(result));
+}
+
+bool CommandClientBase::isBaseCommand(ServerCommand command) const
+{
+    return (command > ServerCommand::INVALID_COMMAND && command < ServerCommand::END_BASE_COMMANDS);
+}
+
+bool CommandClientBase::isBaseCommand(CommandType command) const
+{
+    return this->isBaseCommand(static_cast<ServerCommand>(command));
 }
 
 void CommandClientBase::recvFromSocket(CommandReply& reply,
@@ -432,7 +510,7 @@ void CommandClientBase::recvFromSocket(CommandReply& reply,
             // Check if we must to close.
             if(!this->flag_client_working_ || (items[1].revents & ZMQ_POLLIN))
             {
-                reply.server_result = OperationResult::CLIENT_STOPPED;
+                reply.result = OperationResult::CLIENT_STOPPED;
                 return;
             }
 
@@ -443,7 +521,7 @@ void CommandClientBase::recvFromSocket(CommandReply& reply,
             // Check for timeout.
             if (elapsed.count() >= this->server_alive_timeout_)
             {
-                reply.server_result = OperationResult::TIMEOUT_REACHED;
+                reply.result = OperationResult::TIMEOUT_REACHED;
                 return;
             }
 
@@ -457,14 +535,14 @@ void CommandClientBase::recvFromSocket(CommandReply& reply,
                 // Check for empty msg or timeout reached.
                 if (multipart_msg.empty())
                 {
-                    reply.server_result = OperationResult::EMPTY_MSG;
+                    reply.result = OperationResult::EMPTY_MSG;
                     return;
                 }
 
                 // Check the multipart msg size.
                 if (multipart_msg.size() != 1 && multipart_msg.size() != 2)
                 {
-                    reply.server_result = OperationResult::INVALID_PARTS;
+                    reply.result = OperationResult::INVALID_PARTS;
                     return;
                 }
 
@@ -472,14 +550,16 @@ void CommandClientBase::recvFromSocket(CommandReply& reply,
                 zmq::message_t msg_res = multipart_msg.pop();
 
                 // Check the result size.
-                if (msg_res.size() != sizeof(serializer::SizeUnit) + sizeof(ResultType))
+                constexpr size_t first_part_size = (sizeof(serializer::SizeUnit) + sizeof(ResultType))*2;
+                if (msg_res.size() != first_part_size)
                 {
-                    reply.server_result = OperationResult::INVALID_MSG;
+                    reply.result = OperationResult::INVALID_MSG;
                     return;
                 }
 
-                // Get the command.
-                serializer::BinarySerializer::fastDeserialization(msg_res.data(), msg_res.size(), reply.server_result);
+                // Get the operation result and the command.
+                serializer::BinarySerializer::fastDeserialization(msg_res.data(), msg_res.size(),
+                                                                  reply.command, reply.result);
 
                 // If there is still one more part, they are the parameters.
                 if (multipart_msg.size() == 1)
@@ -490,13 +570,13 @@ void CommandClientBase::recvFromSocket(CommandReply& reply,
                     // Check the parameters.
                     if(msg_params.size() == 0)
                     {
-                        reply.server_result = OperationResult::EMPTY_PARAMS;
+                        reply.result = OperationResult::EMPTY_PARAMS;
                         return;
                     }
 
                     // Get and store the parameters data.
                     serializer::BinarySerializer serializer(msg_params.data(), msg_params.size());
-                    reply.params_size = serializer.moveUnique(reply.params);
+                    reply.data.size = serializer.moveUnique(reply.data.bytes);
                 }
 
                 // All ok.
@@ -509,7 +589,7 @@ void CommandClientBase::recvFromSocket(CommandReply& reply,
             // The error code is for ZMQ EFSM error.
             if(error.num() == kZmqEFSMError && !this->flag_client_working_)
             {
-                reply.server_result = OperationResult::CLIENT_STOPPED;
+                reply.result = OperationResult::CLIENT_STOPPED;
                 return;
             }
 
@@ -518,7 +598,7 @@ void CommandClientBase::recvFromSocket(CommandReply& reply,
             this->internalStopClient();
 
             // Store the error result.
-            reply.server_result = OperationResult::INTERNAL_ZMQ_ERROR;
+            reply.result = OperationResult::INTERNAL_ZMQ_ERROR;
             return;
         }
     }
@@ -579,7 +659,7 @@ void CommandClientBase::internalStopClient()
 void CommandClientBase::aliveWorker()
 {
     // Request and reply.
-    RequestData request;
+    CommandRequest command_request;
     CommandReply reply;
 
     // Alive socket.
@@ -590,7 +670,8 @@ void CommandClientBase::aliveWorker()
     bool first_time = true;
 
     // Update the request.
-    request.command = ServerCommand::REQ_ALIVE;
+    command_request.client_uuid = this->client_info_.uuid;
+    command_request.command = ServerCommand::REQ_ALIVE;
 
     // Create the ZMQ auxiliar alive socket.
     try
@@ -647,11 +728,11 @@ void CommandClientBase::aliveWorker()
         try
         {
             // Prepare the multipart msg. The msg id will be the same of the original client socket.
-            zmq::multipart_t multipart_msg(this->prepareMessage(request));
+            zmq::multipart_t multipart_msg(this->prepareMessage(command_request));
 
             // Call to the internal sending command callback.
             if (this->flag_alive_callbacks_)
-                this->onSendingCommand(request);
+                this->onSendingCommand(command_request);
 
             // Send the msg.
             multipart_msg.send(*alive_socket);
@@ -664,7 +745,7 @@ void CommandClientBase::aliveWorker()
             // If was  connected, call to the disconnected callback.
             if(this->flag_server_connected_)
             {
-                this->onDisconnected({});
+                this->onDisconnected(this->connected_server_info_);
                 this->flag_server_connected_ = false;
             }
 
@@ -691,14 +772,14 @@ void CommandClientBase::aliveWorker()
 
 
         // Retrieve the result and reset the future
-        while (this->fut_recv_alive_.wait_for(10ms) != std::future_status::ready);
+        while (this->fut_recv_alive_.wait_for(std::chrono::milliseconds(10)) != std::future_status::ready);
 
         // Check the result.
-        if (reply.server_result == OperationResult::CLIENT_STOPPED)
+        if (reply.result == OperationResult::CLIENT_STOPPED)
         {
             this->flag_autoalive_enabled_ = false;
         }
-        else if(reply.server_result == OperationResult::TIMEOUT_REACHED)
+        else if(reply.result == OperationResult::TIMEOUT_REACHED)
         {
             // Call to the internall callback.
             this->onDeadServer(this->connected_server_info_);
@@ -716,14 +797,14 @@ void CommandClientBase::aliveWorker()
             // NOTE: The client reset is neccesary for flush the ZMQ internal
             this->internalResetClient();
         }
-        else if(reply.server_result == OperationResult::COMMAND_OK)
+        else if(reply.result == OperationResult::COMMAND_OK)
         {
             // Call to the internal callback.
             if(this->flag_alive_callbacks_)
                 this->onReplyReceived(reply);
         }
-        else if(reply.server_result != OperationResult::COMMAND_OK &&
-                reply.server_result != OperationResult::INTERNAL_ZMQ_ERROR)
+        else if(reply.result != OperationResult::COMMAND_OK &&
+                reply.result != OperationResult::INTERNAL_ZMQ_ERROR)
         {
             // Internal callback.
             this->onBadOperation(reply);
@@ -747,28 +828,21 @@ OperationResult CommandClientBase::doConnect(bool auto_alive)
     RequestData request;
     CommandReply reply;
 
-    // Serializer.
-    serializer::BinarySerializer serializer;
-
-    // Serialize the parameters data.
-    serializer.write(this->client_info_);
-
-    // Update the request.
-    request.command = ServerCommand::REQ_CONNECT;
-    request.params_size = serializer.moveUnique(request.params);
+    // Serialize the client information.
+    request.size = serializer::BinarySerializer::fastSerialization(request.bytes, this->client_info_);
 
     // Send the command.
-    result = this->sendCommand(request, reply);
+    result = this->sendCommand(ServerCommand::REQ_CONNECT, request, reply);
 
     // Check the result.
-    if(result == OperationResult::COMMAND_OK && reply.server_result == OperationResult::COMMAND_OK && auto_alive)
+    if(result == OperationResult::COMMAND_OK && reply.result == OperationResult::COMMAND_OK && auto_alive)
         this->startAutoAlive();
 
     // Call to the callback and update flag..
     if(result == OperationResult::COMMAND_OK)
     {
         // Deserialize the server data.
-        serializer::BinarySerializer::fastDeserialization(std::move(reply.params), reply.params_size,
+        serializer::BinarySerializer::fastDeserialization(std::move(reply.data.bytes), reply.data.size,
             this->connected_server_info_.hostname, this->connected_server_info_.name,
             this->connected_server_info_.info, this->connected_server_info_.version);
 
@@ -783,18 +857,11 @@ OperationResult CommandClientBase::doConnect(bool auto_alive)
 
 OperationResult CommandClientBase::doDisconnect()
 {
-    // Containers.
-    RequestData request;
-    CommandReply reply;
-
     // Stop always the auto alive worker.
     this->stopAutoAlive();
 
-    // Update the request.
-    request.command = ServerCommand::REQ_DISCONNECT;
-
     // Send the command.
-    OperationResult res = this->sendCommand(request, reply);
+    OperationResult res = this->sendCommand(ServerCommand::REQ_DISCONNECT);
 
     // Call the callback and update flag.
     if(res == OperationResult::COMMAND_OK && this->flag_server_connected_)
@@ -809,52 +876,41 @@ OperationResult CommandClientBase::doDisconnect()
 
 OperationResult CommandClientBase::doAlive()
 {
-    // Containers.
-    RequestData request;
-    CommandReply reply;
-
-    // Update the request.
-    request.command = ServerCommand::REQ_ALIVE;
-
     // Send the command.
-    return this->sendCommand(request, reply);
+    return this->sendCommand(ServerCommand::REQ_ALIVE);
 }
 
 OperationResult CommandClientBase::doGetServerTime(std::string &datetime)
 {
     // Containers.
-    RequestData request;
     CommandReply reply;
     OperationResult result;
 
-    // Update the request.
-    request.command = ServerCommand::REQ_GET_SERVER_TIME;
-
     // Send the command.
-    result = this->sendCommand(request, reply);
+    result = this->sendCommand(ServerCommand::REQ_GET_SERVER_TIME, reply);
 
     // Check the result.
     if(result != OperationResult::COMMAND_OK)
         return result;
 
     // Get the ISO 8601 datetime string.
-    serializer::BinarySerializer::fastDeserialization(std::move(reply.params), reply.params_size, datetime);
+    serializer::BinarySerializer::fastDeserialization(std::move(reply.data.bytes), reply.data.size, datetime);
 
     // Return the result.
     return result;
 }
 
-zmq::multipart_t CommandClientBase::prepareMessage(const RequestData &request)
+zmq::multipart_t CommandClientBase::prepareMessage(const CommandRequest& command_request)
 {
     // Serializer.
     serializer::BinarySerializer serializer;
 
     // Prepare the uuid message.
-    size_t uuid_size = serializer.write(this->client_info_.uuid.getBytes());
+    size_t uuid_size = serializer.write(command_request.client_uuid.getBytes());
     zmq::message_t msg_uuid(serializer.release(), uuid_size);
 
     // Preprare the command message.
-    size_t cmd_size = serializer.write(request.command);
+    size_t cmd_size = serializer.write(command_request.command);
     zmq::message_t msg_command(serializer.release(), cmd_size);
 
     // Prepare the multipart msg.
@@ -863,10 +919,10 @@ zmq::multipart_t CommandClientBase::prepareMessage(const RequestData &request)
     multipart_msg.add(std::move(msg_command));
 
     // Add command parameters if they exist
-    if (request.params_size > 0)
+    if (command_request.data.size > 0)
     {
         // Prepare the command parameters
-        zmq::message_t message_params(request.params.get(), request.params_size);
+        zmq::message_t message_params(command_request.data.bytes.get(), command_request.data.size);
         multipart_msg.add(std::move(message_params));
     }
 

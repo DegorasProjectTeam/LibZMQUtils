@@ -42,7 +42,6 @@
 #include <cstdlib>
 #include <thread>
 #include <chrono>
-#include <regex>
 // =====================================================================================================================
 
 // ZMQ INCLUDES
@@ -84,18 +83,18 @@ PublisherBase::PublisherBase(unsigned port,
 
     // Store the adapters.
     if(ip_address == "*")
-        this->server_adapters_ = interfcs;
+        this->publisher_adapters_ = interfcs;
     else
     {
         for(const auto& intrfc : interfcs)
         {
             if(intrfc.ip == ip_address)
-                this->server_adapters_.push_back(intrfc);
+                this->publisher_adapters_.push_back(intrfc);
         }
     }
 
     // Check for valid configuration.
-    if(this->server_adapters_.empty())
+    if(this->publisher_adapters_.empty())
     {
         std::string module = "[LibZMQUtils,PublisherSubscriber,PublisherBase] ";
         throw std::invalid_argument(module + "No interfaces found for address <" + ip_address + ">.");
@@ -109,6 +108,7 @@ PublisherBase::PublisherBase(unsigned port,
     this->pub_info_.name = publisher_name;
     this->pub_info_.info = publisher_info;
     this->pub_info_.version = publisher_version;
+    this->pub_info_.ips = this->getPublisherIps();
 }
 
 PublisherBase::~PublisherBase()
@@ -128,15 +128,15 @@ void PublisherBase::onSendingMsg(const PubSubData &) {}
 
 bool PublisherBase::startPublisher()
 {
-    // Safe mutex lock
-    std::unique_lock<std::mutex> lock(this->mtx_);
-
     // If publisher is already started, do nothing
-    if (this->socket_)
+    if (this->flag_working_)
         return false;
 
     // Start the publisher.
-    return this->internalResetPublisher() ? (this->onPublisherStart(), true) : false;
+    bool res = this->internalResetPublisher();
+
+    // Start the publisher.
+    return res ? (this->onPublisherStart(), true) : false;
 }
 
 void PublisherBase::stopPublisher()
@@ -180,6 +180,34 @@ const PublisherInfo& PublisherBase::getPublisherInfo() const
 const utils::UUID &PublisherBase::getUUID() const
 {
     return this->pub_info_.uuid;
+}
+
+std::vector<std::string> PublisherBase::getPublisherIps() const
+{
+    std::unique_lock<std::mutex> lock(this->mtx_);
+    std::vector<std::string> ips;
+    for(const auto& intrfc : this->internalGetPublisherAddresses())
+        ips.push_back(intrfc.ip);
+    return ips;
+}
+
+std::string PublisherBase::getPublisherIpsStr(const std::string &separator) const
+{
+    std::unique_lock<std::mutex> lock(this->mtx_);
+    std::string ips;
+    for(const auto& intrfc : this->internalGetPublisherAddresses())
+    {
+        ips.append(intrfc.ip);
+        ips.append(separator);
+    }
+    if (!ips.empty() && separator.length() > 0)
+        ips.erase(ips.size() - separator.size(), separator.size());
+    return ips;
+}
+
+const PublisherBase::NetworkAdapterInfoV PublisherBase::internalGetPublisherAddresses() const
+{
+    return this->publisher_adapters_;
 }
 
 bool PublisherBase::isWorking() const
@@ -230,11 +258,14 @@ PublisherResult PublisherBase::sendMsg(const PubSubData& request)
 
 const std::vector<NetworkAdapterInfo> &PublisherBase::getBoundInterfaces() const
 {
-    return this->server_adapters_;
+    return this->publisher_adapters_;
 }
 
 bool PublisherBase::internalResetPublisher()
 {
+    // Lock.
+    this->mtx_.lock();
+
     // Close the previous sockets to flush.
     this->deleteSockets();
 
@@ -257,10 +288,16 @@ bool PublisherBase::internalResetPublisher()
         // Update the working flag.
         this->flag_working_ = false;
 
+        // Unlock.
+        this->mtx_.unlock();
+
         // Call to the internal callback.
         this->onPublisherError(error, "PublisherBase: Error while creating the publisher.");
         return false;
     }
+
+    // Unlock.
+    this->mtx_.unlock();
 
     // All ok
     return true;

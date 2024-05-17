@@ -77,12 +77,10 @@ endif()
 # AMELAS CLIENT
 
 # Get the header files for the client.
-file(GLOB_RECURSE HEADERS ${EXAMPLE_DIR}/includes/AmelasControllerClient/*.h)
+file(GLOB_RECURSE HEADERS
+    ${EXAMPLE_DIR}/includes/AmelasControllerClient/*.h)
 
-# Get the template files for client.
-file(GLOB_RECURSE TEMPLTS ${EXAMPLE_DIR}/includes/AmelasControllerClient/*.tpp)
-
-# Get the source files for client.
+# Get the source files for server.
 file(GLOB_RECURSE SOURCES
     ${EXAMPLE_DIR}/sources/ExampleClientAmelas.cpp
     ${EXAMPLE_DIR}/sources/AmelasControllerClient/*.cpp)
@@ -97,7 +95,7 @@ macro_setup_launcher("${APP_CLIENT}"
                      ${HEADERS} ${TEMPLTS} ${SOURCES})
 
 # Include directories.
-target_include_directories(${APP_CLIENT} PRIVATE ${CMAKE_SOURCE_DIR}/examples/${MODULE_NAME}/${EXAMPLE_NAME})
+target_include_directories(${APP_CLIENT} PRIVATE ${CMAKE_SOURCE_DIR}/examples/${MODULE_NAME}/${EXAMPLE_NAME}/)
 
 # In mingw better do static linking of the libgcc, libwinpthread and libstd.
 if (MINGW)

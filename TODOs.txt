@@ -3,6 +3,8 @@ LibZMQUtils TODOs
 
 PRIORITY:
 
+- Add a queue functionality to publisher. The idea is that send msg always will be blocking and something like addToPublishQueue is non blocking to avoid performance issues.
+
 - Improve concurrency control in client.
 
 - Add a toolchain to facilitate the compilation for ARM (like RPi devices or FPGAs).
@@ -11,14 +13,17 @@ PRIORITY:
 
 - Cancel client operation functionality.
 
-- Non blocking senmdMsg operation mode with futures. 
-
-- In HostInfo, add to the JSONString the last seen as readable string.
+- Non blocking senmdMsg operation mode with futures in client. 
 
 - Add a command to get server info.
 
+- Make the internal utilities independent of generic infrastructure and move them to the DegorasBase library
+
+- Move template implementations to tpp.
 
 NO PRIORITY:
+
+- Future log functionality with auto publisher. When LibDegorasBase ready.
 
 - Multiple endpoints to the same port.
 

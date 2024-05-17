@@ -28,6 +28,56 @@
  *   along with this project. If not, see the license at < https://eupl.eu/ >.                                         *
  **********************************************************************************************************************/
 
-#include <LibZMQUtils/CommandServerClient/clbk_command_server_base.h>
-#include <LibZMQUtils/CommandServerClient/common.h>
+/** ********************************************************************************************************************
+ * @file command_server_client_data.cpp
+ * @brief This file contains the implementation of common elements for the CommandServerClient module.
+ * @author Degoras Project Team
+ * @copyright EUPL License
+***********************************************************************************************************************/
 
+// C++ INCLUDES
+// =====================================================================================================================
+// =====================================================================================================================
+
+// ZMQUTILS INCLUDES
+// =====================================================================================================================
+#include "LibZMQUtils/CommandServerClient/data/command_server_client_data.h"
+// =====================================================================================================================
+
+// ZMQUTILS NAMESPACES
+// =====================================================================================================================
+namespace zmqutils{
+namespace reqrep{
+// =====================================================================================================================
+
+CommandRequest::CommandRequest() :
+    command(ServerCommand::INVALID_COMMAND)
+{}
+
+CommandRequest::CommandRequest(ServerCommand command, const utils::UUID& uuid, RequestData&& data) :
+    command(command),
+    client_uuid(uuid),
+    data(std::move(data))
+{}
+
+void CommandRequest::clear()
+{
+    this->command = ServerCommand::INVALID_COMMAND;
+    this->client_uuid.clear();
+    this->data.clear();
+}
+
+CommandReply::CommandReply():
+    command(ServerCommand::INVALID_COMMAND),
+    result(OperationResult::INVALID_RESULT)
+{}
+
+void CommandReply::clear()
+{
+    this->command = ServerCommand::INVALID_COMMAND;
+    this->result = OperationResult::INVALID_RESULT;
+    this->data.clear();
+}
+
+}} // END NAMESPACES.
+// =====================================================================================================================

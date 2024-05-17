@@ -33,6 +33,7 @@
 // PROJECT INCLUDES
 // =====================================================================================================================
 #include "AmelasControllerClient/amelas_controller_client.h"
+#include "AmelasControllerServer/amelas_controller_server_data.h"
 // =====================================================================================================================
 
 // AMELAS NAMESPACES
@@ -42,180 +43,49 @@ namespace communication{
 // =====================================================================================================================
 
 // ---------------------------------------------------------------------------------------------------------------------
-using zmqutils::serverclient::ServerCommand;
-using zmqutils::serverclient::OperationResult;
-using zmqutils::serverclient::ResultType;
-using zmqutils::serverclient::CommandType;
-using zmqutils::serverclient::CommandReply;
-using zmqutils::serverclient::RequestData;
+using zmqutils::reqrep::ServerCommand;
+using zmqutils::reqrep::OperationResult;
+using zmqutils::reqrep::ResultType;
+using zmqutils::reqrep::CommandType;
+using zmqutils::reqrep::CommandReply;
+using zmqutils::reqrep::RequestData;
 using zmqutils::serializer::BinarySerializer;
 // ---------------------------------------------------------------------------------------------------------------------
 
+AmelasControllerClient::AmelasControllerClient(const std::string& server_endpoint, const std::string& client_name,
+                                               const std::string& client_version, const std::string& client_info,
+                                               const std::string& net_interface) :
+    zmqutils::reqrep::DebugCommandClientBase(server_endpoint, client_name, client_version, client_info, net_interface)
+{
+    // Register the enum to string lookup arrays.
+    this->registerCommandToStrLookup(AmelasServerCommandStr);
+}
+
+bool AmelasControllerClient::validateCommand(zmqutils::reqrep::CommandType command) const
+{
+    return (CommandClientBase::isBaseCommand(command) || (command >= kMinCmdId && command <= kMaxCmdId));
+}
+
 OperationResult AmelasControllerClient::getHomePosition(controller::AltAzPos &pos, controller::AmelasError &res)
 {    
-    RequestData request = this->prepareRequest(AmelasServerCommand::REQ_GET_HOME_POSITION);
-    return this->executeCommand(request, res, pos);
+    return this->executeCommand(AmelasServerCommand::REQ_GET_HOME_POSITION, res, pos);
 }
 
 OperationResult AmelasControllerClient::setHomePosition(const controller::AltAzPos &pos,
                                                           controller::AmelasError &res)
 {
-    RequestData request = this->prepareRequest(AmelasServerCommand::REQ_SET_HOME_POSITION, pos);
-    return this->executeCommand(request, res);
+    RequestData request = this->prepareRequestData(pos);
+    return this->executeCommand(AmelasServerCommand::REQ_SET_HOME_POSITION, request, res);
 }
 
 OperationResult AmelasControllerClient::doOpenSearchTelescope(controller::AmelasError &res)
 {
-    RequestData request = this->prepareRequest(AmelasServerCommand::REQ_DO_OPEN_SEARCH_TELESCOPE);
-    return this->executeCommand(request, res);
+    return this->executeCommand(AmelasServerCommand::REQ_DO_OPEN_SEARCH_TELESCOPE, res);
 }
 
 OperationResult AmelasControllerClient::doExampleNotImp(controller::AmelasError &res)
 {
-    RequestData request = this->prepareRequest(AmelasServerCommand::REQ_DO_EXAMPLE_NOT_IMP);
-    return this->executeCommand(request, res);
-}
-
-void AmelasControllerClient::onClientStart()
-{
-    // Log.
-    std::cout<< std::string(100, '-')                                        << std::endl;
-    std::cout<< "<" << this->getClientInfo().name << ">"                     << std::endl;
-    std::cout<< "-> ON CLIENT START: "                                       << std::endl;
-    std::cout<< "Time:     " << zmqutils::utils::currentISO8601Date()        << std::endl;
-    std::cout<< "Endpoint: " << this->getServerEndpoint()                    << std::endl;
-    std::cout<< "UUID:     " << this->getClientInfo().uuid.toRFC4122String() << std::endl;
-    std::cout<< "Ip:       " << this->getClientInfo().ip                     << std::endl;
-    std::cout<< "PID:      " << this->getClientInfo().pid                    << std::endl;
-    std::cout<< "Hostname: " << this->getClientInfo().hostname               << std::endl;
-    std::cout<< "Name:     " << this->getClientInfo().name                   << std::endl;
-    std::cout<< "Info:     " << this->getClientInfo().info                   << std::endl;
-    std::cout<< "Version:  " << this->getClientInfo().version                << std::endl;
-    std::cout<< std::string(100, '-')                                        << std::endl;
-}
-
-void AmelasControllerClient::onClientStop()
-{
-    // Log.
-    std::cout<< std::string(100, '-')                             << std::endl;
-    std::cout<< "<" << this->getClientInfo().name<<">"            << std::endl;
-    std::cout<< "-> ON CLIENT STOP: "                             << std::endl;
-    std::cout<< "Time: " << zmqutils::utils::currentISO8601Date() << std::endl;
-    std::cout<< std::string(100, '-')                             << std::endl;
-}
-
-void AmelasControllerClient::onWaitingReply()
-{
-    // Log.
-    std::cout<< std::string(100, '-')                             << std::endl;
-    std::cout<< "<" << this->getClientInfo().name<<">"            << std::endl;
-    std::cout<< "-> ON WAITING REPLY: "                           << std::endl;
-    std::cout<< "Time: " << zmqutils::utils::currentISO8601Date() << std::endl;
-    std::cout<< std::string(100, '-')                             << std::endl;
-}
-
-void AmelasControllerClient::onDeadServer(const zmqutils::serverclient::ServerInfo& server)
-{
-    // Log.
-    std::cout<< std::string(100, '-')                                        << std::endl;
-    std::cout<< "<" << this->getClientInfo().name << ">"                     << std::endl;
-    std::cout<< "-> ON DEAD SERVER: "                                        << std::endl;
-    std::cout<< "Time:            " << zmqutils::utils::currentISO8601Date() << std::endl;
-    std::cout<< "Server Port:     " << server.port                           << std::endl;
-    std::cout<< "Server Name:     " << server.endpoint                       << std::endl;
-    std::cout<< "Server Hostname: " << server.hostname                       << std::endl;
-    std::cout<< "Server Name:     " << server.name                           << std::endl;
-    std::cout<< "Server Info:     " << server.info                           << std::endl;
-    std::cout<< "Server Version:  " << server.version                        << std::endl;
-    std::cout<< std::string(100, '-')                                        << std::endl;
-}
-
-void AmelasControllerClient::onConnected(const zmqutils::serverclient::ServerInfo& server)
-{
-    // TODO In base get server info when connected.
-    // Log.
-    std::cout<< std::string(100, '-')                                        << std::endl;
-    std::cout<< "<" << this->getClientInfo().name << ">"                     << std::endl;
-    std::cout<< "-> ON CONNECTED: "                                          << std::endl;
-    std::cout<< "Time:            " << zmqutils::utils::currentISO8601Date() << std::endl;
-    std::cout<< "Server Port:     " << server.port                           << std::endl;
-    std::cout<< "Server Name:     " << server.endpoint                       << std::endl;
-    std::cout<< "Server Hostname: " << server.hostname                       << std::endl;
-    std::cout<< "Server Name:     " << server.name                           << std::endl;
-    std::cout<< "Server Info:     " << server.info                           << std::endl;
-    std::cout<< "Server Version:  " << server.version                        << std::endl;
-    std::cout<< std::string(100, '-')                                        << std::endl;
-}
-
-void AmelasControllerClient::onDisconnected(const zmqutils::serverclient::ServerInfo& server)
-{
-    // Log.
-    std::cout<< std::string(100, '-')                                        << std::endl;
-    std::cout<< "<" << this->getClientInfo().name << ">"                     << std::endl;
-    std::cout<< "-> ON DISCONNECTED: "                                       << std::endl;
-    std::cout<< "Time:            " << zmqutils::utils::currentISO8601Date() << std::endl;
-    std::cout<< "Server Port:     " << server.port                           << std::endl;
-    std::cout<< "Server Name:     " << server.endpoint                       << std::endl;
-    std::cout<< "Server Hostname: " << server.hostname                       << std::endl;
-    std::cout<< "Server Name:     " << server.name                           << std::endl;
-    std::cout<< "Server Info:     " << server.info                           << std::endl;
-    std::cout<< "Server Version:  " << server.version                        << std::endl;
-    std::cout<< std::string(100, '-')                                        << std::endl;
-}
-
-void AmelasControllerClient::onReplyReceived(const CommandReply &reply)
-{
-    // Log.
-    BinarySerializer serializer(reply.params.get(), reply.params_size);
-    std::cout<< std::string(100, '-')                                               << std::endl;
-    std::cout<< "<" << this->getClientInfo().name << ">"                            << std::endl;
-    std::cout<< "-> ON REPLY RECEIVED: "                                            << std::endl;
-    std::cout<< "Time:        " << zmqutils::utils::currentISO8601Date()            << std::endl;
-    std::cout<< "Result:      " << static_cast<ResultType>(reply.server_result) << " ("
-        << operationResultStr(AmelasOperationResultStr, reply.server_result) << ")" << std::endl;
-    std::cout<< "Params Size: " << reply.params_size                                << std::endl;
-    std::cout<< "Params Hex:  " << serializer.getDataHexString()                    << std::endl;
-    std::cout<< std::string(100, '-')                                               << std::endl;
-}
-
-void AmelasControllerClient::onSendingCommand(const RequestData &req)
-{
-    // Log.
-    BinarySerializer serializer(req.params.get(), req.params_size);
-    std::cout<< std::string(100, '-')                                    << std::endl;
-    std::cout<< "<" << this->getClientInfo().name << ">"                 << std::endl;
-    std::cout<< "-> ON SEND COMMAND: "                                   << std::endl;
-    std::cout<< "Time:        " << zmqutils::utils::currentISO8601Date() << std::endl;
-    std::cout<< "Command:     " << static_cast<CommandType>(req.command) << " (" <<
-        serverCommandStr(AmelasServerCommandStr, req.command) << ")"     << std::endl;
-    std::cout<< "Params size: " << req.params_size                       << std::endl;
-    std::cout<< "Params Hex:  " << serializer.getDataHexString()         << std::endl;
-    std::cout<< std::string(100, '-')                                    << std::endl;
-}
-
-void AmelasControllerClient::onClientError(const zmq::error_t& error, const std::string& ext_info)
-{
-    // Log.
-    std::cout<< std::string(100, '-')                              << std::endl;
-    std::cout<< "<"<<this->getClientInfo().name<<">"               << std::endl;
-    std::cout<< "-> ON CLIENT ERROR: "                             << std::endl;
-    std::cout<< "Time:  " << zmqutils::utils::currentISO8601Date() << std::endl;
-    std::cout<< "Code:  " << error.num()                           << std::endl;
-    std::cout<< "Error: " << error.what()                          << std::endl;
-    std::cout<< "Info:  " << ext_info                              << std::endl;
-    std::cout<< std::string(100, '-')                              << std::endl;
-}
-
-void AmelasControllerClient::onBadOperation(const CommandReply& reply)
-{
-    // Log.
-    std::cout<< std::string(100, '-')                                               << std::endl;
-    std::cout<< "<" << this->getClientInfo().name << ">"                            << std::endl;
-    std::cout<< "-> ON BAD OPERATION: "                                             << std::endl;
-    std::cout<< "Time:   " << zmqutils::utils::currentISO8601Date()                 << std::endl;
-    std::cout<< "Result: " << static_cast<ResultType>(reply.server_result) << " ("
-        << operationResultStr(AmelasOperationResultStr, reply.server_result) << ")" << std::endl;
-    std::cout<< std::string(100, '-')                                               << std::endl;
+    return this->executeCommand(AmelasServerCommand::REQ_DO_EXAMPLE_NOT_IMP, res);
 }
 
 }} // END NAMESPACES.

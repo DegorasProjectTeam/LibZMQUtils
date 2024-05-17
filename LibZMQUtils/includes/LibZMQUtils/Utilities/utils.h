@@ -67,6 +67,8 @@ namespace utils{
 // =====================================================================================================================
 /// System clock time point to store datetimes (should use Unix Time).
 using TimePointStd = std::chrono::system_clock::time_point;
+///
+using HRTimePointStd = std::chrono::high_resolution_clock::time_point;
 /// Steady clock time point for measuring intervals.
 using SCTimePointStd =  std::chrono::steady_clock::time_point;
 // =====================================================================================================================

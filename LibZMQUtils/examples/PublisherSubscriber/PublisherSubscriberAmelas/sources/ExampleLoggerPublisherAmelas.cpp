@@ -85,12 +85,6 @@ public:
         if (token)
         {
             std::string token_command(token);
-            if (token_command != "info" && token_command != "warning" && token_command != "error")
-            {
-                std::cerr << "Failed at sending log message. Unknown type." << std::endl;
-                delete[] command_str;
-                return;
-            }
 
             token = std::strtok(nullptr, "");
 
@@ -132,6 +126,12 @@ public:
                 log.level = AmelasLogLevel::AMELAS_ERROR;
                 log.str_info = token_msg;
                 res = this->publisher_.sendLog(log);
+            }
+            else
+            {
+                std::cerr << "Failed at sending log message. Unknown type." << std::endl;
+                delete[] command_str;
+                return;
             }
 
             if (res != PublisherResult::MSG_OK)
@@ -198,7 +198,7 @@ int main(int, char**)
         std::cout<<"------------------------------------------------------"<<std::endl;
         std::cout<<"-- Topics --"<<std::endl;
         std::cout<<"- AMELAS_INFO:    info msg"<<std::endl;
-        std::cout<<"- AMELAS_DEBUG:   debug msg <(not implemented, for testing.>"<<std::endl;
+        std::cout<<"- AMELAS_DEBUG:   debug msg <(not subscribed, for testing.>"<<std::endl;
         std::cout<<"- AMELAS_WARNING: warning msg"<<std::endl;
         std::cout<<"- AMELAS_ERROR:   error msg"<<std::endl;
         std::cout<<"-- Other --"<<std::endl;

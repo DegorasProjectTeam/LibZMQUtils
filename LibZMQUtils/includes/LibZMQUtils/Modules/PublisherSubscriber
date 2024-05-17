@@ -28,6 +28,8 @@
  *   along with this project. If not, see the license at < https://eupl.eu/ >.                                         *
  **********************************************************************************************************************/
 
-#include <LibZMQUtils/CommandServerClient/command_server_base.h>
-#include <LibZMQUtils/CommandServerClient/common.h>
+#include <LibZMQUtils/PublisherSubscriber/publisher_base.h>
+#include <LibZMQUtils/PublisherSubscriber/subscriber_base.h>
+#include <LibZMQUtils/PublisherSubscriber/clbk_subscriber_base.h>
+#include <LibZMQUtils/PublisherSubscriber/common.h>
 

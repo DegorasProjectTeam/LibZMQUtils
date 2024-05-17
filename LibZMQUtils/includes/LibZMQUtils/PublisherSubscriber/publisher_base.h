@@ -64,6 +64,11 @@ namespace pubsub{
 class LIBZMQUTILS_EXPORT PublisherBase : public ZMQContextHandler
 {
 
+private:
+
+    // Helper aliases.
+    using NetworkAdapterInfoV = std::vector<internal_helpers::network::NetworkAdapterInfo>;
+
 public:
     
     /**
@@ -125,6 +130,20 @@ public:
      * @return the UUID of the publisher.
      */
     const utils::UUID& getUUID() const;
+
+    /**
+     * @brief Get the server
+     * @return
+     */
+    std::vector<std::string> getPublisherIps() const;
+
+    std::string getPublisherIpsStr(const std::string &separator) const;
+
+    /**
+     * @brief Get the UUID of this publisher.
+     * @return the UUID of the publisher.
+     */
+    const NetworkAdapterInfoV internalGetPublisherAddresses() const;
 
     /**
      * @brief Check if the publisher is working, i.e., it was successfully started.
@@ -200,9 +219,6 @@ protected:
 
 private:
 
-    // Helper aliases.
-    using NetworkAdapterInfoV = std::vector<internal_helpers::network::NetworkAdapterInfo>;
-
     void deleteSockets();
 
     void internalStopPublisher();
@@ -213,7 +229,7 @@ private:
 
     // Endpoint data and publisher info.
     PublisherInfo pub_info_;
-    NetworkAdapterInfoV server_adapters_;  ///< Interfaces bound by publisher.
+    NetworkAdapterInfoV publisher_adapters_;  ///< Interfaces bound by publisher.
 
     // ZMQ sockets and endpoint.
     zmq::socket_t *socket_;       ///< ZMQ publisher socket.

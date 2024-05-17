@@ -30,7 +30,7 @@
 
 /** ********************************************************************************************************************
  * @file common.h
- * @brief This file contains common elements for the CommandServerClient module.
+ * @brief This file contains the definition of common elements for the CommandServerClient module.
  * @author Degoras Project Team
  * @copyright EUPL License
 ***********************************************************************************************************************/
@@ -41,37 +41,28 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
-#include <string>
-#include <cstring>
-#include <memory>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/Global/libzmqutils_global.h"
 #include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
-#include "LibZMQUtils/Utilities/utils.h"
 #include "LibZMQUtils/Utilities/uuid_generator.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
-namespace serverclient{
-// =====================================================================================================================
-
-// SERVER - OTHERS
-// =====================================================================================================================
-using namespace std::chrono_literals;
+namespace reqrep{
 // =====================================================================================================================
 
 // SERVER - CLIENT COMMON ALIAS
 // =====================================================================================================================
-using CommandType = std::int32_t;   ///< Type used for the BaseServerCommand enumeration.
-using ResultType = std::int32_t;    ///< Type used for the BaseOperationResult enumeration.
+using CommandType = std::int32_t;           ///< Type used for the BaseServerCommand enumeration.
+using ResultType = std::int32_t;            ///< Type used for the BaseOperationResult enumeration.
 // =====================================================================================================================
 
-// SERVER - CLIENT COMMON ENUMS
+// SERVER - CLIENT COMMON ENUMS AND CONSTEXPR
 // =====================================================================================================================
 
 /**
@@ -83,7 +74,7 @@ using ResultType = std::int32_t;    ///< Type used for the BaseOperationResult e
  */
 enum class ServerCommand : CommandType
 {
-    INVALID_COMMAND     = -1, ///< Invalid command.
+    INVALID_COMMAND     = -1, ///< Invalid server command.
     REQ_CONNECT         = 0,  ///< Request to connect to the server.
     REQ_DISCONNECT      = 1,  ///< Request to disconnect from the server.
     REQ_ALIVE           = 2,  ///< Request to check if the server is alive and for notify that the client is alive too.
@@ -100,6 +91,7 @@ enum class ServerCommand : CommandType
  */
 enum class OperationResult : ResultType
 {
+    INVALID_RESULT           = -1, ///< Invalid operation result.
     COMMAND_OK               = 0,  ///< The command was executed successfully.
     INTERNAL_ZMQ_ERROR       = 1,  ///< An internal ZeroMQ error occurred.
     EMPTY_MSG                = 2,  ///< The message is empty.
@@ -126,11 +118,20 @@ enum class OperationResult : ResultType
 };
 
 // Usefull const expressions.
-constexpr int kMinBaseCmdId = static_cast<int>(ServerCommand::INVALID_COMMAND)+1;   ///< Minimum valid base command ID.
-constexpr int kMaxBaseCmdId = static_cast<int>(ServerCommand::END_BASE_COMMANDS)-1; ///< Minimum valid base command ID.
 
-/// Array with strings that represents the different ServerCommand enum values.
-static constexpr std::array<const char*, 51>  ServerCommandStr
+/// Minimum valid base enum command identifier (related to ServerCommand enum).
+constexpr int kMinBaseCmdId = static_cast<int>(ServerCommand::INVALID_COMMAND) + 1;
+
+/// Maximum valid base enum command identifier (related to ServerCommand enum).
+constexpr int kMaxBaseCmdId = static_cast<int>(ServerCommand::END_BASE_COMMANDS) - 1;
+
+/// Maximum number of strings for representing each base enum command identifier (related to ServerCommand enum).
+constexpr int kMaxBaseCmdSrings = static_cast<int>(ServerCommand::END_BASE_COMMANDS) + 1;
+
+// Lookup arrays for trasnsform the enumerations to string.
+
+/// Lookup array with strings that represents the different ServerCommand enum values.
+static constexpr std::array<const char*, kMaxBaseCmdSrings>  ServerCommandStr
 {
     "REQ_CONNECT",
     "REQ_DISCONNECT",
@@ -185,7 +186,7 @@ static constexpr std::array<const char*, 51>  ServerCommandStr
     "END_BASE_COMMANDS"
 };
 
-/// Array with strings that represents the different OperationResult enum values.
+/// Lookup array with strings that represents the different OperationResult enum values.
 static constexpr std::array<const char*, 50>  OperationResultStr
 {
     "COMMAND_OK - Command executed.",
@@ -242,135 +243,44 @@ static constexpr std::array<const char*, 50>  OperationResultStr
 
 // =====================================================================================================================
 
-// SERVER - CLIENT COMMON STRUCTS
+// SERVER - CLIENT COMMON DATA STRUCTS
 // =====================================================================================================================
 
-/**
- * @brief Represents information about a host client.
- *
- * The `ClientInfo` class stores information about a host client, including a unique client host UUID, IP address,
- * process ID (PID), hostname, and an optional client name. It also includes a timestamp to track the last time the
- * host client was seen, which is typically used by servers to monitor client connections.
- */
-struct LIBZMQUTILS_EXPORT ClientInfo : public zmqutils::serializer::Serializable
-{    
-    /**
-     * @brief Constructor for ClientInfo with specific parameters.
-     * @param uuid      Unique client host UUID.
-     * @param ip        Host client IP address.
-     * @param pid       PID of the host client process.
-     * @param hostname  Host client hostname.
-     * @param name      Optional client name (default is an empty string).
-     * @param info      Detailed client information.
-     * @param version   Client version.
-     */
-    ClientInfo(const utils::UUID& uuid, const std::string& ip, const std::string& pid, const std::string& hostname,
-               const std::string& name, const std::string& info, const std::string& version);
+struct LIBZMQUTILS_EXPORT RequestData : serializer::BinarySerializedData
+{};
 
-    // Default constructor, copy and move
-    ClientInfo() = default;
-    ClientInfo(const ClientInfo&) = default;
-    ClientInfo(ClientInfo&&) = default;
-    ClientInfo& operator=(const ClientInfo&) = default;
-    ClientInfo& operator=(ClientInfo&&) = default;
-
-    size_t serialize(zmqutils::serializer::BinarySerializer& serializer) const final;
-
-    void deserialize(zmqutils::serializer::BinarySerializer& serializer) final;
-
-    size_t serializedSize() const final;
-
-    /**
-     * @brief Convert ClientInfo to a JSON-formatted string.
-     */
-    std::string toJsonString() const;
-
-    // Struct data.
-    utils::UUID uuid;                  ///< Unique client host UUID.
-    std::string ip;                    ///< Host client ip.
-    std::string pid;                   ///< PID of the host client process.
-    std::string hostname;              ///< Host client name.
-    std::string name;                  ///< Client name, optional.
-    std::string info;                  ///< Client information, optional.
-    std::string version;               ///< Client version, optional.
-    utils::SCTimePointStd last_seen;   ///< Last time that the client was seen by the server.
-};
-
-/**
- * @brief Represents information about a server.
- *
- * This structure encapsulates various server details, such as port, endpoint, hostname, server name, and a collection
- * of associated IP addresses. It also provides a method to convert this information to a JSON-formatted string.
- */
-struct LIBZMQUTILS_EXPORT ServerInfo
-{
-    /**
-     * @brief Constructor for ServerInfo with specific parameters.
-     * @param port     Server port.
-     * @param endpoint Final server endpoint.
-     * @param hostname Host server name.
-     * @param name     Server name.
-     * @param info     Detailed server information.
-     * @param version  Server version.
-     * @param ips      Vector of server IP addresses.
-     */
-    ServerInfo(unsigned port, const std::string& endpoint, const std::string& hostname, const std::string& name,
-               const std::string& info, const std::string& version, const std::vector<std::string>& ips);
-
-    // Default constructor, copy and move
-    ServerInfo() = default;
-    ServerInfo(const ServerInfo&) = default;
-    ServerInfo(ServerInfo&&) = default;
-    ServerInfo& operator=(const ServerInfo&) = default;
-    ServerInfo& operator=(ServerInfo&&) = default;
-
-    /**
-     * @brief Convert ServerInfo to a JSON-formatted string.
-     */
-    std::string toJsonString() const;
-
-    // Struct data.
-    unsigned port;                 ///< Server port.
-    std::string endpoint;          ///< Final server endpoint.
-    std::string hostname;          ///< Host server name.
-    std::string name;              ///< Server name, optional.
-    std::string info;              ///< Server information, optional.
-    std::string version;           ///< Server version, optional.
-    std::vector<std::string> ips;  ///< Vector of server ips.
-};
-
-struct LIBZMQUTILS_EXPORT RequestData
-{
-    RequestData(ServerCommand id);
-
-    RequestData();
-
-    ServerCommand command;                    ///< Command to be sent.
-    std::unique_ptr<std::byte[]> params;      ///< Serialized parameters of the command.
-    size_t params_size;                       ///< Total serialized parameters size.
-
-    inline bool isEmpty() const {return (this->params_size == 0 || !this->params);}
-};
+struct LIBZMQUTILS_EXPORT ReplyData : serializer::BinarySerializedData
+{};
 
 struct LIBZMQUTILS_EXPORT CommandRequest
 {
     CommandRequest();
 
-    utils::UUID client_uuid;                 ///< Client UUID unique identification.
-    ServerCommand command;                   ///< Command to be sent.
-    std::unique_ptr<std::byte[]> params;
-    size_t params_size;
+    CommandRequest(ServerCommand command, const utils::UUID& uuid, RequestData&& data);
 
-    inline bool isEmpty() const {return (this->params_size == 0 || !this->params);}
+    /**
+     * @brief Resets the CommandRequest clearing all the contents.
+     */
+    void clear();
+
+    // Struct data.
+    ServerCommand command;    ///< Command to be executed in the server.
+    utils::UUID client_uuid;  ///< Client UUID unique identification.
+    RequestData data;         ///< Request data with the associated command request parameters.
 };
 
 struct LIBZMQUTILS_EXPORT CommandReply
 {
     CommandReply();
 
-    std::unique_ptr<std::byte[]> params;    ///< Serialized parameters of the command.
-    size_t params_size;                     ///< Total serialized parameters size.
-    OperationResult server_result;          ///< Reply result from the server.
+    /**
+     * @brief Resets the CommandReply clearing all the contents.
+     */
+    void clear();
+
+    ServerCommand command;    ///< Command whose execution generated this reply data.
+    OperationResult result;    ///< Reply result from the server.
+    ReplyData data;            ///< Reply data. Can be empty depending on the result of executing the command.
 };
 
 // =====================================================================================================================
@@ -378,27 +288,6 @@ struct LIBZMQUTILS_EXPORT CommandReply
 // SERVER - CLIENT COMMON HELPER FUNCTIONS
 // =====================================================================================================================
 
-/**
- * @brief Retrieve a server command string based on the given server command identifier.
- * @param arr Array of const char * to search the command string.
- * @param cmd The command identifier (of type `CmdId`) to look up.
- * @return The server command string associated with the identifier, or "UNKNOWN_SERVER_COMMAND" if is out of bounds.
- */
-template <std::size_t N, typename CmdId>
-std::string serverCommandStr(const std::array<const char*, N>& arr, CmdId cmd)
-{
-    CommandType id = static_cast<CommandType>(cmd);
-    return (static_cast<size_t>(id) < arr.size()) ? arr[static_cast<size_t>(id)] : "UNKNOWN_SERVER_COMMAND";
-}
-
-template <std::size_t N, typename OperationId>
-std::string operationResultStr(const std::array<const char*, N>& arr, OperationId operation)
-{
-    ResultType id = static_cast<ResultType>(operation);
-    return (static_cast<size_t>(id) < arr.size()) ? arr[static_cast<size_t>(id)] : "UNKNOWN_OPERATION_RESULT";
-}
-
 // =====================================================================================================================
-
-}} // END NAMESPACES.
+}} // END NAMESPACE
 // =====================================================================================================================

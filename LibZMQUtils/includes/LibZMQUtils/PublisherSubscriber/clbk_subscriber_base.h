@@ -56,7 +56,8 @@ namespace pubsub{
 /**
  * @brief The ClbkSubscriberBase class implements a Subscriber that includes callback handling for each topic.
  */
-class LIBZMQUTILS_EXPORT ClbkSubscriberBase : public SubscriberBase, public utils::CallbackHandler
+class LIBZMQUTILS_EXPORT ClbkSubscriberBase : public SubscriberBase,
+                                              private utils::CallbackHandler
 {
 
 public:
@@ -65,6 +66,12 @@ public:
      * @brief ClbkSubscriberBase default constructor.
      */
     ClbkSubscriberBase();
+
+    /**
+     * @brief Function for setting an error callback.
+     * @param callback The error callback method that will be called.
+     */
+    void setErrorCallback(std::function<void(const PubSubMsg &, SubscriberResult)> callback);
 
     /**
      * @brief Template function for registering a callback. This callback will be registered for a specific topic.
@@ -85,25 +92,14 @@ public:
      * @brief Template function for setting an error callback. This callback will called whenever a subscriber error
      *        is issued.
      *
-     * @param ClassT, the class of the object that contains the method used as error callback.
-     * @param object, a object whose method will be called.
-     * @param callback, the error callback method that will be called.
+     * @param object A object whose method will be called.
+     * @param callback The error callback method that will be called.
      */
     template<typename ClassT>
     void setErrorCallback(ClassT* object, void(ClassT::*error_callback)(const PubSubMsg &, SubscriberResult))
     {
         this->error_callback_ = [object, error_callback](const PubSubMsg &msg, SubscriberResult res)
         {(object->*error_callback)(msg, res);};
-    }
-
-    /**
-     * @brief Function for setting an error callback. This callback will called whenever a subscriber error
-     *        is issued.
-     * @param functor, the error callback method that will be called.
-     */
-    void setErrorCallback(std::function<void(const PubSubMsg &, SubscriberResult)> functor)
-    {
-        this->error_callback_ = functor;
     }
 
     /**
@@ -129,7 +125,7 @@ public:
      *        the message.
      */
     template<typename CallbackType, typename ClassT, typename RetT = void, typename... Args>
-    void registerCallbackAndRequestProcFunc(const TopicType& topic, ClassT* object, RetT(ClassT::*callback)(Args...))
+    void registerCbAndReqProcFunc(const TopicType& topic, ClassT* object, RetT(ClassT::*callback)(Args...))
     {
         // Register the callback.
         this->registerCallback(topic, object, callback);
@@ -180,11 +176,7 @@ protected:
      * @param msg, the message that caused the error.
      * @param res, the subscriber result with the error.
      */
-    void invokeErrorCallback(const PubSubMsg &msg, SubscriberResult res)
-    {
-        if (this->error_callback_)
-            this->error_callback_(msg, res);
-    }
+    void invokeErrorCallback(const PubSubMsg &msg, SubscriberResult res);
     /**
      * @brief Parametric method for invoking a registered callback. If no callback is registered, the function will
      *        try to invoke error callback.
@@ -296,17 +288,15 @@ protected:
         }
     }
 
-
 private:
-
-    ///< Error callback functor.
-    std::function<void(const PubSubMsg&, SubscriberResult)> error_callback_;
 
     // Hide the base functions.
     using CallbackHandler::invokeCallback;
     using CallbackHandler::removeCallback;
     using CallbackHandler::hasCallback;
 
+    // Error callback functor.
+    std::function<void(const PubSubMsg&, SubscriberResult)> error_callback_;
 };
 
 }} // END NAMESPACES.

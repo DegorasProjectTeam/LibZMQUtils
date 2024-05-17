@@ -68,16 +68,11 @@ public:
      * @brief Construct a new UUID object from an array of 16 bytes.
      * @param bytes An array of 16 bytes representing the UUID.
      */
-    UUID(const std::array<std::byte, 16>& bytes);
+    UUID(const std::array<std::byte, kUUIDSize>& bytes);
 
-    /**
-     * @brief Default constructor.
-     */
     UUID() = default;
-
     UUID(const UUID&) = default;
     UUID(UUID&&) = default;
-
     UUID& operator=(const UUID&) = default;
     UUID& operator=(UUID&&) = default;
 
@@ -108,13 +103,28 @@ public:
      */
     std::string toRFC4122String() const;
 
-    const std::array<std::byte, 16>& getBytes() const;
+    /**
+     * @brief Retrieves a constant reference to the UUID's byte array.
+     * @return A constant reference to the UUID's byte array.
+     */
+    const std::array<std::byte, kUUIDSize>& getBytes() const;
 
+    /**
+     * @brief Clears the UUID, resetting all bytes to zero.
+     *
+     * This function sets all 16 bytes of the UUID to zero, effectively nullifying the UUID. It uses std::fill_n to
+     * efficiently perform the operation on the byte array. After calling this method, the UUID will be in a state
+     * equivalent to a newly constructed, uninitialized UUID object.
+     *
+     * @note This method can be used to reset the UUID if it's no longer needed or before reassigning
+     * a new value to ensure no residual data remains.
+     */
+    void clear();
 
 private:
 
     // Members.
-    std::array<std::byte, 16> bytes_;  ///< Bytes of the UUID.
+    std::array<std::byte, kUUIDSize> bytes_;  ///< Bytes of the UUID.
 };
 
 // UUID logical comparison operators

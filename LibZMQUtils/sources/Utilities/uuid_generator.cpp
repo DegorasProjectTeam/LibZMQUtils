@@ -153,8 +153,15 @@ std::string UUID::toRFC4122String() const
     return ss.str();
 }
 
-const std::array<std::byte, 16> &UUID::getBytes() const {return this->bytes_;}
+const std::array<std::byte, 16> &UUID::getBytes() const
+{
+    return this->bytes_;
+}
 
+void UUID::clear()
+{
+    std::fill(this->bytes_.begin(), this->bytes_.end(), std::byte{0});
+}
 
 bool operator<(const UUID &a, const UUID &b)
 {

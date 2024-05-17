@@ -48,14 +48,19 @@
 
 // LIBZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/Modules/CommandClient>
+#include <LibZMQUtils/Modules/CommandServerClient>
 #include <LibZMQUtils/Modules/Utilities>
 // =====================================================================================================================
 
 // INTERFACE INCLUDES
 // =====================================================================================================================
-#include <AmelasController/amelas_controller_data.h>
-#include <AmelasControllerServer/amelas_controller_server_data.h>
+#include <LibZMQUtils/Modules/CommandServerClient>
+#include <LibZMQUtils/Modules/Utilities>
+// =====================================================================================================================
+
+// PROJECT INCLUDES
+// =====================================================================================================================
+#include "AmelasController/amelas_controller_data.h"
 // =====================================================================================================================
 
 // AMELAS NAMESPACES
@@ -64,52 +69,26 @@ namespace amelas{
 namespace communication{
 // =====================================================================================================================
 
-class AmelasControllerClient : public zmqutils::serverclient::CommandClientBase
+class AmelasControllerClient : public zmqutils::reqrep::DebugCommandClientBase
 {
 public:
 
-    // Use the constructor of CommandClientBase becaouse we don't need to do anything more.
-    using zmqutils::serverclient::CommandClientBase::CommandClientBase;
+    AmelasControllerClient(const std::string& server_endpoint, const std::string& client_name = "",
+                           const std::string& client_version = "", const std::string& client_info = "",
+                           const std::string& net_interface = "");
 
-    template<typename CmdId>
-    bool validateCommand(CmdId command) const
-    {
-        return (CommandClientBase::validateCommand(command) ||
-                (static_cast<std::int32_t>(command) >= kMinCmdId && static_cast<std::int32_t>(command) <= kMaxCmdId));
-    }
+    bool validateCommand(zmqutils::reqrep::CommandType command) const;
 
-    zmqutils::serverclient::OperationResult getHomePosition(controller::AltAzPos &pos,
+    zmqutils::reqrep::OperationResult getHomePosition(controller::AltAzPos &pos,
                                                               controller::AmelasError &res);
 
-    zmqutils::serverclient::OperationResult setHomePosition(const controller::AltAzPos &pos,
+    zmqutils::reqrep::OperationResult setHomePosition(const controller::AltAzPos &pos,
                                                               controller::AmelasError &res);
 
-    zmqutils::serverclient::OperationResult doOpenSearchTelescope(controller::AmelasError &res);
+    zmqutils::reqrep::OperationResult doOpenSearchTelescope(controller::AmelasError &res);
 
-    zmqutils::serverclient::OperationResult doExampleNotImp(controller::AmelasError &res);
+    zmqutils::reqrep::OperationResult doExampleNotImp(controller::AmelasError &res);
 
-
-private:
-
-    virtual void onClientStart() override final;
-
-    virtual void onClientStop() override final;
-
-    virtual void onWaitingReply() override final;
-
-    virtual void onDeadServer(const zmqutils::serverclient::ServerInfo&) override final;
-
-    virtual void onConnected(const zmqutils::serverclient::ServerInfo&) override final;
-
-    virtual void onDisconnected(const zmqutils::serverclient::ServerInfo&) override final;
-
-    virtual void onBadOperation(const zmqutils::serverclient::CommandReply&) override final;
-
-    virtual void onReplyReceived(const zmqutils::serverclient::CommandReply&) override final;
-
-    virtual void onSendingCommand(const zmqutils::serverclient::RequestData&) override final;
-
-    virtual void onClientError(const zmq::error_t&, const std::string& ext_info) override final;
 };
 
 }} // END NAMESPACES.

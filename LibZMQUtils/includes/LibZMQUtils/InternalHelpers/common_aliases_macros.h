@@ -1,15 +1,9 @@
 /***********************************************************************************************************************
- *   LibZMQUtils (ZeroMQ High-Level Utilities C++ Library).                                                            *
+ *   LibZMQUtils (ZMQ Utilitites Library): A libre library with ZMQ related useful utilities.                          *
  *                                                                                                                     *
- *   A modern open-source C++ library with high-level utilities based on the well-known ZeroMQ open-source universal   *
- *   messaging library. Includes custom command based server-client and publisher-subscriber with automatic binary     *
- *   serialization capabilities, specially designed for system infraestructure. Developed as a free software under the *
- *   context of Degoras Project for the Spanish Navy Observatory SLR station (SFEL) in San Fernando and, of course,    *
- *   for any other station that wants to use it!                                                                       *
- *                                                                                                                     *
- *   Copyright (C) 2024 Degoras Project Team                                                                           *
+ *   Copyright (C) 2023 Degoras Project Team                                                                           *
  *                      < Ángel Vera Herrera, avera@roa.es - angeldelaveracruz@gmail.com >                             *
- *                      < Jesús Relinque Madroñal >                                                                    *                                                            *
+ *                      < Jesús Relinque Madroñal >                                                                    *
  *                                                                                                                     *
  *   This file is part of LibZMQUtils.                                                                                 *
  *                                                                                                                     *
@@ -29,66 +23,63 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file clbk_subscriber_base.cpp
- * @brief This file contains the implementation of the ClbkSubscriberBase class and related.
+ * @file common_aliases_macros.h
+ * @brief This file contains several generic aliases and macros for the library.
  * @author Degoras Project Team
  * @copyright EUPL License
 ***********************************************************************************************************************/
 
+// =====================================================================================================================
+#pragma once
+// =====================================================================================================================
+
 // C++ INCLUDES
 // =====================================================================================================================
+#include<vector>
+#include<string>
+#include<chrono>
+
+#if ((defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) || __cplusplus >= 201703L)
+    #include <optional>
+#else
+    #include <experimental/optional>
+#endif
 // =====================================================================================================================
 
-// ZMQUTILS INCLUDES
-// =====================================================================================================================
-#include "LibZMQUtils/PublisherSubscriber/clbk_subscriber_base.h"
-// =====================================================================================================================
-
-// ZMQUTILS NAMESPACES
+// LIBZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
-namespace pubsub{
+// =====================================================================================================================
 
-ClbkSubscriberBase::ClbkSubscriberBase() {}
+// Generic namespaces
+// ---------------------------------------------------------------------------------------------------------------------
+using namespace std::chrono_literals;
+// ---------------------------------------------------------------------------------------------------------------------
 
-void ClbkSubscriberBase::setErrorCallback(std::function<void (const PubSubMsg &, SubscriberResult)> callback)
-{
-    this->error_callback_ = callback;
-}
+// Generic aliases
+// ---------------------------------------------------------------------------------------------------------------------
 
-void ClbkSubscriberBase::removeCallback(const TopicType &topic)
-{
-    CallbackHandler::removeCallback(std::hash<TopicType>{}(topic));
-}
+/// Convenient optional (from std::experimental) type alias.
+#if ((defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) || __cplusplus >= 201703L)
+    template <class T> using Optional = std::optional<T>;
+#else
+    template <class T> using Optional = std::experimental::optional<T>;
+#endif
 
-bool ClbkSubscriberBase::hasCallback(const TopicType &topic)
-{
-    return CallbackHandler::hasCallback(std::hash<TopicType>{}(topic));
-}
+/// Alias for a std::string vector.
+using StringV = std::vector<std::string>;
 
-ClbkSubscriberBase::~ClbkSubscriberBase()
-{}
+// ---------------------------------------------------------------------------------------------------------------------
 
-void ClbkSubscriberBase::onInvalidMsgReceived(const PubSubMsg &msg, SubscriberResult res)
-{
-    this->invokeErrorCallback(msg, res);
-}
+// Generic macros
+// ---------------------------------------------------------------------------------------------------------------------
 
-void ClbkSubscriberBase::onMsgReceived(const PubSubMsg &msg, SubscriberResult &res)
-{
-    SubscriberBase::onMsgReceived(msg, res);
+#define COUNT_ARGS_IMPL(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, N, ...) N
+#define COUNT_ARGS(...) COUNT_ARGS_IMPL(__VA_ARGS__, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
 
-    if (SubscriberResult::MSG_OK != res)
-        this->invokeErrorCallback(msg, res);
-}
-
-void ClbkSubscriberBase::invokeErrorCallback(const PubSubMsg &msg, SubscriberResult res)
-{
-    if (this->error_callback_)
-        this->error_callback_(msg, res);
-}
+// ---------------------------------------------------------------------------------------------------------------------
 
 // =====================================================================================================================
 
-}} // END NAMESPACES.
+} // END NAMESPACES
 // =====================================================================================================================

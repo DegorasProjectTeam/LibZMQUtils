@@ -120,8 +120,6 @@ int main(int, char**)
                                                   &log_processor,
                                                   &AmelasLogProcessor::processLogInfo);
 
-
-
     subscriber.registerCallbackAndRequestProcFunc(AmelasLogLevel::AMELAS_WARNING,
                                                   &log_processor,
                                                   &AmelasLogProcessor::processLogWarning);

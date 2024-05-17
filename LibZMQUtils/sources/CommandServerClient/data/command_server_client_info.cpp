@@ -29,66 +29,155 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file clbk_subscriber_base.cpp
- * @brief This file contains the implementation of the ClbkSubscriberBase class and related.
+ * @file server_client_info.cpp
+ * @brief This file contains the implementation for the CommandClientInfo and CommandServerInfo structs.
  * @author Degoras Project Team
  * @copyright EUPL License
 ***********************************************************************************************************************/
 
 // C++ INCLUDES
 // =====================================================================================================================
+#include <sstream>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/PublisherSubscriber/clbk_subscriber_base.h"
+#include "LibZMQUtils/CommandServerClient/data/command_server_client_info.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
-namespace pubsub{
+namespace reqrep{
+// =====================================================================================================================
 
-ClbkSubscriberBase::ClbkSubscriberBase() {}
-
-void ClbkSubscriberBase::setErrorCallback(std::function<void (const PubSubMsg &, SubscriberResult)> callback)
-{
-    this->error_callback_ = callback;
-}
-
-void ClbkSubscriberBase::removeCallback(const TopicType &topic)
-{
-    CallbackHandler::removeCallback(std::hash<TopicType>{}(topic));
-}
-
-bool ClbkSubscriberBase::hasCallback(const TopicType &topic)
-{
-    return CallbackHandler::hasCallback(std::hash<TopicType>{}(topic));
-}
-
-ClbkSubscriberBase::~ClbkSubscriberBase()
+CommandClientInfo::CommandClientInfo(const utils::UUID& uuid, const std::string& ip, const std::string& pid,
+                       const std::string& hostname, const std::string& name , const std::string& info,
+                       const std::string& version):
+    uuid(uuid),
+    ip(ip),
+    pid(pid),
+    hostname(hostname),
+    name(name),
+    info(info),
+    version(version)
 {}
 
-void ClbkSubscriberBase::onInvalidMsgReceived(const PubSubMsg &msg, SubscriberResult res)
+size_t CommandClientInfo::serialize(serializer::BinarySerializer &serializer) const
 {
-    this->invokeErrorCallback(msg, res);
+    return serializer.write(this->uuid, this->ip, this->pid, this->hostname, this->name, this->info, this->version);
 }
 
-void ClbkSubscriberBase::onMsgReceived(const PubSubMsg &msg, SubscriberResult &res)
+void CommandClientInfo::deserialize(serializer::BinarySerializer &serializer)
 {
-    SubscriberBase::onMsgReceived(msg, res);
-
-    if (SubscriberResult::MSG_OK != res)
-        this->invokeErrorCallback(msg, res);
+    serializer.read(this->uuid, this->ip, this->pid, this->hostname, this->name, this->info, this->version);
 }
 
-void ClbkSubscriberBase::invokeErrorCallback(const PubSubMsg &msg, SubscriberResult res)
+size_t CommandClientInfo::serializedSize() const
 {
-    if (this->error_callback_)
-        this->error_callback_(msg, res);
+    return Serializable::calcTotalSize(this->uuid, this->ip, this->pid, this->hostname,
+                                       this->name, this->info, this->version);
 }
 
-// =====================================================================================================================
+std::string CommandClientInfo::toJsonString() const
+{
+    std::stringstream ss;
+
+    ss << "{"
+       << "\"uuid\":\"" << this->uuid.toRFC4122String() << "\","
+       << "\"ip\":\"" << this->ip << "\","
+       << "\"pid\":\"" << this->pid << "\","
+       << "\"hostname\":\"" << this->hostname << "\","
+       << "\"name\":\"" << this->name << "\","
+       << "\"info\":\"" << this->info << "\","
+       << "\"version\":\"" << this->version << "\","
+       << "\"last_seen\":\"" << utils::timePointToIso8601(this->last_seen) << "\""
+       << "}";
+
+    return ss.str();
+}
+
+CommandServerInfo::CommandServerInfo(unsigned int port, const std::string &endpoint, const std::string &hostname,
+                       const std::string &name, const std::string &info, const std::string &version,
+                       const std::vector<std::string> &ips) :
+    port(port),
+    endpoint(endpoint),
+    hostname(hostname),
+    name(name),
+    info(info),
+    version(version),
+    ips(ips)
+{}
+
+std::string CommandServerInfo::toJsonString() const
+{
+    std::stringstream ss;
+
+    ss << "{"
+       << "\"port\":" << this->port << ","
+       << "\"endpoint\":\"" << this->endpoint << "\","
+       << "\"hostname\":\"" << this->hostname << "\","
+       << "\"name\":\"" << this->name << "\","
+       << "\"info\":\"" << this->info << "\","
+       << "\"version\":\"" << this->version << "\","
+       << "\"ips\":[";
+
+    // Add each IP address in the "ips" vector to the JSON array
+    for (size_t i = 0; i < this->ips.size(); ++i)
+    {
+        ss << "\"" << this->ips[i] << "\"";
+        if (i != this->ips.size() - 1)
+            ss << ",";
+    }
+    ss << "]" << "}";
+    return ss.str();
+}
+
+std::string CommandClientInfo::toString() const
+{
+    // Containers.
+    std::stringstream ss;
+
+    // Generate the string.
+    ss << "Client UUID:     " << this->uuid.toRFC4122String() << std::endl;
+    ss << "Client Ip:       " << this->ip                     << std::endl;
+    ss << "Client PID:      " << this->pid                    << std::endl;
+    ss << "Client Hostname: " << this->hostname               << std::endl;
+    ss << "Client Name:     " << this->name                   << std::endl;
+    ss << "Client Info:     " << this->info                   << std::endl;
+    ss << "Client Version:  " << this->version                << std::endl;
+    ss << "Client Seen:     " << utils::timePointToIso8601(this->last_seen);
+    // Return the string.
+    return ss.str();
+}
+
+std::string CommandServerInfo::toString() const
+{
+    // Containers.
+    std::stringstream ss;
+    std::string ip_list, separator(" - ");
+
+    // Get the IPs.
+    for(const auto& ip : this->ips)
+    {
+        ip_list.append(ip);
+        ip_list.append(separator);
+    }
+    if (!ip_list.empty() && separator.length() > 0)
+        ip_list.erase(ip_list.size() - separator.size(), separator.size());
+
+    // Generate the string.
+    ss << "Server Port:      " << this->port << std::endl;
+    ss << "Server Endpoint:  " << this->endpoint << std::endl;
+    ss << "Server Hostname:  " << this->hostname << std::endl;
+    ss << "Server Name:      " << this->name << std::endl;
+    ss << "Server Info:      " << this->info << std::endl;
+    ss << "Server Version:   " << this->version << std::endl;
+    ss << "Server Addresses: " << ip_list;
+
+    // Return the string.
+    return ss.str();
+}
 
 }} // END NAMESPACES.
 // =====================================================================================================================

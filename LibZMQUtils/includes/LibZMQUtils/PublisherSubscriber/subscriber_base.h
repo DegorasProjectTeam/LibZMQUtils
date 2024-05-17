@@ -303,7 +303,7 @@ private:
     // ZMQ socket.
     zmq::socket_t* socket_;              ///< ZMQ subscriber socket.
     zmq::socket_t* socket_pub_close_;    ///< ZMQ close publisher socket.
-    utils::UUID socket_close_uuid_;             ///< UUID for close publisher.
+    utils::UUID socket_close_uuid_;      ///< UUID for close publisher.
 
     // Subscruiber uuid
     utils::UUID sub_uuid_;

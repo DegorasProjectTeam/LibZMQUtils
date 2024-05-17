@@ -401,5 +401,21 @@ void BinarySerializer::readSingle(std::string &str)
     this->offset_ += size;
 }
 
+BinarySerializedData::BinarySerializedData() :
+    bytes(nullptr),
+    size(0)
+{}
+
+bool BinarySerializedData::isEmpty() const
+{
+    return (this->size == 0 || !this->bytes);
+}
+
+void BinarySerializedData::clear()
+{
+    this->bytes.reset();
+    this->size = 0;
+}
+
 }} // END NAMESPACES.
 // =====================================================================================================================

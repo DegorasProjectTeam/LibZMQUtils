@@ -221,7 +221,7 @@ struct LIBZMQUTILS_EXPORT PublisherInfo
     std::string name;              ///< Publisher name, optional.
     std::string info;              ///< Publisher information, optional.
     std::string version;           ///< Publisher version, optional.
-    //std::vector<std::string> ips;  ///< Vector of publisher ips.
+    std::vector<std::string> ips;  ///< Vector of publisher ips.
 };
 
 /**
@@ -243,10 +243,10 @@ struct LIBZMQUTILS_EXPORT SubscriberInfo
     std::string toJsonString() const;
 
     // Struct data.
+    utils::UUID uuid;              ///< Unique Subscriber host UUID.
     std::string name;              ///< Subscriber name, optional.
     std::string info;              ///< Subscriber information, optional.
     std::string version;           ///< Subscriber version, optional.
-    //std::vector<std::string> ips;  ///< Vector of publisher ips.
 };
 
 /**

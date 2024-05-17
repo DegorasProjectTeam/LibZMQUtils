@@ -48,7 +48,7 @@
 
 // LIBZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/Modules/CallbackSubscriber>
+#include <LibZMQUtils/Modules/PublisherSubscriber>
 #include <LibZMQUtils/Modules/Utilities>
 // =====================================================================================================================
 
@@ -119,7 +119,7 @@ public:
     void registerCallbackAndRequestProcFunc(const controller::AmelasLogLevel &log_level, ClassT* object,
                                             RetT(ClassT::*callback)(Args...))
     {
-        zmqutils::pubsub::ClbkSubscriberBase::registerCallbackAndRequestProcFunc<CallbackType, ClassT, RetT, Args...>(
+        zmqutils::pubsub::ClbkSubscriberBase::registerCbAndReqProcFunc<CallbackType, ClassT, RetT, Args...>(
             zmqutils::pubsub::TopicType(AmelasLoggerTopic[static_cast<size_t>(log_level)]), object, callback);
     }
 
@@ -127,8 +127,7 @@ private:
 
     // -----------------------------------------------------------------------------------------------------------------
     using SubscriberBase::registerRequestProcFunc;
-    using CallbackHandler::registerCallback;
-    using zmqutils::pubsub::ClbkSubscriberBase::registerCallbackAndRequestProcFunc;
+    using zmqutils::pubsub::ClbkSubscriberBase::registerCbAndReqProcFunc;
     using zmqutils::pubsub::ClbkSubscriberBase::registerCallback;
     using zmqutils::pubsub::SubscriberBase::addTopicFilter;
     using zmqutils::pubsub::SubscriberBase::removeTopicFilter;

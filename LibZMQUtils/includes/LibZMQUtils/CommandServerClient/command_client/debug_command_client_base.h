@@ -28,6 +28,61 @@
  *   along with this project. If not, see the license at < https://eupl.eu/ >.                                         *
  **********************************************************************************************************************/
 
-#include <LibZMQUtils/PublisherSubscriber/clbk_subscriber_base.h>
-#include <LibZMQUtils/PublisherSubscriber/common.h>
+/** ********************************************************************************************************************
+ * @file debug_command_client_base.h
+ * @brief This file contains the declaration of the DebugCommandClientBase class and related.
+ * @author Degoras Project Team
+ * @copyright EUPL License
+***********************************************************************************************************************/
 
+// =====================================================================================================================
+#pragma once
+// =====================================================================================================================
+
+// C++ INCLUDES
+// =====================================================================================================================
+#include <string>
+// =====================================================================================================================
+
+// ZMQUTILS INCLUDES
+// =====================================================================================================================
+#include "LibZMQUtils/CommandServerClient/command_client/command_client_base.h"
+// =====================================================================================================================
+
+// ZMQUTILS NAMESPACES
+// =====================================================================================================================
+namespace zmqutils{
+namespace reqrep{
+// =====================================================================================================================
+
+/**
+ * @brief The DebugCommandServerBase class implements a CommandServerBase that includes internal callbacks that
+ * prints all the input and output data in each internal callback call to facilitate debugging and development. At any
+ * time you can toggle inheritance between DebugCommandServerBase and the original CommandServerBase one to monitor
+ * what is happening on the screen. This class is for support and does not imply that a robust logging system should
+ * not be used in the override implementation of the system being developed.
+ */
+class LIBZMQUTILS_EXPORT DebugCommandClientBase : public CommandClientBase
+{
+public:
+    using CommandClientBase::CommandClientBase;
+
+protected:
+    void onClientStart() override;
+    void onClientStop() override;
+    void onWaitingReply() override;
+    void onDeadServer(const CommandServerInfo &) override;
+    void onConnected(const CommandServerInfo &) override;
+    void onDisconnected(const CommandServerInfo &) override;
+    void onBadOperation(const CommandReply &rep) override;
+    void onReplyReceived(const CommandReply &rep) override;
+    void onSendingCommand(const CommandRequest &req) override;
+    void onClientError(const zmq::error_t &error, const std::string &ext_info) override;
+
+private:
+
+    std::string generateStringHeader(const std::string& clbk_name, const std::vector<std::string>& data);
+};
+
+}} // END NAMESPACES.
+// =====================================================================================================================

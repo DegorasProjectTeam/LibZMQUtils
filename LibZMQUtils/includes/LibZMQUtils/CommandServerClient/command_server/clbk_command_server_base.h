@@ -47,8 +47,7 @@
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/Global/libzmqutils_global.h"
-#include "LibZMQUtils/CommandServerClient/common.h"
-#include "LibZMQUtils/CommandServerClient/command_server_base.h"
+#include "LibZMQUtils/CommandServerClient/command_server/command_server_base.h"
 #include "LibZMQUtils/Utilities/callback_handler.h"
 #include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
 #include "LibZMQUtils/InternalHelpers/tuple_helpers.h"
@@ -57,25 +56,22 @@
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
-namespace serverclient{
+namespace reqrep{
 // =====================================================================================================================
 
 /**
  * @brief The ClbkCommandServerBase class implements a CommandServer that includes callback handling for each command.
  */
-class ClbkCommandServerBase : public CommandServerBase,
-                              private utils::CallbackHandler
+class LIBZMQUTILS_EXPORT ClbkCommandServerBase : public CommandServerBase,
+                                                 private utils::CallbackHandler
 {
 public:
 
     /**
      * @brief ClbkCommandServerBase default constructor.
      */
-    LIBZMQUTILS_EXPORT ClbkCommandServerBase(unsigned port,
-                                             const std::string& local_addr = "*",
-                                             const std::string& server_name = "",
-                                             const std::string& server_version = "",
-                                             const std::string& server_info = "");
+     ClbkCommandServerBase(unsigned port, const std::string& local_addr = "*", const std::string& server_name = "",
+                           const std::string& server_version = "", const std::string& server_info = "");
 
     /**
      * @brief Template function for registering a callback. This callback will be registered for a specific command.
@@ -127,43 +123,43 @@ public:
      */
     template<typename CallbackType, typename InputTuple = std::tuple<>, typename OutputTuple = std::tuple<>,
              typename CmdId, typename ClassT, typename RetT = void, typename... Args>
-    void registerCallbackAndRequestProcFunc(CmdId command, ClassT* object, RetT(ClassT::*callback)(Args...))
+    void registerCbAndReqProcFunc(CmdId command, ClassT* object, RetT(ClassT::*callback)(Args...))
     {
         // Register the callback.
         this->registerCallback(command, object, callback);
 
         // Process function lambda.
-        auto lambdaProcFunc = [this](const CommandRequest& request, CommandReply& reply)
+        auto lambda_proc_func = [this](const CommandRequest& request, CommandReply& reply)
         {
-            this->processClbkRequest<CallbackType, RetT, InputTuple, OutputTuple>(request, reply);
+            this->processCbRequest<CallbackType, RetT, InputTuple, OutputTuple>(request, reply);
         };
 
         // Automatic command process function registration.
-        this->registerRequestProcFunc(static_cast<zmqutils::serverclient::CommandType>(command), lambdaProcFunc);
+        this->registerReqProcFunc(static_cast<zmqutils::reqrep::CommandType>(command), lambda_proc_func);
     }
 
     /**
      * @brief Remove the registered callback for a specific command.
      * @param command, the command whose callback will be erased.
      */
-    LIBZMQUTILS_EXPORT void removeCallback(ServerCommand command);
+    void removeCallback(ServerCommand command);
 
     /**
      * @brief Check if there is a registered callback for a specific command.
      * @param command, the command whose callback existence will be checked.
      * @return
      */
-    LIBZMQUTILS_EXPORT bool hasCallback(ServerCommand command);
+    bool hasCallback(ServerCommand command);
 
     /**
      * @brief Virtual destructor.
      */
-    LIBZMQUTILS_EXPORT virtual ~ClbkCommandServerBase() override;
+    virtual ~ClbkCommandServerBase() override;
 
 protected:
 
     /**
-     * @brief Processes a callback request based on the command type and data encapsulated in the request.
+     * @brief Processes a callback request based on the command type and bytes encapsulated in the request.
      *
      * This function processes different types of callback requests by handling input and output parameters
      * differently depending on their types, which are specified as tuple template parameters.
@@ -173,19 +169,19 @@ protected:
      * - Both input and output parameters are provided.
      * - Neither input nor output parameters are provided.
      *
-     * The function deserializes input data from the request, invokes the appropriate callback based on the
+     * The function deserializes input bytes from the request, invokes the appropriate callback based on the
      * template parameters, and serializes the output back into the reply.
      *
      * @tparam CallbackType The type of the callback function to be invoked.
      * @tparam RetT The return type of the callback function.
      * @tparam InputTuple A tuple containing types of the input parameters.
      * @tparam OutputTuple A tuple containing types of the output parameters.
-     * @param request A reference to the CommandRequest object containing input data and command details.
+     * @param request A reference to the CommandRequest object containing input bytes and command details.
      * @param reply A reference to the CommandReply object to store the results of the callback invocation.
      */
     template<typename CallbackType, typename RetT, typename InputTuple, typename OutputTuple>
-    void processClbkRequest(const zmqutils::serverclient::CommandRequest& request,
-                            zmqutils::serverclient::CommandReply& reply)
+    void processCbRequest(const zmqutils::reqrep::CommandRequest& request,
+                            zmqutils::reqrep::CommandReply& reply)
     {
         // Prepare the input and output parameters
         InputTuple inputs;
@@ -194,22 +190,22 @@ protected:
         // If there are inputs, deserialize them
         if constexpr (std::tuple_size_v<InputTuple> > 0)
         {
-            if (request.isEmpty())
+            if (request.data.isEmpty())
             {
-                reply.server_result = zmqutils::serverclient::OperationResult::EMPTY_PARAMS;
+                reply.result = zmqutils::reqrep::OperationResult::EMPTY_PARAMS;
                 return;
             }
 
             // Deserialize the inputs.
             try
             {
-                zmqutils::serializer::BinarySerializer::fastDeserialization(request.params.get(),
-                                                                            request.params_size,
+                zmqutils::serializer::BinarySerializer::fastDeserialization(request.data.bytes.get(),
+                                                                            request.data.size,
                                                                             inputs);
             }
             catch(...)
             {
-                reply.server_result = OperationResult::BAD_PARAMETERS;
+                reply.result = OperationResult::BAD_PARAMETERS;
                 return;
             }
         }
@@ -223,9 +219,10 @@ protected:
             // Invoke the callback with parameters
             std::apply([this, &request, &reply](auto&&... args)
             {
-                return this->invokeCallback<CallbackType, RetT>(request, reply, std::forward<decltype(args)>(args)...);
+                return this->invokeCallback<CallbackType, RetT>(request,
+                                                                reply,
+                                                                std::forward<decltype(args)>(args)...);
             }, args);
-
 
             // If there are output parameters, serialize them into the reply.
             if constexpr (std::tuple_size_v<OutputTuple> > 0)
@@ -234,11 +231,8 @@ protected:
                 internal_helpers::tuple::tuple_split(std::move(args), inputs, outputs);
 
                 // Serialize the output parameters.
-                zmqutils::serializer::BinarySerializer serializer;
-                serializer.write(outputs);
-                reply.params_size = serializer.moveUnique(reply.params);
+                reply.data.size = zmqutils::serializer::BinarySerializer::fastSerialization(reply.data.bytes, outputs);
             }
-
         }
         // If there are return type at callback, send it before output parameters.
         else
@@ -263,7 +257,8 @@ protected:
                 serializer.write(outputs);
             }
 
-            reply.params_size = serializer.moveUnique(reply.params);
+            // Serialize the data and move the container.
+            reply.data.size = serializer.moveUnique(reply.data.bytes);
         }
     }
 
@@ -283,7 +278,7 @@ protected:
         // Check the callback.
         if(!this->hasCallback(cmd))
         {
-            reply.server_result = OperationResult::EMPTY_EXT_CALLBACK;
+            reply.result = OperationResult::EMPTY_EXT_CALLBACK;
             return RetT();
         }
 
@@ -304,7 +299,7 @@ protected:
         }
         catch(...)
         {
-            reply.server_result = OperationResult::INVALID_EXT_CALLBACK;
+            reply.result = OperationResult::INVALID_EXT_CALLBACK;
             return RetT();
         }
     }

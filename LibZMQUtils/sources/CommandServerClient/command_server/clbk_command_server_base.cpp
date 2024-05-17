@@ -28,7 +28,51 @@
  *   along with this project. If not, see the license at < https://eupl.eu/ >.                                         *
  **********************************************************************************************************************/
 
-#include <LibZMQUtils/PublisherSubscriber/subscriber_base.h>
-#include <LibZMQUtils/PublisherSubscriber/clbk_subscriber_base.h>
-#include <LibZMQUtils/PublisherSubscriber/common.h>
+/** ********************************************************************************************************************
+ * @file clbk_command_server_base.cpp
+ * @brief This file contains the implementation of the ClbkCommandServerBase class and related.
+ * @author Degoras Project Team
+ * @copyright EUPL License
+***********************************************************************************************************************/
 
+// C++ INCLUDES
+// =====================================================================================================================
+#include <string>
+// =====================================================================================================================
+
+// ZMQUTILS INCLUDES
+// =====================================================================================================================
+#include "LibZMQUtils/CommandServerClient/command_server/clbk_command_server_base.h"
+// =====================================================================================================================
+
+// ZMQUTILS NAMESPACES
+// =====================================================================================================================
+namespace zmqutils{
+namespace reqrep{
+// =====================================================================================================================
+
+ClbkCommandServerBase::ClbkCommandServerBase(unsigned int port,
+                                             const std::string &local_addr,
+                                             const std::string &server_name,
+                                             const std::string &server_version,
+                                             const std::string &server_info) :
+    CommandServerBase(port, local_addr, server_name, server_version, server_info),
+    CallbackHandler()
+{}
+
+void ClbkCommandServerBase::removeCallback(ServerCommand command)
+{
+    CallbackHandler::removeCallback(static_cast<CallbackHandler::CallbackId>(command));
+}
+
+bool ClbkCommandServerBase::hasCallback(ServerCommand command)
+{
+    return CallbackHandler::hasCallback(static_cast<CallbackHandler::CallbackId>(command));
+}
+
+ClbkCommandServerBase::~ClbkCommandServerBase() { }
+
+// =====================================================================================================================
+
+}} // END NAMESPACES.
+// =====================================================================================================================

@@ -50,9 +50,11 @@
 // =====================================================================================================================
 #include "LibZMQUtils/Global/libzmqutils_global.h"
 #include "LibZMQUtils/Global/zmq_context_handler.h"
-#include "LibZMQUtils/CommandServerClient/common.h"
 #include "LibZMQUtils/InternalHelpers/network_helpers.h"
+#include "LibZMQUtils/InternalHelpers/common_aliases_macros.h"
 #include "LibZMQUtils/Utilities/uuid_generator.h"
+#include "LibZMQUtils/CommandServerClient/data/command_server_client_data.h"
+#include "LibZMQUtils/CommandServerClient/data/command_server_client_info.h"
 // =====================================================================================================================
 
 // ZMQ NAMESPACES
@@ -67,7 +69,7 @@ namespace zmq
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
-namespace serverclient{
+namespace reqrep{
 // =====================================================================================================================
 
 // CONSTANTS
@@ -75,6 +77,18 @@ namespace serverclient{
 constexpr unsigned kDefaultClientAliveTimeoutMsec = 10000;    ///< Default timeout for consider a client dead (msec).
 constexpr unsigned kDefaultServerReconnAttempts = 5;          ///< Default server reconnection number of attempts.
 constexpr unsigned kDefaultMaxNumberOfClients = 1000;         ///< Default maximum number of connected clients.
+// =====================================================================================================================
+
+// MACROS
+// =====================================================================================================================
+
+#define M_SERVER_COMMAND_REGISTER_LOOKUP_COMMANDS_STRINGS(ENUM_TYPE, ...) \
+static constexpr std::array<const char*, COUNT_ARGS(__VA_ARGS__)> ENUM_TYPE##LookupStr { __VA_ARGS__ }; \
+    template<> \
+    struct EnumStringLookupTrait<ENUM_TYPE> { \
+        static constexpr auto& strings = ENUM_TYPE##LookupStr; \
+};
+
 // =====================================================================================================================
 
 /**
@@ -228,6 +242,7 @@ constexpr unsigned kDefaultMaxNumberOfClients = 1000;         ///< Default maxim
  *
  * @see ServerCommand, OperationResult, CommandRequest, CommandReply, CommandClientBase, onCustomCommandReceived
  */
+//template<typename ServerCommandEnum = ServerCommand>
 class LIBZMQUTILS_EXPORT CommandServerBase : public ZMQContextHandler
 {
 
@@ -266,9 +281,9 @@ public:
 
     /**
      * @brief Get all the server information.
-     * @return A const reference to the ServerInfo struct that contains all the server information.
+     * @return A const reference to the CommandServerInfo struct that contains all the server information.
      */
-    const ServerInfo& getServerInfo() const;
+    const CommandServerInfo& getServerInfo() const;
 
     /**
      * @brief Get the network adapter addresses used by the server.
@@ -288,7 +303,8 @@ public:
      * is obtained from the server addresses provided by the `getServerAddresses()` function.
      *
      * @param separator A string used to separate each IP address in the resulting concatenated string.
-     * @return std::string A string containing all server IPs, separated by the specified separator.
+     *
+     * @return A string containing all server IPs, separated by the specified separator.
      */
     std::string getServerIpsStr(const std::string& separator) const;
 
@@ -322,7 +338,7 @@ public:
      *
      * @return A const reference to the map of connected clients.
      */
-    const std::map<utils::UUID, ClientInfo>& getConnectedClients() const;
+    const std::map<utils::UUID, CommandClientInfo>& getConnectedClients() const;
 
     /**
      * @brief Check if the server is currently working.
@@ -382,9 +398,9 @@ public:
      *
      * @param The desired status of the client's alive status checking (true to enable, false to disable).
      *
-     * @warning It is strongly recommended to keep this check active, due to the critical nature of the systems
-     *          that usually use this kind of servers. Disabling the client alive status check could result in
-     *          unexpected behavior or system instability in case of sudden client disconnections or failures.
+     * @warning It is strongly recommended to keep this check active, due to the critical nature of the systems that
+     * usually use this kind of servers. Disabling the client alive status check could result in unexpected behavior
+     * or system instability in case of sudden client disconnections or failures.
      */
     void setClientStatusCheck(bool);
 
@@ -421,6 +437,56 @@ public:
     void stopServer();
 
     /**
+     * @brief Converts a ServerCommand to its string representation.
+     *
+     * This function takes a ServerCommand enum value and returns its corresponding string representation. If a custom
+     * command-to-string function is registered, it will be used. If the command is invalid, "INVALID_COMMAND" will be
+     * returned. If the command value is within a valid range, the corresponding string will be returned. Otherwise,
+     * "UNKNOWN_COMMAND" will be returned.
+     *
+     * @param command The ServerCommand enum value to convert.
+     * @return The string representation of the command.
+     */
+    std::string serverCommandToString(ServerCommand command) const;
+
+    /**
+     * @brief Converts a ServerCommand (as CommandType raw value) to its string representation.
+     *
+     * This function takes a CommandType raw value and returns its corresponding string representation. If a custom
+     * command-to-string function is registered, it will be used. If the command is invalid, "INVALID_COMMAND" will be
+     * returned. If the command value is within a valid range, the corresponding string will be returned. Otherwise,
+     * "UNKNOWN_COMMAND" will be returned.
+     *
+     * @param command The CommandType raw value to convert.
+     * @return The string representation of the command.
+     */
+    std::string serverCommandToString(CommandType command) const;
+
+    /**
+     * @brief Converts a OperationResult to its string representation.
+     *
+     * This function takes a OperationResult enum value and returns its corresponding string representation. If the
+     * result is invalid, "INVALID_OPERATION_RESULT" will be returned. If the result value is within a valid range,
+     * the corresponding string will be returned. Otherwise, "UNKNOWN_OPERATION_RESULT" will be returned.
+     *
+     * @param result The OperationResult enum value to convert.
+     * @return The string representation of the result.
+     */
+    std::string operationResultToString(OperationResult result) const;
+
+    /**
+     * @brief Converts a OperationResult (as ResultType raw value) to its string representation.
+     *
+     * This function takes a ResultType raw value and returns its corresponding string representation. If the result is
+     * invalid, "INVALID_OPERATION_RESULT" will be returned. If the result value is within a valid range, the
+     * corresponding string will be returned. Otherwise, "UNKNOWN_OPERATION_RESULT" will be returned.
+     *
+     * @param result The ResultType raw value to convert.
+     * @return The string representation of the result.
+     */
+    std::string operationResultToString(ResultType result) const;
+
+    /**
      * @brief Virtual destructor.
      *
      * This destructor is virtual to ensure proper cleanup when the derived class is destroyed.
@@ -430,30 +496,31 @@ public:
 protected:
 
     // -----------------------------------------------------------------------------------------------------------------
-    using ProcessFunction = std::function<void(const CommandRequest&, CommandReply&)>; ///< Process function alias.
-    using ProcessFunctionsMap = std::unordered_map<ServerCommand, ProcessFunction>;    ///< Process function map alias.
+    /// Alias for a function that allows process a command request and to generate the reply.
+    using ProcessFunction = std::function<void(const CommandRequest&, CommandReply&)>;
+    ///< Alias for a map that associates commands with process functions.
+    using ProcessFunctionsMap = std::unordered_map<ServerCommand, ProcessFunction>;
     // -----------------------------------------------------------------------------------------------------------------
 
     /**
      * @brief Register a function to process `CommandRequest` request from a custom server command.
      *
      * This function allows you to register a function that will process the CommandRequest requests from a custom
-     * server command. The process function must take two parameters: a constant reference to a `CommandRequest` object
-     * and a reference to a `CommandReply` object.
+     * server command. The process function must take two parameters: a constant reference to a `CommandRequest`
+     * object and a reference to a `CommandReply` object.
      *
      * The registered function will be invoked automatically when a request for the specified command
      * is received by the server.
      *
-     * @param command The custom server command that the function will process replies for.
-     * @param obj A pointer to the instance of the object that contains the member function to be called.
-     * @param func The member function to call when the server command receives a request.
+     * @param command  The custom server command that the function will process replies for.
+     * @param obj      A pointer to the instance of the object that contains the member function to be called.
+     * @param function The member function to call when the server command receives a request.
      *
      * @warning The `func` function must be a member function of the class pointed to by `obj` and take a constant
-     *          reference to a `CommandRequest` object and a reference to a `CommandReply` object as parameters.
+     * reference to a `CommandRequest` object and a reference to a `CommandReply` object as parameters.
      */
     template <typename Cmd, typename ClassT>
-    void registerRequestProcFunc(Cmd command, ClassT* obj,
-                                 void(ClassT::*func)(const CommandRequest&, CommandReply&))
+    void registerReqProcFunc(Cmd command, ClassT* obj, void(ClassT::*func)(const CommandRequest&, CommandReply&))
     {
         this->process_fnc_map_[static_cast<ServerCommand>(command)] =
             [obj, func](const CommandRequest& request, CommandReply& reply)
@@ -475,31 +542,60 @@ protected:
      * The registered function will be invoked automatically when a request for the specified command
      * is received by the server.
      *
-     * @param command The custom server command that the function will process requests for.
-     * @param func The function object to call when the server command receives a request. This function
-     *        object must match the signature `void(const CommandRequest&, CommandReply&)`.
+     * @param command  The custom server command that the function will process requests for.
+     * @param function The function object to call when the server command receives a request. This function
+     *                    object must match the signature `void(const CommandRequest&, CommandReply&)`.
      */
     template <typename Cmd>
-    void registerRequestProcFunc(Cmd command, std::function<void(const CommandRequest&, CommandReply&)> func)
+    void registerReqProcFunc(Cmd command, std::function<void(const CommandRequest&, CommandReply&)> function)
     {
-        this->process_fnc_map_[static_cast<ServerCommand>(command)] = func;
+        this->process_fnc_map_[static_cast<ServerCommand>(command)] = function;
+    }
+
+    template <std::size_t N1>
+    void registerCommandToStrLookup(const std::array<const char*, N1>& lookup_array)
+    {
+        // Extend the commands string array.
+        auto ext_cmds = zmqutils::utils::joinArraysConstexpr(ServerCommandStr, lookup_array);
+
+        // Process function lambda.
+        auto lambda_get_cmd_str = [ext_cmds](ServerCommand command)
+        {
+            std::int32_t enum_val = static_cast<std::int32_t>(command);
+            std::size_t idx = static_cast<std::size_t>(command);
+            std::string cmd_str = "UNKNOWN_COMMAND";
+
+            if (enum_val < 0)
+                cmd_str = "INVALID_COMMAND";
+            else if (idx < std::size(ext_cmds))
+                cmd_str = ext_cmds[idx];
+
+            return cmd_str;
+        };
+
+        // Store the function.
+        this->command_to_string_function_ = lambda_get_cmd_str;
     }
 
     /**
-     * @brief Validates a custom command.
+     * @brief Validates a custom request.
      *
-     * This function checks if a custom command is valid. The validation is implementation-specific and
-     * must be provided by any class that derives from this one. If the custom command is found to be
-     * invalid by this function, the internal callback method `onCustomCommandReceived` will not be invoked.
+     * This function checks if a custom request is valid. The validation is implementation-specific and must be
+     * provided by any class that derives from this one. If the custom request is found to be invalid by this
+     * function, the internal callback method `onCustomCommandReceived` will not be invoked.
      *
-     * @note If you want handle in method `onCustomCommandReceived` commands that could be valid but the
-     *       process logic is not yet implemented, this function must return true for these commands.
+     * The validation can be very simple, for example, checking if the internal custom request command exists.
+     * Usually, this is enough for most scenarios, becaouse the complex checks (for example the parameters, the
+     * existence of a callback function for the command, etc) are performed by the base server.
      *
-     * @param cmd The `ServerCommand` identifier to be validated.
+     * @param request The `CommandRequest` request to be validated.
      *
-     * @return Returns true if the command is valid; false otherwise.
+     * @return Returns true if the request is valid; false otherwise.
+     *
+     * @note If you want handle in method `onCustomCommandReceived` requests that could be valid but the process
+     * logic is not yet implemented, this function must return true for these commands.
      */
-    virtual  bool validateCustomCommand(ServerCommand) = 0;
+    virtual  bool validateCustomRequest(const CommandRequest& request) const = 0;
 
     /**
      * @brief Base server start callback. Subclasses must override this function.
@@ -549,7 +645,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onConnected(const ClientInfo&) = 0;
+    virtual void onConnected(const CommandClientInfo&) = 0;
 
     /**
      * @brief Base disconnected callback. Subclasses must override this function.
@@ -562,7 +658,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onDisconnected(const ClientInfo&) = 0;
+    virtual void onDisconnected(const CommandClientInfo&) = 0;
 
     /**
      * @brief Base dead client callback. Subclasses must override this function.
@@ -575,7 +671,7 @@ protected:
      *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onDeadClient(const ClientInfo&) = 0;
+    virtual void onDeadClient(const CommandClientInfo&) = 0;
 
     /**
      * @brief Base invalid message received callback. Subclasses must override this function.
@@ -610,22 +706,17 @@ protected:
      * @brief Base custom command received callback. Subclasses must override this function.
      *
      * @param[in]  The `CommandRequest` object representing the command execution request.
-     * @param[out] The `CommandReply` object representing the command execution reply.
-     *
-     * @note This function must process the `CommandRequest` (function parameter input) and update the CommandReply
-     *       (function parameter output), especially the result code.
      *
      * @note This method is only called when the received command has been validated as a valid custom command
-     *       by the validateCustomCommand method.
+     *       by the validateCustomRequest method.
      *
-     * @warning All internal callbacks, including this one, must be non-blocking and have minimal
-     *          computation time. Blocking or computationally intensive operations within internal
-     *          callbacks can significantly affect the server's performance and responsiveness.
-     *          If complex tasks are required, it is recommended to perform them asynchronously
-     *          to avoid blocking the server's main thread. Consider using separate threads or
-     *          asynchronous mechanisms to handle time-consuming tasks.
+     * @warning The overrided callback must be non-blocking and have minimal computation time. Blocking or
+     *          computationally intensive operations within internal callbacks can significantly affect the
+     *          server's performance and responsiveness. If complex tasks are required, it is recommended to
+     *          perform them asynchronously to avoid blocking the server's main thread. Consider using separate
+     *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    virtual void onCustomCommandReceived(CommandRequest&, CommandReply&);
+    virtual void onCustomCommandReceived(CommandRequest&) = 0;
 
     /**
      * @brief Base server error callback. Subclasses must override this function.
@@ -663,61 +754,65 @@ protected:
 
 private:
 
+    /// Alias for a function that allows transform a ServerCommand to a string.
+    using CommandToStringFunction = std::function<std::string(ServerCommand)>;
+
     // Helper aliases.
     using NetworkAdapterInfoV = std::vector<internal_helpers::network::NetworkAdapterInfo>;
 
-    // Helper for check if the base command is valid.
+    /// Helper for check if the base command is valid.
     static bool validateCommand(int raw_command);
 
-    // Intermal helper to get the server addresses.
+    /// Intermal helper to get the server addresses.
     const NetworkAdapterInfoV &internalGetServerAddresses() const;
 
-    // Internal helper for stop the server.
+    /// Internal helper for stop the server.
     void internalStopServer();
 
-    // Server worker (will be execute asynchronously).
+    /// Server worker (will be execute asynchronously).
     void serverWorker();
 
-    // Process base command.
+    /// Process base command.
     void processCommand(CommandRequest&, CommandReply&);
 
-    // Process custom command.
+    /// Process custom command.
     void processCustomCommand(CommandRequest& request, CommandReply& reply);
 
-    // Client status checker.
+    /// Client status checker.
     void checkClientsAliveStatus();
 
-    // Update client last connection.
+    /// Update client last connection.
     void updateClientLastConnection(const utils::UUID &id);
 
-    // Update the server timeout.
+    /// Update the server timeout.
     void updateServerTimeout();
 
-    // Function for receive data from the client.
+    /// Function for receive data from the client.
     OperationResult recvFromSocket(CommandRequest&);
 
-    // Function for reset the socket.
+    /// Function for reset the socket.
     void resetSocket();
 
     // INTERNAL COMMANDS.
 
-    // Internal connect execution process.
+    /// Internal connect execution process.
     OperationResult execReqConnect(CommandRequest&, CommandReply &reply);
 
-    // Internal disconnect execution process.
+    /// Internal disconnect execution process.
     OperationResult execReqDisconnect(const CommandRequest&);
 
-    // Internal disconnect execution process.
+    /// Internal disconnect execution process.
     OperationResult execReqGetServerTime(CommandReply& reply);
 
     // -----------------------------------------------------
 
-    // ZMQ socket.
-    zmq::socket_t* server_socket_;    ///< ZMQ server socket.
+    // ZMQ data.
+    zmq::socket_t* server_socket_;   ///< ZMQ server socket.
+    zmq::error_t last_zmq_error_;    ///< Last ZMQ error.
 
     // Endpoint data and server info.
     NetworkAdapterInfoV server_adapters_;   ///< Listen server adapters.
-    ServerInfo server_info_;                ///< Server information.
+    CommandServerInfo server_info_;                ///< Server information.
 
     // Mutex.
     mutable std::mutex mtx_;        ///< Safety mutex.
@@ -728,10 +823,13 @@ private:
     std::condition_variable cv_server_depl_;  ///< Condition variable to notify the deployment status of the server.
 
     // Clients container.
-    std::map<utils::UUID, ClientInfo> connected_clients_;   ///< Dictionary with the connected clients.
+    std::map<utils::UUID, CommandClientInfo> connected_clients_;   ///< Dictionary with the connected clients.
 
-    // Process functions container.
+    // Process functions containers.
     ProcessFunctionsMap process_fnc_map_;        ///< Container with the internal factory process function.
+
+    // To string functions containers.
+    CommandToStringFunction command_to_string_function_;  ///< Function to transform ServerCommand into strings.
 
     // Usefull flags.
     std::atomic_bool flag_server_working_;       ///< Flag for check the server working status.

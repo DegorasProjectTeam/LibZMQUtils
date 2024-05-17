@@ -47,7 +47,7 @@
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/Modules/CommandServer>
+#include <LibZMQUtils/Modules/CommandServerClient>
 #include <LibZMQUtils/Modules/Utilities>
 // =====================================================================================================================
 

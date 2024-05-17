@@ -112,21 +112,21 @@ int main(int, char**)
 
     // Set the controller callbacks in the server.
 
-    amelas_server.registerCallbackAndRequestProcFunc<SetHomePositionFunction,
-                                       SetHomePositionFunctionInArgs,
-                                       SetHomePositionFunctionOutArgs>
+    amelas_server.registerCbAndReqProcFunc<SetHomePositionFunction,
+                                           SetHomePositionFunctionInArgs,
+                                           SetHomePositionFunctionOutArgs>
         (AmelasServerCommand::REQ_SET_HOME_POSITION,
          &amelas_controller,
          &AmelasController::setHomePosition);
 
-    amelas_server.registerCallbackAndRequestProcFunc<GetHomePositionFunction,
+    amelas_server.registerCbAndReqProcFunc<GetHomePositionFunction,
                                        GetHomePositionFunctionInArgs,
                                        GetHomePositionFunctionOutArgs>
         (AmelasServerCommand::REQ_GET_HOME_POSITION,
          &amelas_controller,
          &AmelasController::getHomePosition);
 
-    amelas_server.registerCallbackAndRequestProcFunc<DoOpenSearchTelescopeFunction,
+    amelas_server.registerCbAndReqProcFunc<DoOpenSearchTelescopeFunction,
                                        DoOpenSearchTelescopeFunctionInArgs,
                                        DoOpenSearchTelescopeFunctionOutArgs>
         (AmelasServerCommand::REQ_DO_OPEN_SEARCH_TELESCOPE,
@@ -142,6 +142,7 @@ int main(int, char**)
     if(!started)
     {
         // Log.
+        console_cfg.restoreConsole();
         std::cout << "Server start failed!! Press Enter to exit!" << std::endl;
         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         std::cin.clear();
@@ -164,7 +165,7 @@ int main(int, char**)
     console_cfg.restoreConsole();
 
     // Return.
-	return 0;
+    return 0;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
