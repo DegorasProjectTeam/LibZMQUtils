@@ -139,8 +139,8 @@ void DebugClbkCommandServerBase::onServerError(const zmq::error_t& error, const 
 {
     // Log.
     std::stringstream data;
-    data << "Code:  " << std::to_string(error.num()) << std::endl;
-    data << "Error: " << error.what() << std::endl;
+    data << "Code:  " << std::to_string(error.num())                                        << std::endl;
+    data << "Error: " << error.what()                                                       << std::endl;
     data << "Info:  " << ext_info;
     std::cout << this->generateStringHeader("ON SERVER ERROR", {data.str()});
 }
@@ -151,10 +151,10 @@ void DebugClbkCommandServerBase::onCommandReceived(const CommandRequest &request
     // Log.
     BinarySerializer serializer(request.data.bytes.get(), request.data.size);
     std::stringstream data;
-    data << "Client UUID: "<<request.client_uuid.toRFC4122String() << std::endl;
+    data << "Client UUID: "<<request.client_uuid.toRFC4122String()                          << std::endl;
     data << "Server Command: " << std::to_string(static_cast<CommandType>(request.command))
-         << " (" << this->serverCommandToString(request.command) << ")" << std::endl;
-    data << "Params Size: " << request.data.size << std::endl;
+         << " (" << this->serverCommandToString(request.command) << ")"                     << std::endl;
+    data << "Params Size: " << request.data.size                                            << std::endl;
     data << "Params Hex:  " << serializer.getDataHexString();
     std::cout << this->generateStringHeader("ON COMMAND RECEIVED", {data.str()});
 }
@@ -164,10 +164,10 @@ void DebugClbkCommandServerBase::onInvalidMsgReceived(const CommandRequest &requ
     // Log.
     BinarySerializer serializer(request.data.bytes.get(), request.data.size);
     std::stringstream data;
-    data << "Client UUID: "<<request.client_uuid.toRFC4122String() << std::endl;
+    data << "Client UUID: "<<request.client_uuid.toRFC4122String()                          << std::endl;
     data << "Server Command: " << std::to_string(static_cast<CommandType>(request.command))
-         << " (" << this->serverCommandToString(request.command) << ")" << std::endl;
-    data << "Params Size: " << request.data.size << std::endl;
+         << " (" << this->serverCommandToString(request.command) << ")"                     << std::endl;
+    data << "Params Size: " << request.data.size                                            << std::endl;
     data << "Params Hex:  " << serializer.getDataHexString();
     std::cout << this->generateStringHeader("ON BAD COMMAND RECEIVED", {data.str()});
 }
@@ -178,10 +178,10 @@ void DebugClbkCommandServerBase::onSendingResponse(const CommandReply &reply)
     BinarySerializer serializer(reply.data.bytes.get(), reply.data.size);
     std::stringstream data;
     data << "Server Command: " << std::to_string(static_cast<CommandType>(reply.command))
-         << " (" << this->serverCommandToString(reply.command) << ")" << std::endl;
+         << " (" << this->serverCommandToString(reply.command) << ")"                       << std::endl;
     data << "Result: " << static_cast<ResultType>(reply.result)
-         << " (" << operationResultToString(reply.result) << ")" << std::endl;
-    data << "Params Size: " << reply.data.size << std::endl;
+         << " (" << operationResultToString(reply.result) << ")"                            << std::endl;
+    data << "Params Size: " << reply.data.size                                              << std::endl;
     data << "Params Hex:  " << serializer.getDataHexString();
     std::cout << this->generateStringHeader("ON SENDING RESPONSE", {data.str()});
 }

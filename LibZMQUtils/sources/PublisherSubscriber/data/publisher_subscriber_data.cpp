@@ -29,7 +29,7 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file common.cpp
+ * @file publisher_subscriber_data.cpp
  * @brief This file contains common elements for the Publisher Subscriber module.
  * @author Degoras Project Team
  * @copyright EUPL License

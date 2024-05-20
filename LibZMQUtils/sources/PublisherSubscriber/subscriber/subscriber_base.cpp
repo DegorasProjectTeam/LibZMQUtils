@@ -66,7 +66,6 @@ SubscriberBase::SubscriberBase(const std::string& subscriber_name,
                                const std::string& subscriber_info) :
     socket_(nullptr),
     socket_pub_close_(nullptr),
-    sub_uuid_(utils::UUIDGenerator::getInstance().generateUUIDv4()),
     flag_working_(false)
 {
     // Get the client interfaces.
@@ -81,6 +80,10 @@ SubscriberBase::SubscriberBase(const std::string& subscriber_name,
     }
 
     // Update the subscriber info.
+    this->sub_info_.name = subscriber_name;
+    this->sub_info_.version = subscriber_version;
+    this->sub_info_.info = subscriber_info;
+    this->sub_info_.uuid = utils::UUIDGenerator::getInstance().generateUUIDv4();
 }
 
 const std::set<TopicType> &SubscriberBase::getTopicFilters() const
@@ -96,6 +99,11 @@ const std::future<void> &SubscriberBase::getWorkerFuture() const
 const std::map<utils::UUID, PublisherInfo> &SubscriberBase::getSubscribedPublishers() const
 {
     return this->subscribed_publishers_;
+}
+
+const SubscriberInfo &SubscriberBase::getSubscriberInfo() const
+{
+    return this->sub_info_;
 }
 
 bool SubscriberBase::isWorking() const
@@ -398,7 +406,7 @@ void SubscriberBase::resetSocket()
     try
     {
         // Create the ZMQ sub socket.
-        auto close_endpoint = "inproc://" + this->sub_uuid_.toRFC4122String();
+        auto close_endpoint = "inproc://" + this->sub_info_.uuid.toRFC4122String();
         this->socket_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::sub);
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
         this->socket_->set(zmq::sockopt::linger, 0);

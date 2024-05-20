@@ -50,7 +50,11 @@ namespace zmqutils{
 namespace pubsub{
 // =====================================================================================================================
 
-ClbkSubscriberBase::ClbkSubscriberBase() {}
+ClbkSubscriberBase::ClbkSubscriberBase(const std::string &subscriber_name,
+                                       const std::string &subscriber_version,
+                                       const std::string &subscriber_info) :
+    SubscriberBase(subscriber_name, subscriber_version, subscriber_info)
+{}
 
 void ClbkSubscriberBase::setErrorCallback(std::function<void (const PublishedMessage &, OperationResult)> callback)
 {
@@ -77,8 +81,6 @@ void ClbkSubscriberBase::onInvalidMsgReceived(const PublishedMessage& msg, Opera
 
 void ClbkSubscriberBase::onMsgReceived(const PublishedMessage &msg, OperationResult res)
 {
-    SubscriberBase::onMsgReceived(msg, res);
-
     if (OperationResult::MSG_OK != res)
         this->invokeErrorCallback(msg, res);
 }

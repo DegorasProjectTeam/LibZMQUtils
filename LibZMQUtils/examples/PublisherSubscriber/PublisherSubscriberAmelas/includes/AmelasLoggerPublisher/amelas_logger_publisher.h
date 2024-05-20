@@ -71,12 +71,12 @@ static constexpr std::array<const char*, 4>  AmelasLoggerTopic
     "LOG_ERROR"
 };
 
-class AmelasLoggerPublisher : public zmqutils::pubsub::PublisherBase
+class AmelasLoggerPublisher : public zmqutils::pubsub::DebugPublisherBase
 {
 public:
 
     // Use the constructor of PublisherBase becaouse we don't need to do anything more.
-    using zmqutils::pubsub::PublisherBase::PublisherBase;
+    using zmqutils::pubsub::DebugPublisherBase::DebugPublisherBase;
 
     // Function to allow easily send logs.
     zmqutils::pubsub::OperationResult sendLog(const controller::AmelasLog& log);
@@ -85,13 +85,6 @@ private:
 
     using zmqutils::pubsub::PublisherBase::sendMsg;
 
-    virtual void onPublisherStart() override final;
-
-    virtual void onPublisherStop() override final;
-
-    virtual void onSendingMsg(const zmqutils::pubsub::PublishedMessage&) override final;
-
-    virtual void onPublisherError(const zmq::error_t&, const std::string&) override final;
 };
 
 }} // END NAMESPACES.

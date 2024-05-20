@@ -32,8 +32,10 @@
 #include <LibZMQUtils/PublisherSubscriber/data/publisher_subscriber_info.h>
 
 #include <LibZMQUtils/PublisherSubscriber/publisher/publisher_base.h>
+#include <LibZMQUtils/PublisherSubscriber/publisher/debug_publisher_base.h>
 
 #include <LibZMQUtils/PublisherSubscriber/subscriber/subscriber_base.h>
 #include <LibZMQUtils/PublisherSubscriber/subscriber/clbk_subscriber_base.h>
+#include <LibZMQUtils/PublisherSubscriber/subscriber/debug_clbk_subscriber_base.h>
 
 

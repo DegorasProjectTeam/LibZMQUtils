@@ -29,8 +29,8 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file publisher_base.h
- * @brief This file contains the declaration of the PublisherBase class and related.
+ * @file debug_publisher_base.h
+ * @brief This file contains the declaration of the DebugPublisherBase class and related.
  * @author Degoras Project Team
  * @copyright EUPL License
 ***********************************************************************************************************************/
@@ -42,17 +42,13 @@
 // C++ INCLUDES
 // =====================================================================================================================
 #include <string>
-#include <atomic>
 // =====================================================================================================================
 
 // LIBZMQUTILS INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/Global/libzmqutils_global.h"
-#include "LibZMQUtils/Global/zmq_context_handler.h"
+#include "LibZMQUtils/PublisherSubscriber/publisher/publisher_base.h"
 #include "LibZMQUtils/PublisherSubscriber/data/publisher_subscriber_data.h"
-#include "LibZMQUtils/PublisherSubscriber/data/publisher_subscriber_info.h"
-#include "LibZMQUtils/InternalHelpers/network_helpers.h"
-#include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
 // =====================================================================================================================
 
 // LIBZMQUTILS NAMESPACES
@@ -62,11 +58,11 @@ namespace pubsub{
 // =====================================================================================================================
 
 
-class LIBZMQUTILS_EXPORT PublisherBase : public ZMQContextHandler
+class LIBZMQUTILS_EXPORT DebugPublisherBase : public PublisherBase
 {
 
 public:
-    
+
     /**
      * @brief Constructs a ZeroMQ-based publisher with specific parameters.
      *
@@ -89,171 +85,36 @@ public:
      * @warning When specifying the `ip_address`, ensure it is a valid IP address present on the system. Incorrect or
      * unavailable addresses may result in connection failures.
      */
-    PublisherBase(unsigned port, const std::string& ip_address = "*", const std::string& publisher_name = "",
-                  const std::string& publisher_version = "", const std::string& publisher_info = "");
-    
-    /**
-     * @brief Start the publisher so it can send messages. It must be started before sending messages.
-     * @return true if it was started successfully. False otherwise.
-     */
-    bool startPublisher();
+    DebugPublisherBase(unsigned port, const std::string& ip_address = "*", const std::string& publisher_name = "",
+                       const std::string& publisher_version = "", const std::string& publisher_info = "");
 
-    /**
-     * @brief Stops the publisher and cleans the socket. Messages cannot be sent until publisher is started again.
-     */
-    void stopPublisher();
-
-    /**
-     * @brief Restarts the publisher.
-     * @return true if reset was successful, false otherwise.
-     */
-    bool resetPublisher();
-
-    /**
-     * @brief Get the endpoint that this publisher is bound to.
-     * @return the URL of the endpoint that this publisher is bound to.
-     */
-    const std::string& getEndpoint() const;
-
-    /**
-     * @brief Get all the publisher information.
-     * @return A const reference to the PublisherInfo struct that contains all the publisher information.
-     */
-    const PublisherInfo& getPublisherInfo() const;
-
-    /**
-     * @brief Get the UUID of this publisher.
-     * @return the UUID of the publisher.
-     */
-    const utils::UUID& getUUID() const;
-
-    /**
-     * @brief Get the IPs of the interfaces this publisher is bound to.
-     * @return A vector with the IPs this publisher is bound to.
-     */
-    std::vector<std::string> getPublisherIps() const;
-
-    /**
-     * @brief Get the IPs of the interfaces this publisher is bound to as a single string.
-     * @param separator The separator used to separate the different interfaces.
-     * @return A string with the IPs this publisher is bound to separated by separator sequence.
-     */
-    std::string getPublisherIpsStr(const std::string &separator) const;
-
-    /**
-     * @brief Get the network adapter addresses used by the publisher.
-     *
-     * This function returns a const reference to a vector of NetworkAdapterInfo objects. Each object contains
-     * information about a network adapter used by the publisher for send messages.
-     *
-     * @return A const reference to a vector of NetworkAdapterInfo objects.
-     */
-    const std::vector<internal_helpers::network::NetworkAdapterInfo> getPublisherAddresses() const;
-
-    /**
-     * @brief Check if the publisher is working, i.e., it was successfully started.
-     * @return true if publisher is working, false otherwise.
-     */
-    bool isWorking() const;
-
-    /**
-     * @brief Sends a PubSubMsg.
-     * @param topic, the topic associated to the message that will be sent.
-     * @param data, the data that will be sent in the message.
-     * @return The result of sending operation as an OperationResult enum.
-     * @note This method is thread-safe, since it is protected by a mutex.
-     * @todo Queued functionality.
-     */
-    OperationResult sendMsg(const TopicType& topic, PublishedData& data);
-
-    /**
-     * @brief Sends a PubSubMsg serializing the arguments.
-     * @param topic, the topic of the msg.
-     * @param args, the arguments to serialize into the message.
-     * @return the result of the sending operation.
-     */
-    template <typename Topic, typename... Args>
-    OperationResult sendMsg(const Topic &topic, const Args&... args)
-    {
-        PublishedData data;
-
-        if constexpr (sizeof...(args) > 0)
-            data.size = zmqutils::serializer::BinarySerializer::fastSerialization(
-                data.bytes, std::forward<const Args&>(args)...);
-
-        return this->sendMsg(static_cast<TopicType>(topic), data);
-    }
-
-    /**
-     * @brief Get the network adapter information of interfaces that this publisher is bound to.
-     *
-     * This function returns a const reference to a vector of NetworkAdapterInfo objects. Each `NetworkAdapterInfo`
-     * object contains information about a network adapter used by the publisher for communication.
-     *
-     * @return A const reference to a vector of NetworkAdapterInfo objects.
-     */
-    const std::vector<internal_helpers::network::NetworkAdapterInfo> &getBoundInterfaces() const;
-
-    /**
-     * @brief Virtual destructor to ensure proper cleanup when the derived class is destroyed.
-     * @warning The publisher will stop if is running but in this case the `onPublisherStop` callback can't be executed.
-     */
-    virtual ~PublisherBase() override;
 
 protected:
 
     /**
      * @brief Base publisher start callback. Subclasses can override this function.
      */
-    virtual void onPublisherStart();
+    virtual void onPublisherStart() override;
 
     /**
      * @brief Base publisher stop callback. Subclasses can override this function.
      */
-    virtual void onPublisherStop();
+    virtual void onPublisherStop() override;
 
     /**
      * @brief Base publisher sending message callback. Subclasses can override this function.
      */
-    virtual void onSendingMsg(const PublishedMessage &);
+    virtual void onSendingMsg(const PublishedMessage &) override;
 
     /**
      * @brief Base publisher error callback. Subclasses can override this function.
      */
-    virtual void onPublisherError(const zmq::error_t&, const std::string&);
+    virtual void onPublisherError(const zmq::error_t&, const std::string&) override;
 
 private:
 
-    // Helper aliases.
-    using NetworkAdapterInfoV = std::vector<internal_helpers::network::NetworkAdapterInfo>;
+    std::string generateStringHeader(const std::string& clbk_name, const std::vector<std::string>& data);
 
-    /// Internal helper to delete the ZMQ sockets.
-    void deleteSockets();
-
-    /// Internal helper to stop the publisher.
-    void internalStopPublisher();
-
-    /// Internal helper to reset the server.
-    bool internalResetPublisher();
-
-    /// Intermal helper to get the publisher addresses.
-    const NetworkAdapterInfoV& internalGetPublisherAddresses() const;
-
-    /// Internal static function to prepare the data.
-    static zmq::multipart_t prepareMessage(const TopicType &topic, PublishedMessage& msg);
-
-    // Endpoint data and publisher info.
-    NetworkAdapterInfoV publisher_adapters_;  ///< Interfaces bound by publisher.
-    PublisherInfo pub_info_;                  ///< Publisher information.
-
-    // ZMQ sockets and endpoint.
-    zmq::socket_t *socket_;       ///< ZMQ publisher socket.
-
-    // Mutex.
-    mutable std::mutex mtx_;      ///< Safety mutex.
-
-    // Usefull flags.
-    std::atomic_bool flag_working_;  ///< Flag for check the working status.
 };
 
 }} // END NAMESPACES.

@@ -119,7 +119,7 @@ void DebugCommandClientBase::onBadOperation(const CommandReply &rep)
     // Log.
     std::stringstream data;
     data << "Server Command: " << std::to_string(static_cast<CommandType>(rep.command))
-         << " (" << this->serverCommandToString(rep.command) << ")" << std::endl;
+         << " (" << this->serverCommandToString(rep.command) << ")"      << std::endl;
     data << "Result: " << static_cast<ResultType>(rep.result)
          << " (" << this->operationResultToString(rep.result) << ")";
     std::cout << this->generateStringHeader("ON BAD OPERATION", {data.str()});
@@ -131,9 +131,9 @@ void DebugCommandClientBase::onReplyReceived(const CommandReply &rep)
     BinarySerializer serializer(rep.data.bytes.get(), rep.data.size);
     std::stringstream data;
     data << "Server Command: " << std::to_string(static_cast<CommandType>(rep.command))
-         << " (" << this->serverCommandToString(rep.command) << ")" << std::endl;
+         << " (" << this->serverCommandToString(rep.command) << ")"      << std::endl;
     data << "Result: " << static_cast<ResultType>(rep.result)
-         << " (" << operationResultToString(rep.result) << ")" << std::endl;
+         << " (" << operationResultToString(rep.result) << ")"           << std::endl;
     data << "Params Size: " << rep.data.size << std::endl;
     data << "Params Hex:  " << serializer.getDataHexString();
     std::cout << this->generateStringHeader("ON REPLY RECEIVED", {data.str()});
@@ -155,8 +155,8 @@ void DebugCommandClientBase::onClientError(const zmq::error_t &error, const std:
 {
     // Log.
     std::stringstream data;
-    data << "Code:  " << std::to_string(error.num()) << std::endl;
-    data << "Error: " << error.what() << std::endl;
+    data << "Code:  " << std::to_string(error.num())                     << std::endl;
+    data << "Error: " << error.what()                                    << std::endl;
     data << "Info:  " << ext_info;
     std::cout << this->generateStringHeader("ON CLIENT ERROR", {data.str()});
 }

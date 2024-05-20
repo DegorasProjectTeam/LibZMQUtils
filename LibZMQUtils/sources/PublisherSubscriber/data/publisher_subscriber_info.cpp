@@ -29,8 +29,8 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file common.cpp
- * @brief This file contains common elements for the Publisher Subscriber module.
+ * @file publisher_subscriber_info.cpp
+ * @brief This file contains the implementation for PublisherInfo and SubscriberInfo structures.
  * @author Degoras Project Team
  * @copyright EUPL License
 ***********************************************************************************************************************/
@@ -86,10 +86,82 @@ PublisherInfo::PublisherInfo(unsigned& port, utils::UUID& uuid, std::string& end
 std::string PublisherInfo::toJsonString() const
 {
     std::stringstream ss;
-    ss << "{\n"
-       << "\t\"uuid\": \"" << this->uuid.toRFC4122String() << "\",\n"
-       << "\t\"name\": \"" << this->name << "\"\n"
+
+    ss << "{"
+       << "\"port\":" << this->port << ","
+       << "\"uuid\":" << this->uuid.toRFC4122String() << ","
+       << "\"endpoint\":\"" << this->endpoint << "\","
+       << "\"hostname\":\"" << this->hostname << "\","
+       << "\"name\":\"" << this->name << "\","
+       << "\"info\":\"" << this->info << "\","
+       << "\"version\":\"" << this->version << "\","
+       << "\"ips\":[";
+
+    // Add each IP address in the "ips" vector to the JSON array
+    for (size_t i = 0; i < this->ips.size(); ++i)
+    {
+        ss << "\"" << this->ips[i] << "\"";
+        if (i != this->ips.size() - 1)
+            ss << ",";
+    }
+    ss << "]" << "}";
+    return ss.str();
+}
+
+std::string PublisherInfo::toString() const
+{
+    // Containers.
+    std::stringstream ss;
+    std::string ip_list, separator(" - ");
+
+    // Get the IPs.
+    for(const auto& ip : this->ips)
+    {
+        ip_list.append(ip);
+        ip_list.append(separator);
+    }
+    if (!ip_list.empty() && separator.length() > 0)
+        ip_list.erase(ip_list.size() - separator.size(), separator.size());
+
+    // Generate the string.
+    ss << "Publisher Port:      "        << this->port                   << std::endl;
+    ss << "Publisher UUID:      "        << this->uuid.toRFC4122String() << std::endl;
+    ss << "Publisher Endpoint:  "        << this->endpoint               << std::endl;
+    ss << "Publisher Hostname:  "        << this->hostname               << std::endl;
+    ss << "Publisher Name:      "        << this->name                   << std::endl;
+    ss << "Publisher Info:      "        << this->info                   << std::endl;
+    ss << "Publisher Version:      "     << this->version                << std::endl;
+    ss << "Publisher Server Addresses: " << ip_list;
+
+    return ss.str();
+}
+
+std::string SubscriberInfo::toJsonString() const
+{
+    std::stringstream ss;
+
+    ss << "{"
+       << "\"uuid\":\"" << this->uuid.toRFC4122String() << "\","
+       << "\"name\":\"" << this->name << "\","
+       << "\"info\":\"" << this->info << "\","
+       << "\"version\":\"" << this->version << "\","
        << "}";
+
+    return ss.str();
+}
+
+std::string SubscriberInfo::toString() const
+{
+    // Containers.
+    std::stringstream ss;
+
+    // Generate the string.
+    ss << "Subscriber UUID:     " << this->uuid.toRFC4122String() << std::endl;
+    ss << "Subscriber Name:     " << this->name                   << std::endl;
+    ss << "Subscriber Info:     " << this->info                   << std::endl;
+    ss << "Subscriber Version:  " << this->version;
+
+    // Return the string.
     return ss.str();
 }
 

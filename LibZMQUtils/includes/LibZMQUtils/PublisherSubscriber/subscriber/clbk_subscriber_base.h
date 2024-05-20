@@ -65,7 +65,9 @@ public:
     /**
      * @brief ClbkSubscriberBase default constructor.
      */
-    ClbkSubscriberBase();
+    ClbkSubscriberBase(const std::string& subscriber_name = "",
+                       const std::string& subscriber_version = "",
+                       const std::string& subscriber_info = "");
 
     /**
      * @brief Function for setting an error callback.

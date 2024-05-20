@@ -1,8 +1,6 @@
 /***********************************************************************************************************************
  *   LibZMQUtils (ZeroMQ High-Level Utilities C++ Library).                                                            *
- *
- *   ExamplesLibZMQUtils related project.                                                                            *
- *                                                                                                        *
+ *                                                                                                                     *
  *   A modern open-source C++ library with high-level utilities based on the well-known ZeroMQ open-source universal   *
  *   messaging library. Includes custom command based server-client and publisher-subscriber with automatic binary     *
  *   serialization capabilities, specially designed for system infraestructure. Developed as a free software under the *
@@ -31,38 +29,68 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file logger_subscriber.cpp
- * @brief EXAMPLE FILE - This file contains the implementation of the AmelasAmelasLoggerSubscriber example class.
+ * @file debug_clbk_subscriber_base.h
+ * @brief This file contains the declaration of the DebugClbkSubscriberBase class and related.
  * @author Degoras Project Team
  * @copyright EUPL License
 ***********************************************************************************************************************/
 
-// PROJECT INCLUDES
 // =====================================================================================================================
-#include "AmelasLoggerSubscriber/amelas_logger_subscriber.h"
-// =====================================================================================================================
-
-// NAMESPACES
-// =====================================================================================================================
-namespace amelas{
-namespace communication{
+#pragma once
 // =====================================================================================================================
 
-// ---------------------------------------------------------------------------------------------------------------------
-using namespace controller;
-// ---------------------------------------------------------------------------------------------------------------------
+// LIBZMQUTILS INCLUDES
+// =====================================================================================================================
+#include "LibZMQUtils/Global/libzmqutils_global.h"
+#include "LibZMQUtils/PublisherSubscriber/subscriber/clbk_subscriber_base.h"
+// =====================================================================================================================
 
-void AmelasLoggerSubscriber::addTopicFilter(const controller::AmelasLogLevel &log_level)
+// LIBZMQUTILS NAMESPACES
+// =====================================================================================================================
+namespace zmqutils{
+namespace pubsub{
+// =====================================================================================================================
+
+/**
+ * @brief The DebugClbkSubscriberBase class implements a ClbkSubscriberBase that override status callback methods
+ * logging the information at standard output.
+ */
+class LIBZMQUTILS_EXPORT DebugClbkSubscriberBase : public ClbkSubscriberBase
 {
-    zmqutils::pubsub::SubscriberBase::addTopicFilter(AmelasLoggerTopic[static_cast<size_t>(log_level)]);
-}
 
-void AmelasLoggerSubscriber::removeTopicFilter(const controller::AmelasLogLevel &log_level)
-{
-    zmqutils::pubsub::SubscriberBase::removeTopicFilter(AmelasLoggerTopic[static_cast<size_t>(log_level)]);
-}
+public:
 
+    /**
+     * @brief DebugClbkSubscriberBase default constructor.
+     */
+    DebugClbkSubscriberBase(const std::string& subscriber_name = "",
+                            const std::string& subscriber_version = "",
+                            const std::string& subscriber_info = "");
+
+
+protected:
+
+    void onSubscriberStart() override;
+    void onSubscriberStop() override;
+    void onSubscriberError(const zmq::error_t &error, const std::string &ext_info) override;
+
+    /**
+     * @brief Override onInvalidMsgReceived to call error callback.
+     */
+    void onInvalidMsgReceived(const PublishedMessage&, OperationResult) override;
+
+    /**
+     * @brief Override onMsgReceived to call error callback if necessary.
+     * @return the subscriber result associated with the message received.
+     */
+    void onMsgReceived(const PublishedMessage&, OperationResult) override;
+
+private:
+
+    std::string generateStringHeader(const std::string& clbk_name, const std::vector<std::string>& data);
+
+
+};
 
 }} // END NAMESPACES.
 // =====================================================================================================================
-

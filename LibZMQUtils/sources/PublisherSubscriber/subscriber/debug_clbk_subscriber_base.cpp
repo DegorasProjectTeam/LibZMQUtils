@@ -1,8 +1,6 @@
 /***********************************************************************************************************************
  *   LibZMQUtils (ZeroMQ High-Level Utilities C++ Library).                                                            *
- *
- *   ExamplesLibZMQUtils related project.                                                                            *
- *                                                                                                        *
+ *                                                                                                                     *
  *   A modern open-source C++ library with high-level utilities based on the well-known ZeroMQ open-source universal   *
  *   messaging library. Includes custom command based server-client and publisher-subscriber with automatic binary     *
  *   serialization capabilities, specially designed for system infraestructure. Developed as a free software under the *
@@ -31,38 +29,111 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file logger_subscriber.cpp
- * @brief EXAMPLE FILE - This file contains the implementation of the AmelasAmelasLoggerSubscriber example class.
+ * @file debug_clbk_subscriber_base.cpp
+ * @brief This file contains the implementation of the DebugClbkSubscriberBase class and related.
  * @author Degoras Project Team
  * @copyright EUPL License
 ***********************************************************************************************************************/
 
-// PROJECT INCLUDES
+// C++ INCLUDES
 // =====================================================================================================================
-#include "AmelasLoggerSubscriber/amelas_logger_subscriber.h"
-// =====================================================================================================================
-
-// NAMESPACES
-// =====================================================================================================================
-namespace amelas{
-namespace communication{
 // =====================================================================================================================
 
-// ---------------------------------------------------------------------------------------------------------------------
-using namespace controller;
-// ---------------------------------------------------------------------------------------------------------------------
+// LIBZMQUTILS INCLUDES
+// =====================================================================================================================
+#include "LibZMQUtils/PublisherSubscriber/subscriber/debug_clbk_subscriber_base.h"
+#include "LibZMQUtils/Utilities/utils.h"
+// =====================================================================================================================
 
-void AmelasLoggerSubscriber::addTopicFilter(const controller::AmelasLogLevel &log_level)
+// LIBZMQUTILS NAMESPACES
+// =====================================================================================================================
+namespace zmqutils{
+namespace pubsub{
+// =====================================================================================================================
+
+DebugClbkSubscriberBase::DebugClbkSubscriberBase(const std::string &subscriber_name,
+                                                 const std::string &subscriber_version,
+                                                 const std::string &subscriber_info) :
+    ClbkSubscriberBase(subscriber_name, subscriber_version, subscriber_info)
+{}
+
+
+void DebugClbkSubscriberBase::onSubscriberStart()
 {
-    zmqutils::pubsub::SubscriberBase::addTopicFilter(AmelasLoggerTopic[static_cast<size_t>(log_level)]);
+    // Log.
+    std::cout << this->generateStringHeader("ON SUBSCRIBER START", {this->getSubscriberInfo().toString()});
 }
 
-void AmelasLoggerSubscriber::removeTopicFilter(const controller::AmelasLogLevel &log_level)
+void DebugClbkSubscriberBase::onSubscriberStop()
 {
-    zmqutils::pubsub::SubscriberBase::removeTopicFilter(AmelasLoggerTopic[static_cast<size_t>(log_level)]);
+    // Log.
+    std::cout << this->generateStringHeader("ON SUBSCRIBER STOP", {});
 }
 
+void DebugClbkSubscriberBase::onSubscriberError(const zmq::error_t &error, const std::string &ext_info)
+{
+    // Log.
+    std::stringstream data;
+    data << "Code:  " << std::to_string(error.num())                         << std::endl;
+    data << "Error: " << error.what()                                        << std::endl;
+    data << "Info:  " << ext_info;
+    std::cout << this->generateStringHeader("ON SUBSCRIBER ERROR", {data.str()});
+}
+
+
+void DebugClbkSubscriberBase::onInvalidMsgReceived(const PublishedMessage& msg, OperationResult res)
+{
+    ClbkSubscriberBase::onInvalidMsgReceived(msg, res);
+
+    // Log.
+    serializer::BinarySerializer serializer(msg.data.bytes.get(), msg.data.size);
+    std::stringstream data;
+    data << "Topic:          " << msg.topic                                  << std::endl;
+    data << "Publisher UUID: " << msg.pub_info.uuid .toRFC4122String()       << std::endl;
+    data << "Params size:    " << msg.data.size                              << std::endl;
+    data << "Params Hex:     " << serializer.getDataHexString();
+    std::cout << this->generateStringHeader("ON INVALID MSG RECEIVED", {data.str()});
+
+}
+
+void DebugClbkSubscriberBase::onMsgReceived(const PublishedMessage &msg, OperationResult res)
+{
+    // Call parent method
+    ClbkSubscriberBase::onMsgReceived(msg, res);
+
+    // Log.
+    serializer::BinarySerializer serializer(msg.data.bytes.get(), msg.data.size);
+    std::stringstream data;
+    data << "Topic:          " << msg.topic                                  << std::endl;
+    data << "Publisher UUID: " << msg.pub_info.uuid .toRFC4122String()       << std::endl;
+    data << "Params size:    " << msg.data.size                              << std::endl;
+    data << "Params Hex:     " << serializer.getDataHexString();
+    std::cout << this->generateStringHeader("ON MSG RECEIVED", {data.str()});
+
+}
+
+std::string DebugClbkSubscriberBase::generateStringHeader(const std::string &clbk_name,
+                                                          const std::vector<std::string>& data)
+{
+    // Log.
+    std::stringstream ss;
+    ss << std::string(100, '-')                                              << std::endl;
+    ss << "<" << this->getSubscriberInfo().name << ">"                       << std::endl;
+    ss << "-> TIME: " << zmqutils::utils::currentISO8601Date()               << std::endl;
+    ss << "-> " << clbk_name                                                 << std::endl;
+
+    for(const auto& str : data)
+    {
+        ss << std::string(20, '-')                                           << std::endl;
+        ss << str                                                            << std::endl;
+    }
+    ss << std::string(100, '-')                                              << std::endl;
+    return ss.str();
+}
+
+// =====================================================================================================================
 
 }} // END NAMESPACES.
 // =====================================================================================================================
+
 

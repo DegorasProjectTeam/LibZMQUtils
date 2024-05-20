@@ -43,7 +43,6 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
-#include <string>
 // =====================================================================================================================
 
 // LIBZMQUTILS INCLUDES
@@ -65,16 +64,13 @@ namespace communication{
 // =====================================================================================================================
 
 // Example of creating a command server from the base.
-class AmelasLoggerSubscriber : public zmqutils::pubsub::ClbkSubscriberBase
+class AmelasLoggerSubscriber : public zmqutils::pubsub::DebugClbkSubscriberBase
 {
 public:
 
     using LogMsgCallback = std::function<void(const controller::AmelasLog&)>;
 
-    /**
-     * @brief Default constructor for AmelasLoggerSubscriber.
-     */
-    AmelasLoggerSubscriber();
+    using zmqutils::pubsub::DebugClbkSubscriberBase::DebugClbkSubscriberBase;
 
     /**
      * @brief Adds topic filter based on log level. Upon subscriber creation, no topic is allowed in, so this function
@@ -132,23 +128,6 @@ private:
     using zmqutils::pubsub::SubscriberBase::addTopicFilter;
     using zmqutils::pubsub::SubscriberBase::removeTopicFilter;
     // -----------------------------------------------------------------------------------------------------------------
-
-    // Internal overrided start callback.
-    virtual void onSubscriberStart() override final;
-
-    // Internal overrided close callback.
-    virtual void onSubscriberStop() override final;
-
-    // Internal overrided command received callback.
-    virtual void onMsgReceived(const zmqutils::pubsub::PublishedMessage&,
-                               zmqutils::pubsub::OperationResult res) override final;
-
-    // Internal overrided bad command received callback.
-    virtual void onInvalidMsgReceived(const zmqutils::pubsub::PublishedMessage&,
-                                      zmqutils::pubsub::OperationResult) override final;
-
-    // Internal overrided server error callback.
-    virtual void onSubscriberError(const zmq::error_t&, const std::string& ext_info) override final;
 };
 
 }} // END NAMESPACES.

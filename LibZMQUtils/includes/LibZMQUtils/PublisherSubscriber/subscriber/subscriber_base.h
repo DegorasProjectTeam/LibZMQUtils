@@ -111,6 +111,13 @@ public:
      */
     const std::map<utils::UUID, PublisherInfo>& getSubscribedPublishers() const;
 
+
+    /**
+     * @brief Get all the subscriber information.
+     * @return A const reference to the SubscriberInfo struct that contains all the subscriber information.
+     */
+    const SubscriberInfo &getSubscriberInfo() const;
+
     /**
      * @brief Check if the worker thread is currently active.
      *
@@ -306,8 +313,8 @@ private:
     zmq::socket_t* socket_pub_close_;    ///< ZMQ close publisher socket.
     utils::UUID socket_close_uuid_;      ///< UUID for close publisher.
 
-    // Subscruiber uuid
-    utils::UUID sub_uuid_;
+    // Subscriber info
+    SubscriberInfo sub_info_;
 
     // Mutex.
     mutable std::mutex mtx_;        ///< Safety mutex.

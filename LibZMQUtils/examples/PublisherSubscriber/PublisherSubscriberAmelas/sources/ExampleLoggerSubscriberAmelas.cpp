@@ -111,11 +111,13 @@ int main(int, char**)
     AmelasLogProcessor log_processor;
 
     // Instantiate and configure subscriber.
-    AmelasLoggerSubscriber subscriber;
+    AmelasLoggerSubscriber subscriber("AMELAS EXAMPLE SUBSCRIBER", "1.7.6", "This is the AMELAS SUBSCRIBER.");
     subscriber.subscribe("tcp://127.0.0.1:9999");
     subscriber.addTopicFilter(AmelasLogLevel::AMELAS_INFO);
     subscriber.addTopicFilter(AmelasLogLevel::AMELAS_WARNING);
     subscriber.addTopicFilter(AmelasLogLevel::AMELAS_ERROR);
+    // This topic will be allowed in to test topics with no callbacks.
+    subscriber.addTopicFilter(AmelasLogLevel::AMELAS_DEBUG);
 
     // Set the callbacks in the subscriber.
     subscriber.registerCallbackAndRequestProcFunc(AmelasLogLevel::AMELAS_INFO,

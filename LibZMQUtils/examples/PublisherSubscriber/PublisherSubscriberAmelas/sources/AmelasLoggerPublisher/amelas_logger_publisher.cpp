@@ -54,60 +54,6 @@ zmqutils::pubsub::OperationResult AmelasLoggerPublisher::sendLog(const controlle
     return this->sendMsg(log_topic, log);
 }
 
-void AmelasLoggerPublisher::onPublisherStart()
-{
-    // Log.
-    std::cout<< std::string(100, '-') << std::endl;
-    std::cout<< "<"<<this->getPublisherInfo().name << ">"                        << std::endl;
-    std::cout<< "-> ON PUBLISHER START: "                                        << std::endl;
-    std::cout<< "Time:      " << zmqutils::utils::currentISO8601Date()           << std::endl;
-    std::cout<< "Addresses: " << this->getPublisherIpsStr(" - ")                 << std::endl;
-    std::cout<< "Port:      " << this->getPublisherInfo().port                   << std::endl;
-    std::cout<< "UUID:      " << this->getPublisherInfo().uuid.toRFC4122String() << std::endl;
-    std::cout<< "Endpoint:  " << this->getPublisherInfo().endpoint               << std::endl;
-    std::cout<< "Hostname:  " << this->getPublisherInfo().hostname               << std::endl;
-    std::cout<< "Name:      " << this->getPublisherInfo().name                   << std::endl;
-    std::cout<< "Info:      " << this->getPublisherInfo().info                   << std::endl;
-    std::cout<< "Version:   " << this->getPublisherInfo().version                << std::endl;
-    std::cout<< std::string(100, '-')                                            << std::endl;
-}
-
-void AmelasLoggerPublisher::onPublisherStop()
-{
-    // Log.
-    std::cout<< std::string(100, '-')                                 << std::endl;
-    std::cout<< "<"<<this->getPublisherInfo().name << ">"             << std::endl;
-    std::cout<< "-> ON PUBLISHER STOP: "                              << std::endl;
-    std::cout<< "Time:     " << zmqutils::utils::currentISO8601Date() << std::endl;
-    std::cout<< std::string(100, '-')                                 << std::endl;
-}
-
-void AmelasLoggerPublisher::onSendingMsg(const zmqutils::pubsub::PublishedMessage& msg)
-{
-    zmqutils::serializer::BinarySerializer serializer(msg.data.bytes.get(), msg.data.size);
-    // Log.
-    std::cout<< std::string(100, '-') << std::endl;
-    std::cout<< "<" << this->getPublisherInfo().name << ">"       << std::endl;
-    std::cout<< "-> ON PUBLISHER SEND COMMAND: "                  << std::endl;
-    std::cout<< "Time: " << zmqutils::utils::currentISO8601Date() << std::endl;
-    std::cout<< "Topic: " << msg.topic                            << std::endl;
-    std::cout<< "Params size: " << msg.data.size                  << std::endl;
-    std::cout<< "Params Hex: " << serializer.getDataHexString()   << std::endl;
-    std::cout<< std::string(100, '-')                             << std::endl;
-}
-
-void AmelasLoggerPublisher::onPublisherError(const zmq::error_t& error, const std::string& ext_info)
-{
-    // Log.
-    std::cout<< std::string(100, '-')                              << std::endl;
-    std::cout<< "<" << this->getPublisherInfo().name << ">"        << std::endl;
-    std::cout<< "-> ON PUBLISHER ERROR: "                          << std::endl;
-    std::cout<< "Time:  " << zmqutils::utils::currentISO8601Date() << std::endl;
-    std::cout<< "Code:  " << error.num()                           << std::endl;
-    std::cout<< "Error: " << error.what()                          << std::endl;
-    std::cout<< "Info:  " << ext_info                              << std::endl;
-    std::cout<< std::string(100, '-')                              << std::endl;
-}
 
 }}  // END NAMESPACES.
 // =====================================================================================================================

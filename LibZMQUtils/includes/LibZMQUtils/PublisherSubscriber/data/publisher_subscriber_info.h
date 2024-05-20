@@ -92,6 +92,11 @@ struct LIBZMQUTILS_EXPORT PublisherInfo
      */
     std::string toJsonString() const;
 
+    /**
+     * @brief Convert PublisherInfo to a formatted string (for debug purposes).
+     */
+    std::string toString() const;
+
     // Struct data.
     unsigned port;                 ///< Publisher port.
     utils::UUID uuid;              ///< Unique publisher host UUID.
@@ -117,9 +122,14 @@ struct LIBZMQUTILS_EXPORT SubscriberInfo
 
     /**
      * @brief Converts subscriber info into a Json string.
-     * @return a Json string representing the publisher info.
+     * @return a Json string representing the subscriber info.
      */
     std::string toJsonString() const;
+
+    /**
+     * @brief Convert SubscriberInfo to a formatted string (for debug purposes).
+     */
+    std::string toString() const;
 
     // Struct data.
     utils::UUID uuid;              ///< Unique Subscriber host UUID.
