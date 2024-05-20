@@ -552,6 +552,7 @@ void CommandServerBase::serverWorker()
         {
             // Store the command.
             reply.command = request.command;
+            reply.result = op_res;
 
             // Execute the command.
             this->processCommand(request, reply);
@@ -585,13 +586,13 @@ void CommandServerBase::serverWorker()
             }
             catch (const zmq::error_t &error)
             {
-                // Store the last error.
-                this->last_zmq_error_ = error;
-
                 // Check if we want to close the server.
                 // The error code is for ZMQ EFSM error.
                 if(!(error.num() == kZmqEFSMError && !this->flag_server_working_))
                 {
+                    // Store the last error.
+                    this->last_zmq_error_ = error;
+                    // Call to the internal callback.
                     std::string module = "[LibZMQUtils,CommandServerClient,CommandServerBase] ";
                     this->onServerError(this->last_zmq_error_, module + "Error while sending a response.");
                 }
@@ -623,8 +624,13 @@ OperationResult CommandServerBase::recvFromSocket(CommandRequest& request)
         if(error.num() == kZmqEFSMError && !this->flag_server_working_)
             return OperationResult::COMMAND_OK;
 
-        // Else, call to error callback.
-        this->onServerError(error, "CommandServerBase: Error while receiving a request.");
+        // Store the last error.
+        this->last_zmq_error_ = error;
+
+        // Call to the internal callback.
+        std::string module = "[LibZMQUtils,CommandServerClient,CommandServerBase] ";
+
+        this->onServerError(this->last_zmq_error_, module + "Error while receiving a request.");
         return OperationResult::INTERNAL_ZMQ_ERROR;
     }
 

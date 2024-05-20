@@ -29,8 +29,8 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file common.h
- * @brief This file contains common elements for the whole library.
+ * @file publisher_subscriber_data.h
+ * @brief This file contains the definition of common data elements for the PublisherSubscriber module.
  * @author Degoras Project Team
  * @copyright EUPL License
 ***********************************************************************************************************************/
@@ -43,82 +43,75 @@
 // =====================================================================================================================
 #include <string>
 #include <cstring>
-#include <memory>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/Global/libzmqutils_global.h"
+#include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
 #include "LibZMQUtils/Utilities/uuid_generator.h"
+#include "LibZMQUtils/PublisherSubscriber/data/publisher_subscriber_info.h"
 // =====================================================================================================================
 
-// ZMQUTILS NAMESPACES
+// LIBZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
 namespace pubsub{
 // =====================================================================================================================
 
-// CONVENIENT ALIAS, ENUMERATIONS AND CONSTEXPR
-// =====================================================================================================================
-
+// PUBLISHER - SUBSCRIBER COMMON ALIAS
 // =====================================================================================================================
 using ResultType = std::int32_t;    ///< Type used for the BaseServerResult enumeration.
-using TopicType = std::string;      ///< Type used for `Topics.
+using TopicType = std::string;      ///< Type used for representing the publisher-subscriber topics.
 // =====================================================================================================================
 
+// PUBLISHER - SUBSCRIBER COMMON ENUMS AND CONSTEXPR
+// =====================================================================================================================
 /**
- * @enum SubscriberResult
- * @brief Enumerates the possible results of a base message receive operation. They can be extended in a subclass.
- * @warning Results 0 to 30 ids must not be used for custom results, they are special and reserved.
+ * @enum OperationResult
+ * @brief Enumerates the possible results of a base publisher subscriber operation. They can be extended in a subclass.
+ * @warning Results 0 to 50 ids must not be used for custom results, they are special and reserved.
  * @warning Only positive results ids are allowed.
  */
-enum class SubscriberResult : ResultType
+enum class OperationResult : ResultType
 {
-    MSG_OK                 = 0,  ///< The msg received is OK.
-    INTERNAL_ZMQ_ERROR     = 1,  ///< An internal ZeroMQ error occurred.
-    EMPTY_MSG              = 2,  ///< The message is empty.
-    EMPTY_PARAMS           = 6,  ///< The command parameters are missing or empty.
-    INVALID_PARTS          = 8,  ///< The message has invalid parts.
-    INVALID_MSG            = 10, ///< The message is invalid.
-    BAD_PARAMETERS         = 13, ///< The parameters sent are not valid.
-    NOT_IMPLEMENTED        = 15, ///< The message process function is not implemented.
-    EMPTY_EXT_CALLBACK     = 17, ///< The associated external callback is empty.
-    INVALID_EXT_CALLBACK   = 18, ///< The associated external callback is invalid.
-    INVALID_PUB_UUID       = 19, ///< The publisher UUID is invalid (could be invalid, missing or empty).
-    END_BASE_RESULTS       = 30  ///< Sentinel value indicating the end of the base server results.
-};
-
-/**
- * @enum PublisherResult
- * @brief Enumerates the possible results of a base send message operation. They can be extended in a subclass.
- * @warning Results 0 to 30 ids must not be used for custom results, they are special and reserved.
- * @warning Only positive results ids are allowed.
- */
-enum class PublisherResult : ResultType
-{
-    MSG_OK = 0,               ///< The command was executed successfully.
+    INVALID_RESULT         = -1,  ///< Invalid operation result.
+    MSG_OK                 = 0,   ///< All the operation was ok (publish data or receive the data).
     INTERNAL_ZMQ_ERROR     = 1,   ///< An internal ZeroMQ error occurred.
     EMPTY_MSG              = 2,   ///< The message is empty.
-    INVALID_PARTS          = 8,   ///< The command has invalid parts.
+    EMPTY_PARAMS           = 6,   ///< The command parameters are missing or empty.
+    INVALID_PARTS          = 8,   ///< The message has invalid parts.
     INVALID_MSG            = 10,  ///< The message is invalid.
-    PUBLISHER_STOPPED      = 17,  ///< The publisher is stopped.
-    END_BASE_RESULTS       = 30   ///< Sentinel value indicating the end of the base publisher results.
+    BAD_PARAMETERS         = 13,  ///< The parameters sent are not valid.
+    NOT_IMPLEMENTED        = 15,  ///< The message process function is not implemented.
+    EMPTY_EXT_CALLBACK     = 16,  ///< The associated external callback is empty.
+    INVALID_EXT_CALLBACK   = 17,  ///< The associated external callback is invalid.
+    INVALID_PUB_UUID       = 18,  ///< The publisher UUID is invalid (could be invalid, missing or empty).
+    PUBLISHER_STOPPED      = 19,  ///< The publisher is stopped.
+    END_BASE_RESULTS       = 50   ///< Sentinel value indicating the end of the base server results.
 };
 
-/**
- * @brief String description of values contained in SubscriberResult enum.
- */
-static constexpr std::array<const char*, 31>  SubscriberResultStr
+/// Minimum valid base enum result identifier (related to OperationResult enum).
+constexpr size_t kMinBaseResultId = static_cast<int>(OperationResult::INVALID_RESULT) + 1;
+
+/// Maximum valid base enum result identifier (related to OperationResult enum).
+constexpr size_t kMaxBaseResultId = static_cast<int>(OperationResult::END_BASE_RESULTS) - 1;
+
+/// Maximum number of strings for representing each base enum result identifier (related to OperationResult enum).
+constexpr size_t kMaxBaseResultSrings = static_cast<int>(OperationResult::END_BASE_RESULTS) + 1;
+
+/// Lookup array with strings that represents the different OperationResult enum values.
+static constexpr std::array<const char*, kMaxBaseResultSrings>  OperationResultStr
 {
-    "MSG_OK - Message succesfully received.",
+    "MSG_OK - All the operation was ok (publish data or receive the data).",
     "INTERNAL_ZMQ_ERROR - Internal ZeroMQ error.",
     "EMPTY_MSG - Message is empty.",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
-    "EMPTY_PARAMS - Command parameters missing or empty.",
+    "EMPTY_PARAMS - The data parameters missing or empty.",
     "RESERVED_BASE_RESULT",
-    "INVALID_PARTS - Command has invalid parts.",
+    "INVALID_PARTS - The message has invalid parts.",
     "RESERVED_BASE_RESULT",
     "INVALID_MSG - The message is invalid.",
     "RESERVED_BASE_RESULT",
@@ -126,45 +119,9 @@ static constexpr std::array<const char*, 31>  SubscriberResultStr
     "BAD PARAMETERS - The parameters received are not valid.",
     "RESERVED_BASE_RESULT",
     "NOT_IMPLEMENTED - Message process function is not implemented and registered in subscriber.",
-    "RESERVED_BASE_RESULT",
     "EMPTY_EXT_CALLBACK - The associated external callback for the message is empty.",
     "INVALID_EXT_CALLBACK - The associated external callback for the message is invalid.",
-    "INVALID_PUBLISHER_UUID - The publisher UUID is invalid (could be invalid, missing or empty).",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT"
-};
-
-/**
- * @brief String description of values contained in PublisherResult enum.
- */
-static constexpr std::array<const char*, 31>  PublisherResultStr
-{
-    "MSG_OK - Message succesfully received.",
-    "INTERNAL_ZMQ_ERROR - Internal ZeroMQ error.",
-    "EMPTY_MSG - Message is empty.",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "INVALID_PARTS - Message has invalid parts.",
-    "RESERVED_BASE_RESULT",
-    "INVALID_MSG - The message is invalid.",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
+    "INVALID_PUB_UUID - The publisher UUID is invalid (could be invalid, missing or empty).",
     "PUBLISHER_STOPPED - The publisher is stopped.",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
@@ -178,102 +135,61 @@ static constexpr std::array<const char*, 31>  PublisherResultStr
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT"
 };
 
 // =====================================================================================================================
 
-// COMMON STRUCTS
+// PUBLISHER - SUBSCRIBER COMMON DATA STRUCTS
 // =====================================================================================================================
 
 /**
- * @brief The PublisherInfo struct holds the information of a specific publisher.
+ * @brief The PublishedData struct contains the data of a message exchanged between publisher and subscribers.
  */
-struct LIBZMQUTILS_EXPORT PublisherInfo
-{
-
-    /**
-     * @brief PublisherInfo constructor.
-     * @param uuid
-     * @param endpoint
-     * @param name
-     */
-    PublisherInfo(utils::UUID uuid, std::string endpoint, std::string name = "");
-
-    // Default constructor, copy and move
-    PublisherInfo() = default;
-    PublisherInfo(const PublisherInfo&) = default;
-    PublisherInfo(PublisherInfo&&) = default;
-    PublisherInfo& operator=(const PublisherInfo&) = default;
-    PublisherInfo& operator=(PublisherInfo&&) = default;
-
-    /**
-     * @brief Converts publisher info into a Json string.
-     * @return a Json string representing the publisher info.
-     */
-    std::string toJsonString() const;
-
-    // Struct data.
-    unsigned port;                 ///< Publisher port.
-    utils::UUID uuid;              ///< Unique publisher host UUID.
-    std::string endpoint;          ///< Final publisher endpoint.
-    std::string hostname;          ///< Host publisher name.
-    std::string name;              ///< Publisher name, optional.
-    std::string info;              ///< Publisher information, optional.
-    std::string version;           ///< Publisher version, optional.
-    std::vector<std::string> ips;  ///< Vector of publisher ips.
-};
-
-/**
- * @brief The SubscriberInfo struct holds the information of a specific subscriber.
- */
-struct LIBZMQUTILS_EXPORT SubscriberInfo
-{
-    // Default constructor, copy and move
-    SubscriberInfo() = default;
-    SubscriberInfo(const SubscriberInfo&) = default;
-    SubscriberInfo(SubscriberInfo&&) = default;
-    SubscriberInfo& operator=(const SubscriberInfo&) = default;
-    SubscriberInfo& operator=(SubscriberInfo&&) = default;
-
-    /**
-     * @brief Converts subscriber info into a Json string.
-     * @return a Json string representing the publisher info.
-     */
-    std::string toJsonString() const;
-
-    // Struct data.
-    utils::UUID uuid;              ///< Unique Subscriber host UUID.
-    std::string name;              ///< Subscriber name, optional.
-    std::string info;              ///< Subscriber information, optional.
-    std::string version;           ///< Subscriber version, optional.
-};
-
-/**
- * @brief The PubSubData struct contains the data of a message exchanged between publisher and subscribers.
- */
-struct LIBZMQUTILS_EXPORT PubSubData
-{
-    PubSubData();
-
-    TopicType topic;
-    std::unique_ptr<std::byte[]> data;
-    size_t data_size;
-};
+struct LIBZMQUTILS_EXPORT PublishedData : serializer::BinarySerializedData
+{};
 
 /**
  * @brief The PubSubMsg struct represents a message exchanged between publisher and subscribers. It includes data and
  * publisher info.
  */
-struct LIBZMQUTILS_EXPORT PubSubMsg
+struct LIBZMQUTILS_EXPORT PublishedMessage
 {
+    PublishedMessage() = default;
 
-    PubSubMsg(const PublisherInfo &pub_info);
+    PublishedMessage(const TopicType& topic, const PublisherInfo& pub_info, PublishedData&& data);
 
-    PubSubMsg() = default;
+    /**
+     * @brief Resets the PublishedMessage clearing all the contents.
+     */
+    void clear()
+    {
+        this->topic.clear();
+        this->data.clear();
+    }
 
-    PublisherInfo pub_info;
-    PubSubData data;
+    // Struct data.
+    TopicType topic;         ///< Topic associated to the published message.
+    PublisherInfo pub_info;  ///< Publisher information.
+    PublishedData data;      ///< Reply data. Can be empty.
 };
 
 

@@ -61,8 +61,10 @@
 // =====================================================================================================================
 
 // ---------------------------------------------------------------------------------------------------------------------
-using zmqutils::pubsub::SubscriberResult;
+using zmqutils::pubsub::OperationResult;
 using zmqutils::serializer::BinarySerializer;
+using zmqutils::pubsub::ResultType;
+using zmqutils::pubsub::PublishedMessage;
 using amelas::communication::AmelasLoggerSubscriber;
 using amelas::communication::AmelasLoggerTopic;
 using amelas::controller::AmelasLog;
@@ -90,9 +92,9 @@ public:
         std::cout << "[ERROR] - " << log.str_info << std::endl;
     }
 
-    void processReceivedLogError(const zmqutils::pubsub::PubSubMsg &, SubscriberResult res)
+    void processReceivedLogError(const PublishedMessage&, OperationResult res)
     {
-        std::cout << "Received bad log. Error code is: " << static_cast<zmqutils::pubsub::ResultType>(res) << std::endl;
+        std::cout << "Received bad log. Error code is: " << static_cast<ResultType>(res) << std::endl;
     }
 };
 

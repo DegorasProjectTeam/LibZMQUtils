@@ -29,8 +29,8 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file common.h
- * @brief This file contains the definition of common elements for the CommandServerClient module.
+ * @file command_server_client_data.h
+ * @brief This file contains the definition of common data elements for the CommandServerClient module.
  * @author Degoras Project Team
  * @copyright EUPL License
 ***********************************************************************************************************************/
@@ -43,14 +43,14 @@
 // =====================================================================================================================
 // =====================================================================================================================
 
-// ZMQUTILS INCLUDES
+// LIBZMQUTILS INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/Global/libzmqutils_global.h"
 #include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
 #include "LibZMQUtils/Utilities/uuid_generator.h"
 // =====================================================================================================================
 
-// ZMQUTILS NAMESPACES
+// LIBZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
 namespace reqrep{
@@ -58,8 +58,8 @@ namespace reqrep{
 
 // SERVER - CLIENT COMMON ALIAS
 // =====================================================================================================================
-using CommandType = std::int32_t;           ///< Type used for the BaseServerCommand enumeration.
-using ResultType = std::int32_t;            ///< Type used for the BaseOperationResult enumeration.
+using CommandType = std::int32_t;           ///< Type used for the ServerCommand enumeration.
+using ResultType = std::int32_t;            ///< Type used for the OperationResult enumeration.
 // =====================================================================================================================
 
 // SERVER - CLIENT COMMON ENUMS AND CONSTEXPR
@@ -95,7 +95,7 @@ enum class OperationResult : ResultType
     COMMAND_OK               = 0,  ///< The command was executed successfully.
     INTERNAL_ZMQ_ERROR       = 1,  ///< An internal ZeroMQ error occurred.
     EMPTY_MSG                = 2,  ///< The message is empty.
-    INVALID_CLIENT_IP        = 3,  ///< The client IP is invalid. TODO
+    INVALID_CLIENT_IP        = 3,  ///< The client IP is invalid.
     EMPTY_PARAMS             = 6,  ///< The command parameters are missing or empty.
     TIMEOUT_REACHED          = 7,  ///< The operation timed out, the client could be dead.
     INVALID_PARTS            = 8,  ///< The message has invalid parts.
@@ -120,13 +120,22 @@ enum class OperationResult : ResultType
 // Usefull const expressions.
 
 /// Minimum valid base enum command identifier (related to ServerCommand enum).
-constexpr int kMinBaseCmdId = static_cast<int>(ServerCommand::INVALID_COMMAND) + 1;
+constexpr size_t kMinBaseCmdId = static_cast<int>(ServerCommand::INVALID_COMMAND) + 1;
 
 /// Maximum valid base enum command identifier (related to ServerCommand enum).
-constexpr int kMaxBaseCmdId = static_cast<int>(ServerCommand::END_BASE_COMMANDS) - 1;
+constexpr size_t kMaxBaseCmdId = static_cast<int>(ServerCommand::END_BASE_COMMANDS) - 1;
 
 /// Maximum number of strings for representing each base enum command identifier (related to ServerCommand enum).
-constexpr int kMaxBaseCmdSrings = static_cast<int>(ServerCommand::END_BASE_COMMANDS) + 1;
+constexpr size_t kMaxBaseCmdSrings = static_cast<int>(ServerCommand::END_BASE_COMMANDS) + 1;
+
+/// Minimum valid base enum result identifier (related to OperationResult enum).
+constexpr size_t kMinBaseResultId = static_cast<int>(OperationResult::INVALID_RESULT) + 1;
+
+/// Maximum valid base enum result identifier (related to OperationResult enum).
+constexpr size_t kMaxBaseResultId = static_cast<int>(OperationResult::END_BASE_RESULTS) - 1;
+
+/// Maximum number of strings for representing each base enum result identifier (related to OperationResult enum).
+constexpr size_t kMaxBaseResultSrings = static_cast<int>(OperationResult::END_BASE_RESULTS) + 1;
 
 // Lookup arrays for trasnsform the enumerations to string.
 
@@ -187,7 +196,7 @@ static constexpr std::array<const char*, kMaxBaseCmdSrings>  ServerCommandStr
 };
 
 /// Lookup array with strings that represents the different OperationResult enum values.
-static constexpr std::array<const char*, 50>  OperationResultStr
+static constexpr std::array<const char*, kMaxBaseResultSrings>  OperationResultStr
 {
     "COMMAND_OK - Command executed.",
     "INTERNAL_ZMQ_ERROR - Internal ZeroMQ error.",
@@ -278,6 +287,7 @@ struct LIBZMQUTILS_EXPORT CommandReply
      */
     void clear();
 
+    // Struct data.
     ServerCommand command;    ///< Command whose execution generated this reply data.
     OperationResult result;    ///< Reply result from the server.
     ReplyData data;            ///< Reply data. Can be empty depending on the result of executing the command.

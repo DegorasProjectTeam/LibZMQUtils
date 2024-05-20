@@ -60,7 +60,7 @@
 // =====================================================================================================================
 
 // ---------------------------------------------------------------------------------------------------------------------
-using zmqutils::pubsub::PublisherResult;
+using zmqutils::pubsub::OperationResult;
 using zmqutils::serializer::BinarySerializer;
 using amelas::communication::AmelasLoggerPublisher;
 using amelas::controller::AmelasLog;
@@ -96,7 +96,7 @@ public:
             }
 
             std::string token_msg(token);
-            PublisherResult res = PublisherResult::INVALID_MSG;
+            OperationResult res = OperationResult::INVALID_MSG;
             AmelasLog log;
 
             if (token_command == "info")
@@ -106,7 +106,7 @@ public:
                 log.str_info = token_msg;
                 res = this->publisher_.sendLog(log);
             }
-            if (token_command == "debug")
+            else if (token_command == "debug")
             {
                 std::cout << "Sending debug log with msg: " << token_msg << std::endl;
                 log.level = AmelasLogLevel::AMELAS_DEBUG;
@@ -134,7 +134,7 @@ public:
                 return;
             }
 
-            if (res != PublisherResult::MSG_OK)
+            if (res != OperationResult::MSG_OK)
             {
                 std::cerr << "Error at sending log message. Error reason: " << static_cast<int>(res) << std::endl;
             }

@@ -757,7 +757,7 @@ private:
     /// Alias for a function that allows transform a ServerCommand to a string.
     using CommandToStringFunction = std::function<std::string(ServerCommand)>;
 
-    // Helper aliases.
+    /// Vector of NetworkAdapterInfo structs.
     using NetworkAdapterInfoV = std::vector<internal_helpers::network::NetworkAdapterInfo>;
 
     /// Helper for check if the base command is valid.
@@ -766,7 +766,7 @@ private:
     /// Intermal helper to get the server addresses.
     const NetworkAdapterInfoV &internalGetServerAddresses() const;
 
-    /// Internal helper for stop the server.
+    /// Internal helper to stop the server.
     void internalStopServer();
 
     /// Server worker (will be execute asynchronously).
@@ -812,7 +812,7 @@ private:
 
     // Endpoint data and server info.
     NetworkAdapterInfoV server_adapters_;   ///< Listen server adapters.
-    CommandServerInfo server_info_;                ///< Server information.
+    CommandServerInfo server_info_;         ///< Server information.
 
     // Mutex.
     mutable std::mutex mtx_;        ///< Safety mutex.

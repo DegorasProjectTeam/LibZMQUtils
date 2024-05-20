@@ -63,19 +63,34 @@ CommandClientInfo::CommandClientInfo(const utils::UUID& uuid, const std::string&
     version(version)
 {}
 
+CommandClientInfo::CommandClientInfo(utils::UUID& uuid, std::string& ip, std::string& pid,
+                                     std::string& hostname, std::string& name , std::string& info,
+                                     std::string& version):
+    uuid(std::move(uuid)),
+    ip(std::move(ip)),
+    pid(std::move(pid)),
+    hostname(std::move(hostname)),
+    name(std::move(name)),
+    info(std::move(info)),
+    version(std::move(version))
+{}
+
 size_t CommandClientInfo::serialize(serializer::BinarySerializer &serializer) const
 {
-    return serializer.write(this->uuid, this->ip, this->pid, this->hostname, this->name, this->info, this->version);
+    return serializer.write(this->uuid.getBytes(), this->ip, this->pid, this->hostname,
+                            this->name, this->info, this->version);
 }
 
 void CommandClientInfo::deserialize(serializer::BinarySerializer &serializer)
 {
-    serializer.read(this->uuid, this->ip, this->pid, this->hostname, this->name, this->info, this->version);
+    std::array<std::byte, 16> uuid_bytes;
+    serializer.read(uuid_bytes, this->ip, this->pid, this->hostname, this->name, this->info, this->version);
+    this->uuid = utils::UUID(uuid_bytes);
 }
 
 size_t CommandClientInfo::serializedSize() const
 {
-    return Serializable::calcTotalSize(this->uuid, this->ip, this->pid, this->hostname,
+    return Serializable::calcTotalSize(this->uuid.getBytes(), this->ip, this->pid, this->hostname,
                                        this->name, this->info, this->version);
 }
 
@@ -107,6 +122,18 @@ CommandServerInfo::CommandServerInfo(unsigned int port, const std::string &endpo
     info(info),
     version(version),
     ips(ips)
+{}
+
+CommandServerInfo::CommandServerInfo(unsigned& port, std::string &endpoint, std::string &hostname,
+                                     std::string &name, std::string &info, std::string &version,
+                                     std::vector<std::string> &ips) :
+    port(std::move(port)),
+    endpoint(std::move(endpoint)),
+    hostname(std::move(hostname)),
+    name(std::move(name)),
+    info(std::move(info)),
+    version(std::move(version)),
+    ips(std::move(ips))
 {}
 
 std::string CommandServerInfo::toJsonString() const

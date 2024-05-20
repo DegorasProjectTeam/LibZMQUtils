@@ -50,7 +50,8 @@
 // =====================================================================================================================
 #include "LibZMQUtils/Global/libzmqutils_global.h"
 #include "LibZMQUtils/Global/zmq_context_handler.h"
-#include "LibZMQUtils/PublisherSubscriber/common.h"
+#include "LibZMQUtils/PublisherSubscriber/data/publisher_subscriber_data.h"
+#include "LibZMQUtils/PublisherSubscriber/data/publisher_subscriber_info.h"
 #include "LibZMQUtils/Utilities/uuid_generator.h"
 // =====================================================================================================================
 
@@ -179,7 +180,7 @@ public:
 protected:
 
     // -----------------------------------------------------------------------------------------------------------------
-    using ProcessFunction = std::function<void(const PubSubMsg&)>;   ///< Process function alias.
+    using ProcessFunction = std::function<void(const PublishedMessage&)>;        ///< Process function alias.
     using ProcessFunctionsMap = std::unordered_map<TopicType, ProcessFunction>;  ///< Process function map alias.
     // -----------------------------------------------------------------------------------------------------------------
 
@@ -195,9 +196,9 @@ protected:
      */
     template <typename ClassT>
     void registerRequestProcFunc(const TopicType &topic, ClassT* obj,
-                                 void(ClassT::*func)(const PubSubMsg&))
+                                 void(ClassT::*func)(const PublishedMessage&))
     {
-        this->process_fnc_map_[topic] = [obj, func](const PubSubMsg& msg)
+        this->process_fnc_map_[topic] = [obj, func](const PublishedMessage& msg)
         {
             return (obj->*func)(msg);
         };
@@ -210,7 +211,7 @@ protected:
      * @param func The member function to call when the msg is received.
      *
      */
-    void registerRequestProcFunc(const TopicType &topic, std::function<void(const PubSubMsg&)> func)
+    void registerRequestProcFunc(const TopicType &topic, std::function<void(const PublishedMessage&)> func)
     {
         this->process_fnc_map_[topic] = func;
     }
@@ -224,7 +225,7 @@ protected:
      *          perform them asynchronously to avoid blocking the subscriber's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    LIBZMQUTILS_EXPORT virtual void onSubscriberStart() = 0;
+    virtual void onSubscriberStart() = 0;
 
     /**
      * @brief Base subscriber stop callback. Subclasses must override this function.
@@ -235,7 +236,7 @@ protected:
      *          perform them asynchronously to avoid blocking the subscriber's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    LIBZMQUTILS_EXPORT virtual void onSubscriberStop() = 0;
+    virtual void onSubscriberStop() = 0;
 
     /**
      * @brief Base invalid message received callback. Subclasses must override this function.
@@ -248,7 +249,7 @@ protected:
      *          perform them asynchronously to avoid blocking the subscriber's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    LIBZMQUTILS_EXPORT virtual void onInvalidMsgReceived(const PubSubMsg&, SubscriberResult) = 0;
+    virtual void onInvalidMsgReceived(const PublishedMessage&, OperationResult res) = 0;
 
     /**
      * @brief Base message received callback. Subclasses may override this function.
@@ -261,7 +262,7 @@ protected:
      *          perform them asynchronously to avoid blocking the subscriber's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    LIBZMQUTILS_EXPORT virtual void onMsgReceived(const PubSubMsg&, SubscriberResult &res);
+    virtual void onMsgReceived(const PublishedMessage&, OperationResult res);
 
     /**
      * @brief Base subscriber error callback. Subclasses must override this function.
@@ -282,7 +283,7 @@ protected:
      *          perform them asynchronously to avoid blocking the subscriber's main thread. Consider using separate
      *          threads or asynchronous mechanisms to handle time-consuming tasks.
      */
-    LIBZMQUTILS_EXPORT virtual void onSubscriberError(const zmq::error_t &error, const std::string& ext_info = "") = 0;
+    virtual void onSubscriberError(const zmq::error_t &error, const std::string& ext_info = "") = 0;
 
 private:
 
@@ -293,7 +294,7 @@ private:
     void startWorker();
 
     // Function for receiving data from the socket.
-    SubscriberResult recvFromSocket(PubSubMsg&);
+    OperationResult recvFromSocket(PublishedMessage&);
 
     // Function for resetting the socket.
     void resetSocket();

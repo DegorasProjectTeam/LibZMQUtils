@@ -50,9 +50,9 @@
 #include <zmq_addon.hpp>
 // =====================================================================================================================
 
-// ZMQUTILS INCLUDES
+// LIBZMQUTILS INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/PublisherSubscriber/publisher_base.h"
+#include "LibZMQUtils/PublisherSubscriber/publisher/publisher_base.h"
 #include "LibZMQUtils/InternalHelpers/network_helpers.h"
 #include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
 // =====================================================================================================================
@@ -61,7 +61,7 @@
 using zmqutils::internal_helpers::network::NetworkAdapterInfo;
 // =====================================================================================================================
 
-// ZMQUTILS NAMESPACES
+// LIBZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
 namespace pubsub{
@@ -118,13 +118,17 @@ PublisherBase::~PublisherBase()
     this->internalStopPublisher();
 }
 
-void PublisherBase::onPublisherError(const zmq::error_t &, const std::string &) {}
+void PublisherBase::onPublisherError(const zmq::error_t &, const std::string &)
+{}
 
-void PublisherBase::onPublisherStart() {}
+void PublisherBase::onPublisherStart()
+{}
 
-void PublisherBase::onPublisherStop() {}
+void PublisherBase::onPublisherStop()
+{}
 
-void PublisherBase::onSendingMsg(const PubSubData &) {}
+void PublisherBase::onSendingMsg(const PublishedMessage&)
+{}
 
 bool PublisherBase::startPublisher()
 {
@@ -205,8 +209,9 @@ std::string PublisherBase::getPublisherIpsStr(const std::string &separator) cons
     return ips;
 }
 
-const PublisherBase::NetworkAdapterInfoV PublisherBase::internalGetPublisherAddresses() const
+const PublisherBase::NetworkAdapterInfoV PublisherBase::getPublisherAddresses() const
 {
+    std::unique_lock<std::mutex> lock(this->mtx_);
     return this->publisher_adapters_;
 }
 
@@ -215,41 +220,45 @@ bool PublisherBase::isWorking() const
     return this->flag_working_;
 }
 
-PublisherResult PublisherBase::sendMsg(const PubSubData& request)
+OperationResult PublisherBase::sendMsg(const TopicType& topic, PublishedData& data)
 {
     // Safe mutex lock
     std::unique_lock<std::mutex> lock(this->mtx_);
 
     // Result.
-    PublisherResult result = PublisherResult::MSG_OK;
+    OperationResult result = OperationResult::MSG_OK;
 
     // Check if we started the publisher.
     if (!this->socket_)
-        return PublisherResult::PUBLISHER_STOPPED;
+        return OperationResult::PUBLISHER_STOPPED;
 
     // Send the msg.
     try
     {
+        // Prepare the message.
+        PublishedMessage msg(topic, this->pub_info_, std::move(data));
+
         // Prepare the multipart msg.
-        zmq::multipart_t multipart_msg(this->prepareMessage(request));
+        zmq::multipart_t multipart_msg(this->prepareMessage(topic, msg));
 
         // Call to the internal sending command callback.
-        this->onSendingMsg(request);
+        this->onSendingMsg(msg);
 
         // Send the msg.
         bool res = multipart_msg.send(*this->socket_);
         if (!res)
         {
-            return PublisherResult::INTERNAL_ZMQ_ERROR;
+            return OperationResult::INTERNAL_ZMQ_ERROR;
         }
 
     }
     catch (const zmq::error_t &error)
     {
         // Call to the error callback and stop the publisher for safety.
-        this->onPublisherError(error, "PublisherBase: Error while sending a request. Stopping the publisher.");
+        std::string module = "[LibZMQUtils,PublisherSubscriber,PublisherBase] ";
+        this->onPublisherError(error, module + "Error while sending a request. Stopping the publisher.");
         this->internalStopPublisher();
-        return PublisherResult::INTERNAL_ZMQ_ERROR;
+        return OperationResult::INTERNAL_ZMQ_ERROR;
     }
 
     // Return the result.
@@ -303,6 +312,11 @@ bool PublisherBase::internalResetPublisher()
     return true;
 }
 
+const PublisherBase::NetworkAdapterInfoV &PublisherBase::internalGetPublisherAddresses() const
+{
+    return this->publisher_adapters_;
+}
+
 void PublisherBase::deleteSockets()
 {
     // Delete the pointers.
@@ -328,33 +342,36 @@ void PublisherBase::internalStopPublisher()
     // Safe sleep.
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
 }
-zmq::multipart_t PublisherBase::prepareMessage(const PubSubData &data)
+
+zmq::multipart_t PublisherBase::prepareMessage(const TopicType& topic, PublishedMessage& msg)
 {
+
     // Serializer.
     serializer::BinarySerializer serializer;
 
     // Prepare the topic. This must come plain, since it is used by ZMQ topic filtering.
-    zmq::message_t msg_topic(data.topic);
+    zmq::message_t msg_topic(topic);
 
-    // Prepare the name message.
-    size_t name_size = serializer.write(this->pub_info_.name);
-    zmq::message_t msg_name(serializer.release(), name_size);
-
-    // Prepare the uuid message.
-    size_t uuid_size = serializer.write(this->pub_info_.uuid.getBytes());
+    // Prepare the uuid.
+    size_t uuid_size = serializer.write(msg.pub_info.uuid.getBytes());
     zmq::message_t msg_uuid(serializer.release(), uuid_size);
+
+    // Prepare the information.
+    size_t info_size = serializer.write(msg.pub_info.endpoint, msg.pub_info.hostname, msg.pub_info.name,
+                                        msg.pub_info.info, msg.pub_info.version);
+    zmq::message_t msg_info(serializer.release(), info_size);
 
     // Prepare the multipart msg.
     zmq::multipart_t multipart_msg;
     multipart_msg.add(std::move(msg_topic));
-    multipart_msg.add(std::move(msg_name));
     multipart_msg.add(std::move(msg_uuid));
+    multipart_msg.add(std::move(msg_info));
 
     // Add command parameters if they exist
-    if (data.data_size > 0)
+    if (msg.data.size > 0)
     {
         // Prepare the command parameters
-        zmq::message_t message_params(data.data.get(), data.data_size);
+        zmq::message_t message_params(msg.data.bytes.get(), msg.data.size);
         multipart_msg.add(std::move(message_params));
     }
 

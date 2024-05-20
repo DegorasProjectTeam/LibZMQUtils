@@ -99,17 +99,17 @@ void AmelasLoggerSubscriber::onSubscriberError(const zmq::error_t &error, const 
     std::cout << std::string(100, '-') << std::endl;
 }
 
-void AmelasLoggerSubscriber::onMsgReceived(const zmqutils::pubsub::PubSubMsg& msg,
-                                           zmqutils::pubsub::SubscriberResult &res)
+void AmelasLoggerSubscriber::onMsgReceived(const zmqutils::pubsub::PublishedMessage& msg,
+                                           zmqutils::pubsub::OperationResult res)
 {
     // Log.
-    zmqutils::serializer::BinarySerializer serializer(msg.data.data.get(), msg.data.data_size);
+    zmqutils::serializer::BinarySerializer serializer(msg.data.bytes.get(), msg.data.size);
     std::cout << std::string(100, '-') << std::endl;
     std::cout << "<LOGGER SUBSCRIBER>" << std::endl;
     std::cout << "-> ON MSG RECEIVED: " << std::endl;
     std::cout << "Time: " << zmqutils::utils::currentISO8601Date() << std::endl;
     std::cout << "Publisher UUID: " << msg.pub_info.uuid.toRFC4122String() << std::endl;
-    std::cout << "Params Size: " << msg.data.data_size << std::endl;
+    std::cout << "Params Size: " << msg.data.size << std::endl;
     std::cout << "Params Hex: " << serializer.getDataHexString() << std::endl;
     std::cout << std::string(100, '-') << std::endl;
 
@@ -119,17 +119,17 @@ void AmelasLoggerSubscriber::onMsgReceived(const zmqutils::pubsub::PubSubMsg& ms
     std::cout << "Result on message processing is: " << static_cast<int>(res) << std::endl;
 }
 
-void AmelasLoggerSubscriber::onInvalidMsgReceived(const zmqutils::pubsub::PubSubMsg& msg,
-                                                  zmqutils::pubsub::SubscriberResult res)
+void AmelasLoggerSubscriber::onInvalidMsgReceived(const zmqutils::pubsub::PublishedMessage& msg,
+                                                  zmqutils::pubsub::OperationResult res)
 {
     // Log.
-    zmqutils::serializer::BinarySerializer serializer(msg.data.data.get(), msg.data.data_size);
+    zmqutils::serializer::BinarySerializer serializer(msg.data.bytes.get(), msg.data.size);
     std::cout << std::string(100, '-') << std::endl;
     std::cout << "<LOGGER SUBSCRIBER>" << std::endl;
     std::cout << "-> ON BAD MSG RECEIVED: " << std::endl;
     std::cout << "Time: "<< zmqutils::utils::currentISO8601Date() << std::endl;
     std::cout << "Publisher UUID: " << msg.pub_info.uuid.toRFC4122String() << std::endl;
-    std::cout << "Params Size: " << msg.data.data_size << std::endl;
+    std::cout << "Params Size: " << msg.data.size << std::endl;
     std::cout << "Params Hex: " << serializer.getDataHexString() << std::endl;
     std::cout << std::string(100, '-') << std::endl;
 

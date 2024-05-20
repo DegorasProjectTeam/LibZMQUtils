@@ -252,7 +252,7 @@ struct LIBZMQUTILS_EXPORT BinarySerializedData
  *
  * @see Serializable
  */
-class BinarySerializer
+class LIBZMQUTILS_EXPORT BinarySerializer
 {
 public:
 
@@ -283,7 +283,7 @@ public:
      * @brief Construct a new ´BinarySerializer´ object with a given capacity.
      * @param capacity The initial capacity of the serializer. Default is 1024.
      */
-    LIBZMQUTILS_EXPORT BinarySerializer(SizeUnit capacity = 1024);
+    BinarySerializer(SizeUnit capacity = 1024);
 
     /**
      * @brief Construct a new ´BinarySerializer´ object and load the given data.
@@ -292,9 +292,9 @@ public:
      * @warning The @a src parameter is a void pointer, so be careful.
      * @warning This constructor implies deep copy.
      */
-    LIBZMQUTILS_EXPORT BinarySerializer(void* src, SizeUnit size);
+     BinarySerializer(void* src, SizeUnit size);
 
-    LIBZMQUTILS_EXPORT BinarySerializer(BytesSmartPtr&& src, SizeUnit size);
+    BinarySerializer(BytesSmartPtr&& src, SizeUnit size);
 
 
     /**
@@ -302,7 +302,7 @@ public:
      * @param size The size of memory to reserve.
      * @warning This function implies deep copy if the class has data.
      */
-    LIBZMQUTILS_EXPORT void reserve(SizeUnit size);
+    void reserve(SizeUnit size);
 
     /**
      * @brief Load data into the serializer.
@@ -311,51 +311,49 @@ public:
      * @warning The @a data parameter is a void pointer, so be careful.
      * @warning This function implies deep copy.
      */
-    LIBZMQUTILS_EXPORT void loadData(void *src, SizeUnit size);
-
-
+    void loadData(void *src, SizeUnit size);
 
     /**
      * @brief Clear the data held by the serializer.
      */
-    LIBZMQUTILS_EXPORT void clearData();
+    void clearData();
 
     /**
      * @brief Reset the internal read offset.
      */
-    LIBZMQUTILS_EXPORT void resetReading();
+    void resetReading();
 
     /**
      * @brief Release the data held by the serializer and return a raw pointer to it.
      * @return Raw pointer to the data.
      */
-    LIBZMQUTILS_EXPORT std::byte* release();
+    std::byte* release();
 
     /**
      * @brief Release the data held by the serializer, return a raw pointer to it, and set the size variable.
      * @param[out] size The size of the data.
      * @return Raw pointer to the data.
      */
-    LIBZMQUTILS_EXPORT std::byte* release(SizeUnit& size);
+    std::byte* release(SizeUnit& size);
 
     /**
      * @brief Move the unique pointer to the data held by the serializer and return it.
      * @param[out] out The smart pointer with the data.
      * @return The current size of the data.
      */
-    LIBZMQUTILS_EXPORT SizeUnit moveUnique(BinarySerializer::BytesSmartPtr& out);
+    SizeUnit moveUnique(BinarySerializer::BytesSmartPtr& out);
 
     /**
      * @brief Get the current size of the data held by the serializer.
      * @return The current size of the data.
      */
-    LIBZMQUTILS_EXPORT SizeUnit getSize() const;
+    SizeUnit getSize() const;
 
     /**
      * @brief Check whether all data has been read.
      * @return True if all data has been read, false otherwise.
      */
-    LIBZMQUTILS_EXPORT bool allReaded() const;
+    bool allReaded() const;
 
     /**
      * @brief Convert the internal state of the ´BinarySerializer´ to a JSON-formatted string.
@@ -377,13 +375,13 @@ public:
      *
      * @return A string representing the BinarySerializer object in JSON format.
      */
-    LIBZMQUTILS_EXPORT std::string toJsonString() const;
+    std::string toJsonString() const;
 
     /**
      * @brief Get a hex string representation of the data held by the serializer.
      * @return Hex string representation of the data.
      */
-    LIBZMQUTILS_EXPORT std::string getDataHexString() const;
+    std::string getDataHexString() const;
 
     /**
      * @brief A static function that serializes multiple input data items into binary data.
@@ -492,7 +490,7 @@ public:
      * @note The function serializes the file content as binary data and does not perform any conversion or
      * transformation on the file content itself.
      */
-    LIBZMQUTILS_EXPORT SizeUnit writeFile(const std::string& in_filenamepath);
+    SizeUnit writeFile(const std::string& in_filenamepath);
 
     /**
      * @brief Variadic template function to read multiple data types at once from the internal buffer.
@@ -543,7 +541,9 @@ public:
      * @note This function assumes that the serialized data in the internal buffer corresponds to a previously
      * serialized file created using the `writeFile` function.
      */
-    LIBZMQUTILS_EXPORT void readFile(const std::string& out_filepath);
+    void readFile(const std::string& out_filepath);
+
+    // -----------------------------------------------------------------------------------------------------------------
 
     // Size calculator function.
     template<typename T>
@@ -551,6 +551,14 @@ public:
 
     template<typename... Args>
     static SizeUnit calcTotalSize(const Args&... args);
+
+    // Size calculator function for vectors.
+    template<typename T>
+    static SizeUnit calcTotalSize(const std::vector<T>& data);
+
+    // Size calculator function for arrays.
+    template<typename T, size_t L>
+    static SizeUnit calcTotalSize(const std::array<T, L>& data);
 
 protected:
 
@@ -570,7 +578,7 @@ protected:
     // -----------------------------------------------------------------------------------------------------------------
 
     // Internal function to determine the endianess of the system.
-    LIBZMQUTILS_EXPORT static Endianess determineEndianess();
+    static Endianess determineEndianess();
 
     // Internal function to check if the type is trivially copiable.
     template<typename T>
@@ -579,14 +587,6 @@ protected:
     // Internal function to check if the type is trivial.
     template<typename T>
     static void checkTrivial();
-
-    // Internal size calculator function for vectors.
-    template<typename T>
-    static SizeUnit calcTotalSize(const std::vector<T>& data);
-
-    // Internal size calculator function for arrays.
-    template<typename T, size_t L>
-    static SizeUnit calcTotalSize(const std::array<T, L>& data);
 
     // Internal binary serialization/deserialization helper function.
     template<typename T, typename C>
@@ -622,10 +622,10 @@ protected:
     writeSingle(const T& obj);
 
     // For writing Serializable objects.
-    LIBZMQUTILS_EXPORT void writeSingle(const Serializable& obj);
+    void writeSingle(const Serializable& obj);
 
     // For writing strings.
-    LIBZMQUTILS_EXPORT void writeSingle(const std::string& str);
+    void writeSingle(const std::string& str);
 
     // For arrays of trivial types.
     template<typename T, SizeUnit L>
@@ -649,10 +649,10 @@ protected:
     readSingle(T& value);
 
     // For read Serializable objects.
-    LIBZMQUTILS_EXPORT void readSingle(Serializable& obj);
+    void readSingle(Serializable& obj);
 
     // For read strings.
-    LIBZMQUTILS_EXPORT void readSingle(std::string& str);
+    void readSingle(std::string& str);
 
     // For arrays of trivial types.
     template<typename T, size_t L>

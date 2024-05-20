@@ -39,15 +39,15 @@
 #pragma once
 // =====================================================================================================================
 
-// ZMQUTILS INCLUDES
+// LIBZMQUTILS INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/Global/libzmqutils_global.h"
-#include "LibZMQUtils/PublisherSubscriber/subscriber_base.h"
+#include "LibZMQUtils/PublisherSubscriber/subscriber/subscriber_base.h"
 #include "LibZMQUtils/Utilities/callback_handler.h"
 #include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
 // =====================================================================================================================
 
-// ZMQUTILS NAMESPACES
+// LIBZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
 namespace pubsub{
@@ -71,7 +71,7 @@ public:
      * @brief Function for setting an error callback.
      * @param callback The error callback method that will be called.
      */
-    void setErrorCallback(std::function<void(const PubSubMsg &, SubscriberResult)> callback);
+    void setErrorCallback(std::function<void(const PublishedMessage&, OperationResult)> callback);
 
     /**
      * @brief Template function for registering a callback. This callback will be registered for a specific topic.
@@ -96,9 +96,9 @@ public:
      * @param callback The error callback method that will be called.
      */
     template<typename ClassT>
-    void setErrorCallback(ClassT* object, void(ClassT::*error_callback)(const PubSubMsg &, SubscriberResult))
+    void setErrorCallback(ClassT* object, void(ClassT::*error_callback)(const PublishedMessage &, OperationResult))
     {
-        this->error_callback_ = [object, error_callback](const PubSubMsg &msg, SubscriberResult res)
+        this->error_callback_ = [object, error_callback](const PublishedMessage &msg, OperationResult res)
         {(object->*error_callback)(msg, res);};
     }
 
@@ -131,7 +131,7 @@ public:
         this->registerCallback(topic, object, callback);
 
         // Process function lambda.
-        auto lambdaProcFunc = [this](const PubSubMsg& msg)
+        auto lambdaProcFunc = [this](const PublishedMessage& msg)
         {
             this->processClbkRequest<CallbackType, RetT, Args...>(msg);
         };
@@ -163,20 +163,21 @@ protected:
     /**
      * @brief Override onInvalidMsgReceived to call error callback.
      */
-    void onInvalidMsgReceived(const PubSubMsg &, SubscriberResult) override;
+    void onInvalidMsgReceived(const PublishedMessage&, OperationResult) override;
 
     /**
      * @brief Override onMsgReceived to call error callback if necessary.
      * @return the subscriber result associated with the message received.
      */
-    void onMsgReceived(const PubSubMsg &, SubscriberResult &res) override;
+    void onMsgReceived(const PublishedMessage&, OperationResult) override;
 
     /**
      * @brief Invokes error callback, if defined.
      * @param msg, the message that caused the error.
      * @param res, the subscriber result with the error.
      */
-    void invokeErrorCallback(const PubSubMsg &msg, SubscriberResult res);
+    void invokeErrorCallback(const PublishedMessage &msg, OperationResult res);
+
     /**
      * @brief Parametric method for invoking a registered callback. If no callback is registered, the function will
      *        try to invoke error callback.
@@ -190,16 +191,16 @@ protected:
      */
     template <typename CallbackType, typename RetT = void,  typename... Args>
     std::conditional_t<std::is_void_v<RetT>, void, std::optional<RetT>>
-    invokeCallback(const PubSubMsg& msg, SubscriberResult& res, Args&&... args)
+    invokeCallback(const PublishedMessage& msg, OperationResult& res, Args&&... args)
     {
         // Get the command.
-        TopicType topic = msg.data.topic;
+        TopicType topic = msg.topic;
 
         // Check the callback.
         if(!this->hasCallback(topic))
         {
             // If there is no callback, try to execute error callback.
-            res = SubscriberResult::EMPTY_EXT_CALLBACK;
+            res = OperationResult::EMPTY_EXT_CALLBACK;
             this->invokeErrorCallback(msg, res);
             return RetT();
         }
@@ -223,7 +224,7 @@ protected:
         catch(...)
         {
             // If an error rises, try to execute error callback.
-            res = SubscriberResult::INVALID_EXT_CALLBACK;
+            res = OperationResult::INVALID_EXT_CALLBACK;
             this->invokeErrorCallback(msg, res);
             return RetT();
         }
@@ -240,20 +241,20 @@ protected:
      * @tparam CallbackType The type of the callback function to be invoked.
      * @tparam RetT The return type of the callback function.
      * @tparam Args Variadic template parameters passed to the callback function.
-     * @param msg A reference to the PubSubMsg object containing the received message.
+     * @param msg A reference to the PublishedMessage object containing the received message.
      */
     template<typename CallbackType, typename RetT, typename ...Args>
-    void processClbkRequest(const PubSubMsg& msg)
+    void processClbkRequest(const PublishedMessage& msg)
     {
 
-        SubscriberResult res;
+        OperationResult res;
         // Input callback case.
         if constexpr (sizeof...(Args) > 0)
         {
             // If there are no parameters, but they are required, execute error callback
-            if (0 == msg.data.data_size)
+            if (0 == msg.data.size)
             {
-                this->invokeErrorCallback(msg, SubscriberResult::EMPTY_PARAMS);
+                this->invokeErrorCallback(msg, OperationResult::EMPTY_PARAMS);
                 return;
             }
 
@@ -263,13 +264,13 @@ protected:
             // Deserialize the inputs.
             try
             {
-                zmqutils::serializer::BinarySerializer::fastDeserialization(msg.data.data.get(),
-                                                                            msg.data.data_size,
+                zmqutils::serializer::BinarySerializer::fastDeserialization(msg.data.bytes.get(),
+                                                                            msg.data.size,
                                                                             args);
             }
             catch(...)
             {
-                this->invokeErrorCallback(msg, SubscriberResult::BAD_PARAMETERS);
+                this->invokeErrorCallback(msg, OperationResult::BAD_PARAMETERS);
                 return;
             }
 
@@ -296,7 +297,7 @@ private:
     using CallbackHandler::hasCallback;
 
     // Error callback functor.
-    std::function<void(const PubSubMsg&, SubscriberResult)> error_callback_;
+    std::function<void(const PublishedMessage&, OperationResult)> error_callback_;
 };
 
 }} // END NAMESPACES.

@@ -79,7 +79,7 @@ public:
     using zmqutils::pubsub::PublisherBase::PublisherBase;
 
     // Function to allow easily send logs.
-    zmqutils::pubsub::PublisherResult sendLog(const controller::AmelasLog& log);
+    zmqutils::pubsub::OperationResult sendLog(const controller::AmelasLog& log);
 
 private:
 
@@ -89,9 +89,9 @@ private:
 
     virtual void onPublisherStop() override final;
 
-    virtual void onSendingMsg(const zmqutils::pubsub::PubSubData&) override final;
+    virtual void onSendingMsg(const zmqutils::pubsub::PublishedMessage&) override final;
 
-    virtual void onPublisherError(const zmq::error_t&, const std::string& ext_info) override final;
+    virtual void onPublisherError(const zmq::error_t&, const std::string&) override final;
 };
 
 }} // END NAMESPACES.

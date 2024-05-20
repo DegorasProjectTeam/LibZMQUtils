@@ -140,12 +140,12 @@ private:
     virtual void onSubscriberStop() override final;
 
     // Internal overrided command received callback.
-    virtual void onMsgReceived(const zmqutils::pubsub::PubSubMsg&,
-                               zmqutils::pubsub::SubscriberResult &res) override final;
+    virtual void onMsgReceived(const zmqutils::pubsub::PublishedMessage&,
+                               zmqutils::pubsub::OperationResult res) override final;
 
     // Internal overrided bad command received callback.
-    virtual void onInvalidMsgReceived(const zmqutils::pubsub::PubSubMsg&,
-                                      zmqutils::pubsub::SubscriberResult) override final;
+    virtual void onInvalidMsgReceived(const zmqutils::pubsub::PublishedMessage&,
+                                      zmqutils::pubsub::OperationResult) override final;
 
     // Internal overrided server error callback.
     virtual void onSubscriberError(const zmq::error_t&, const std::string& ext_info) override final;

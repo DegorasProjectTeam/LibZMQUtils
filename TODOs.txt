@@ -15,13 +15,15 @@ PRIORITY:
 
 - Non blocking senmdMsg operation mode with futures in client. 
 
-- Add a command to get server info.
+- Add a comman to get server info.
 
 - Make the internal utilities independent of generic infrastructure and move them to the DegorasBase library
 
 - Move template implementations to tpp.
 
 NO PRIORITY:
+
+- Real UUID validation function.
 
 - Future log functionality with auto publisher. When LibDegorasBase ready.
 

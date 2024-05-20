@@ -35,8 +35,7 @@
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include <LibZMQUtils/Modules/Publisher>
-#include <LibZMQUtils/Modules/Subscriber>
+#include <LibZMQUtils/Modules/PublisherSubscriber>
 #include <LibZMQUtils/Testing/UnitTest>
 // =====================================================================================================================
 
@@ -77,17 +76,14 @@ M_DEFINE_UNIT_TEST(PublisherSubscriber, PublishSubscribe)
             this->promise.set_value(msg);
         }
 
-
         std::future<std::string> future;
     };
-
-    std::cout << "Start test..." << std::endl;
 
     SubscriberCallbackHandler handler;
     const std::string test_string = "HOLA MUNDO";
 
     // Publisher.
-    zmqutils::pubsub::PublisherBase publisher(endpoint, "Test publisher");
+    zmqutils::pubsub::PublisherBase publisher(port, ip, "Test publisher");
 
     // Start the publisher.
     bool started = publisher.startPublisher();
@@ -117,7 +113,7 @@ M_DEFINE_UNIT_TEST(PublisherSubscriber, PublishSubscribe)
     }
 
 
-    subscriber.registerCallbackAndRequestProcFunc<std::function<void(const std::string&)>>(
+    subscriber.registerCbAndReqProcFunc<std::function<void(const std::string&)>>(
         "Test", &handler, &SubscriberCallbackHandler::handleMsg);
 
     publisher.sendMsg("Test", test_string);
@@ -176,7 +172,7 @@ M_DEFINE_UNIT_TEST(PublisherSubscriber, PublishMultithread)
     SubscriberCallbackHandler handler(test_string, messages_to_receive);
 
     // Publisher.
-    zmqutils::pubsub::PublisherBase publisher(endpoint, "Test publisher");
+    zmqutils::pubsub::PublisherBase publisher(port, ip, "Test publisher");
 
     // Start the publisher.
     bool publisher_started = publisher.startPublisher();
@@ -206,7 +202,7 @@ M_DEFINE_UNIT_TEST(PublisherSubscriber, PublishMultithread)
     }
 
 
-    subscriber.registerCallbackAndRequestProcFunc<std::function<void(const std::string&)>>(
+    subscriber.registerCbAndReqProcFunc<std::function<void(const std::string&)>>(
         "Test", &handler, &SubscriberCallbackHandler::handleMsg);
 
 

@@ -28,12 +28,70 @@
  *   along with this project. If not, see the license at < https://eupl.eu/ >.                                         *
  **********************************************************************************************************************/
 
-#include <LibZMQUtils/PublisherSubscriber/data/publisher_subscriber_data.h>
-#include <LibZMQUtils/PublisherSubscriber/data/publisher_subscriber_info.h>
+/** ********************************************************************************************************************
+ * @file common.cpp
+ * @brief This file contains common elements for the Publisher Subscriber module.
+ * @author Degoras Project Team
+ * @copyright EUPL License
+***********************************************************************************************************************/
 
-#include <LibZMQUtils/PublisherSubscriber/publisher/publisher_base.h>
+// C++ INCLUDES
+// =====================================================================================================================
+#include <sstream>
+// =====================================================================================================================
 
-#include <LibZMQUtils/PublisherSubscriber/subscriber/subscriber_base.h>
-#include <LibZMQUtils/PublisherSubscriber/subscriber/clbk_subscriber_base.h>
+// ZMQUTILS INCLUDES
+// =====================================================================================================================
+#include "LibZMQUtils/PublisherSubscriber/data/publisher_subscriber_info.h"
+// =====================================================================================================================
 
+// ZMQUTILS NAMESPACES
+// =====================================================================================================================
+namespace zmqutils{
+namespace pubsub{
+// =====================================================================================================================
 
+PublisherInfo::PublisherInfo(unsigned port, const utils::UUID& uuid, const std::string& endpoint,
+                             const std::string &hostname, const std::string &name, const std::string &info,
+                             const std::string &version, const std::vector<std::string> &ips) :
+    port(port),
+    uuid(uuid),
+    endpoint(endpoint),
+    hostname(hostname),
+    name(name),
+    info(info),
+    version(version),
+    ips(ips)
+{}
+
+PublisherInfo::PublisherInfo(unsigned port, const utils::UUID& uuid, const std::string& endpoint) :
+    port(port),
+    uuid(uuid),
+    endpoint(endpoint)
+{}
+
+PublisherInfo::PublisherInfo(unsigned& port, utils::UUID& uuid, std::string& endpoint,
+                             std::string &hostname, std::string &name, std::string &info,
+                             std::string &version, std::vector<std::string>& ips) :
+    port(std::move(port)),
+    uuid(std::move(uuid)),
+    endpoint(std::move(endpoint)),
+    hostname(std::move(hostname)),
+    name(std::move(name)),
+    info(std::move(info)),
+    version(std::move(version)),
+    ips(std::move(ips))
+{}
+
+std::string PublisherInfo::toJsonString() const
+{
+    std::stringstream ss;
+    ss << "{\n"
+       << "\t\"uuid\": \"" << this->uuid.toRFC4122String() << "\",\n"
+       << "\t\"name\": \"" << this->name << "\"\n"
+       << "}";
+    return ss.str();
+}
+
+}} // END NAMESPACES.
+// =====================================================================================================================

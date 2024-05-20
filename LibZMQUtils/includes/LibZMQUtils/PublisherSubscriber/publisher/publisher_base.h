@@ -45,16 +45,17 @@
 #include <atomic>
 // =====================================================================================================================
 
-// ZMQUTILS INCLUDES
+// LIBZMQUTILS INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/Global/libzmqutils_global.h"
 #include "LibZMQUtils/Global/zmq_context_handler.h"
-#include "LibZMQUtils/PublisherSubscriber/common.h"
+#include "LibZMQUtils/PublisherSubscriber/data/publisher_subscriber_data.h"
+#include "LibZMQUtils/PublisherSubscriber/data/publisher_subscriber_info.h"
 #include "LibZMQUtils/InternalHelpers/network_helpers.h"
 #include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
 // =====================================================================================================================
 
-// ZMQUTILS NAMESPACES
+// LIBZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
 namespace pubsub{
@@ -63,11 +64,6 @@ namespace pubsub{
 
 class LIBZMQUTILS_EXPORT PublisherBase : public ZMQContextHandler
 {
-
-private:
-
-    // Helper aliases.
-    using NetworkAdapterInfoV = std::vector<internal_helpers::network::NetworkAdapterInfo>;
 
 public:
     
@@ -137,13 +133,19 @@ public:
      */
     std::vector<std::string> getPublisherIps() const;
 
+
+
     std::string getPublisherIpsStr(const std::string &separator) const;
 
     /**
-     * @brief Get the UUID of this publisher.
-     * @return the UUID of the publisher.
+     * @brief Get the network adapter addresses used by the publisher.
+     *
+     * This function returns a const reference to a vector of NetworkAdapterInfo objects. Each object contains
+     * information about a network adapter used by the publisher for send messages.
+     *
+     * @return A const reference to a vector of NetworkAdapterInfo objects.
      */
-    const NetworkAdapterInfoV internalGetPublisherAddresses() const;
+    const std::vector<internal_helpers::network::NetworkAdapterInfo> getPublisherAddresses() const;
 
     /**
      * @brief Check if the publisher is working, i.e., it was successfully started.
@@ -153,12 +155,13 @@ public:
 
     /**
      * @brief Sends a PubSubMsg.
-     * @param data, the data that will be sent in the msg.
-     * @return the result of sending operation.
+     * @param topic, the topic associated to the message that will be sent.
+     * @param data, the data that will be sent in the message.
+     * @return The result of sending operation as an OperationResult enum.
      * @note This method is thread-safe, since it is protected by a mutex.
-     * @todo Maybe the mutex should be changed by a queue that sends the messages to the thread of the socket.
+     * @todo Queued functionality.
      */
-    PublisherResult sendMsg(const PubSubData &data);
+    OperationResult sendMsg(const TopicType& topic, PublishedData& data);
 
     /**
      * @brief Sends a PubSubMsg serializing the arguments.
@@ -167,16 +170,15 @@ public:
      * @return the result of the sending operation.
      */
     template <typename Topic, typename... Args>
-    PublisherResult sendMsg(const Topic &topic, const Args&... args)
+    OperationResult sendMsg(const Topic &topic, const Args&... args)
     {
-        PubSubData data;
-        data.topic = static_cast<TopicType>(topic);
+        PublishedData data;
 
         if constexpr (sizeof...(args) > 0)
-            data.data_size = zmqutils::serializer::BinarySerializer::fastSerialization(
-                data.data, std::forward<const Args&>(args)...);
+            data.size = zmqutils::serializer::BinarySerializer::fastSerialization(
+                data.bytes, std::forward<const Args&>(args)...);
 
-        return this->sendMsg(data);
+        return this->sendMsg(static_cast<TopicType>(topic), data);
     }
 
     /**
@@ -210,7 +212,7 @@ protected:
     /**
      * @brief Base publisher sending message callback. Subclasses can override this function.
      */
-    virtual void onSendingMsg(const PubSubData&);
+    virtual void onSendingMsg(const PublishedMessage &);
 
     /**
      * @brief Base publisher error callback. Subclasses can override this function.
@@ -219,17 +221,27 @@ protected:
 
 private:
 
+    // Helper aliases.
+    using NetworkAdapterInfoV = std::vector<internal_helpers::network::NetworkAdapterInfo>;
+
+    /// Internal helper to delete the ZMQ sockets.
     void deleteSockets();
 
+    /// Internal helper to stop the publisher.
     void internalStopPublisher();
 
+    /// Internal helper to reset the server.
     bool internalResetPublisher();
 
-    zmq::multipart_t prepareMessage(const PubSubData &data);
+    /// Intermal helper to get the publisher addresses.
+    const NetworkAdapterInfoV& internalGetPublisherAddresses() const;
+
+    /// Internal static function to prepare the data.
+    static zmq::multipart_t prepareMessage(const TopicType &topic, PublishedMessage& msg);
 
     // Endpoint data and publisher info.
-    PublisherInfo pub_info_;
     NetworkAdapterInfoV publisher_adapters_;  ///< Interfaces bound by publisher.
+    PublisherInfo pub_info_;                  ///< Publisher information.
 
     // ZMQ sockets and endpoint.
     zmq::socket_t *socket_;       ///< ZMQ publisher socket.

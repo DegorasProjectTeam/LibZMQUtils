@@ -65,12 +65,16 @@ public:
     static inline constexpr unsigned kUUIDSize = 16;  ///< UUID bytes size.
 
     /**
+     * @brief Construct a new empty (invalid) UUID object.
+     */
+    UUID();
+
+    /**
      * @brief Construct a new UUID object from an array of 16 bytes.
      * @param bytes An array of 16 bytes representing the UUID.
      */
     UUID(const std::array<std::byte, kUUIDSize>& bytes);
 
-    UUID() = default;
     UUID(const UUID&) = default;
     UUID(UUID&&) = default;
     UUID& operator=(const UUID&) = default;

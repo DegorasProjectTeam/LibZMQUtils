@@ -54,7 +54,7 @@ CommandRequest::CommandRequest() :
     command(ServerCommand::INVALID_COMMAND)
 {}
 
-CommandRequest::CommandRequest(ServerCommand command, const utils::UUID& uuid, RequestData&& data) :
+CommandRequest::CommandRequest(ServerCommand command, const utils::UUID &uuid, RequestData &&data) :
     command(command),
     client_uuid(uuid),
     data(std::move(data))

@@ -37,45 +37,25 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
-#include <sstream>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/PublisherSubscriber/common.h"
+#include "LibZMQUtils/PublisherSubscriber/data/publisher_subscriber_data.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
 namespace pubsub{
+
+PublishedMessage::PublishedMessage(const TopicType &topic, const PublisherInfo &pub_info, PublishedData &&data) :
+    topic(topic),
+    pub_info(pub_info),
+    data(std::move(data))
+{}
+
 // =====================================================================================================================
-PublisherInfo::PublisherInfo(utils::UUID uuid,
-                                               std::string endpoint,
-                                               std::string name):
-    uuid(std::move(uuid)),
-    endpoint(std::move(endpoint)),
-    name(std::move(name))
-{}
-
-std::string PublisherInfo::toJsonString() const
-{
-    std::stringstream ss;
-    ss << "{\n"
-       << "\t\"uuid\": \"" << this->uuid.toRFC4122String() << "\",\n"
-       << "\t\"name\": \"" << this->name << "\"\n"
-       << "}";
-    return ss.str();
-}
-
-PubSubData::PubSubData():
-    data(nullptr),
-    data_size(0)
-{}
-
-PubSubMsg::PubSubMsg(const PublisherInfo &pub_info) :
-    pub_info(pub_info)
-{}
 
 }} // END NAMESPACES.
 // =====================================================================================================================

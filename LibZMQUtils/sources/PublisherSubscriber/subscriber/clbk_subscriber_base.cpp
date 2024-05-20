@@ -39,19 +39,20 @@
 // =====================================================================================================================
 // =====================================================================================================================
 
-// ZMQUTILS INCLUDES
+// LIBZMQUTILS INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/PublisherSubscriber/clbk_subscriber_base.h"
+#include "LibZMQUtils/PublisherSubscriber/subscriber/clbk_subscriber_base.h"
 // =====================================================================================================================
 
-// ZMQUTILS NAMESPACES
+// LIBZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
 namespace pubsub{
+// =====================================================================================================================
 
 ClbkSubscriberBase::ClbkSubscriberBase() {}
 
-void ClbkSubscriberBase::setErrorCallback(std::function<void (const PubSubMsg &, SubscriberResult)> callback)
+void ClbkSubscriberBase::setErrorCallback(std::function<void (const PublishedMessage &, OperationResult)> callback)
 {
     this->error_callback_ = callback;
 }
@@ -69,20 +70,20 @@ bool ClbkSubscriberBase::hasCallback(const TopicType &topic)
 ClbkSubscriberBase::~ClbkSubscriberBase()
 {}
 
-void ClbkSubscriberBase::onInvalidMsgReceived(const PubSubMsg &msg, SubscriberResult res)
+void ClbkSubscriberBase::onInvalidMsgReceived(const PublishedMessage& msg, OperationResult res)
 {
     this->invokeErrorCallback(msg, res);
 }
 
-void ClbkSubscriberBase::onMsgReceived(const PubSubMsg &msg, SubscriberResult &res)
+void ClbkSubscriberBase::onMsgReceived(const PublishedMessage &msg, OperationResult res)
 {
     SubscriberBase::onMsgReceived(msg, res);
 
-    if (SubscriberResult::MSG_OK != res)
+    if (OperationResult::MSG_OK != res)
         this->invokeErrorCallback(msg, res);
 }
 
-void ClbkSubscriberBase::invokeErrorCallback(const PubSubMsg &msg, SubscriberResult res)
+void ClbkSubscriberBase::invokeErrorCallback(const PublishedMessage &msg, OperationResult res)
 {
     if (this->error_callback_)
         this->error_callback_(msg, res);

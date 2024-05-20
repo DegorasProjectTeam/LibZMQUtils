@@ -48,7 +48,7 @@ namespace amelas{
 namespace communication{
 // =====================================================================================================================
 
-zmqutils::pubsub::PublisherResult AmelasLoggerPublisher::sendLog(const controller::AmelasLog &log)
+zmqutils::pubsub::OperationResult AmelasLoggerPublisher::sendLog(const controller::AmelasLog &log)
 {
     std::string log_topic = AmelasLoggerTopic[static_cast<size_t>(log.level)];
     return this->sendMsg(log_topic, log);
@@ -82,16 +82,16 @@ void AmelasLoggerPublisher::onPublisherStop()
     std::cout<< std::string(100, '-')                                 << std::endl;
 }
 
-void AmelasLoggerPublisher::onSendingMsg(const zmqutils::pubsub::PubSubData &req)
+void AmelasLoggerPublisher::onSendingMsg(const zmqutils::pubsub::PublishedMessage& msg)
 {
-    zmqutils::serializer::BinarySerializer serializer(req.data.get(), req.data_size);
+    zmqutils::serializer::BinarySerializer serializer(msg.data.bytes.get(), msg.data.size);
     // Log.
     std::cout<< std::string(100, '-') << std::endl;
     std::cout<< "<" << this->getPublisherInfo().name << ">"       << std::endl;
     std::cout<< "-> ON PUBLISHER SEND COMMAND: "                  << std::endl;
     std::cout<< "Time: " << zmqutils::utils::currentISO8601Date() << std::endl;
-    std::cout<< "Topic: " << req.topic                            << std::endl;
-    std::cout<< "Params size: " << req.data_size                  << std::endl;
+    std::cout<< "Topic: " << msg.topic                            << std::endl;
+    std::cout<< "Params size: " << msg.data.size                  << std::endl;
     std::cout<< "Params Hex: " << serializer.getDataHexString()   << std::endl;
     std::cout<< std::string(100, '-')                             << std::endl;
 }

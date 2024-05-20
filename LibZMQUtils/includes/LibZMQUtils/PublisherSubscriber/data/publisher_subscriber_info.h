@@ -29,8 +29,8 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file debug_clbk_command_server_base.h
- * @brief This file contains the declaration of the DebugClbkCommandServerBase class and related.
+ * @file publisher_subscriber_info.h
+ * @brief This file contains the declaration for the PublisherInfo and SubscriberInfo structs.
  * @author Degoras Project Team
  * @copyright EUPL License
 ***********************************************************************************************************************/
@@ -44,78 +44,91 @@
 #include <string>
 // =====================================================================================================================
 
-// ZMQUTILS INCLUDES
+// LIBZMQUTILS INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/CommandServerClient/command_server/clbk_command_server_base.h"
+#include "LibZMQUtils/Global/libzmqutils_global.h"
+#include "LibZMQUtils/Utilities/uuid_generator.h"
 // =====================================================================================================================
 
-// ZMQUTILS NAMESPACES
+// LIBZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
-namespace reqrep{
+namespace pubsub{
 // =====================================================================================================================
 
 /**
- * @brief The DebugClbkCommandServerBase class implements a ClbkCommandServerBase that includes internal callbacks that
- * prints all the input and output data in each internal callback call to facilitate debugging and development. At any
- * time you can toggle inheritance between DebugClbkCommandServerBase and the original ClbkCommandServerBase one to
- * monitor what is happening on the screen. This class is for support and does not imply that a robust logging system
- * should not be used in the override implementation of the system being developed.
+ * @brief Represents information about a publisher.
+ *
  */
-class LIBZMQUTILS_EXPORT DebugClbkCommandServerBase : public ClbkCommandServerBase
+struct LIBZMQUTILS_EXPORT PublisherInfo
 {
-public:
 
-    DebugClbkCommandServerBase(unsigned port, const std::string& local_addr = "*", bool log_internal_callbacks = true);
+    /**
+     * @brief PublisherInfo constructor.
+     * @param uuid
+     * @param endpoint
+     * @param name
+     */
+    PublisherInfo(unsigned port, const utils::UUID& uuid, const std::string& endpoint, const std::string& hostname,
+                  const std::string& name, const std::string& info, const std::string& version,
+                  const std::vector<std::string>& ips);
 
-    DebugClbkCommandServerBase(unsigned port, const std::string& local_addr = "*", const std::string& server_name = "",
-                               const std::string& server_version = "", const std::string& server_info = "",
-                               bool log_internal_callbacks = true);
+    PublisherInfo(unsigned port, const utils::UUID& uuid, const std::string& endpoint);
 
-protected:
+    PublisherInfo(unsigned& port, utils::UUID& uuid, std::string& endpoint, std::string& hostname, std::string& name,
+                  std::string& info, std::string& version, std::vector<std::string>& ips);
 
-    // -----------------------------------------------------------------------------------------------------------------
-    using CommandServerBase::registerReqProcFunc;
-    using ClbkCommandServerBase::registerCallback;
-    // -----------------------------------------------------------------------------------------------------------------
 
-    // Internal overrided custom command received callback.
-    virtual void onCustomCommandReceived(zmqutils::reqrep::CommandRequest&) override;
+    // Default constructor, copy and move
+    PublisherInfo() = default;
+    PublisherInfo(const PublisherInfo&) = default;
+    PublisherInfo(PublisherInfo&&) = default;
+    PublisherInfo& operator=(const PublisherInfo&) = default;
+    PublisherInfo& operator=(PublisherInfo&&) = default;
 
-    // Internal overrided start callback.
-    virtual void onServerStart() override;
+    /**
+     * @brief Converts publisher info into a Json string.
+     * @return a Json string representing the publisher info.
+     */
+    std::string toJsonString() const;
 
-    // Internal overrided close callback.
-    virtual void onServerStop() override;
-
-    // Internal waiting command callback.
-    virtual void onWaitingCommand() override;
-
-    // Internal dead client callback.
-    virtual void onDeadClient(const zmqutils::reqrep::CommandClientInfo&) override;
-
-    // Internal overrided connect callback.
-    virtual void onConnected(const zmqutils::reqrep::CommandClientInfo&) override;
-
-    // Internal overrided disconnect callback.
-    virtual void onDisconnected(const zmqutils::reqrep::CommandClientInfo&) override;
-
-    // Internal overrided command received callback.
-    virtual void onCommandReceived(const zmqutils::reqrep::CommandRequest&) override;
-
-    // Internal overrided bad command received callback.
-    virtual void onInvalidMsgReceived(const zmqutils::reqrep::CommandRequest&) override;
-
-    // Internal overrided sending response callback.
-    virtual void onSendingResponse(const zmqutils::reqrep::CommandReply&) override;
-
-    // Internal overrided server error callback.
-    virtual void onServerError(const zmq::error_t&, const std::string& ext_info) override;
-
-private:
-
-    std::string generateStringHeader(const std::string& clbk_name, const std::vector<std::string>& data);
+    // Struct data.
+    unsigned port;                 ///< Publisher port.
+    utils::UUID uuid;              ///< Unique publisher host UUID.
+    std::string endpoint;          ///< Final publisher endpoint.
+    std::string hostname;          ///< Host publisher name.
+    std::string name;              ///< Publisher name, optional.
+    std::string info;              ///< Publisher information, optional.
+    std::string version;           ///< Publisher version, optional.
+    std::vector<std::string> ips;  ///< Vector of publisher ips.
 };
+
+/**
+ * @brief The SubscriberInfo struct holds the information of a specific subscriber.
+ */
+struct LIBZMQUTILS_EXPORT SubscriberInfo
+{
+    // Default constructor, copy and move
+    SubscriberInfo() = default;
+    SubscriberInfo(const SubscriberInfo&) = default;
+    SubscriberInfo(SubscriberInfo&&) = default;
+    SubscriberInfo& operator=(const SubscriberInfo&) = default;
+    SubscriberInfo& operator=(SubscriberInfo&&) = default;
+
+    /**
+     * @brief Converts subscriber info into a Json string.
+     * @return a Json string representing the publisher info.
+     */
+    std::string toJsonString() const;
+
+    // Struct data.
+    utils::UUID uuid;              ///< Unique Subscriber host UUID.
+    std::string name;              ///< Subscriber name, optional.
+    std::string info;              ///< Subscriber information, optional.
+    std::string version;           ///< Subscriber version, optional.
+};
+
+// =====================================================================================================================
 
 }} // END NAMESPACES.
 // =====================================================================================================================

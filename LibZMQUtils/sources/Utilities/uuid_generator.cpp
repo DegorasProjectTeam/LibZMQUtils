@@ -117,6 +117,11 @@ UUID UUIDGenerator::generateUUIDv4()
     return uuid;
 }
 
+UUID::UUID()
+{
+    this->clear();
+}
+
 UUID::UUID(const std::array<std::byte, 16> &bytes):
     bytes_(bytes)
 {}

@@ -29,7 +29,7 @@
  **********************************************************************************************************************/
 
 /** ********************************************************************************************************************
- * @file common.h
+ * @file command_server_client_info.h
  * @brief This file contains the declaration for the CommandClientInfo and CommandServerInfo structs.
  * @author Degoras Project Team
  * @copyright EUPL License
@@ -45,7 +45,7 @@
 #include <cstring>
 // =====================================================================================================================
 
-// ZMQUTILS INCLUDES
+// LIBZMQUTILS INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/Global/libzmqutils_global.h"
 #include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
@@ -53,7 +53,7 @@
 #include "LibZMQUtils/Utilities/uuid_generator.h"
 // =====================================================================================================================
 
-// ZMQUTILS NAMESPACES
+// LIBZMQUTILS NAMESPACES
 // =====================================================================================================================
 namespace zmqutils{
 namespace reqrep{
@@ -78,8 +78,12 @@ struct LIBZMQUTILS_EXPORT CommandClientInfo : public zmqutils::serializer::Seria
      * @param info      Detailed client information.
      * @param version   Client version.
      */
-    CommandClientInfo(const utils::UUID& uuid, const std::string& ip, const std::string& pid, const std::string& hostname,
-               const std::string& name, const std::string& info, const std::string& version);
+    CommandClientInfo(const utils::UUID& uuid, const std::string& ip, const std::string& pid,
+                      const std::string& hostname, const std::string& name, const std::string& info,
+                      const std::string& version);
+
+    CommandClientInfo(utils::UUID& uuid, std::string& ip, std::string& pid, std::string& hostname,
+                      std::string& name, std::string& info, std::string& version);
 
     // Default constructors and operatos.
     CommandClientInfo() = default;
@@ -135,7 +139,20 @@ struct LIBZMQUTILS_EXPORT CommandServerInfo
      * @param ips      Vector of server IP addresses.
      */
     CommandServerInfo(unsigned port, const std::string& endpoint, const std::string& hostname, const std::string& name,
-               const std::string& info, const std::string& version, const std::vector<std::string>& ips);
+                      const std::string& info, const std::string& version, const std::vector<std::string>& ips);
+
+    /**
+     * @brief Constructor for CommandServerInfo with specific parameters.
+     * @param port     Server port.
+     * @param endpoint Final server endpoint.
+     * @param hostname Host server name.
+     * @param name     Server name.
+     * @param info     Detailed server information.
+     * @param version  Server version.
+     * @param ips      Vector of server IP addresses.
+     */
+    CommandServerInfo(unsigned& port, std::string& endpoint, std::string& hostname, std::string& name,
+                      std::string& info, std::string& version, std::vector<std::string>& ips);
 
     // Default constructors and operators.
     CommandServerInfo() = default;

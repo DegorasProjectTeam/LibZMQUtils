@@ -49,7 +49,7 @@
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-#include "LibZMQUtils/PublisherSubscriber/subscriber_base.h"
+#include "LibZMQUtils/PublisherSubscriber/subscriber/subscriber_base.h"
 #include "LibZMQUtils/Global/constants.h"
 #include "LibZMQUtils/InternalHelpers/network_helpers.h"
 #include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
@@ -138,7 +138,7 @@ void SubscriberBase::stopSubscriber()
     this->topic_filters_.clear();
 }
 
-void SubscriberBase::subscribe(const std::string &pub_endpoint)
+void SubscriberBase::subscribe(const std::string& pub_endpoint)
 {
     // Check if endpoint is already subscribed
     auto it = std::find_if(this->subscribed_publishers_.begin(), this->subscribed_publishers_.end(),
@@ -149,7 +149,8 @@ void SubscriberBase::subscribe(const std::string &pub_endpoint)
     if (it == this->subscribed_publishers_.end())
     {
         // If endpoint is not subscribed, then store information.
-        PublisherInfo pub_info(utils::UUIDGenerator::getInstance().generateUUIDv4(), pub_endpoint);
+        unsigned port = static_cast<unsigned>(std::stoi(pub_endpoint.substr(pub_endpoint.rfind(':') + 1)));
+        PublisherInfo pub_info(port, utils::UUID(), pub_endpoint);
         this->subscribed_publishers_.insert({pub_info.uuid, pub_info});
         // If socket is started, then reset to apply the change.
         if (this->flag_working_)
@@ -249,28 +250,11 @@ SubscriberBase::~SubscriberBase()
     this->internalStopSubscriber();
 }
 
-void SubscriberBase::onMsgReceived(const PubSubMsg &msg, SubscriberResult &res)
-{
-    auto iter = process_fnc_map_.find(msg.data.topic);
-    if(iter != process_fnc_map_.end())
-    {
-        // Invoke the function.
-        iter->second(msg);
-        res = SubscriberResult::MSG_OK;
-    }
-    else
-    {
-        // Command not found in the map.
-        res = SubscriberResult::NOT_IMPLEMENTED;
-    }
-}
-
-
 void SubscriberBase::startWorker()
 {
     // Containers.
-    SubscriberResult result;
-    PubSubMsg msg;
+    OperationResult result;
+    PublishedMessage msg;
 
     // Start subscriber socket
     this->resetSocket();
@@ -282,33 +266,38 @@ void SubscriberBase::startWorker()
         result = this->recvFromSocket(msg);
 
         // Process the data.
-        if(result == SubscriberResult::MSG_OK && !this->flag_working_)
+        if(result == OperationResult::MSG_OK && !this->flag_working_)
         {
             // In this case, we will close the subscriber. Call to the internal callback.
             this->onSubscriberStop();
         }
-        else if (result != SubscriberResult::MSG_OK)
+        else if (result != OperationResult::MSG_OK)
         {
             // Internal callback.
             this->onInvalidMsgReceived(msg, result);
         }
-        else if (result == SubscriberResult::MSG_OK)
+        else if (result == OperationResult::MSG_OK)
         {
+            // Fin the functor.
+            auto iter = process_fnc_map_.find(msg.topic);
+
+            // Update the result value.
+            result = (iter == process_fnc_map_.end()) ? OperationResult::NOT_IMPLEMENTED : OperationResult::MSG_OK;
+
             // Call callback for msg received.
             this->onMsgReceived(msg, result);
 
-            // If processing was not succesful, call invalid msg callback.
-            if (result != SubscriberResult::MSG_OK)
-                this->onInvalidMsgReceived(msg, result);
+            // Invoke the function if implemented.
+            if(iter != process_fnc_map_.end())
+                iter->second(msg);
         }
-    }
-    // Finish the worker.
+    } // Finish the worker.
 }
 
-SubscriberResult SubscriberBase::recvFromSocket(PubSubMsg& msg)
+OperationResult SubscriberBase::recvFromSocket(PublishedMessage& msg)
 {
     // Result variable.
-    SubscriberResult result = SubscriberResult::MSG_OK;
+    OperationResult result = OperationResult::MSG_OK;
 
     // Containers.
     bool recv_result;
@@ -325,31 +314,27 @@ SubscriberResult SubscriberBase::recvFromSocket(PubSubMsg& msg)
         // Check if we want to close the subscriber.
         // The error code is for ZMQ EFSM error.
         if(error.num() == kZmqEFSMError && !this->flag_working_)
-            return SubscriberResult::MSG_OK;
+            return OperationResult::MSG_OK;
 
         // Else, call to error callback.
         this->onSubscriberError(error, "SubscriberBase: Error while receiving a request.");
-        return SubscriberResult::INTERNAL_ZMQ_ERROR;
+        return OperationResult::INTERNAL_ZMQ_ERROR;
     }
 
     // Check for empty msg or timeout reached.
     if (multipart_msg.empty())
-        return SubscriberResult::EMPTY_MSG;
+        return OperationResult::EMPTY_MSG;
 
     // Check the multipart msg size.
     if (recv_result && (multipart_msg.size() == 3 || multipart_msg.size() == 4))
     {
         // Get the multipart data.
         zmq::message_t msg_topic = multipart_msg.pop();
-        zmq::message_t msg_pub_name = multipart_msg.pop();
         zmq::message_t msg_uuid = multipart_msg.pop();
+        zmq::message_t msg_pub_name = multipart_msg.pop();
 
         // Get the topic. Topic is not serialized using BinarySerializer, since it must come plain.
-        msg.data.topic = msg_topic.to_string();
-
-        // Get the publisher name.
-        serializer::BinarySerializer::fastDeserialization(
-            msg_pub_name.data(), msg_pub_name.size(), msg.pub_info.name);
+        msg.topic = msg_topic.to_string();
 
         // Get the publisher uuid data.
         if (msg_uuid.size() == utils::UUID::kUUIDSize + sizeof(serializer::SizeUnit)*2)
@@ -359,17 +344,22 @@ SubscriberResult SubscriberBase::recvFromSocket(PubSubMsg& msg)
             msg.pub_info.uuid = utils::UUID(uuid_bytes);
         }
         else
-            return SubscriberResult::INVALID_PUB_UUID;
+            return OperationResult::INVALID_PUB_UUID;
+
+        // Get the publisher information.
+        serializer::BinarySerializer::fastDeserialization(msg_pub_name.data(), msg_pub_name.size(),
+            msg.pub_info.endpoint, msg.pub_info.hostname, msg.pub_info.name, msg.pub_info.info, msg.pub_info.version);
+
+        // TODO COMPLETE INFO AND STORE IT
 
         // If exit topic was issued, check if uuid matches the close publisher.
-        if (kReservedExitTopic == msg.data.topic)
+        if (kReservedExitTopic == msg.topic)
         {
             if (this->socket_close_uuid_ == msg.pub_info.uuid)
-                return SubscriberResult::MSG_OK;
+                return OperationResult::MSG_OK;
             else
-                return SubscriberResult::INVALID_PARTS;
+                return OperationResult::INVALID_PARTS;
         }
-
 
         // If there is still one more part, it is the message data.
         if (multipart_msg.size() == 1)
@@ -382,21 +372,19 @@ SubscriberResult SubscriberBase::recvFromSocket(PubSubMsg& msg)
             {
                 // Get and store the parameters data.
                 serializer::BinarySerializer serializer(message_data.data(), message_data.size());
-                msg.data.data_size = serializer.moveUnique(msg.data.data);
+                msg.data.size = serializer.moveUnique(msg.data.bytes);
 
             }
             else
-                return SubscriberResult::EMPTY_PARAMS;
+                return OperationResult::EMPTY_PARAMS;
         }
     }
     else
-        return SubscriberResult::INVALID_PARTS;
+        return OperationResult::INVALID_PARTS;
 
     // Return the result.
     return result;
 }
-
-
 
 void SubscriberBase::resetSocket()
 {
@@ -417,12 +405,14 @@ void SubscriberBase::resetSocket()
         this->socket_->connect(close_endpoint);
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
         this->socket_->set(zmq::sockopt::subscribe, kReservedExitTopic);
+
         // Connect to subscribed publishers
         for (const auto& publishers : this->subscribed_publishers_)
         {
             this->socket_->connect(publishers.second.endpoint);
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
+
         // Set all topic filters
         for (const auto& topic: this->topic_filters_)
         {
@@ -464,6 +454,9 @@ void SubscriberBase::resetSocket()
 
     }
 }
+
+void SubscriberBase::onMsgReceived(const PublishedMessage&, OperationResult)
+{}
 
 }} // END NAMESPACES.
 // =====================================================================================================================
