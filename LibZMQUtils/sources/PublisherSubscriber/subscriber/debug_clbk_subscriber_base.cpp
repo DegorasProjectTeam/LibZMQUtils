@@ -83,8 +83,6 @@ void DebugClbkSubscriberBase::onSubscriberError(const zmq::error_t &error, const
 
 void DebugClbkSubscriberBase::onInvalidMsgReceived(const PublishedMessage& msg, OperationResult res)
 {
-    ClbkSubscriberBase::onInvalidMsgReceived(msg, res);
-
     // Log.
     serializer::BinarySerializer serializer(msg.data.bytes.get(), msg.data.size);
     std::stringstream data;
@@ -94,13 +92,13 @@ void DebugClbkSubscriberBase::onInvalidMsgReceived(const PublishedMessage& msg, 
     data << "Params Hex:     " << serializer.getDataHexString();
     std::cout << this->generateStringHeader("ON INVALID MSG RECEIVED", {data.str()});
 
+    // Call parent method.
+    ClbkSubscriberBase::onInvalidMsgReceived(msg, res);
+
 }
 
 void DebugClbkSubscriberBase::onMsgReceived(const PublishedMessage &msg, OperationResult res)
 {
-    // Call parent method
-    ClbkSubscriberBase::onMsgReceived(msg, res);
-
     // Log.
     serializer::BinarySerializer serializer(msg.data.bytes.get(), msg.data.size);
     std::stringstream data;
@@ -109,6 +107,9 @@ void DebugClbkSubscriberBase::onMsgReceived(const PublishedMessage &msg, Operati
     data << "Params size:    " << msg.data.size                              << std::endl;
     data << "Params Hex:     " << serializer.getDataHexString();
     std::cout << this->generateStringHeader("ON MSG RECEIVED", {data.str()});
+
+    // Call parent method.
+    ClbkSubscriberBase::onMsgReceived(msg, res);
 
 }
 
