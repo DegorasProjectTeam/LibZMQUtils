@@ -111,7 +111,7 @@ void DebugCommandClientBase::onConnected(const CommandServerInfo& server)
 void DebugCommandClientBase::onDisconnected(const CommandServerInfo& server)
 {
     // Log.
-    std::cout << this->generateStringHeader("ON DISCONNECTED", {server.toJsonString()});
+    std::cout << this->generateStringHeader("ON DISCONNECTED", {server.toString()});
 }
 
 void DebugCommandClientBase::onBadOperation(const CommandReply &rep)

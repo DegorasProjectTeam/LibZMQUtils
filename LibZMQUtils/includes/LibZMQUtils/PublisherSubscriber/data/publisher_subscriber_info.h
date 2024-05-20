@@ -69,13 +69,13 @@ struct LIBZMQUTILS_EXPORT PublisherInfo
      * @param endpoint
      * @param name
      */
-    PublisherInfo(unsigned port, const utils::UUID& uuid, const std::string& endpoint, const std::string& hostname,
+    PublisherInfo(const utils::UUID& uuid, unsigned port, const std::string& endpoint, const std::string& hostname,
                   const std::string& name, const std::string& info, const std::string& version,
                   const std::vector<std::string>& ips);
 
-    PublisherInfo(unsigned port, const utils::UUID& uuid, const std::string& endpoint);
+    PublisherInfo(const utils::UUID& uuid, unsigned port, const std::string& endpoint);
 
-    PublisherInfo(unsigned& port, utils::UUID& uuid, std::string& endpoint, std::string& hostname, std::string& name,
+    PublisherInfo(utils::UUID& uuid, unsigned& port, std::string& endpoint, std::string& hostname, std::string& name,
                   std::string& info, std::string& version, std::vector<std::string>& ips);
 
 
@@ -98,8 +98,8 @@ struct LIBZMQUTILS_EXPORT PublisherInfo
     std::string toString() const;
 
     // Struct data.
-    unsigned port;                 ///< Publisher port.
     utils::UUID uuid;              ///< Unique publisher host UUID.
+    unsigned port;                 ///< Publisher port.
     std::string endpoint;          ///< Final publisher endpoint.
     std::string hostname;          ///< Host publisher name.
     std::string name;              ///< Publisher name, optional.
@@ -133,6 +133,7 @@ struct LIBZMQUTILS_EXPORT SubscriberInfo
 
     // Struct data.
     utils::UUID uuid;              ///< Unique Subscriber host UUID.
+    std::string hostname;          ///< Host subscriber name.
     std::string name;              ///< Subscriber name, optional.
     std::string info;              ///< Subscriber information, optional.
     std::string version;           ///< Subscriber version, optional.

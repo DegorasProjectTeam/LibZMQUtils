@@ -101,8 +101,8 @@ PublisherBase::PublisherBase(unsigned port,
     }
 
     // Update the publisher information.
-    this->pub_info_.port = port;
     this->pub_info_.uuid = uuid;
+    this->pub_info_.port = port;
     this->pub_info_.endpoint = "tcp://" + ip_address + ":" + std::to_string(port);
     this->pub_info_.hostname = internal_helpers::network::getHostname();
     this->pub_info_.name = publisher_name;
@@ -268,6 +268,26 @@ OperationResult PublisherBase::sendMsg(const TopicType& topic, PublishedData& da
 const std::vector<NetworkAdapterInfo> &PublisherBase::getBoundInterfaces() const
 {
     return this->publisher_adapters_;
+}
+
+std::string PublisherBase::operationResultToString(OperationResult result)
+{
+    // Containers.
+    std::int32_t enum_val = static_cast<std::int32_t>(result);
+    std::size_t idx = static_cast<std::size_t>(result);
+    std::string op_str = "UNKNOWN_OPERATION_RESULT";
+
+    // Check the index.
+    if (enum_val < 0)
+        op_str = "INVALID_OPERATION_RESULT";
+    else if (idx < std::size(OperationResultStr))
+        op_str = OperationResultStr[idx];
+    return op_str;
+}
+
+std::string PublisherBase::operationResultToString(ResultType result)
+{
+    return PublisherBase::operationResultToString(static_cast<OperationResult>(result));
 }
 
 bool PublisherBase::internalResetPublisher()

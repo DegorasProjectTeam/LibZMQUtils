@@ -120,22 +120,22 @@ enum class OperationResult : ResultType
 // Usefull const expressions.
 
 /// Minimum valid base enum command identifier (related to ServerCommand enum).
-constexpr size_t kMinBaseCmdId = static_cast<int>(ServerCommand::INVALID_COMMAND) + 1;
+constexpr int kMinBaseCmdId = static_cast<int>(ServerCommand::INVALID_COMMAND) + 1;
 
 /// Maximum valid base enum command identifier (related to ServerCommand enum).
-constexpr size_t kMaxBaseCmdId = static_cast<int>(ServerCommand::END_BASE_COMMANDS) - 1;
+constexpr int kMaxBaseCmdId = static_cast<int>(ServerCommand::END_BASE_COMMANDS) - 1;
 
 /// Maximum number of strings for representing each base enum command identifier (related to ServerCommand enum).
-constexpr size_t kMaxBaseCmdSrings = static_cast<int>(ServerCommand::END_BASE_COMMANDS) + 1;
+constexpr int kMaxBaseCmdSrings = static_cast<int>(ServerCommand::END_BASE_COMMANDS) + 1;
 
 /// Minimum valid base enum result identifier (related to OperationResult enum).
-constexpr size_t kMinBaseResultId = static_cast<int>(OperationResult::INVALID_RESULT) + 1;
+constexpr int kMinBaseResultId = static_cast<int>(OperationResult::INVALID_RESULT) + 1;
 
 /// Maximum valid base enum result identifier (related to OperationResult enum).
-constexpr size_t kMaxBaseResultId = static_cast<int>(OperationResult::END_BASE_RESULTS) - 1;
+constexpr int kMaxBaseResultId = static_cast<int>(OperationResult::END_BASE_RESULTS) - 1;
 
 /// Maximum number of strings for representing each base enum result identifier (related to OperationResult enum).
-constexpr size_t kMaxBaseResultSrings = static_cast<int>(OperationResult::END_BASE_RESULTS) + 1;
+constexpr int kMaxBaseResultSrings = static_cast<int>(OperationResult::END_BASE_RESULTS) + 1;
 
 // Lookup arrays for trasnsform the enumerations to string.
 

@@ -265,7 +265,7 @@ public:
      * @param result The OperationResult enum value to convert.
      * @return The string representation of the result.
      */
-    std::string operationResultToString(OperationResult result) const;
+    static std::string operationResultToString(OperationResult result);
 
     /**
      * @brief Converts a OperationResult (as ResultType raw value) to its string representation.
@@ -277,7 +277,7 @@ public:
      * @param result The ResultType raw value to convert.
      * @return The string representation of the result.
      */
-    std::string operationResultToString(ResultType result) const;
+    static std::string operationResultToString(ResultType result);
 
     /**
      * @brief Virtual destructor to ensure proper cleanup when the derived class is destroyed.

@@ -92,9 +92,10 @@ public:
         std::cout << "[ERROR] - " << log.str_info << std::endl;
     }
 
-    void processReceivedLogError(const PublishedMessage&, OperationResult res)
+    void processErrorCallback(const PublishedMessage&, OperationResult res)
     {
-        std::cout << "Received bad log. Error code is: " << static_cast<ResultType>(res) << std::endl;
+        std::cout << "Error callback with code: " << static_cast<ResultType>(res)
+                  << " (" << AmelasLoggerSubscriber::operationResultToString(res) << ")" << std::endl;
     }
 };
 
@@ -133,8 +134,7 @@ int main(int, char**)
                                                   &AmelasLogProcessor::processLogError);
 
     subscriber.setErrorCallback(&log_processor,
-                                &AmelasLogProcessor::processReceivedLogError);
-
+                                &AmelasLogProcessor::processErrorCallback);
 
     // Start the subscriber.
     bool started = subscriber.startSubscriber();

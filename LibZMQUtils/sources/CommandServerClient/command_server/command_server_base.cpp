@@ -81,6 +81,9 @@ CommandServerBase::CommandServerBase(unsigned port,
     server_reconn_attempts_(kDefaultServerReconnAttempts),
     max_connected_clients_(kDefaultMaxNumberOfClients)
 {
+    // Generate a unique UUID (v4) for the server.
+    utils::UUID uuid = utils::UUIDGenerator::getInstance().generateUUIDv4();
+
     // Get the adapters.
     std::vector<NetworkAdapterInfo> interfcs = internal_helpers::network::getHostIPsWithInterfaces();
 
@@ -104,6 +107,7 @@ CommandServerBase::CommandServerBase(unsigned port,
     }
 
     // Update the server information.
+    this->server_info_.uuid = uuid;
     this->server_info_.name = server_name;
     this->server_info_.port = port;
     this->server_info_.version = server_version;

@@ -454,11 +454,8 @@ std::string CommandClientBase::serverCommandToString(CommandType command) const
     return this->serverCommandToString(static_cast<ServerCommand>(command));
 }
 
-std::string CommandClientBase::operationResultToString(OperationResult result) const
+std::string CommandClientBase::operationResultToString(OperationResult result)
 {
-    // Mutex.
-    std::unique_lock<std::mutex> lock(this->mtx_);
-
     // Containers.
     std::int32_t enum_val = static_cast<std::int32_t>(result);
     std::size_t idx = static_cast<std::size_t>(result);
@@ -472,9 +469,9 @@ std::string CommandClientBase::operationResultToString(OperationResult result) c
     return op_str;
 }
 
-std::string CommandClientBase::operationResultToString(ResultType result) const
+std::string CommandClientBase::operationResultToString(ResultType result)
 {
-    return this->operationResultToString(static_cast<OperationResult>(result));
+    return CommandClientBase::operationResultToString(static_cast<OperationResult>(result));
 }
 
 bool CommandClientBase::isBaseCommand(ServerCommand command) const

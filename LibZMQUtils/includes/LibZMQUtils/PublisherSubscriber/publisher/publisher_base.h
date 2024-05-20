@@ -194,6 +194,9 @@ public:
      */
     const std::vector<internal_helpers::network::NetworkAdapterInfo> &getBoundInterfaces() const;
 
+    static std::string operationResultToString(OperationResult result);
+
+    static std::string operationResultToString(ResultType result);
     /**
      * @brief Virtual destructor to ensure proper cleanup when the derived class is destroyed.
      * @warning The publisher will stop if is running but in this case the `onPublisherStop` callback can't be executed.

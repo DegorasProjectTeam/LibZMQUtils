@@ -80,10 +80,11 @@ SubscriberBase::SubscriberBase(const std::string& subscriber_name,
     }
 
     // Update the subscriber info.
+    this->sub_info_.uuid = utils::UUIDGenerator::getInstance().generateUUIDv4();
+    this->sub_info_.hostname = internal_helpers::network::getHostname();
     this->sub_info_.name = subscriber_name;
     this->sub_info_.version = subscriber_version;
     this->sub_info_.info = subscriber_info;
-    this->sub_info_.uuid = utils::UUIDGenerator::getInstance().generateUUIDv4();
 }
 
 const std::set<TopicType> &SubscriberBase::getTopicFilters() const
@@ -158,7 +159,7 @@ void SubscriberBase::subscribe(const std::string& pub_endpoint)
     {
         // If endpoint is not subscribed, then store information.
         unsigned port = static_cast<unsigned>(std::stoi(pub_endpoint.substr(pub_endpoint.rfind(':') + 1)));
-        PublisherInfo pub_info(port, utils::UUID(), pub_endpoint);
+        PublisherInfo pub_info(utils::UUID(),port, pub_endpoint);
         this->subscribed_publishers_.insert({pub_info.uuid, pub_info});
         // If socket is started, then reset to apply the change.
         if (this->flag_working_)
@@ -210,11 +211,8 @@ void SubscriberBase::removeTopicFilter(const TopicType &filter)
 
 }
 
-std::string SubscriberBase::operationResultToString(OperationResult result) const
+std::string SubscriberBase::operationResultToString(OperationResult result)
 {
-    // Mutex.
-    std::unique_lock<std::mutex> lock(this->mtx_);
-
     // Containers.
     std::int32_t enum_val = static_cast<std::int32_t>(result);
     std::size_t idx = static_cast<std::size_t>(result);
@@ -226,6 +224,11 @@ std::string SubscriberBase::operationResultToString(OperationResult result) cons
     else if (idx < std::size(OperationResultStr))
         op_str = OperationResultStr[idx];
     return op_str;
+}
+
+std::string SubscriberBase::operationResultToString(ResultType result)
+{
+    return SubscriberBase::operationResultToString(static_cast<OperationResult>(result));
 }
 
 void SubscriberBase::internalStopSubscriber()

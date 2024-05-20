@@ -138,8 +138,9 @@ struct LIBZMQUTILS_EXPORT CommandServerInfo
      * @param version  Server version.
      * @param ips      Vector of server IP addresses.
      */
-    CommandServerInfo(unsigned port, const std::string& endpoint, const std::string& hostname, const std::string& name,
-                      const std::string& info, const std::string& version, const std::vector<std::string>& ips);
+    CommandServerInfo(const utils::UUID &uuid, unsigned port, const std::string& endpoint, const std::string& hostname,
+                      const std::string& name, const std::string& info, const std::string& version,
+                      const std::vector<std::string>& ips);
 
     /**
      * @brief Constructor for CommandServerInfo with specific parameters.
@@ -151,8 +152,8 @@ struct LIBZMQUTILS_EXPORT CommandServerInfo
      * @param version  Server version.
      * @param ips      Vector of server IP addresses.
      */
-    CommandServerInfo(unsigned& port, std::string& endpoint, std::string& hostname, std::string& name,
-                      std::string& info, std::string& version, std::vector<std::string>& ips);
+    CommandServerInfo(utils::UUID &uuid, unsigned& port, std::string& endpoint, std::string& hostname,
+                      std::string& name, std::string& info, std::string& version, std::vector<std::string>& ips);
 
     // Default constructors and operators.
     CommandServerInfo() = default;
@@ -172,6 +173,7 @@ struct LIBZMQUTILS_EXPORT CommandServerInfo
     std::string toString() const;
 
     // Struct data.
+    utils::UUID uuid;              ///< Unique server UUID.
     unsigned port;                 ///< Server port.
     std::string endpoint;          ///< Final server endpoint.
     std::string hostname;          ///< Host server name.

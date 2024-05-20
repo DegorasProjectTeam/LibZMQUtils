@@ -51,11 +51,11 @@ namespace zmqutils{
 namespace pubsub{
 // =====================================================================================================================
 
-PublisherInfo::PublisherInfo(unsigned port, const utils::UUID& uuid, const std::string& endpoint,
+PublisherInfo::PublisherInfo(const utils::UUID& uuid, unsigned port, const std::string& endpoint,
                              const std::string &hostname, const std::string &name, const std::string &info,
                              const std::string &version, const std::vector<std::string> &ips) :
-    port(port),
     uuid(uuid),
+    port(port),
     endpoint(endpoint),
     hostname(hostname),
     name(name),
@@ -64,13 +64,13 @@ PublisherInfo::PublisherInfo(unsigned port, const utils::UUID& uuid, const std::
     ips(ips)
 {}
 
-PublisherInfo::PublisherInfo(unsigned port, const utils::UUID& uuid, const std::string& endpoint) :
-    port(port),
+PublisherInfo::PublisherInfo(const utils::UUID& uuid, unsigned port, const std::string& endpoint) :
     uuid(uuid),
+    port(port),
     endpoint(endpoint)
 {}
 
-PublisherInfo::PublisherInfo(unsigned& port, utils::UUID& uuid, std::string& endpoint,
+PublisherInfo::PublisherInfo(utils::UUID& uuid, unsigned& port, std::string& endpoint,
                              std::string &hostname, std::string &name, std::string &info,
                              std::string &version, std::vector<std::string>& ips) :
     port(std::move(port)),
@@ -124,8 +124,8 @@ std::string PublisherInfo::toString() const
         ip_list.erase(ip_list.size() - separator.size(), separator.size());
 
     // Generate the string.
-    ss << "Publisher Port:      "        << this->port                   << std::endl;
     ss << "Publisher UUID:      "        << this->uuid.toRFC4122String() << std::endl;
+    ss << "Publisher Port:      "        << this->port                   << std::endl;
     ss << "Publisher Endpoint:  "        << this->endpoint               << std::endl;
     ss << "Publisher Hostname:  "        << this->hostname               << std::endl;
     ss << "Publisher Name:      "        << this->name                   << std::endl;
@@ -142,6 +142,7 @@ std::string SubscriberInfo::toJsonString() const
 
     ss << "{"
        << "\"uuid\":\"" << this->uuid.toRFC4122String() << "\","
+       << "\"hostname\":\"" << this->hostname << "\","
        << "\"name\":\"" << this->name << "\","
        << "\"info\":\"" << this->info << "\","
        << "\"version\":\"" << this->version << "\","
@@ -157,6 +158,7 @@ std::string SubscriberInfo::toString() const
 
     // Generate the string.
     ss << "Subscriber UUID:     " << this->uuid.toRFC4122String() << std::endl;
+    ss << "Subscriber Hostname: " << this->hostname               << std::endl;
     ss << "Subscriber Name:     " << this->name                   << std::endl;
     ss << "Subscriber Info:     " << this->info                   << std::endl;
     ss << "Subscriber Version:  " << this->version;

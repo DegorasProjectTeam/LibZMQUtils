@@ -177,7 +177,9 @@ public:
      */
     void cleanTopicFilters();
 
-    std::string operationResultToString(OperationResult result) const;
+    static std::string operationResultToString(OperationResult result);
+
+    static std::string operationResultToString(ResultType result);
 
     /**
      * @brief Virtual destructor.

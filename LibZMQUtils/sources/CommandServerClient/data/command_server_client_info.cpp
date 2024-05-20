@@ -112,9 +112,10 @@ std::string CommandClientInfo::toJsonString() const
     return ss.str();
 }
 
-CommandServerInfo::CommandServerInfo(unsigned int port, const std::string &endpoint, const std::string &hostname,
-                       const std::string &name, const std::string &info, const std::string &version,
-                       const std::vector<std::string> &ips) :
+CommandServerInfo::CommandServerInfo(const utils::UUID &uuid, unsigned int port, const std::string &endpoint, const std::string &hostname,
+                                     const std::string &name, const std::string &info, const std::string &version,
+                                     const std::vector<std::string> &ips) :
+    uuid(uuid),
     port(port),
     endpoint(endpoint),
     hostname(hostname),
@@ -124,9 +125,10 @@ CommandServerInfo::CommandServerInfo(unsigned int port, const std::string &endpo
     ips(ips)
 {}
 
-CommandServerInfo::CommandServerInfo(unsigned& port, std::string &endpoint, std::string &hostname,
+CommandServerInfo::CommandServerInfo(utils::UUID &uuid, unsigned& port, std::string &endpoint, std::string &hostname,
                                      std::string &name, std::string &info, std::string &version,
                                      std::vector<std::string> &ips) :
+    uuid(std::move(uuid)),
     port(std::move(port)),
     endpoint(std::move(endpoint)),
     hostname(std::move(hostname)),
@@ -141,6 +143,7 @@ std::string CommandServerInfo::toJsonString() const
     std::stringstream ss;
 
     ss << "{"
+       << "\"uuid\":\"" << this->uuid.toRFC4122String() << "\","
        << "\"port\":" << this->port << ","
        << "\"endpoint\":\"" << this->endpoint << "\","
        << "\"hostname\":\"" << this->hostname << "\","
@@ -174,6 +177,7 @@ std::string CommandClientInfo::toString() const
     ss << "Client Info:     " << this->info                   << std::endl;
     ss << "Client Version:  " << this->version                << std::endl;
     ss << "Client Seen:     " << utils::timePointToIso8601(this->last_seen);
+
     // Return the string.
     return ss.str();
 }
@@ -194,6 +198,7 @@ std::string CommandServerInfo::toString() const
         ip_list.erase(ip_list.size() - separator.size(), separator.size());
 
     // Generate the string.
+    ss << "Server UUID:      " << this->uuid.toRFC4122String() << std::endl;
     ss << "Server Port:      " << this->port << std::endl;
     ss << "Server Endpoint:  " << this->endpoint << std::endl;
     ss << "Server Hostname:  " << this->hostname << std::endl;

@@ -92,13 +92,13 @@ enum class OperationResult : ResultType
 };
 
 /// Minimum valid base enum result identifier (related to OperationResult enum).
-constexpr size_t kMinBaseResultId = static_cast<int>(OperationResult::INVALID_RESULT) + 1;
+constexpr int kMinBaseResultId = static_cast<int>(OperationResult::INVALID_RESULT) + 1;
 
 /// Maximum valid base enum result identifier (related to OperationResult enum).
-constexpr size_t kMaxBaseResultId = static_cast<int>(OperationResult::END_BASE_RESULTS) - 1;
+constexpr int kMaxBaseResultId = static_cast<int>(OperationResult::END_BASE_RESULTS) - 1;
 
 /// Maximum number of strings for representing each base enum result identifier (related to OperationResult enum).
-constexpr size_t kMaxBaseResultSrings = static_cast<int>(OperationResult::END_BASE_RESULTS) + 1;
+constexpr int kMaxBaseResultSrings = static_cast<int>(OperationResult::END_BASE_RESULTS) + 1;
 
 /// Lookup array with strings that represents the different OperationResult enum values.
 static constexpr std::array<const char*, kMaxBaseResultSrings>  OperationResultStr
