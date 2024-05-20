@@ -210,6 +210,24 @@ void SubscriberBase::removeTopicFilter(const TopicType &filter)
 
 }
 
+std::string SubscriberBase::operationResultToString(OperationResult result) const
+{
+    // Mutex.
+    std::unique_lock<std::mutex> lock(this->mtx_);
+
+    // Containers.
+    std::int32_t enum_val = static_cast<std::int32_t>(result);
+    std::size_t idx = static_cast<std::size_t>(result);
+    std::string op_str = "UNKNOWN_OPERATION_RESULT";
+
+    // Check the index.
+    if (enum_val < 0)
+        op_str = "INVALID_OPERATION_RESULT";
+    else if (idx < std::size(OperationResultStr))
+        op_str = OperationResultStr[idx];
+    return op_str;
+}
+
 void SubscriberBase::internalStopSubscriber()
 {
     // If worker is already stopped, do nothing.

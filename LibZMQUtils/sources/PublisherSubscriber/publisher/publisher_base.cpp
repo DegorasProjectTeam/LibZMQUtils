@@ -345,7 +345,6 @@ void PublisherBase::internalStopPublisher()
 
 zmq::multipart_t PublisherBase::prepareMessage(const TopicType& topic, PublishedMessage& msg)
 {
-
     // Serializer.
     serializer::BinarySerializer serializer;
 

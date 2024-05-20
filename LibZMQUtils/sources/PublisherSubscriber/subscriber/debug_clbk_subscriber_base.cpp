@@ -80,21 +80,21 @@ void DebugClbkSubscriberBase::onSubscriberError(const zmq::error_t &error, const
     std::cout << this->generateStringHeader("ON SUBSCRIBER ERROR", {data.str()});
 }
 
-
 void DebugClbkSubscriberBase::onInvalidMsgReceived(const PublishedMessage& msg, OperationResult res)
 {
     // Log.
     serializer::BinarySerializer serializer(msg.data.bytes.get(), msg.data.size);
     std::stringstream data;
-    data << "Topic:          " << msg.topic                                  << std::endl;
-    data << "Publisher UUID: " << msg.pub_info.uuid .toRFC4122String()       << std::endl;
-    data << "Params size:    " << msg.data.size                              << std::endl;
+    data << "Topic:          " << msg.topic                      << std::endl;
+    data << "Result: " << static_cast<ResultType>(res)
+         << " (" << operationResultToString(res) << ")"          << std::endl;
+    data << msg.pub_info.toString()                              << std::endl;
+    data << "Params size:    " << msg.data.size                  << std::endl;
     data << "Params Hex:     " << serializer.getDataHexString();
     std::cout << this->generateStringHeader("ON INVALID MSG RECEIVED", {data.str()});
 
     // Call parent method.
     ClbkSubscriberBase::onInvalidMsgReceived(msg, res);
-
 }
 
 void DebugClbkSubscriberBase::onMsgReceived(const PublishedMessage &msg, OperationResult res)
@@ -102,9 +102,11 @@ void DebugClbkSubscriberBase::onMsgReceived(const PublishedMessage &msg, Operati
     // Log.
     serializer::BinarySerializer serializer(msg.data.bytes.get(), msg.data.size);
     std::stringstream data;
-    data << "Topic:          " << msg.topic                                  << std::endl;
-    data << "Publisher UUID: " << msg.pub_info.uuid .toRFC4122String()       << std::endl;
-    data << "Params size:    " << msg.data.size                              << std::endl;
+    data << "Topic:          " << msg.topic                      << std::endl;
+    data << "Result: " << static_cast<ResultType>(res)
+         << " (" << operationResultToString(res) << ")"          << std::endl;
+    data << msg.pub_info.toString()                              << std::endl;
+    data << "Params size:    " << msg.data.size                  << std::endl;
     data << "Params Hex:     " << serializer.getDataHexString();
     std::cout << this->generateStringHeader("ON MSG RECEIVED", {data.str()});
 

@@ -177,6 +177,8 @@ public:
      */
     void cleanTopicFilters();
 
+    std::string operationResultToString(OperationResult result) const;
+
     /**
      * @brief Virtual destructor.
      *
