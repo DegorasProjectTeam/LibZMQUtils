@@ -223,13 +223,29 @@ void SubscriberBase::internalStopSubscriber()
     if(this->fut_worker_.valid() &&
         this->fut_worker_.wait_for(std::chrono::seconds(0)) == std::future_status::timeout)
     {
-
         // Message for closing.
-        zmq::multipart_t msg;
-        msg.addstr(TopicType(kReservedExitTopic));
-        msg.addstr("close_pub");
-        msg.addstr(this->socket_close_uuid_.toRFC4122String());
-        msg.send(*this->socket_pub_close_);
+
+        // Serializer.
+        serializer::BinarySerializer serializer;
+
+        // Prepare the topic. This must come plain, since it is used by ZMQ topic filtering.
+        zmq::message_t msg_topic{TopicType(kReservedExitTopic)};
+
+        // Prepare the close socket uuid.
+        size_t uuid_size = serializer.write(this->socket_close_uuid_.getBytes());
+        zmq::message_t msg_uuid(serializer.release(), uuid_size);
+
+        // Information is empty.
+        zmq::message_t msg_info;
+
+        // Prepare the multipart msg.
+        zmq::multipart_t multipart_msg;
+        multipart_msg.add(std::move(msg_topic));
+        multipart_msg.add(std::move(msg_uuid));
+        multipart_msg.add(std::move(msg_info));
+
+        // Send the message.
+        multipart_msg.send(*this->socket_pub_close_);
 
         // Wait the future.
         this->fut_worker_.wait();
@@ -354,13 +370,8 @@ OperationResult SubscriberBase::recvFromSocket(PublishedMessage& msg)
         else
             return OperationResult::INVALID_PUB_UUID;
 
-        // Get the publisher information.
-        serializer::BinarySerializer::fastDeserialization(msg_pub_name.data(), msg_pub_name.size(),
-            msg.pub_info.endpoint, msg.pub_info.hostname, msg.pub_info.name, msg.pub_info.info, msg.pub_info.version);
-
-        // TODO COMPLETE INFO AND STORE IT
-
-        // If exit topic was issued, check if uuid matches the close publisher.
+        // If exit topic was issued, check if uuid matches the close publisher and return.
+        // No more info is necessary.
         if (kReservedExitTopic == msg.topic)
         {
             if (this->socket_close_uuid_ == msg.pub_info.uuid)
@@ -368,6 +379,12 @@ OperationResult SubscriberBase::recvFromSocket(PublishedMessage& msg)
             else
                 return OperationResult::INVALID_PARTS;
         }
+
+        // Get the publisher information.
+        serializer::BinarySerializer::fastDeserialization(msg_pub_name.data(), msg_pub_name.size(),
+            msg.pub_info.endpoint, msg.pub_info.hostname, msg.pub_info.name, msg.pub_info.info, msg.pub_info.version);
+
+        // TODO COMPLETE INFO AND STORE IT
 
         // If there is still one more part, it is the message data.
         if (multipart_msg.size() == 1)
