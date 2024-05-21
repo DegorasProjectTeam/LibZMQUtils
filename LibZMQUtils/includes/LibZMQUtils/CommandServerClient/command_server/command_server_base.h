@@ -256,8 +256,8 @@ public:
      * connections. By default, the server will accept connections on all available local addresses.
      *
      * @param port           The port number on which the server will listen for incoming requests.
-     * @param ip_address     The IP address on which the server will accept connections. By default, it listens on all
-     *                          available interfaces ("*").
+     * @param bound_iface    The interface on which the server will accept connections. By default, it listens on all
+     *                       available interfaces ("*"). It can be identified by IP or name.
      * @param server_name    Optional parameter to specify the server name. By default is empty.
      * @param server_version Optional parameter to specify the server version (like "1.1.1"). By default is empty.
      * @param server_info    Optional parameter to specify the server information. By default is empty.
@@ -276,7 +276,7 @@ public:
      * @warning When specifying the `ip_address`, ensure it is a valid IP address present on the system. Incorrect or
      * unavailable addresses may result in connection failures.
      */
-    CommandServerBase(unsigned port, const std::string& ip_address = "*", const std::string& server_name = "",
+    CommandServerBase(unsigned port, const std::string& bound_iface = "*", const std::string& server_name = "",
                       const std::string& server_version = "", const std::string& server_info = "");
 
     /**

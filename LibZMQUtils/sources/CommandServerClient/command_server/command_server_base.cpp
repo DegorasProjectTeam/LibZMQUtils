@@ -69,8 +69,8 @@ namespace reqrep{
 // =====================================================================================================================
 
 CommandServerBase::CommandServerBase(unsigned port,
-                                     const std::string& ip_address,
-                                     const std::string &server_name,
+                                     const std::string& bound_iface,
+                                     const std::string& server_name,
                                      const std::string& server_version,
                                      const std::string& server_info) :
     server_socket_(nullptr),
@@ -85,17 +85,25 @@ CommandServerBase::CommandServerBase(unsigned port,
     utils::UUID uuid = utils::UUIDGenerator::getInstance().generateUUIDv4();
 
     // Get the adapters.
-    std::vector<NetworkAdapterInfo> interfcs = internal_helpers::network::getHostIPsWithInterfaces();
+    std::vector<NetworkAdapterInfo> ifaces = internal_helpers::network::getHostIPsWithInterfaces();
+
+    std::string inter_aux = bound_iface;
+
+    // Update if localhost.
+    if(inter_aux == "localhost")
+        inter_aux = "127.0.0.1";
 
     // Store the adapters.
-    if(ip_address == "*")
-        this->server_adapters_ = interfcs;
+    if(inter_aux == "*")
+        this->server_adapters_ = ifaces;
     else
     {
-        for(const auto& intrfc : interfcs)
+        for(const auto& iface : ifaces)
         {
-            if(intrfc.ip == ip_address)
-                this->server_adapters_.push_back(intrfc);
+            if(iface.ip == inter_aux)
+                this->server_adapters_.push_back(iface);
+            else if (iface.name == inter_aux)
+                this->server_adapters_.push_back(iface);
         }
     }
 
@@ -103,7 +111,7 @@ CommandServerBase::CommandServerBase(unsigned port,
     if(this->server_adapters_.empty())
     {
         std::string module = "[LibZMQUtils,CommandServerClient,CommandServerBase] ";
-        throw std::invalid_argument(module + "No interfaces found for address <" + ip_address + ">.");
+        throw std::invalid_argument(module + "No interfaces found for address <" + inter_aux + ">.");
     }
 
     // Update the server information.
@@ -112,7 +120,7 @@ CommandServerBase::CommandServerBase(unsigned port,
     this->server_info_.port = port;
     this->server_info_.version = server_version;
     this->server_info_.info = server_info;
-    this->server_info_.endpoint = "tcp://" + ip_address + ":" + std::to_string(port);
+    this->server_info_.endpoint = "tcp://" + inter_aux + ":" + std::to_string(port);
     this->server_info_.ips = this->getServerIps();
     this->server_info_.hostname = internal_helpers::network::getHostname();
     this->server_info_.last_seen = std::chrono::high_resolution_clock::now();
