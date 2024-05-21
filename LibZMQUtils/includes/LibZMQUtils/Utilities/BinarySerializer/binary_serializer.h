@@ -635,6 +635,11 @@ protected:
     template<typename T>
     void writeSingle(const std::vector<T>& v);
 
+    // For vectors of trivial types.
+    // TODO
+    // void writeSingle(const std::vector<std::string>& v)
+    // {}
+
     // -----------------------------------------------------------------------------------------------------------------
 
     // Read data functions.

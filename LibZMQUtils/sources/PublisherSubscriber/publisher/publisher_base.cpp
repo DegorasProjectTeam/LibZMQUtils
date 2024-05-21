@@ -389,6 +389,7 @@ zmq::multipart_t PublisherBase::prepareMessage(const TopicType& topic, Published
     zmq::message_t msg_tp(serializer.release(), tp_size);
 
     // Prepare the information.
+    // TODO SEND THE IPS
     size_t info_size = serializer.write(msg.pub_info.endpoint, msg.pub_info.hostname, msg.pub_info.name,
                                         msg.pub_info.info, msg.pub_info.version);
     zmq::message_t msg_info(serializer.release(), info_size);

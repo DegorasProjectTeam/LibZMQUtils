@@ -1,5 +1,8 @@
 LibZMQUtils TODOs
 
+MAX_PRIORITY:
+
+- Serialize std::vector of strings and apply to send the ips.
 
 PRIORITY:
 
