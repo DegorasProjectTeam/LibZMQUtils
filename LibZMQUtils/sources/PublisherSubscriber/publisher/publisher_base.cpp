@@ -67,8 +67,8 @@ namespace zmqutils{
 namespace pubsub{
 // =====================================================================================================================
 
-PublisherBase::PublisherBase(unsigned port,
-                             const std::string& interface,
+PublisherBase::PublisherBase(unsigned publisher_port,
+                             const std::string& publisher_iface,
                              const std::string& publisher_name,
                              const std::string& publisher_version,
                              const std::string& publisher_info) :
@@ -82,7 +82,7 @@ PublisherBase::PublisherBase(unsigned port,
     std::vector<NetworkAdapterInfo> interfcs = internal_helpers::network::getHostIPsWithInterfaces();
 
     // Auxiliar ip.
-    std::string inter_aux = interface;
+    std::string inter_aux = publisher_iface;
 
     // Update if localhost.
     if(inter_aux == "localhost")
@@ -111,8 +111,8 @@ PublisherBase::PublisherBase(unsigned port,
 
     // Update the publisher information.
     this->pub_info_.uuid = uuid;
-    this->pub_info_.port = port;
-    this->pub_info_.endpoint = "tcp://" + inter_aux + ":" + std::to_string(port);
+    this->pub_info_.port = publisher_port;
+    this->pub_info_.endpoint = "tcp://" + inter_aux + ":" + std::to_string(publisher_port);
     this->pub_info_.hostname = internal_helpers::network::getHostname();
     this->pub_info_.name = publisher_name;
     this->pub_info_.info = publisher_info;

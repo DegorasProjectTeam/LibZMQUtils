@@ -408,7 +408,8 @@ OperationResult SubscriberBase::recvFromSocket(PublishedMessage& msg)
 
         // Get the publisher information.
         serializer::BinarySerializer::fastDeserialization(msg_pub.data(), msg_pub.size(),
-            msg.pub_info.endpoint, msg.pub_info.hostname, msg.pub_info.name, msg.pub_info.info, msg.pub_info.version);
+            msg.pub_info.endpoint, msg.pub_info.hostname, msg.pub_info.name, msg.pub_info.info,
+                                                          msg.pub_info.version);
 
         // TODO WARNING: WE CANT UPDATE THE STORED INFO BECAOUSE IN ZMQ YOU CANT KNOW WHAT PUBLISHER SEND THE MSG.
 
