@@ -331,7 +331,8 @@ OperationResult CommandClientBase::sendCommand(ServerCommand command, RequestDat
     reply = CommandReply();
 
     // Prepare the CommandRequest.
-    CommandRequest command_request(command, this->client_info_.uuid, std::move(request_data));
+    CommandRequest command_request(command, this->client_info_.uuid, std::move(request_data),
+                                   utils::currentISO8601Date(true, false, true));
 
     // Check if we start the client.
     if (!this->client_socket_)
@@ -571,6 +572,7 @@ void CommandClientBase::recvFromSocket(CommandReply& reply,
                 // Get the multipart data.
                 zmq::message_t msg_uuid = multipart_msg.pop();
                 zmq::message_t msg_res = multipart_msg.pop();
+                //zmq::message_t msg_time = multipart_msg.pop();
 
                 // Get the server UUID data.
                 if (msg_uuid.size() == utils::UUID::kUUIDSize + sizeof(serializer::SizeUnit)*2)
@@ -584,6 +586,10 @@ void CommandClientBase::recvFromSocket(CommandReply& reply,
                     reply.result = OperationResult::INVALID_SERVER_UUID;
                     return;
                 }
+
+                // Get the timestamp.
+                //serializer::BinarySerializer::fastDeserialization(msg_time.data(), msg_time.size(), msg.timestamp);
+                //msg.tp = utils::iso8601DatetimeToTimePoint(msg.timestamp);
 
                 // Check the result size.
                 constexpr size_t res_part_size = (sizeof(serializer::SizeUnit) + sizeof(ResultType))*2;
@@ -952,10 +958,15 @@ zmq::multipart_t CommandClientBase::prepareMessage(const CommandRequest& command
     size_t cmd_size = serializer.write(command_request.command);
     zmq::message_t msg_command(serializer.release(), cmd_size);
 
+    // Prepare the timestamp.
+    size_t tp_size = serializer.write(command_request.timestamp);
+    zmq::message_t msg_tp(serializer.release(), tp_size);
+
     // Prepare the multipart msg.
     zmq::multipart_t multipart_msg;
     multipart_msg.add(std::move(msg_uuid));
     multipart_msg.add(std::move(msg_command));
+    multipart_msg.add(std::move(msg_tp));
 
     // Add command parameters if they exist
     if (command_request.data.size > 0)

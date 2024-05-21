@@ -47,6 +47,7 @@
 // =====================================================================================================================
 #include "LibZMQUtils/Global/libzmqutils_global.h"
 #include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
+#include "LibZMQUtils/Utilities/utils.h"
 #include "LibZMQUtils/Utilities/uuid_generator.h"
 // =====================================================================================================================
 
@@ -267,7 +268,7 @@ struct LIBZMQUTILS_EXPORT CommandRequest
 {
     CommandRequest();
 
-    CommandRequest(ServerCommand command, const utils::UUID& uuid, RequestData&& data);
+    CommandRequest(ServerCommand command, const utils::UUID& uuid, RequestData&& data, const std::string& timestamp);
 
     /**
      * @brief Resets the CommandRequest clearing all the contents.
@@ -278,6 +279,8 @@ struct LIBZMQUTILS_EXPORT CommandRequest
     ServerCommand command;    ///< Command to be executed in the server.
     utils::UUID client_uuid;  ///< Client UUID unique identification.
     RequestData data;         ///< Request data with the associated command request parameters.
+    std::string timestamp;    ///< ISO8601 string timestamp that represents the time when the message was created.
+    utils::HRTimePointStd tp; ///< Time point that represents the time when the message was created.
 };
 
 struct LIBZMQUTILS_EXPORT CommandReply
@@ -294,6 +297,8 @@ struct LIBZMQUTILS_EXPORT CommandReply
     utils::UUID server_uuid;  ///< Server UUID unique identification.
     OperationResult result;   ///< Reply result from the server.
     ReplyData data;           ///< Reply data. Can be empty depending on the result of executing the command.
+    std::string timestamp;    ///< ISO8601 string timestamp that represents the time when the message was created.
+    utils::HRTimePointStd tp; ///< Time point that represents the time when the message was created.
 };
 
 // =====================================================================================================================

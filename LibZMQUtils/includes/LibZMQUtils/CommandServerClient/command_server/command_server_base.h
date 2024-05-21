@@ -251,12 +251,12 @@ public:
     /**
      * @brief Base constructor for a ZeroMQ command server.
      *
-     * This constructor initializes a ZeroMQ based command server with the specified port for listening to
+     * This constructor initializes a ZeroMQ based command server with the specified server_port for listening to
      * incoming requests. Additionally, it allows specifying local addresses on which the server will accept
      * connections. By default, the server will accept connections on all available local addresses.
      *
-     * @param port           The port number on which the server will listen for incoming requests.
-     * @param bound_iface    The interface on which the server will accept connections. By default, it listens on all
+     * @param server_port    The server_port number on which the server will listen for incoming requests.
+     * @param server_iface   The interface on which the server will accept connections. By default, it listens on all
      *                       available interfaces ("*"). It can be identified by IP or name.
      * @param server_name    Optional parameter to specify the server name. By default is empty.
      * @param server_version Optional parameter to specify the server version (like "1.1.1"). By default is empty.
@@ -276,7 +276,7 @@ public:
      * @warning When specifying the `ip_address`, ensure it is a valid IP address present on the system. Incorrect or
      * unavailable addresses may result in connection failures.
      */
-    CommandServerBase(unsigned port, const std::string& bound_iface = "*", const std::string& server_name = "",
+    CommandServerBase(unsigned server_port, const std::string& server_iface = "*", const std::string& server_name = "",
                       const std::string& server_version = "", const std::string& server_info = "");
 
     /**

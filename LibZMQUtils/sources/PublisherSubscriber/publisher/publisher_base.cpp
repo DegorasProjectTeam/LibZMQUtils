@@ -106,13 +106,13 @@ PublisherBase::PublisherBase(unsigned publisher_port,
     if(this->publisher_adapters_.empty())
     {
         std::string module = "[LibZMQUtils,PublisherSubscriber,PublisherBase] ";
-        throw std::invalid_argument(module + "No interfaces found for address <" + inter_aux + ">.");
+        throw std::invalid_argument(module + "No interfaces found for <" + publisher_iface + ">.");
     }
 
     // Update the publisher information.
     this->pub_info_.uuid = uuid;
     this->pub_info_.port = publisher_port;
-    this->pub_info_.endpoint = "tcp://" + inter_aux + ":" + std::to_string(publisher_port);
+    this->pub_info_.endpoint = "tcp://" + publisher_iface + ":" + std::to_string(publisher_port);
     this->pub_info_.hostname = internal_helpers::network::getHostname();
     this->pub_info_.name = publisher_name;
     this->pub_info_.info = publisher_info;

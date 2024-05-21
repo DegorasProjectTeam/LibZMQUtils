@@ -69,7 +69,7 @@ namespace reqrep{
 // =====================================================================================================================
 
 CommandServerBase::CommandServerBase(unsigned port,
-                                     const std::string& bound_iface,
+                                     const std::string& server_iface,
                                      const std::string& server_name,
                                      const std::string& server_version,
                                      const std::string& server_info) :
@@ -87,7 +87,7 @@ CommandServerBase::CommandServerBase(unsigned port,
     // Get the adapters.
     std::vector<NetworkAdapterInfo> ifaces = internal_helpers::network::getHostIPsWithInterfaces();
 
-    std::string inter_aux = bound_iface;
+    std::string inter_aux = server_iface;
 
     // Update if localhost.
     if(inter_aux == "localhost")
@@ -111,7 +111,7 @@ CommandServerBase::CommandServerBase(unsigned port,
     if(this->server_adapters_.empty())
     {
         std::string module = "[LibZMQUtils,CommandServerClient,CommandServerBase] ";
-        throw std::invalid_argument(module + "No interfaces found for address <" + inter_aux + ">.");
+        throw std::invalid_argument(module + "No interfaces found for <" + server_iface + ">.");
     }
 
     // Update the server information.
@@ -120,7 +120,7 @@ CommandServerBase::CommandServerBase(unsigned port,
     this->server_info_.port = port;
     this->server_info_.version = server_version;
     this->server_info_.info = server_info;
-    this->server_info_.endpoint = "tcp://" + inter_aux + ":" + std::to_string(port);
+    this->server_info_.endpoint = "tcp://" + server_iface + ":" + std::to_string(port);
     this->server_info_.ips = this->getServerIps();
     this->server_info_.hostname = internal_helpers::network::getHostname();
     this->server_info_.last_seen = std::chrono::high_resolution_clock::now();
@@ -584,6 +584,10 @@ void CommandServerBase::serverWorker()
             size_t res_size = serializer.write(reply.command, reply.result);
             multipart_msg.addmem(serializer.release(), res_size);
 
+            // Prepare the timestamp.
+            //size_t tp_size = serializer.write(reply.timestamp);
+            //multipart_msg.addmem(serializer.release(), tp_size);
+
             // Specific data.
             if(reply.result == OperationResult::COMMAND_OK && reply.data.size != 0)
             {
@@ -636,6 +640,7 @@ OperationResult CommandServerBase::recvFromSocket(CommandRequest& request)
     {
         // Wait the command.
         recv_result = multipart_msg.recv(*(this->server_socket_));
+
     }
     catch(zmq::error_t& error)
     {
@@ -665,11 +670,12 @@ OperationResult CommandServerBase::recvFromSocket(CommandRequest& request)
         return OperationResult::EMPTY_MSG;
 
     // Check the multipart msg size.
-    if (multipart_msg.size() == 2 || multipart_msg.size() == 3)
+    if (multipart_msg.size() == 3 || multipart_msg.size() == 4)
     {
         // Get the multipart data.
         zmq::message_t msg_uuid = multipart_msg.pop();
         zmq::message_t msg_command = multipart_msg.pop();
+        zmq::message_t msg_time = multipart_msg.pop();
 
         // First get the uuid data.
         if (msg_uuid.size() == UUID::kUUIDSize + sizeof(serializer::SizeUnit)*2)
@@ -683,6 +689,10 @@ OperationResult CommandServerBase::recvFromSocket(CommandRequest& request)
 
         // Update the last connection if the client is connected.
         this->updateClientLastConnection(request.client_uuid);
+
+        // Get the timestamp.
+        serializer::BinarySerializer::fastDeserialization(msg_time.data(), msg_time.size(), request.timestamp);
+        request.tp = utils::iso8601DatetimeToTimePoint(request.timestamp);
 
         // Get the command.
         if (msg_command.size() == sizeof(serializer::SizeUnit) + sizeof(CommandType))

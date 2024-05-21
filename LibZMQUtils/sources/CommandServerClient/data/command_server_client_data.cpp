@@ -50,14 +50,18 @@ namespace zmqutils{
 namespace reqrep{
 // =====================================================================================================================
 
-CommandRequest::CommandRequest() :
-    command(ServerCommand::INVALID_COMMAND)
-{}
+CommandRequest::CommandRequest()
+{
+    this->clear();
+}
 
-CommandRequest::CommandRequest(ServerCommand command, const utils::UUID &uuid, RequestData &&data) :
+CommandRequest::CommandRequest(ServerCommand command, const utils::UUID &uuid, RequestData &&data,
+                               const std::string& timestamp) :
     command(command),
     client_uuid(uuid),
-    data(std::move(data))
+    data(std::move(data)),
+    timestamp(timestamp),
+    tp(utils::iso8601DatetimeToTimePoint(this->timestamp))
 {}
 
 void CommandRequest::clear()
@@ -65,18 +69,22 @@ void CommandRequest::clear()
     this->command = ServerCommand::INVALID_COMMAND;
     this->client_uuid.clear();
     this->data.clear();
+    this->timestamp = "";
+    this->tp = utils::HRTimePointStd();
 }
 
-CommandReply::CommandReply():
-    command(ServerCommand::INVALID_COMMAND),
-    result(OperationResult::INVALID_RESULT)
-{}
+CommandReply::CommandReply()
+{
+    this->clear();
+}
 
 void CommandReply::clear()
 {
     this->command = ServerCommand::INVALID_COMMAND;
     this->result = OperationResult::INVALID_RESULT;
     this->data.clear();
+    this->timestamp = "";
+    this->tp = utils::HRTimePointStd();
 }
 
 }} // END NAMESPACES.

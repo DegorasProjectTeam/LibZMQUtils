@@ -54,7 +54,8 @@ PublishedMessage::PublishedMessage(const TopicType &topic, const PublisherInfo &
     topic(topic),
     pub_info(pub_info),
     data(std::move(data)),
-    timestamp(timestamp)
+    timestamp(timestamp),
+    tp(utils::iso8601DatetimeToTimePoint(this->timestamp))
 {}
 
 void PublishedMessage::clear()

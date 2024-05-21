@@ -119,11 +119,14 @@ void DebugCommandClientBase::onDisconnected(const CommandServerInfo& server)
 void DebugCommandClientBase::onBadOperation(const CommandReply &rep)
 {
     // Log.
+    auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(utils::HRClock::now() - rep.tp);
     std::stringstream data;
-    data << "Server UUID: "<<rep.server_uuid.toRFC4122String()           << std::endl;
+    data << "Timestamp:      " << rep.timestamp                          << std::endl;
+    data << "Elapsed ms:     " << elapsed_ms.count()                     << std::endl;
+    data << "Server UUID:    " << rep.server_uuid.toRFC4122String()      << std::endl;
     data << "Server Command: " << std::to_string(static_cast<CommandType>(rep.command))
          << " (" << this->serverCommandToString(rep.command) << ")"      << std::endl;
-    data << "Result: " << static_cast<ResultType>(rep.result)
+    data << "Result:         " << static_cast<ResultType>(rep.result)
          << " (" << this->operationResultToString(rep.result) << ")";
     std::cout << this->generateStringHeader("ON BAD OPERATION", {data.str()});
 }
@@ -131,15 +134,18 @@ void DebugCommandClientBase::onBadOperation(const CommandReply &rep)
 void DebugCommandClientBase::onReplyReceived(const CommandReply &rep)
 {
     // Log.
+    //auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(utils::HRClock::now() - rep.tp);
     BinarySerializer serializer(rep.data.bytes.get(), rep.data.size);
     std::stringstream data;
-    data << "Server UUID: "<<rep.server_uuid.toRFC4122String()           << std::endl;
+    //data << "Timestamp:      " << rep.timestamp                          << std::endl;
+    //data << "Elapsed ms:     " << elapsed_ms.count()                     << std::endl;
+    data << "Server UUID:    " << rep.server_uuid.toRFC4122String()      << std::endl;
     data << "Server Command: " << std::to_string(static_cast<CommandType>(rep.command))
          << " (" << this->serverCommandToString(rep.command) << ")"      << std::endl;
-    data << "Result: " << static_cast<ResultType>(rep.result)
+    data << "Result:         " << static_cast<ResultType>(rep.result)
          << " (" << operationResultToString(rep.result) << ")"           << std::endl;
-    data << "Params Size: " << rep.data.size << std::endl;
-    data << "Params Hex:  " << serializer.getDataHexString();
+    data << "Params Size:    " << rep.data.size << std::endl;
+    data << "Params Hex:     " << serializer.getDataHexString();
     std::cout << this->generateStringHeader("ON REPLY RECEIVED", {data.str()});
 }
 
@@ -148,10 +154,11 @@ void DebugCommandClientBase::onSendingCommand(const CommandRequest &req)
     // Log.
     BinarySerializer serializer(req.data.bytes.get(), req.data.size);
     std::stringstream data;
-    data << "Command:     " << static_cast<CommandType>(req.command)
+    data << "Timestamp:      " << req.timestamp                          << std::endl;
+    data << "Server Command: " << static_cast<CommandType>(req.command)
          << " (" <<  this->serverCommandToString(req.command) << ")"     << std::endl;
-    data << "Params size: " << req.data.size                             << std::endl;
-    data << "Params Hex:  " << serializer.getDataHexString();
+    data << "Params size:    " << req.data.size                          << std::endl;
+    data << "Params Hex:     " << serializer.getDataHexString();
     std::cout << this->generateStringHeader("ON SENDING COMMAND", {data.str()});
 }
 
