@@ -77,6 +77,7 @@ CommandClientBase::CommandClientBase(const std::string& server_endpoint,
     flag_autoalive_enabled_(false),
     flag_alive_callbacks_(false),
     flag_server_connected_(false),
+    flag_server_seen_(false),
     server_alive_timeout_(kDefaultServerAliveTimeoutMsec),
     send_alive_period_(kDefaultClientSendAlivePeriodMsec)
 {    
@@ -257,6 +258,24 @@ void CommandClientBase::disableAutoAlive()
 {
     std::unique_lock<std::mutex> lock(this->mtx_);
     this->stopAutoAlive();
+}
+
+bool CommandClientBase::isConnected() const
+{
+    return this->flag_server_connected_;
+}
+
+bool CommandClientBase::serverWasSeen()
+{
+    return this->flag_server_seen_;
+}
+
+bool CommandClientBase::serverWasSeen(utils::HRTimePointStd &tp)
+{
+    std::unique_lock<std::mutex> lock(this->mtx_);
+    if(this->flag_server_seen_)
+        tp = this->connected_server_info_.last_seen;
+    return this->flag_server_seen_;
 }
 
 const std::string &CommandClientBase::getServerEndpoint() const
@@ -486,11 +505,11 @@ bool CommandClientBase::isBaseCommand(CommandType command) const
 
 void CommandClientBase::recvFromSocket(CommandReply& reply,
                                        zmq::socket_t* recv_socket,
-                                       zmq::socket_t *close_socket)
+                                       zmq::socket_t* close_socket)
 {
     // Prepare the poller.
     std::vector<zmq::pollitem_t> items = {
-          { static_cast<void*>(*recv_socket), 0, ZMQ_POLLIN, 0 },
+          { static_cast<void*>(*recv_socket),  0, ZMQ_POLLIN, 0 },
           { static_cast<void*>(*close_socket), 0, ZMQ_POLLIN, 0 }};
 
     // Start time for check the timeout.
@@ -522,10 +541,16 @@ void CommandClientBase::recvFromSocket(CommandReply& reply,
                 return;
             }
 
-            // We have data.
+            // We have data, so a message has been received, try to process it.
             if (items[0].revents & ZMQ_POLLIN)
             {
-                // Message has been received, try to process it
+                // Update the seen flag.
+                this->flag_server_seen_ = true;
+
+                // Store the last time the server was seen.
+                this->connected_server_info_.last_seen = std::chrono::high_resolution_clock::now();
+
+                // Get the multipart msg.
                 zmq::multipart_t multipart_msg;
                 multipart_msg.recv(*recv_socket);
 
@@ -537,18 +562,32 @@ void CommandClientBase::recvFromSocket(CommandReply& reply,
                 }
 
                 // Check the multipart msg size.
-                if (multipart_msg.size() != 1 && multipart_msg.size() != 2)
+                if (multipart_msg.size() != 2 && multipart_msg.size() != 3)
                 {
                     reply.result = OperationResult::INVALID_PARTS;
                     return;
                 }
 
                 // Get the multipart data.
+                zmq::message_t msg_uuid = multipart_msg.pop();
                 zmq::message_t msg_res = multipart_msg.pop();
 
+                // Get the server UUID data.
+                if (msg_uuid.size() == utils::UUID::kUUIDSize + sizeof(serializer::SizeUnit)*2)
+                {
+                    std::array<std::byte, 16> uuid_bytes;
+                    serializer::BinarySerializer::fastDeserialization(msg_uuid.data(), msg_uuid.size(), uuid_bytes);
+                    reply.server_uuid = utils::UUID(uuid_bytes);
+                }
+                else
+                {
+                    reply.result = OperationResult::INVALID_SERVER_UUID;
+                    return;
+                }
+
                 // Check the result size.
-                constexpr size_t first_part_size = (sizeof(serializer::SizeUnit) + sizeof(ResultType))*2;
-                if (msg_res.size() != first_part_size)
+                constexpr size_t res_part_size = (sizeof(serializer::SizeUnit) + sizeof(ResultType))*2;
+                if (msg_res.size() != res_part_size)
                 {
                     reply.result = OperationResult::INVALID_MSG;
                     return;
@@ -842,6 +881,9 @@ OperationResult CommandClientBase::doConnect(bool auto_alive)
         serializer::BinarySerializer::fastDeserialization(std::move(reply.data.bytes), reply.data.size,
             this->connected_server_info_.hostname, this->connected_server_info_.name,
             this->connected_server_info_.info, this->connected_server_info_.version);
+
+        // Update UUID.
+        this->connected_server_info_.uuid = reply.server_uuid;
 
         // Update the flag and call to the internal callback.
         this->flag_server_connected_ = true;

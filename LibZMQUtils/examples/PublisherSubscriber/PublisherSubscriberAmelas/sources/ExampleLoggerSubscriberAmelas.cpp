@@ -79,23 +79,39 @@ public:
 
     void processLogInfo(const AmelasLog &log)
     {
-        std::cout << "[INFO] - " << log.str_info << ". Size of log: " << log.serializedSize() << std::endl;
+        std::cout << std::string(100, '-') << std::endl;
+        std::cout << "<AMELAS LOG PROCESSOR>"<<std::endl;
+        std::cout << "Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
+        std::cout << "New log: [INFO] - " << log.str_info << ". Size: " << log.serializedSize() << std::endl;
+        std::cout << std::string(100, '-') << std::endl;
     }
 
     void processLogWarning(const AmelasLog &log)
     {
-        std::cout << "[WARNING] - " << log.str_info << std::endl;
+        std::cout << std::string(100, '-') << std::endl;
+        std::cout << "<AMELAS LOG PROCESSOR>"<<std::endl;
+        std::cout << "Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
+        std::cout << "New log: [WARNING] - " << log.str_info << ". Size: " << log.serializedSize() << std::endl;
+        std::cout << std::string(100, '-') << std::endl;
     }
 
     void processLogError(const AmelasLog &log)
     {
-        std::cout << "[ERROR] - " << log.str_info << std::endl;
+        std::cout << std::string(100, '-') << std::endl;
+        std::cout << "<AMELAS LOG PROCESSOR>"<<std::endl;
+        std::cout << "Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
+        std::cout << "New log: [ERROR] - " << log.str_info << ". Size: " << log.serializedSize() << std::endl;
+        std::cout << std::string(100, '-') << std::endl;
     }
 
     void processErrorCallback(const PublishedMessage&, OperationResult res)
     {
+        std::cout << std::string(100, '-') << std::endl;
+        std::cout << "<AMELAS LOG PROCESSOR>"<<std::endl;
+        std::cout << "Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
         std::cout << "Error callback with code: " << static_cast<ResultType>(res)
                   << " (" << AmelasLoggerSubscriber::operationResultToString(res) << ")" << std::endl;
+        std::cout << std::string(100, '-') << std::endl;
     }
 };
 

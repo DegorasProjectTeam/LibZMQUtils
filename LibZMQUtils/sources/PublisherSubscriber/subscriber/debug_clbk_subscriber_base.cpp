@@ -85,12 +85,13 @@ void DebugClbkSubscriberBase::onInvalidMsgReceived(const PublishedMessage& msg, 
     // Log.
     serializer::BinarySerializer serializer(msg.data.bytes.get(), msg.data.size);
     std::stringstream data;
-    data << "Topic:          " << msg.topic                      << std::endl;
-    data << "Result: " << static_cast<ResultType>(res)
-         << " (" << operationResultToString(res) << ")"          << std::endl;
-    data << msg.pub_info.toString()                              << std::endl;
-    data << "Params size:    " << msg.data.size                  << std::endl;
-    data << "Params Hex:     " << serializer.getDataHexString();
+    data << "Topic:       " << msg.topic                      << std::endl;
+    data << "Timestamp:   " << msg.timestamp                  << std::endl;
+    data << "Result:      " << static_cast<ResultType>(res)
+         << " (" << operationResultToString(res) << ")"       << std::endl;
+    data << msg.pub_info.toString()                           << std::endl;
+    data << "Params size: " << msg.data.size                  << std::endl;
+    data << "Params Hex:  " << serializer.getDataHexString();
     std::cout << this->generateStringHeader("ON INVALID MSG RECEIVED", {data.str()});
 
     // Call parent method.
@@ -102,12 +103,13 @@ void DebugClbkSubscriberBase::onMsgReceived(const PublishedMessage &msg, Operati
     // Log.
     serializer::BinarySerializer serializer(msg.data.bytes.get(), msg.data.size);
     std::stringstream data;
-    data << "Topic:          " << msg.topic                      << std::endl;
-    data << "Result: " << static_cast<ResultType>(res)
-         << " (" << operationResultToString(res) << ")"          << std::endl;
-    data << msg.pub_info.toString()                              << std::endl;
-    data << "Params size:    " << msg.data.size                  << std::endl;
-    data << "Params Hex:     " << serializer.getDataHexString();
+    data << "Topic:       " << msg.topic                      << std::endl;
+    data << "Timestamp:   " << msg.timestamp                  << std::endl;
+    data << "Result:      " << static_cast<ResultType>(res)
+         << " (" << operationResultToString(res) << ")"       << std::endl;
+    data << msg.pub_info.toString()                           << std::endl;
+    data << "Params size: " << msg.data.size                  << std::endl;
+    data << "Params Hex:  " << serializer.getDataHexString();
     std::cout << this->generateStringHeader("ON MSG RECEIVED", {data.str()});
 
     // Call parent method.

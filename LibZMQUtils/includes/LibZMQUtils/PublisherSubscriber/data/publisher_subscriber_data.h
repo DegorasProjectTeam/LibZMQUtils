@@ -42,14 +42,13 @@
 // C++ INCLUDES
 // =====================================================================================================================
 #include <string>
-#include <cstring>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/Global/libzmqutils_global.h"
 #include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
-#include "LibZMQUtils/Utilities/uuid_generator.h"
+#include "LibZMQUtils/Utilities/utils.h"
 #include "LibZMQUtils/PublisherSubscriber/data/publisher_subscriber_info.h"
 // =====================================================================================================================
 
@@ -175,21 +174,19 @@ struct LIBZMQUTILS_EXPORT PublishedMessage
 {
     PublishedMessage() = default;
 
-    PublishedMessage(const TopicType& topic, const PublisherInfo& pub_info, PublishedData&& data);
+    PublishedMessage(const TopicType& topic, const PublisherInfo& pub_info,
+                     PublishedData&& data, const std::string& timestamp);
 
     /**
      * @brief Resets the PublishedMessage clearing all the contents.
      */
-    void clear()
-    {
-        this->topic.clear();
-        this->data.clear();
-    }
+    void clear();
 
     // Struct data.
     TopicType topic;         ///< Topic associated to the published message.
     PublisherInfo pub_info;  ///< Publisher information.
     PublishedData data;      ///< Reply data. Can be empty.
+    std::string timestamp;   ///< ISO8601 string timestamp that represents the time when the message was created.
 };
 
 

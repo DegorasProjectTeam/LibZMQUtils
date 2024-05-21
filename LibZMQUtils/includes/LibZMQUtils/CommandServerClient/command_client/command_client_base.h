@@ -155,6 +155,44 @@ public:
     void disableAutoAlive();
 
     /**
+     * @brief Checks if the server is considered currently connected.
+     *
+     * This function checks the internal flag to determine if the client considers itself connected to the server.
+     * However, it's important to note that if auto-alive checks are disabled, this function may return `true` even
+     * when the actual connection has been lost. The actual connection state may not be accurately known until a new
+     * request is sent to the server.
+     *
+     * @return True if the client considers itself connected, false if definitely disconnected.
+     */
+    bool isConnected() const;
+
+    /**
+     * @brief Determines if the server has been seen at any point.
+     *
+     * This function returns the status of whether the server has been detected or interacted with at some point.
+     * If this function returns true, it indicates that the server was at least once available or responsive,
+     * and it may be possible to check the last time the server was seen, depending on additional system capabilities.
+     *
+     * @return True if the server was seen at any time, false otherwise.
+     */
+    bool serverWasSeen();
+
+    /**
+     * @brief Determines if the server has been seen at any point and retrieves the last seen time point if so.
+     *
+     * This function locks the associated mutex to safely check the server's seen flag and, if the server
+     * has been seen, updates the provided time point parameter with the time the server was last seen.
+     * This allows callers to not only check if the server has been detected at any point but also to
+     * retrieve the exact moment of the last interaction if it occurred.
+     *
+     * @param[out] tp Reference to a time point variable that will be set to the last seen time of the server.
+     *                This parameter is only modified if the server was indeed seen.
+     *
+     * @return True if the server was seen at any time, allowing the tp parameter to be updated; false otherwise.
+     */
+    bool serverWasSeen(utils::HRTimePointStd& tp);
+
+    /**
      * @brief Try to connect to the Command Server.
      * @param auto_alive, true to enable the auto alive sending, false to disable.
      * @return the OperationResult.
@@ -539,7 +577,8 @@ private:
     std::atomic_bool flag_client_working_;     ///< Flag for check the client working status.
     std::atomic_bool flag_autoalive_enabled_;  ///< Flag for enables or disables the automatic sending of alive messages.
     std::atomic_bool flag_alive_callbacks_;    ///< Flag for enables or disables the callbacks for alive messages.
-    std::atomic_bool flag_server_connected_;   ///< Flag for check if, in a certain momment, the client was alive.
+    std::atomic_bool flag_server_connected_;   ///< Flag that indicates if the client considers connected to server.
+    std::atomic_bool flag_server_seen_;        ///< Flag that is true if the server was seen in some momment.
 
     // Configurable parameters.
     std::atomic_uint server_alive_timeout_;    ///< Tiemout for consider a server dead (in msec).

@@ -49,11 +49,20 @@
 namespace zmqutils{
 namespace pubsub{
 
-PublishedMessage::PublishedMessage(const TopicType &topic, const PublisherInfo &pub_info, PublishedData &&data) :
+PublishedMessage::PublishedMessage(const TopicType &topic, const PublisherInfo &pub_info,
+                                   PublishedData &&data, const std::string &timestamp) :
     topic(topic),
     pub_info(pub_info),
-    data(std::move(data))
+    data(std::move(data)),
+    timestamp(timestamp)
 {}
+
+void PublishedMessage::clear()
+{
+    this->topic.clear();
+    this->data.clear();
+    this->timestamp.clear();
+}
 
 // =====================================================================================================================
 

@@ -99,7 +99,9 @@ void DebugCommandClientBase::onWaitingReply()
 
 void DebugCommandClientBase::onDeadServer(const CommandServerInfo& server)
 {
-    std::cout << this->generateStringHeader("ON DEAD SERVER", {server.toString()});
+    // Log.
+    std::string data = this->serverWasSeen() ? server.toString() : server.toString(true);
+    std::cout << this->generateStringHeader("ON DEAD SERVER", {data});
 }
 
 void DebugCommandClientBase::onConnected(const CommandServerInfo& server)
@@ -118,6 +120,7 @@ void DebugCommandClientBase::onBadOperation(const CommandReply &rep)
 {
     // Log.
     std::stringstream data;
+    data << "Server UUID: "<<rep.server_uuid.toRFC4122String()           << std::endl;
     data << "Server Command: " << std::to_string(static_cast<CommandType>(rep.command))
          << " (" << this->serverCommandToString(rep.command) << ")"      << std::endl;
     data << "Result: " << static_cast<ResultType>(rep.result)
@@ -130,6 +133,7 @@ void DebugCommandClientBase::onReplyReceived(const CommandReply &rep)
     // Log.
     BinarySerializer serializer(rep.data.bytes.get(), rep.data.size);
     std::stringstream data;
+    data << "Server UUID: "<<rep.server_uuid.toRFC4122String()           << std::endl;
     data << "Server Command: " << std::to_string(static_cast<CommandType>(rep.command))
          << " (" << this->serverCommandToString(rep.command) << ")"      << std::endl;
     data << "Result: " << static_cast<ResultType>(rep.result)

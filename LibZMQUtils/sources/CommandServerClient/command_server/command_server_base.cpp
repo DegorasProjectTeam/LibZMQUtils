@@ -115,6 +115,7 @@ CommandServerBase::CommandServerBase(unsigned port,
     this->server_info_.endpoint = "tcp://" + ip_address + ":" + std::to_string(port);
     this->server_info_.ips = this->getServerIps();
     this->server_info_.hostname = internal_helpers::network::getHostname();
+    this->server_info_.last_seen = std::chrono::high_resolution_clock::now();
 }
 
 const std::future<void> &CommandServerBase::getServerWorkerFuture() const
@@ -567,9 +568,13 @@ void CommandServerBase::serverWorker()
             // Prepare the multipart msg.
             zmq::multipart_t multipart_msg;
 
+            // Prepare the uuid.
+            size_t uuid_size = serializer.write(this->server_info_.uuid.getBytes());
+            multipart_msg.addmem(serializer.release(), uuid_size);
+
             // Prepare the command result.
-            size_t size = serializer.write(reply.command, reply.result);
-            multipart_msg.addmem(serializer.release(), size);
+            size_t res_size = serializer.write(reply.command, reply.result);
+            multipart_msg.addmem(serializer.release(), res_size);
 
             // Specific data.
             if(reply.result == OperationResult::COMMAND_OK && reply.data.size != 0)
@@ -614,6 +619,9 @@ OperationResult CommandServerBase::recvFromSocket(CommandRequest& request)
     // Containers.
     bool recv_result;
     zmq::multipart_t multipart_msg;
+
+    // Update timestamp of the server information.
+    this->server_info_.last_seen = std::chrono::high_resolution_clock::now();
 
     // Try to receive data. If an execption is thrown, receiving fails and an error code is generated.
     try

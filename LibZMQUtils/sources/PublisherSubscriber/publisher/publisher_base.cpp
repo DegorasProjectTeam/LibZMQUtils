@@ -236,7 +236,7 @@ OperationResult PublisherBase::sendMsg(const TopicType& topic, PublishedData& da
     try
     {
         // Prepare the message.
-        PublishedMessage msg(topic, this->pub_info_, std::move(data));
+        PublishedMessage msg(topic, this->pub_info_, std::move(data), utils::currentISO8601Date(true, false, true));
 
         // Prepare the multipart msg.
         zmq::multipart_t multipart_msg(this->prepareMessage(topic, msg));
@@ -375,6 +375,10 @@ zmq::multipart_t PublisherBase::prepareMessage(const TopicType& topic, Published
     size_t uuid_size = serializer.write(msg.pub_info.uuid.getBytes());
     zmq::message_t msg_uuid(serializer.release(), uuid_size);
 
+    // Prepare the timestamp.
+    size_t tp_size = serializer.write(msg.timestamp);
+    zmq::message_t msg_tp(serializer.release(), tp_size);
+
     // Prepare the information.
     size_t info_size = serializer.write(msg.pub_info.endpoint, msg.pub_info.hostname, msg.pub_info.name,
                                         msg.pub_info.info, msg.pub_info.version);
@@ -384,6 +388,7 @@ zmq::multipart_t PublisherBase::prepareMessage(const TopicType& topic, Published
     zmq::multipart_t multipart_msg;
     multipart_msg.add(std::move(msg_topic));
     multipart_msg.add(std::move(msg_uuid));
+    multipart_msg.add(std::move(msg_tp));
     multipart_msg.add(std::move(msg_info));
 
     // Add command parameters if they exist

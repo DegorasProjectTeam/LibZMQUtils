@@ -21,6 +21,8 @@ PRIORITY:
 
 - Move template implementations to tpp.
 
+- Send the list of ip interfaces to the client (but configurable in server).
+
 NO PRIORITY:
 
 - Real UUID validation function.

@@ -96,6 +96,8 @@ enum class OperationResult : ResultType
     INTERNAL_ZMQ_ERROR       = 1,  ///< An internal ZeroMQ error occurred.
     EMPTY_MSG                = 2,  ///< The message is empty.
     INVALID_CLIENT_IP        = 3,  ///< The client IP is invalid.
+    INVALID_SERVER_UUID      = 4,  ///< The server UUID is invalid (could be invalid, missing or empty).
+    DISCONNECTED_FROM_SERVER = 5,  ///< The server forced the client disconnection (for example due to dead condition).
     EMPTY_PARAMS             = 6,  ///< The command parameters are missing or empty.
     TIMEOUT_REACHED          = 7,  ///< The operation timed out, the client could be dead.
     INVALID_PARTS            = 8,  ///< The message has invalid parts.
@@ -113,7 +115,6 @@ enum class OperationResult : ResultType
     MAX_CLIENTS_REACH        = 20, ///< The server has reached the maximum number of clients allowed.
     COMMAND_NOT_ALLOWED      = 21, ///< The command is not allowed to be executed.                                  TODO
     CLIENT_VERSION_NOT_COMP  = 22, ///< The version of the client is not compatible with the server version.        TODO
-    DISCONNECTED_FROM_SERVER = 23, ///< The server forced the client disconnection (for example due to dead condition).
     END_BASE_RESULTS         = 50  ///< Sentinel value indicating the end of the base server results.
 };
 
@@ -202,8 +203,8 @@ static constexpr std::array<const char*, kMaxBaseResultSrings>  OperationResultS
     "INTERNAL_ZMQ_ERROR - Internal ZeroMQ error.",
     "EMPTY_MSG - Message is empty.",
     "INVALID_CLIENT_IP - Client IP missing or empty.",
-    "RESERVED_BASE_RESULT",
-    "RESERVED_BASE_RESULT",
+    "INVALID_SERVER_UUID - The server UUID is invalid (could be invalid, missing or empty).",
+    "DISCONNECTED_FROM_SERVER - The server forced the client disconnection (for example due to dead condition).",
     "EMPTY_PARAMS - Command parameters missing or empty.",
     "TIMEOUT_REACHED - Operation timed out.",
     "INVALID_PARTS - Command has invalid parts.",
@@ -221,7 +222,8 @@ static constexpr std::array<const char*, kMaxBaseResultSrings>  OperationResultS
     "MAX_CLIENTS_REACH - The server has reached the maximum number of clients allowed.",
     "COMMAND_NOT_ALLOWED - The command is not allowed to be executed.",
     "CLIENT_VERSION_NOT_COMP - The version of the client is not compatible with the server version.",
-    "DISCONNECTED_FROM_SERVER - The server forced the client disconnection (for example due to dead condition).",
+    "RESERVED_BASE_RESULT",
+    "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
@@ -289,8 +291,9 @@ struct LIBZMQUTILS_EXPORT CommandReply
 
     // Struct data.
     ServerCommand command;    ///< Command whose execution generated this reply data.
-    OperationResult result;    ///< Reply result from the server.
-    ReplyData data;            ///< Reply data. Can be empty depending on the result of executing the command.
+    utils::UUID server_uuid;  ///< Server UUID unique identification.
+    OperationResult result;   ///< Reply result from the server.
+    ReplyData data;           ///< Reply data. Can be empty depending on the result of executing the command.
 };
 
 // =====================================================================================================================

@@ -99,8 +99,9 @@ void DebugPublisherBase::onSendingMsg(const PublishedMessage &msg)
     // Log.
     serializer::BinarySerializer serializer(msg.data.bytes.get(), msg.data.size);
     std::stringstream data;
-    data << "Topic:     " << msg.topic                                       << std::endl;
-    data << "Params size: " << msg.data.size                                 << std::endl;
+    data << "Topic:       " << msg.topic                      << std::endl;
+    data << "Timestamp:   " << msg.timestamp                  << std::endl;
+    data << "Params size: " << msg.data.size                  << std::endl;
     data << "Params Hex:  " << serializer.getDataHexString();
     std::cout << this->generateStringHeader("ON SENDING MSG", {data.str()});
 }
@@ -122,7 +123,6 @@ std::string DebugPublisherBase::generateStringHeader(const std::string &clbk_nam
     ss << std::string(100, '-') << std::endl;
     return ss.str();
 }
-
 
 }} // END NAMESPACES.
 // =====================================================================================================================

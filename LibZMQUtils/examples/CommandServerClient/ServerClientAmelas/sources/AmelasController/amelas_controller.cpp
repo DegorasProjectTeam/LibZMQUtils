@@ -74,12 +74,12 @@ AmelasError AmelasController::setHomePosition(const AltAzPos &pos)
     // Log.
     std::string cmd_str = ControllerErrorStr[static_cast<size_t>(error)];
     std::cout << std::string(100, '-') << std::endl;
-    std::cout<<"<AMELAS CONTROLLER>"<<std::endl;
-    std::cout<<"-> SET_HOME_POSITION"<<std::endl;
-    std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
-    std::cout<<"Az: "<<pos.az<<std::endl;
-    std::cout<<"El: "<<pos.el<<std::endl;
-    std::cout<<"Error: "<<static_cast<int>(error)<<" ("<<cmd_str<<")"<<std::endl;
+    std::cout << "<AMELAS CONTROLLER>" << std::endl;
+    std::cout << "-> SET_HOME_POSITION" << std::endl;
+    std::cout << "Time: "<<zmqutils::utils::currentISO8601Date() << std::endl;
+    std::cout << "Az: " << pos.az << std::endl;
+    std::cout << "El: " << pos.el << std::endl;
+    std::cout << "Error: " << static_cast<int>(error) << " (" << cmd_str << ")" << std::endl;
     std::cout << std::string(100, '-') << std::endl;
 
     return error;
@@ -90,9 +90,9 @@ AmelasError AmelasController::getHomePosition(AltAzPos &pos)
     pos = this->home_pos_;
 
     std::cout << std::string(100, '-') << std::endl;
-    std::cout<<"<AMELAS CONTROLLER>"<<std::endl;
-    std::cout<<"-> GET_HOME_POSITION"<<std::endl;
-    std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
+    std::cout << "<AMELAS CONTROLLER>" << std::endl;
+    std::cout << "-> GET_HOME_POSITION" << std::endl;
+    std::cout << "Time: " << zmqutils::utils::currentISO8601Date() << std::endl;
     std::cout << std::string(100, '-') << std::endl;
 
     return AmelasError::SUCCESS;
@@ -102,9 +102,9 @@ AmelasError AmelasController::doOpenSearchTelescope()
 {
     // Log.
     std::cout << std::string(100, '-') << std::endl;
-    std::cout<<"<AMELAS CONTROLLER>"<<std::endl;
-    std::cout<<"-> DO_OPEN_SEARCH_TELESCOPE"<<std::endl;
-    std::cout<<"Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
+    std::cout << "<AMELAS CONTROLLER>" << std::endl;
+    std::cout << "-> DO_OPEN_SEARCH_TELESCOPE" << std::endl;
+    std::cout << "Time: " << zmqutils::utils::currentISO8601Date() << std::endl;
     std::cout << std::string(100, '-') << std::endl;
 
     return AmelasError::SUCCESS;

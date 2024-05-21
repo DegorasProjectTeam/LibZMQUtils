@@ -131,7 +131,7 @@ std::string PublisherInfo::toString() const
     ss << "Publisher Name:      "        << this->name                   << std::endl;
     ss << "Publisher Info:      "        << this->info                   << std::endl;
     ss << "Publisher Version:   "        << this->version                << std::endl;
-    ss << "Publisher Server Addresses: " << ip_list;
+    ss << "Publisher Addresses: " << ip_list;
 
     return ss.str();
 }

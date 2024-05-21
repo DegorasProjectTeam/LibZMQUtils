@@ -150,6 +150,7 @@ std::string CommandServerInfo::toJsonString() const
        << "\"name\":\"" << this->name << "\","
        << "\"info\":\"" << this->info << "\","
        << "\"version\":\"" << this->version << "\","
+       << "\"last_seen\":\"" << utils::timePointToIso8601(this->last_seen) << "\","
        << "\"ips\":[";
 
     // Add each IP address in the "ips" vector to the JSON array
@@ -182,11 +183,19 @@ std::string CommandClientInfo::toString() const
     return ss.str();
 }
 
-std::string CommandServerInfo::toString() const
+std::string CommandServerInfo::toString(bool only_basic_info) const
 {
     // Containers.
     std::stringstream ss;
     std::string ip_list, separator(" - ");
+
+    // Only basic information.
+    if(only_basic_info)
+    {
+        ss << "Server Port:      " << this->port << std::endl;
+        ss << "Server Endpoint:  " << this->endpoint;
+        return ss.str();
+    }
 
     // Get the IPs.
     for(const auto& ip : this->ips)
@@ -205,7 +214,8 @@ std::string CommandServerInfo::toString() const
     ss << "Server Name:      " << this->name << std::endl;
     ss << "Server Info:      " << this->info << std::endl;
     ss << "Server Version:   " << this->version << std::endl;
-    ss << "Server Addresses: " << ip_list;
+    ss << "Server Addresses: " << ip_list << std::endl;
+    ss << "Server Seen:      " << utils::timePointToIso8601(this->last_seen);
 
     // Return the string.
     return ss.str();

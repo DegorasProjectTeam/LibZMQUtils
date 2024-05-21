@@ -371,12 +371,13 @@ OperationResult SubscriberBase::recvFromSocket(PublishedMessage& msg)
         return OperationResult::EMPTY_MSG;
 
     // Check the multipart msg size.
-    if (recv_result && (multipart_msg.size() == 3 || multipart_msg.size() == 4))
+    if (recv_result && (multipart_msg.size() == 4 || multipart_msg.size() == 5))
     {
         // Get the multipart data.
         zmq::message_t msg_topic = multipart_msg.pop();
         zmq::message_t msg_uuid = multipart_msg.pop();
-        zmq::message_t msg_pub_name = multipart_msg.pop();
+        zmq::message_t msg_time = multipart_msg.pop();
+        zmq::message_t msg_pub = multipart_msg.pop();
 
         // Get the topic. Topic is not serialized using BinarySerializer, since it must come plain.
         msg.topic = msg_topic.to_string();
@@ -401,8 +402,11 @@ OperationResult SubscriberBase::recvFromSocket(PublishedMessage& msg)
                 return OperationResult::INVALID_PARTS;
         }
 
+        // Get the timestamp.
+        serializer::BinarySerializer::fastDeserialization(msg_time.data(), msg_time.size(), msg.timestamp);
+
         // Get the publisher information.
-        serializer::BinarySerializer::fastDeserialization(msg_pub_name.data(), msg_pub_name.size(),
+        serializer::BinarySerializer::fastDeserialization(msg_pub.data(), msg_pub.size(),
             msg.pub_info.endpoint, msg.pub_info.hostname, msg.pub_info.name, msg.pub_info.info, msg.pub_info.version);
 
         // TODO COMPLETE INFO AND STORE IT

@@ -170,17 +170,18 @@ struct LIBZMQUTILS_EXPORT CommandServerInfo
     /**
      * @brief Convert CommandServerInfo to a formatted string (for debug purposes).
      */
-    std::string toString() const;
+    std::string toString(bool only_basic_info = false) const;
 
     // Struct data.
-    utils::UUID uuid;              ///< Unique server UUID.
-    unsigned port;                 ///< Server port.
-    std::string endpoint;          ///< Final server endpoint.
-    std::string hostname;          ///< Host server name.
-    std::string name;              ///< Server name, optional.
-    std::string info;              ///< Server information, optional.
-    std::string version;           ///< Server version, optional.
-    std::vector<std::string> ips;  ///< Vector of server ips.
+    utils::UUID uuid;                ///< Unique server UUID.
+    unsigned port;                   ///< Server port.
+    std::string endpoint;            ///< Final server endpoint.
+    std::string hostname;            ///< Host server name.
+    std::string name;                ///< Server name, optional.
+    std::string info;                ///< Server information, optional.
+    std::string version;             ///< Server version, optional.
+    std::vector<std::string> ips;    ///< Vector of server ips.
+    utils::HRTimePointStd last_seen; ///< Time point with the last moment that the server was seen by the client.
 };
 
 // =====================================================================================================================
