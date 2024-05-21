@@ -404,12 +404,13 @@ OperationResult SubscriberBase::recvFromSocket(PublishedMessage& msg)
 
         // Get the timestamp.
         serializer::BinarySerializer::fastDeserialization(msg_time.data(), msg_time.size(), msg.timestamp);
+        msg.tp = utils::iso8601DatetimeToTimePoint(msg.timestamp);
 
         // Get the publisher information.
         serializer::BinarySerializer::fastDeserialization(msg_pub.data(), msg_pub.size(),
             msg.pub_info.endpoint, msg.pub_info.hostname, msg.pub_info.name, msg.pub_info.info, msg.pub_info.version);
 
-        // TODO COMPLETE INFO AND STORE IT
+        // TODO WARNING: WE CANT UPDATE THE STORED INFO BECAOUSE IN ZMQ YOU CANT KNOW WHAT PUBLISHER SEND THE MSG.
 
         // If there is still one more part, it is the message data.
         if (multipart_msg.size() == 1)

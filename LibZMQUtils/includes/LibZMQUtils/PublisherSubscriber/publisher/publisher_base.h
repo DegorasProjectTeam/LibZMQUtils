@@ -74,7 +74,7 @@ public:
      * binding connections, and other metadata such as the publisher name, version, and additional information.
      *
      * @param port              The port number on which the publisher will listen for incoming connections.
-     * @param ip_address        The IP address on which the publisher will accept connections. By default, it listens
+     * @param interface         The interface on which the publisher will accept connections. By default, it listens
      *                              on all available interfaces ("*").
      * @param publisher_name    Optional parameter to specify the publisher name. By default is empty.
      * @param publisher_version Optional parameter to specify the publisher version (like "1.1.1"). By default is empty.
@@ -82,14 +82,14 @@ public:
      *
      * @throws std::invalid_argument If no network interfaces matching the specified IP address are found.
      *
-     * @note The publisher requires at least one valid IP address to function properly. If "ip_address" is set to "*",
+     * @note The publisher requires at least one valid IP address to function properly. If "interface" is set to "*",
      * it will listen on all available local interfaces. Otherwise, the publisher will only bind to the specified IP
      * address if it matches a valid interface.
      *
-     * @warning When specifying the `ip_address`, ensure it is a valid IP address present on the system. Incorrect or
+     * @warning When specifying the `interface`, ensure it is a valid IP address present on the system. Incorrect or
      * unavailable addresses may result in connection failures.
      */
-    PublisherBase(unsigned port, const std::string& ip_address = "*", const std::string& publisher_name = "",
+    PublisherBase(unsigned port, const std::string& interface = "*", const std::string& publisher_name = "",
                   const std::string& publisher_version = "", const std::string& publisher_info = "");
     
     /**

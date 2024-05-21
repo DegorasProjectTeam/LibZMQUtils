@@ -36,6 +36,7 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
+#include <regex>
 #include <string>
 #include <cstring>
 #include <chrono>
@@ -71,7 +72,11 @@ using TimePointStd = std::chrono::system_clock::time_point;
 using HRTimePointStd = std::chrono::high_resolution_clock::time_point;
 /// Steady clock time point for measuring intervals.
 using SCTimePointStd =  std::chrono::steady_clock::time_point;
+/// High resolution clock.
+using HRClock = std::chrono::high_resolution_clock;
 // =====================================================================================================================
+
+LIBZMQUTILS_EXPORT long long daysFromCivil(int y, unsigned m, unsigned d);
 
 LIBZMQUTILS_EXPORT std::string timePointToString(const TimePointStd& tp,
                                                  const std::string& format = "%Y-%m-%dT%H:%M:%S",
@@ -81,6 +86,8 @@ LIBZMQUTILS_EXPORT std::string timePointToIso8601(const TimePointStd& tp,
                                                   bool add_ms = true, bool add_ns = false, bool utc = true);
 
 LIBZMQUTILS_EXPORT std::string currentISO8601Date(bool add_ms = true, bool add_ns = false, bool utc = true);
+
+LIBZMQUTILS_EXPORT HRTimePointStd iso8601DatetimeToTimePoint(const std::string& datetime);
 
 // template<typename Enum, std::size_t N>
 // std::string getEnumString(Enum value, const std::array<const char*, N>& str_array)

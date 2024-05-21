@@ -78,6 +78,7 @@ enum class OperationResult : ResultType
     MSG_OK                 = 0,   ///< All the operation was ok (publish data or receive the data).
     INTERNAL_ZMQ_ERROR     = 1,   ///< An internal ZeroMQ error occurred.
     EMPTY_MSG              = 2,   ///< The message is empty.
+    PUB_NOT_REGISTERED     = 3,   ///< The publisher is not registered in the client.
     EMPTY_PARAMS           = 6,   ///< The command parameters are missing or empty.
     INVALID_PARTS          = 8,   ///< The message has invalid parts.
     INVALID_MSG            = 10,  ///< The message is invalid.
@@ -105,7 +106,7 @@ static constexpr std::array<const char*, kMaxBaseResultSrings>  OperationResultS
     "MSG_OK - All the operation was ok (publish data or receive the data).",
     "INTERNAL_ZMQ_ERROR - Internal ZeroMQ error.",
     "EMPTY_MSG - Message is empty.",
-    "RESERVED_BASE_RESULT",
+    "PUB_NOT_REGISTERED - The publisher is not registered in the client.",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
     "EMPTY_PARAMS - The data parameters missing or empty.",
@@ -183,10 +184,11 @@ struct LIBZMQUTILS_EXPORT PublishedMessage
     void clear();
 
     // Struct data.
-    TopicType topic;         ///< Topic associated to the published message.
-    PublisherInfo pub_info;  ///< Publisher information.
-    PublishedData data;      ///< Reply data. Can be empty.
-    std::string timestamp;   ///< ISO8601 string timestamp that represents the time when the message was created.
+    TopicType topic;          ///< Topic associated to the published message.
+    PublisherInfo pub_info;   ///< Publisher information.
+    PublishedData data;       ///< Reply data. Can be empty.
+    std::string timestamp;    ///< ISO8601 string timestamp that represents the time when the message was created.
+    utils::HRTimePointStd tp; ///< Time point that represents the time when the message was created.
 };
 
 

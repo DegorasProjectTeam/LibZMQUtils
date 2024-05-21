@@ -130,5 +130,76 @@ std::string currentISO8601Date(bool add_ms, bool add_ns, bool utc)
     return timePointToIso8601(now, add_ms, add_ns, utc);
 }
 
+HRTimePointStd iso8601DatetimeToTimePoint(const std::string &datetime)
+{
+    // Auxiliar variables.
+    int y,m,d,h,M, s;
+    std::smatch match;
+
+    // Regex.
+    std::regex iso8601_regex_extended(R"(^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?Z$)");
+    std::regex iso8601_regex_basic(R"(^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(?:\.(\d+))?Z$)");
+
+    // Check the regexes.
+    if (!std::regex_search(datetime, match, iso8601_regex_extended))
+    {
+        if (!std::regex_search(datetime, match, iso8601_regex_basic))
+            throw std::invalid_argument("[LibDegorasSLR,Timing,iso8601DatetimeToTimePoint] Invalid argument: " + datetime);
+    }
+
+    // Get the datetime values.
+    y = std::stoi(match[1].str());
+    m = std::stoi(match[2].str());
+    d = std::stoi(match[3].str());
+    h = std::stoi(match[4].str());
+    M = std::stoi(match[5].str());
+    s = std::stoi(match[6].str());
+    std::string fractional_seconds_str = match[7].str();
+
+    // Get the time point.
+    auto days_since_epoch = daysFromCivil(y, static_cast<unsigned>(m), static_cast<unsigned>(d));
+    HRTimePointStd t = HRClock::time_point(std::chrono::duration<int, std::ratio<86400>>(days_since_epoch));
+
+    // Add the hours, minutes, seconds and milliseconds.
+    t += std::chrono::hours(h);
+    t += std::chrono::minutes(M);
+    t += std::chrono::seconds(s);
+
+    // Process the fractional part.
+    if (!fractional_seconds_str.empty())
+    {
+        long long fractional_seconds = std::stoll(fractional_seconds_str);
+        size_t length = fractional_seconds_str.length();
+
+        // Convert fractional seconds to the appropriate duration
+        if (length <= 3)
+            t += std::chrono::milliseconds(fractional_seconds);
+        else if (length <= 6)
+            t += std::chrono::microseconds(fractional_seconds);
+        else
+            t += std::chrono::nanoseconds(fractional_seconds);
+    }
+
+    // Return the time point.
+    return t;
+}
+
+long long daysFromCivil(int y, unsigned int m, unsigned int d)
+{
+    // Check the numeric limits.
+    static_assert(std::numeric_limits<unsigned>::digits >= 18,
+                  "[LibDegorasBase,Timing,daysFromCivil] >= 16 bit unsigned integer");
+    static_assert(std::numeric_limits<int>::digits >= 20,
+                  "[LibDegorasBase,Timing,daysFromCivil] >= 16 bit signed integer");
+    // Calculate the number of days since 1970-01-01.
+    y -= m <= 2;
+    const int era = (y >= 0 ? y : y-399) / 400;
+    const unsigned yoe = static_cast<unsigned>(y - era * 400);   // [0, 399]
+    const unsigned doy = (153*(m > 2 ? m-3 : m+9) + 2)/5 + d-1;  // [0, 365]
+    const unsigned doe = yoe * 365 + yoe/4 - yoe/100 + doy;      // [0, 146096]
+    // Return the result.
+    return era * 146097LL + static_cast<int>(doe) - 719468LL;
+}
+
 }} // END NAMESPACES.
 // =====================================================================================================================

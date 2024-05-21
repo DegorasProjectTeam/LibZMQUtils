@@ -68,7 +68,7 @@ namespace pubsub{
 // =====================================================================================================================
 
 PublisherBase::PublisherBase(unsigned port,
-                             const std::string& ip_address,
+                             const std::string& interface,
                              const std::string& publisher_name,
                              const std::string& publisher_version,
                              const std::string& publisher_info) :
@@ -81,14 +81,23 @@ PublisherBase::PublisherBase(unsigned port,
     // Get the adapters.
     std::vector<NetworkAdapterInfo> interfcs = internal_helpers::network::getHostIPsWithInterfaces();
 
+    // Auxiliar ip.
+    std::string inter_aux = interface;
+
+    // Update if localhost.
+    if(inter_aux == "localhost")
+        inter_aux = "127.0.0.1";
+
     // Store the adapters.
-    if(ip_address == "*")
+    if(inter_aux == "*")
         this->publisher_adapters_ = interfcs;
     else
     {
         for(const auto& intrfc : interfcs)
         {
-            if(intrfc.ip == ip_address)
+            if(intrfc.ip == inter_aux)
+                this->publisher_adapters_.push_back(intrfc);
+            else if(intrfc.name == inter_aux)
                 this->publisher_adapters_.push_back(intrfc);
         }
     }
@@ -97,13 +106,13 @@ PublisherBase::PublisherBase(unsigned port,
     if(this->publisher_adapters_.empty())
     {
         std::string module = "[LibZMQUtils,PublisherSubscriber,PublisherBase] ";
-        throw std::invalid_argument(module + "No interfaces found for address <" + ip_address + ">.");
+        throw std::invalid_argument(module + "No interfaces found for address <" + inter_aux + ">.");
     }
 
     // Update the publisher information.
     this->pub_info_.uuid = uuid;
     this->pub_info_.port = port;
-    this->pub_info_.endpoint = "tcp://" + ip_address + ":" + std::to_string(port);
+    this->pub_info_.endpoint = "tcp://" + inter_aux + ":" + std::to_string(port);
     this->pub_info_.hostname = internal_helpers::network::getHostname();
     this->pub_info_.name = publisher_name;
     this->pub_info_.info = publisher_info;
