@@ -80,7 +80,8 @@ enum class ServerCommand : CommandType
     REQ_DISCONNECT      = 1,  ///< Request to disconnect from the server.
     REQ_ALIVE           = 2,  ///< Request to check if the server is alive and for notify that the client is alive too.
     REQ_GET_SERVER_TIME = 3,  ///< Request to get the server ISO 8601 UTC datetime (uses the system clock).
-    END_IMPL_COMMANDS   = 4,  ///< Sentinel value indicating the end of the base implemented commands (invalid command).
+    REQ_PING            = 4,  ///< Request to ping server.
+    END_IMPL_COMMANDS   = 5,  ///< Sentinel value indicating the end of the base implemented commands (invalid command).
     END_BASE_COMMANDS   = 50  ///< Sentinel value indicating the end of the base commands (invalid command).
 };
 
@@ -148,8 +149,8 @@ static constexpr std::array<const char*, kMaxBaseCmdSrings>  ServerCommandStr
     "REQ_DISCONNECT",
     "REQ_ALIVE",
     "REQ_GET_SERVER_TIME",
+    "REQ_PING",
     "END_IMPL_COMMANDS",
-    "RESERVED_BASE_COMMAND",
     "RESERVED_BASE_COMMAND",
     "RESERVED_BASE_COMMAND",
     "RESERVED_BASE_COMMAND",

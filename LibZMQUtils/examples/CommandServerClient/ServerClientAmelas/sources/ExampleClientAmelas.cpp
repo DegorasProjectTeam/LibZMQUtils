@@ -136,11 +136,26 @@ public:
             std::cout << "Sending REQ_GET_SERVER_TIME command." << std::endl;
             std::string datetime;
             res = this->client_.doGetServerTime(datetime);
-            if(res==OperationResult::COMMAND_OK)
+
+            if(res == OperationResult::COMMAND_OK)
                 std::cout << "GET_SERVER_TIME command executed succesfully. "
                           << "Server time is: " << datetime << std::endl;
             else
                 std::cout << "GET_SERVER_TIME command failed." << std::endl;
+        }
+        else if (command_id == static_cast<CommandType>(ServerCommand::REQ_PING))
+        {
+            std::cout << "Sending REQ_PING command." << std::endl;
+            std::chrono::milliseconds elapsed_time;
+            res = this->client_.doPing(elapsed_time);
+
+            if(res == OperationResult::COMMAND_OK)
+                std::cout << "PING command executed succesfully. ";
+
+            else
+                std::cout << "PING command failed. ";
+
+            std::cout << "Elapsed time is: " << std::to_string(elapsed_time.count()) << " ms." << std::endl;
         }
         else if (command_id == static_cast<CommandType>(AmelasServerCommand::REQ_GET_HOME_POSITION))
         {
@@ -344,6 +359,7 @@ int main(int, char**)
         std::cout<<"- REQ_DISCONNECT:       1"<<std::endl;
         std::cout<<"- REQ_ALIVE:            2"<<std::endl;
         std::cout<<"- REQ_GET_SERVER_TIME:  3"<<std::endl;
+        std::cout<<"- REQ_PING:             4"<<std::endl;
         std::cout<<"-- Specific Commands --"<<std::endl;
         std::cout<<"- REQ_SET_HOME_POSITION:        51 az el"<<std::endl;
         std::cout<<"- REQ_GET_HOME_POSITION:        52"<<std::endl;

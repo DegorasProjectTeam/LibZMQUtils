@@ -213,10 +213,19 @@ public:
 
     /**
      * @brief Request the time from a Command Server.
-     * @param datetime, the resulting datetime obtained from the Command Server.
-     * @return the OperationResult.
+     * @param datetime The resulting datetime obtained from the Command Server.
+     * @return The OperationResult.
      */
     OperationResult doGetServerTime(std::string& datetime);
+
+
+    /**
+     * @brief Send ping to server.
+     * @param elapsed_time The time elapsed between sending ping and receiving answer.
+     * @return The result of the operation.
+     * @note elapsed_time is calculated whether if operation is successful or not.
+     */
+    OperationResult doPing(std::chrono::milliseconds &elapsed_time);
 
     /**
      * @brief Send a command to the Command Server.
@@ -322,6 +331,7 @@ public:
      * @warning The client will stop if is running but in this case the `onClientStop` callback can't be executed.
      */
     virtual ~CommandClientBase() override;
+
 
 protected:
 

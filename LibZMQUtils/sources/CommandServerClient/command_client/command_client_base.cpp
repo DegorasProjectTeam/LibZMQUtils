@@ -949,6 +949,26 @@ OperationResult CommandClientBase::doGetServerTime(std::string &datetime)
     return result;
 }
 
+OperationResult CommandClientBase::doPing(std::chrono::milliseconds &elapsed_time)
+{
+    // Containers.
+    CommandReply reply;
+    OperationResult result;
+
+    auto start_ping_tp = std::chrono::steady_clock::now();
+
+    // Send the command.
+    result = this->sendCommand(ServerCommand::REQ_PING, reply);
+
+    auto end_ping_tp = std::chrono::steady_clock::now();
+
+    // Calculate elapsed time.
+    elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_ping_tp - start_ping_tp);
+
+    // Return the result.
+    return result;
+}
+
 zmq::multipart_t CommandClientBase::prepareMessage(const CommandRequest& command_request)
 {
     // Serializer.

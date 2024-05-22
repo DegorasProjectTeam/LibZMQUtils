@@ -800,6 +800,10 @@ void CommandServerBase::processCommand(CommandRequest& request, CommandReply& re
     {
         reply.result = this->execReqGetServerTime(reply);
     }
+    else if (ServerCommand::REQ_PING == request.command)
+    {
+        reply.result = OperationResult::COMMAND_OK;
+    }
     else if(this->validateCustomRequest(request))
     {
         // Call the internal callback.
