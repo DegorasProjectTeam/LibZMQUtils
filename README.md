@@ -11,12 +11,11 @@
 
   <p align="center">
     <br />
-    A C++ libre library with ZMQ related useful utilities. 
+A modern open-source and cross-platform C++ library with high-level utilities based on the well-known ZeroMQ open-source universal messaging library. Includes a suite of modules that encapsulates the ZMQ communication patterns as well as automatic binary serialization capabilities, specially designed for system infraestructure. The library is suited for the quick and easy integration of new and old systems and can be used in different sectors and disciplines seeking robust messaging and serialization solutions.
     <br />
     <br />
-    Developed under the context of Degoras Project for the Spanish Navy Observatory SLR 
+Developed as free software within the context of the Degoras Project for the Satellite Laser Ranging Station (SFEL) at the Spanish Navy Observatory (ROA) in San Fernando, Cádiz. The library is open for use by other SLR stations and organizations, so we warmly encourage you to give it a try and feel free to contact us anytime!    
     <br />
-    (SFEL) station in San Fernando and, of course, any other station that wants to use it!
     <br />
     <br />
     <a href="https://github.com/DegorasProjectTeam/LibZMQUtils/tree/master/LibZMQUtils/docs"><strong>Explore the docs »</strong></a>
@@ -37,7 +36,7 @@ This project was born with the aim to provide a generic command client/server in
 
 ### Built With
 
-This project is compiled under C++17 with Mingw compilator in Windows OS, using ZMQ library version 4.3.4. It is still pending to test this library with other compilators, OS and ZMQ library versions.
+This project is compiled under C++17 with Mingw compilator in Windows OS, using ZMQ library version 4.3.4. Also works under Ubuntu 22 using gcc13. It is still pending to test this library with other compilators, OS and ZMQ library versions.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
