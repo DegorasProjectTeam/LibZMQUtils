@@ -89,6 +89,8 @@ LIBZMQUTILS_EXPORT std::string currentISO8601Date(bool add_ms = true, bool add_n
 
 LIBZMQUTILS_EXPORT HRTimePointStd iso8601DatetimeToTimePoint(const std::string& datetime);
 
+LIBZMQUTILS_EXPORT bool isValidIso8601Datetime(const std::string& datetime);
+
 // template<typename Enum, std::size_t N>
 // std::string getEnumString(Enum value, const std::array<const char*, N>& str_array)
 // {

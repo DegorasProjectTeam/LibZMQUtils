@@ -55,8 +55,8 @@ CommandRequest::CommandRequest()
     this->clear();
 }
 
-CommandRequest::CommandRequest(ServerCommand command, const utils::UUID &uuid, RequestData &&data,
-                               const std::string& timestamp) :
+CommandRequest::CommandRequest(ServerCommand command, const utils::UUID &uuid,
+                               const std::string& timestamp, RequestData &&data) :
     command(command),
     client_uuid(uuid),
     data(std::move(data)),

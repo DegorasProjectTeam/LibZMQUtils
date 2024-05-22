@@ -331,8 +331,8 @@ OperationResult CommandClientBase::sendCommand(ServerCommand command, RequestDat
     reply = CommandReply();
 
     // Prepare the CommandRequest.
-    CommandRequest command_request(command, this->client_info_.uuid, std::move(request_data),
-                                   utils::currentISO8601Date(true, false, true));
+    CommandRequest command_request(command, this->client_info_.uuid, utils::currentISO8601Date(true, false, true),
+                                   std::move(request_data));
 
     // Check if we start the client.
     if (!this->client_socket_)
@@ -549,7 +549,7 @@ void CommandClientBase::recvFromSocket(CommandReply& reply,
                 this->flag_server_seen_ = true;
 
                 // Store the last time the server was seen.
-                this->connected_server_info_.last_seen = std::chrono::high_resolution_clock::now();
+                this->connected_server_info_.last_seen = utils::HRTimePointStd::clock::now();
 
                 // Get the multipart msg.
                 zmq::multipart_t multipart_msg;
@@ -563,7 +563,7 @@ void CommandClientBase::recvFromSocket(CommandReply& reply,
                 }
 
                 // Check the multipart msg size.
-                if (multipart_msg.size() != 2 && multipart_msg.size() != 3)
+                if (multipart_msg.size() != 3 && multipart_msg.size() != 4)
                 {
                     reply.result = OperationResult::INVALID_PARTS;
                     return;
@@ -572,7 +572,7 @@ void CommandClientBase::recvFromSocket(CommandReply& reply,
                 // Get the multipart data.
                 zmq::message_t msg_uuid = multipart_msg.pop();
                 zmq::message_t msg_res = multipart_msg.pop();
-                //zmq::message_t msg_time = multipart_msg.pop();
+                zmq::message_t msg_time = multipart_msg.pop();
 
                 // Get the server UUID data.
                 if (msg_uuid.size() == utils::UUID::kUUIDSize + sizeof(serializer::SizeUnit)*2)
@@ -587,10 +587,6 @@ void CommandClientBase::recvFromSocket(CommandReply& reply,
                     return;
                 }
 
-                // Get the timestamp.
-                //serializer::BinarySerializer::fastDeserialization(msg_time.data(), msg_time.size(), msg.timestamp);
-                //msg.tp = utils::iso8601DatetimeToTimePoint(msg.timestamp);
-
                 // Check the result size.
                 constexpr size_t res_part_size = (sizeof(serializer::SizeUnit) + sizeof(ResultType))*2;
                 if (msg_res.size() != res_part_size)
@@ -602,6 +598,12 @@ void CommandClientBase::recvFromSocket(CommandReply& reply,
                 // Get the operation result and the command.
                 serializer::BinarySerializer::fastDeserialization(msg_res.data(), msg_res.size(),
                                                                   reply.command, reply.result);
+
+                // Get the timestamp.
+                serializer::BinarySerializer::fastDeserialization(msg_time.data(), msg_time.size(), reply.timestamp);
+
+                // Convert timestamp string to timepoint.
+                reply.tp = utils::iso8601DatetimeToTimePoint(reply.timestamp);
 
                 // If there is still one more part, they are the parameters.
                 if (multipart_msg.size() == 1)
@@ -641,6 +643,11 @@ void CommandClientBase::recvFromSocket(CommandReply& reply,
 
             // Store the error result.
             reply.result = OperationResult::INTERNAL_ZMQ_ERROR;
+            return;
+        }
+        catch(...)
+        {
+            reply.result = OperationResult::INVALID_MSG;
             return;
         }
     }
@@ -701,7 +708,8 @@ void CommandClientBase::internalStopClient()
 void CommandClientBase::aliveWorker()
 {
     // Request and reply.
-    CommandRequest command_request;
+    CommandRequest command_request(ServerCommand::REQ_ALIVE, this->client_info_.uuid,
+                                   utils::currentISO8601Date(true, false, true), {});
     CommandReply reply;
 
     // Alive socket.
@@ -710,10 +718,6 @@ void CommandClientBase::aliveWorker()
 
     // First time flag.
     bool first_time = true;
-
-    // Update the request.
-    command_request.client_uuid = this->client_info_.uuid;
-    command_request.command = ServerCommand::REQ_ALIVE;
 
     // Create the ZMQ auxiliar alive socket.
     try

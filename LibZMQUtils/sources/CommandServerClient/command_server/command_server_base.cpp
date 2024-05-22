@@ -497,10 +497,6 @@ void CommandServerBase::serverWorker()
     // for each client. The loop can be stopped (in a safe way) if using the stopServer() function.
     while(this->server_socket_ && this->flag_server_working_)
     {
-        // Resets all the containers.
-        request.clear();
-        reply.clear();
-
         // Call to the internal waiting command callback (check first the last request).
         if (request.command != ServerCommand::REQ_ALIVE || this->flag_alive_callbacks_)
             this->onWaitingCommand();
@@ -530,6 +526,7 @@ void CommandServerBase::serverWorker()
             // Store the result
             reply.result = op_res;
             reply.command = request.command;
+            reply.timestamp = utils::currentISO8601Date(true, false, true);
 
             // Internal callback.
             this->onInvalidMsgReceived(request);
@@ -570,6 +567,9 @@ void CommandServerBase::serverWorker()
             // Execute the command.
             this->processCommand(request, reply);
 
+            // Store timestamp for processed command.
+            reply.timestamp = utils::currentISO8601Date(true, false, true);
+
             // Binary serializer.
             serializer::BinarySerializer serializer;
 
@@ -585,8 +585,8 @@ void CommandServerBase::serverWorker()
             multipart_msg.addmem(serializer.release(), res_size);
 
             // Prepare the timestamp.
-            //size_t tp_size = serializer.write(reply.timestamp);
-            //multipart_msg.addmem(serializer.release(), tp_size);
+            size_t tp_size = serializer.write(reply.timestamp);
+            multipart_msg.addmem(serializer.release(), tp_size);
 
             // Specific data.
             if(reply.result == OperationResult::COMMAND_OK && reply.data.size != 0)
@@ -633,14 +633,13 @@ OperationResult CommandServerBase::recvFromSocket(CommandRequest& request)
     zmq::multipart_t multipart_msg;
 
     // Update timestamp of the server information.
-    this->server_info_.last_seen = std::chrono::high_resolution_clock::now();
+    this->server_info_.last_seen = utils::HRTimePointStd::clock::now();
 
     // Try to receive data. If an execption is thrown, receiving fails and an error code is generated.
     try
     {
         // Wait the command.
         recv_result = multipart_msg.recv(*(this->server_socket_));
-
     }
     catch(zmq::error_t& error)
     {
@@ -690,10 +689,6 @@ OperationResult CommandServerBase::recvFromSocket(CommandRequest& request)
         // Update the last connection if the client is connected.
         this->updateClientLastConnection(request.client_uuid);
 
-        // Get the timestamp.
-        serializer::BinarySerializer::fastDeserialization(msg_time.data(), msg_time.size(), request.timestamp);
-        request.tp = utils::iso8601DatetimeToTimePoint(request.timestamp);
-
         // Get the command.
         if (msg_command.size() == sizeof(serializer::SizeUnit) + sizeof(CommandType))
         {
@@ -717,6 +712,18 @@ OperationResult CommandServerBase::recvFromSocket(CommandRequest& request)
         else
         {
             request.command = ServerCommand::INVALID_COMMAND;
+            return OperationResult::INVALID_MSG;
+        }
+
+        // Get the timestamp.
+        try
+        {
+            serializer::BinarySerializer::fastDeserialization(msg_time.data(), msg_time.size(), request.timestamp);
+            request.tp = utils::iso8601DatetimeToTimePoint(request.timestamp);
+        }
+        catch(...)
+        {
+            // There was an error trying to deserialize or parse the timestamp.
             return OperationResult::INVALID_MSG;
         }
 

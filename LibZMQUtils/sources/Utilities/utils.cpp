@@ -137,14 +137,14 @@ HRTimePointStd iso8601DatetimeToTimePoint(const std::string &datetime)
     std::smatch match;
 
     // Regex.
-    std::regex iso8601_regex_extended(R"(^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?Z$)");
-    std::regex iso8601_regex_basic(R"(^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(?:\.(\d+))?Z$)");
+    const std::regex iso8601_regex_extended(R"(^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?Z$)");
+    const std::regex iso8601_regex_basic(R"(^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(?:\.(\d+))?Z$)");
 
     // Check the regexes.
-    if (!std::regex_search(datetime, match, iso8601_regex_extended))
+    if (!std::regex_search(datetime, match, iso8601_regex_extended) &&
+        !std::regex_search(datetime, match, iso8601_regex_basic))
     {
-        if (!std::regex_search(datetime, match, iso8601_regex_basic))
-            throw std::invalid_argument("[LibDegorasSLR,Timing,iso8601DatetimeToTimePoint] Invalid argument: " + datetime);
+        throw std::invalid_argument("[LibDegorasSLR,Timing,iso8601DatetimeToTimePoint] Invalid argument: " + datetime);
     }
 
     // Get the datetime values.
@@ -184,6 +184,19 @@ HRTimePointStd iso8601DatetimeToTimePoint(const std::string &datetime)
     return t;
 }
 
+bool isValidIso8601Datetime(const std::string &datetime)
+{
+    std::smatch match;
+
+    // Regex.
+    const std::regex iso8601_regex_extended(R"(^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?Z$)");
+    const std::regex iso8601_regex_basic(R"(^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(?:\.(\d+))?Z$)");
+
+    // Check if datetime matches one of ISO datetime patterns.
+    return std::regex_search(datetime, match, iso8601_regex_extended) ||
+           std::regex_search(datetime, match, iso8601_regex_basic);
+}
+
 long long daysFromCivil(int y, unsigned int m, unsigned int d)
 {
     // Check the numeric limits.
@@ -200,6 +213,8 @@ long long daysFromCivil(int y, unsigned int m, unsigned int d)
     // Return the result.
     return era * 146097LL + static_cast<int>(doe) - 719468LL;
 }
+
+
 
 }} // END NAMESPACES.
 // =====================================================================================================================

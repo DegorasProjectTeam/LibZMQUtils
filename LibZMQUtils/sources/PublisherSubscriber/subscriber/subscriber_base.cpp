@@ -256,6 +256,10 @@ void SubscriberBase::internalStopSubscriber()
         size_t uuid_size = serializer.write(this->socket_close_uuid_.getBytes());
         zmq::message_t msg_uuid(serializer.release(), uuid_size);
 
+        // Prepare the timestamp.
+        size_t ts_size = serializer.write(utils::currentISO8601Date(true, false, true));
+        zmq::message_t msg_ts(serializer.release(), ts_size);
+
         // Information is empty.
         zmq::message_t msg_info;
 
@@ -263,6 +267,7 @@ void SubscriberBase::internalStopSubscriber()
         zmq::multipart_t multipart_msg;
         multipart_msg.add(std::move(msg_topic));
         multipart_msg.add(std::move(msg_uuid));
+        multipart_msg.add(std::move(msg_ts));
         multipart_msg.add(std::move(msg_info));
 
         // Send the message.
@@ -411,7 +416,7 @@ OperationResult SubscriberBase::recvFromSocket(PublishedMessage& msg)
             msg.pub_info.endpoint, msg.pub_info.hostname, msg.pub_info.name, msg.pub_info.info,
                                                           msg.pub_info.version);
 
-        // TODO WARNING: WE CANT UPDATE THE STORED INFO BECAOUSE IN ZMQ YOU CANT KNOW WHAT PUBLISHER SEND THE MSG.
+        // TODO WARNING: WE CANT UPDATE THE STORED INFO BECAUSE IN ZMQ YOU CANT KNOW WHAT PUBLISHER SENDS THE MSG.
 
         // If there is still one more part, it is the message data.
         if (multipart_msg.size() == 1)

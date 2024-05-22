@@ -268,7 +268,7 @@ struct LIBZMQUTILS_EXPORT CommandRequest
 {
     CommandRequest();
 
-    CommandRequest(ServerCommand command, const utils::UUID& uuid, RequestData&& data, const std::string& timestamp);
+    CommandRequest(ServerCommand command, const utils::UUID& uuid, const std::string& timestamp, RequestData&& data);
 
     /**
      * @brief Resets the CommandRequest clearing all the contents.
