@@ -1,17 +1,21 @@
 /***********************************************************************************************************************
  *   LibZMQUtils (ZeroMQ High-Level Utilities C++ Library).                                                            *
- *
- *   ExamplesLibZMQUtils related project.                                                                            *
- *                                                                                                        *
- *   A modern open-source C++ library with high-level utilities based on the well-known ZeroMQ open-source universal   *
- *   messaging library. Includes custom command based server-client and publisher-subscriber with automatic binary     *
- *   serialization capabilities, specially designed for system infraestructure. Developed as a free software under the *
- *   context of Degoras Project for the Spanish Navy Observatory SLR station (SFEL) in San Fernando and, of course,    *
- *   for any other station that wants to use it!                                                                       *
+ *                                                                                                                     *
+ *   ExamplesLibZMQUtils related project.                                                                              *
+ *                                                                                                                     *
+ *   A modern open-source and cross-platform C++ library with high-level utilities based on the well-known ZeroMQ      *
+ *   open-source universal messaging library. Includes a suite of modules that encapsulates the ZMQ communication      *
+ *   patterns as well as automatic binary serialization capabilities, specially designed for system infraestructure.   *
+ *   The library is suited for the quick and easy integration of new and old systems and can be used in different      *
+ *   sectors and disciplines seeking robust messaging and serialization solutions.                                     *
+ *                                                                                                                     *
+ *   Developed as free software within the context of the Degoras Project for the Satellite Laser Ranging Station      *
+ *   (SFEL) at the Spanish Navy Observatory (ROA) in San Fernando, Cádiz. The library is open for use by other SLR     *
+ *   stations and organizations, so we warmly encourage you to give it a try and feel free to contact us anytime!      *
  *                                                                                                                     *
  *   Copyright (C) 2024 Degoras Project Team                                                                           *
  *                      < Ángel Vera Herrera, avera@roa.es - angeldelaveracruz@gmail.com >                             *
- *                      < Jesús Relinque Madroñal >                                                                    *                                                            *
+ *                      < Jesús Relinque Madroñal >                                                                    *
  *                                                                                                                     *
  *   This file is part of LibZMQUtils.                                                                                 *
  *                                                                                                                     *
@@ -59,6 +63,7 @@
 // =====================================================================================================================
 
 // ---------------------------------------------------------------------------------------------------------------------
+// ZMQ Utils Namsespaces.
 using zmqutils::reqrep::CommandType;
 using zmqutils::reqrep::CommandReply;
 using zmqutils::reqrep::ServerCommand;
@@ -66,6 +71,7 @@ using zmqutils::reqrep::CommandClientBase;
 using zmqutils::reqrep::RequestData;
 using zmqutils::reqrep::OperationResult;
 using amelas::communication::AmelasControllerClient;
+// Amelas Nampesaces.
 using amelas::communication::AmelasServerCommand;
 using amelas::controller::AltAzPos;
 using amelas::controller::AmelasError;
@@ -306,18 +312,27 @@ private:
  */
 int main(int, char**)
 {
+    // Std Namespaces.
+    using namespace std::chrono_literals;
+
     // Configure the console.
     zmqutils::utils::ConsoleConfig& console_cfg = zmqutils::utils::ConsoleConfig::getInstance();
     console_cfg.configureConsole(true, false, true);
 
-    // Configuration variables.
-    std::string endpoint = "tcp://127.0.0.1:9999";          // Client endpoint.
+    // Client configuration variables.
+    std::string server_endpoint = "tcp://127.0.0.1:9999";       // Server endpoint.
+    std::string client_iface = "";                              // Client network interface.
+    std::string client_name = "AMELAS EXAMPLE CLIENT";          // Client name.
+    std::string client_version = "1.7.6";                       // Client version.
+    std::string client_info = "This is the AMELAS client.";     // Client information.
+
+    // Other configurations.
     bool enable_alive_callbacks = false;                    // Disable or enable the alive callbacks.
     std::chrono::milliseconds alive_timeout_ms = 2000ms;    // Timeout to consider a client dead.
     std::chrono::milliseconds alive_period_ms = 1000ms;     // Timeout to consider a client dead.
 
     // Instanciate the client.
-    AmelasControllerClient client(endpoint, "AMELAS EXAMPLE CLIENT", "1.7.6", "This is the AMELAS client.");
+    AmelasControllerClient client(server_endpoint, client_iface, client_name, client_version, client_info);
 
     // Prepare the auxiliar testing parser.
     AmelasClientCmdParser client_parser(client);

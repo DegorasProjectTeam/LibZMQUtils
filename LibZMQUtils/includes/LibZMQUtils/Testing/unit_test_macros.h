@@ -1,11 +1,21 @@
 /***********************************************************************************************************************
- *   LibDPSLR (Degoras Project SLR Library): A libre base library for SLR related developments.                        *                                      *
+ *   LibZMQUtils (ZeroMQ High-Level Utilities C++ Library).                                                            *
  *                                                                                                                     *
- *   Copyright (C) 2023 Degoras Project Team                                                                           *
+ *   A modern open-source and cross-platform C++ library with high-level utilities based on the well-known ZeroMQ      *
+ *   open-source universal messaging library. Includes a suite of modules that encapsulates the ZMQ communication      *
+ *   patterns as well as automatic binary serialization capabilities, specially designed for system infraestructure.   *
+ *   The library is suited for the quick and easy integration of new and old systems and can be used in different      *
+ *   sectors and disciplines seeking robust messaging and serialization solutions.                                     *
+ *                                                                                                                     *
+ *   Developed as free software within the context of the Degoras Project for the Satellite Laser Ranging Station      *
+ *   (SFEL) at the Spanish Navy Observatory (ROA) in San Fernando, Cádiz. The library is open for use by other SLR     *
+ *   stations and organizations, so we warmly encourage you to give it a try and feel free to contact us anytime!      *
+ *                                                                                                                     *
+ *   Copyright (C) 2024 Degoras Project Team                                                                           *
  *                      < Ángel Vera Herrera, avera@roa.es - angeldelaveracruz@gmail.com >                             *
  *                      < Jesús Relinque Madroñal >                                                                    *
  *                                                                                                                     *
- *   This file is part of LibDPSLR.                                                                                    *
+ *   This file is part of LibZMQUtils.                                                                                 *
  *                                                                                                                     *
  *   Licensed under the European Union Public License (EUPL), Version 1.2 or subsequent versions of the EUPL license   *
  *   as soon they will be approved by the European Commission (IDABC).                                                 *

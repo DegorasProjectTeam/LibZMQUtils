@@ -4,6 +4,10 @@ MAX_PRIORITY:
 
 - Serialize std::vector of strings and apply to send the ips.
 
+- Improve documentation for current modules.
+
+- Add a comman to get server info.
+
 PRIORITY:
 
 - Add a queue functionality to publisher. The idea is that send msg always will be blocking and something like addToPublishQueue is non blocking to avoid performance issues.
@@ -14,12 +18,6 @@ PRIORITY:
 
 - Add security with CURVE and encryption.
 
-- Cancel client operation functionality.
-
-- Non blocking senmdMsg operation mode with futures in client. 
-
-- Add a comman to get server info.
-
 - Make the internal utilities independent of generic infrastructure and move them to the DegorasBase library
 
 - Move template implementations to tpp.
@@ -28,13 +26,15 @@ PRIORITY:
 
 NO PRIORITY:
 
+- Non blocking senmdMsg operation mode with futures in client. 
+
+- Cancel client operation functionality.
+
 - Real UUID validation function.
 
 - Future log functionality with auto publisher. When LibDegorasBase ready.
 
 - Multiple endpoints to the same port.
-
-- Add a function to known the ping value in msec (connection delay).
  
 - Add public IP for client and server (configurable for remote and local only). 
 

@@ -1,17 +1,21 @@
 /***********************************************************************************************************************
  *   LibZMQUtils (ZeroMQ High-Level Utilities C++ Library).                                                            *
- *
- *   ExamplesLibZMQUtils related project.                                                                            *
- *                                                                                                        *
- *   A modern open-source C++ library with high-level utilities based on the well-known ZeroMQ open-source universal   *
- *   messaging library. Includes custom command based server-client and publisher-subscriber with automatic binary     *
- *   serialization capabilities, specially designed for system infraestructure. Developed as a free software under the *
- *   context of Degoras Project for the Spanish Navy Observatory SLR station (SFEL) in San Fernando and, of course,    *
- *   for any other station that wants to use it!                                                                       *
+ *                                                                                                                     *
+ *   ExamplesLibZMQUtils related project.                                                                              *
+ *                                                                                                                     *
+ *   A modern open-source and cross-platform C++ library with high-level utilities based on the well-known ZeroMQ      *
+ *   open-source universal messaging library. Includes a suite of modules that encapsulates the ZMQ communication      *
+ *   patterns as well as automatic binary serialization capabilities, specially designed for system infraestructure.   *
+ *   The library is suited for the quick and easy integration of new and old systems and can be used in different      *
+ *   sectors and disciplines seeking robust messaging and serialization solutions.                                     *
+ *                                                                                                                     *
+ *   Developed as free software within the context of the Degoras Project for the Satellite Laser Ranging Station      *
+ *   (SFEL) at the Spanish Navy Observatory (ROA) in San Fernando, Cádiz. The library is open for use by other SLR     *
+ *   stations and organizations, so we warmly encourage you to give it a try and feel free to contact us anytime!      *
  *                                                                                                                     *
  *   Copyright (C) 2024 Degoras Project Team                                                                           *
  *                      < Ángel Vera Herrera, avera@roa.es - angeldelaveracruz@gmail.com >                             *
- *                      < Jesús Relinque Madroñal >                                                                    *                                                            *
+ *                      < Jesús Relinque Madroñal >                                                                    *
  *                                                                                                                     *
  *   This file is part of LibZMQUtils.                                                                                 *
  *                                                                                                                     *
@@ -61,6 +65,25 @@
 #include "includes/AmelasControllerServer/amelas_controller_server_data.h"
 // =====================================================================================================================
 
+// ---------------------------------------------------------------------------------------------------------------------
+// Std Namespaces.
+using namespace std::chrono_literals;
+// Amelas Nampesaces.
+using amelas::communication::AmelasControllerServer;
+using amelas::communication::AmelasServerCommand;
+using amelas::controller::AmelasController;
+// Amelas Callbacks
+using amelas::controller::SetHomePositionFunction;
+using amelas::controller::SetHomePositionFunctionInArgs;
+using amelas::controller::SetHomePositionFunctionOutArgs;
+using amelas::controller::GetHomePositionFunction;
+using amelas::controller::GetHomePositionFunctionInArgs;
+using amelas::controller::GetHomePositionFunctionOutArgs;
+using amelas::controller::DoOpenSearchTelescopeFunction;
+using amelas::controller::DoOpenSearchTelescopeFunctionInArgs;
+using amelas::controller::DoOpenSearchTelescopeFunctionOutArgs;
+// ---------------------------------------------------------------------------------------------------------------------
+
 /**
  * @brief Main entry point of the program ExampleServerAmelas.
  *
@@ -69,28 +92,19 @@
  */
 int main(int, char**)
 {
-    // Nampesaces.
-    using amelas::communication::AmelasControllerServer;
-    using amelas::communication::AmelasServerCommand;
-    using amelas::controller::AmelasController;
-    // Callbacks
-    using amelas::controller::SetHomePositionFunction;
-    using amelas::controller::SetHomePositionFunctionInArgs;
-    using amelas::controller::SetHomePositionFunctionOutArgs;
-    using amelas::controller::GetHomePositionFunction;
-    using amelas::controller::GetHomePositionFunctionInArgs;
-    using amelas::controller::GetHomePositionFunctionOutArgs;
-    using amelas::controller::DoOpenSearchTelescopeFunction;
-    using amelas::controller::DoOpenSearchTelescopeFunctionInArgs;
-    using amelas::controller::DoOpenSearchTelescopeFunctionOutArgs;
 
     // Configure the console.
     zmqutils::utils::ConsoleConfig& console_cfg = zmqutils::utils::ConsoleConfig::getInstance();
     console_cfg.configureConsole(true, true, false);
 
-    // Configuration variables.
-    std::string ip = "*";                                       // Server Ip.
-    unsigned port = 9999;                                       // Server connection port.
+    // Server configuration variables.
+    unsigned server_port = 9999;                                // Server connection port.
+    std::string server_iface = "*";                             // Server network interface.
+    std::string server_name = "AMELAS EXAMPLE SERVER";          // Server name.
+    std::string server_version = "1.7.6";                       // Server version.
+    std::string server_info = "This is the AMELAS server.";     // Server information.
+
+    // Other configurations.
     bool client_status_check = true;                            // Disable or enable the clients alive status.
     unsigned max_client_connections = 2;                        // Maximum number of client connections.
     unsigned recconn_attempts = 2;                              // Reconnection attempts for the server.
@@ -100,7 +114,7 @@ int main(int, char**)
     AmelasController amelas_controller;
 
     // Instantiate the server.
-    AmelasControllerServer amelas_server(port, ip, "AMELAS EXAMPLE SERVER", "1.7.6", "This is the AMELAS server.");
+    AmelasControllerServer amelas_server(server_port, server_iface, server_name, server_version, server_info);
 
     // Configure the server.
     amelas_server.setClientStatusCheck(client_status_check);

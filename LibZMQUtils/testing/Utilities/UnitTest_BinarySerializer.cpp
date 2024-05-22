@@ -1,7 +1,17 @@
 /***********************************************************************************************************************
- *   LibZMQUtils (ZMQ Utilitites Library): A libre library with ZMQ related useful utilities.                          *
+ *   LibZMQUtils (ZeroMQ High-Level Utilities C++ Library).                                                            *
  *                                                                                                                     *
- *   Copyright (C) 2023 Degoras Project Team                                                                           *
+ *   A modern open-source and cross-platform C++ library with high-level utilities based on the well-known ZeroMQ      *
+ *   open-source universal messaging library. Includes a suite of modules that encapsulates the ZMQ communication      *
+ *   patterns as well as automatic binary serialization capabilities, specially designed for system infraestructure.   *
+ *   The library is suited for the quick and easy integration of new and old systems and can be used in different      *
+ *   sectors and disciplines seeking robust messaging and serialization solutions.                                     *
+ *                                                                                                                     *
+ *   Developed as free software within the context of the Degoras Project for the Satellite Laser Ranging Station      *
+ *   (SFEL) at the Spanish Navy Observatory (ROA) in San Fernando, Cádiz. The library is open for use by other SLR     *
+ *   stations and organizations, so we warmly encourage you to give it a try and feel free to contact us anytime!      *
+ *                                                                                                                     *
+ *   Copyright (C) 2024 Degoras Project Team                                                                           *
  *                      < Ángel Vera Herrera, avera@roa.es - angeldelaveracruz@gmail.com >                             *
  *                      < Jesús Relinque Madroñal >                                                                    *
  *                                                                                                                     *
@@ -35,7 +45,7 @@
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
 #include <LibZMQUtils/Modules/Utilities>
-#include <LibZMQUtils/Testing/UnitTest>
+#include <LibZMQUtils/Modules/Testing>
 // =====================================================================================================================
 
 // =====================================================================================================================

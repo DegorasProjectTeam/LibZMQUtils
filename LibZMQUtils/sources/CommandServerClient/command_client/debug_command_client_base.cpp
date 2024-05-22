@@ -1,15 +1,19 @@
 /***********************************************************************************************************************
  *   LibZMQUtils (ZeroMQ High-Level Utilities C++ Library).                                                            *
  *                                                                                                                     *
- *   A modern open-source C++ library with high-level utilities based on the well-known ZeroMQ open-source universal   *
- *   messaging library. Includes custom command based server-client and publisher-subscriber with automatic binary     *
- *   serialization capabilities, specially designed for system infraestructure. Developed as a free software under the *
- *   context of Degoras Project for the Spanish Navy Observatory SLR station (SFEL) in San Fernando and, of course,    *
- *   for any other station that wants to use it!                                                                       *
+ *   A modern open-source and cross-platform C++ library with high-level utilities based on the well-known ZeroMQ      *
+ *   open-source universal messaging library. Includes a suite of modules that encapsulates the ZMQ communication      *
+ *   patterns as well as automatic binary serialization capabilities, specially designed for system infraestructure.   *
+ *   The library is suited for the quick and easy integration of new and old systems and can be used in different      *
+ *   sectors and disciplines seeking robust messaging and serialization solutions.                                     *
+ *                                                                                                                     *
+ *   Developed as free software within the context of the Degoras Project for the Satellite Laser Ranging Station      *
+ *   (SFEL) at the Spanish Navy Observatory (ROA) in San Fernando, Cádiz. The library is open for use by other SLR     *
+ *   stations and organizations, so we warmly encourage you to give it a try and feel free to contact us anytime!      *
  *                                                                                                                     *
  *   Copyright (C) 2024 Degoras Project Team                                                                           *
  *                      < Ángel Vera Herrera, avera@roa.es - angeldelaveracruz@gmail.com >                             *
- *                      < Jesús Relinque Madroñal >                                                                    *                                                            *
+ *                      < Jesús Relinque Madroñal >                                                                    *
  *                                                                                                                     *
  *   This file is part of LibZMQUtils.                                                                                 *
  *                                                                                                                     *
@@ -62,9 +66,29 @@ using zmqutils::reqrep::CommandClientInfo;
 using zmqutils::serializer::BinarySerializer;
 // ---------------------------------------------------------------------------------------------------------------------
 
+DebugCommandClientBase::DebugCommandClientBase(const std::string &server_endpoint,
+                                               const std::string &client_iface,
+                                               const std::string &client_name,
+                                               const std::string &client_version,
+                                               const std::string &client_info,
+                                               bool log_internal_callbacks) :
+    CommandClientBase(server_endpoint, client_iface, client_name, client_version, client_info),
+    log_internal_callbacks_(log_internal_callbacks)
+{}
+
+DebugCommandClientBase::DebugCommandClientBase(const std::string &server_endpoint,
+                                               const std::string &client_iface,
+                                               bool log_internal_callbacks) :
+    CommandClientBase(server_endpoint, client_iface),
+    log_internal_callbacks_(log_internal_callbacks)
+{}
+
 std::string DebugCommandClientBase::generateStringHeader(const std::string &clbk_name,
                                                          const std::vector<std::string>& data)
 {
+    if(!this->log_internal_callbacks_)
+        return std::string();
+
     std::stringstream ss;
     ss << std::string(100, '-') << std::endl;
     ss << "<" << this->getClientInfo().name << ">" << std::endl;
@@ -174,5 +198,3 @@ void DebugCommandClientBase::onClientError(const zmq::error_t &error, const std:
 
 }} // END NAMESPACES.
 // =====================================================================================================================
-
-

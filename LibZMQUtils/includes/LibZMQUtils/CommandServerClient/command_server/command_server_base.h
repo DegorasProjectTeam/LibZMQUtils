@@ -1,15 +1,19 @@
 /***********************************************************************************************************************
  *   LibZMQUtils (ZeroMQ High-Level Utilities C++ Library).                                                            *
  *                                                                                                                     *
- *   A modern open-source C++ library with high-level utilities based on the well-known ZeroMQ open-source universal   *
- *   messaging library. Includes custom command based server-client and publisher-subscriber with automatic binary     *
- *   serialization capabilities, specially designed for system infraestructure. Developed as a free software under the *
- *   context of Degoras Project for the Spanish Navy Observatory SLR station (SFEL) in San Fernando and, of course,    *
- *   for any other station that wants to use it!                                                                       *
+ *   A modern open-source and cross-platform C++ library with high-level utilities based on the well-known ZeroMQ      *
+ *   open-source universal messaging library. Includes a suite of modules that encapsulates the ZMQ communication      *
+ *   patterns as well as automatic binary serialization capabilities, specially designed for system infraestructure.   *
+ *   The library is suited for the quick and easy integration of new and old systems and can be used in different      *
+ *   sectors and disciplines seeking robust messaging and serialization solutions.                                     *
+ *                                                                                                                     *
+ *   Developed as free software within the context of the Degoras Project for the Satellite Laser Ranging Station      *
+ *   (SFEL) at the Spanish Navy Observatory (ROA) in San Fernando, Cádiz. The library is open for use by other SLR     *
+ *   stations and organizations, so we warmly encourage you to give it a try and feel free to contact us anytime!      *
  *                                                                                                                     *
  *   Copyright (C) 2024 Degoras Project Team                                                                           *
  *                      < Ángel Vera Herrera, avera@roa.es - angeldelaveracruz@gmail.com >                             *
- *                      < Jesús Relinque Madroñal >                                                                    *                                                            *
+ *                      < Jesús Relinque Madroñal >                                                                    *
  *                                                                                                                     *
  *   This file is part of LibZMQUtils.                                                                                 *
  *                                                                                                                     *
@@ -276,8 +280,11 @@ public:
      * @warning When specifying the `ip_address`, ensure it is a valid IP address present on the system. Incorrect or
      * unavailable addresses may result in connection failures.
      */
-    CommandServerBase(unsigned server_port, const std::string& server_iface = "*", const std::string& server_name = "",
-                      const std::string& server_version = "", const std::string& server_info = "");
+    CommandServerBase(unsigned server_port,
+                      const std::string& server_iface = "*",
+                      const std::string& server_name = "",
+                      const std::string& server_version = "",
+                      const std::string& server_info = "");
 
     /**
      * @brief Get all the server information.
@@ -840,6 +847,9 @@ private:
     std::atomic_uint client_alive_timeout_;     ///< Tiemout for consider a client dead (in msec).
     std::atomic_uint server_reconn_attempts_;   ///< Server reconnection number of attempts.
     std::atomic_uint max_connected_clients_;    ///< Maximum number of connected clients.
+
+    /// Specific class scope (for debug purposes).
+    inline static const std::string kScope = "[LibZMQUtils,CommandServerClient,CommandServerBase]";
 };
 
 }} // END NAMESPACES.

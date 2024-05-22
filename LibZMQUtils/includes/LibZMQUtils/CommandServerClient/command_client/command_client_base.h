@@ -1,15 +1,19 @@
 /***********************************************************************************************************************
  *   LibZMQUtils (ZeroMQ High-Level Utilities C++ Library).                                                            *
  *                                                                                                                     *
- *   A modern open-source C++ library with high-level utilities based on the well-known ZeroMQ open-source universal   *
- *   messaging library. Includes custom command based server-client and publisher-subscriber with automatic binary     *
- *   serialization capabilities, specially designed for system infraestructure. Developed as a free software under the *
- *   context of Degoras Project for the Spanish Navy Observatory SLR station (SFEL) in San Fernando and, of course,    *
- *   for any other station that wants to use it!                                                                       *
+ *   A modern open-source and cross-platform C++ library with high-level utilities based on the well-known ZeroMQ      *
+ *   open-source universal messaging library. Includes a suite of modules that encapsulates the ZMQ communication      *
+ *   patterns as well as automatic binary serialization capabilities, specially designed for system infraestructure.   *
+ *   The library is suited for the quick and easy integration of new and old systems and can be used in different      *
+ *   sectors and disciplines seeking robust messaging and serialization solutions.                                     *
+ *                                                                                                                     *
+ *   Developed as free software within the context of the Degoras Project for the Satellite Laser Ranging Station      *
+ *   (SFEL) at the Spanish Navy Observatory (ROA) in San Fernando, Cádiz. The library is open for use by other SLR     *
+ *   stations and organizations, so we warmly encourage you to give it a try and feel free to contact us anytime!      *
  *                                                                                                                     *
  *   Copyright (C) 2024 Degoras Project Team                                                                           *
  *                      < Ángel Vera Herrera, avera@roa.es - angeldelaveracruz@gmail.com >                             *
- *                      < Jesús Relinque Madroñal >                                                                    *                                                            *
+ *                      < Jesús Relinque Madroñal >                                                                    *
  *                                                                                                                     *
  *   This file is part of LibZMQUtils.                                                                                 *
  *                                                                                                                     *
@@ -83,16 +87,16 @@ public:
      * @brief Base constructor for a ZeroMQ command client.
      *
      * @param server_endpoint The URL endpoint of the server with the port.
-     * @param net_interface   Name of the network interface to be used. If empty, the class will look for the best one.
+     * @param client_iface    Name of the network interface to be used. If empty, the class will look for the best one.
      * @param client_name     Optional parameter to specify the server name. By default is empty.
      * @param client_version  Optional parameter to specify the server version (like "1.1.1"). By default is empty.
      * @param client_info     Optional parameter to specify the server information. By default is empty.
      */
     CommandClientBase(const std::string& server_endpoint,
+                      const std::string& client_iface = "",
                       const std::string& client_name = "",
                       const std::string& client_version = "",
-                      const std::string& client_info = "",
-                      const std::string& net_interface = "");
+                      const std::string& client_info = "");
     
     /**
      * @brief Get the client info.
@@ -593,6 +597,9 @@ private:
     // Configurable parameters.
     std::atomic_uint server_alive_timeout_;    ///< Tiemout for consider a server dead (in msec).
     std::atomic_uint send_alive_period_;       ///< Server reconnection number of attempts.
+
+    /// Specific class scope (for debug purposes).
+    inline static const std::string kScope = "[LibZMQUtils,CommandServerClient,CommandClientBase]";
 };
 
 }} // END NAMESPACES.

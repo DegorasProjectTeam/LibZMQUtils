@@ -1,15 +1,19 @@
 /***********************************************************************************************************************
  *   LibZMQUtils (ZeroMQ High-Level Utilities C++ Library).                                                            *
  *                                                                                                                     *
- *   A modern open-source C++ library with high-level utilities based on the well-known ZeroMQ open-source universal   *
- *   messaging library. Includes custom command based server-client and publisher-subscriber with automatic binary     *
- *   serialization capabilities, specially designed for system infraestructure. Developed as a free software under the *
- *   context of Degoras Project for the Spanish Navy Observatory SLR station (SFEL) in San Fernando and, of course,    *
- *   for any other station that wants to use it!                                                                       *
+ *   A modern open-source and cross-platform C++ library with high-level utilities based on the well-known ZeroMQ      *
+ *   open-source universal messaging library. Includes a suite of modules that encapsulates the ZMQ communication      *
+ *   patterns as well as automatic binary serialization capabilities, specially designed for system infraestructure.   *
+ *   The library is suited for the quick and easy integration of new and old systems and can be used in different      *
+ *   sectors and disciplines seeking robust messaging and serialization solutions.                                     *
+ *                                                                                                                     *
+ *   Developed as free software within the context of the Degoras Project for the Satellite Laser Ranging Station      *
+ *   (SFEL) at the Spanish Navy Observatory (ROA) in San Fernando, Cádiz. The library is open for use by other SLR     *
+ *   stations and organizations, so we warmly encourage you to give it a try and feel free to contact us anytime!      *
  *                                                                                                                     *
  *   Copyright (C) 2024 Degoras Project Team                                                                           *
  *                      < Ángel Vera Herrera, avera@roa.es - angeldelaveracruz@gmail.com >                             *
- *                      < Jesús Relinque Madroñal >                                                                    *                                                            *
+ *                      < Jesús Relinque Madroñal >                                                                    *
  *                                                                                                                     *
  *   This file is part of LibZMQUtils.                                                                                 *
  *                                                                                                                     *
@@ -49,12 +53,18 @@
 #include <zmq.hpp>
 #include <zmq_addon.hpp>
 // =====================================================================================================================
+
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
 #include "LibZMQUtils/CommandServerClient/command_client/command_client_base.h"
 #include "LibZMQUtils/InternalHelpers/network_helpers.h"
 #include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
 #include "LibZMQUtils/Global/constants.h"
+// =====================================================================================================================
+
+// =====================================================================================================================
+using zmqutils::utils::UUID;
+using zmqutils::internal_helpers::network::NetworkAdapterInfo;
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
@@ -64,10 +74,10 @@ namespace reqrep {
 // =====================================================================================================================
 
 CommandClientBase::CommandClientBase(const std::string& server_endpoint,
+                                     const std::string& client_iface,
                                      const std::string& client_name ,
                                      const std::string& client_version,
-                                     const std::string& client_info,
-                                     const std::string& net_interface) :
+                                     const std::string& client_info) :
     server_endpoint_(server_endpoint),
     client_socket_(nullptr),
     recv_close_socket_(nullptr),
@@ -89,18 +99,18 @@ CommandClientBase::CommandClientBase(const std::string& server_endpoint,
     utils::UUID uuid = utils::UUIDGenerator::getInstance().generateUUIDv4();
 
     // Get the client interfaces.
-    std::vector<internal_helpers::network::NetworkAdapterInfo> interfcs =
-        internal_helpers::network::getHostIPsWithInterfaces();
+    std::vector<NetworkAdapterInfo> interfcs = internal_helpers::network::getHostIPsWithInterfaces();
+
+    // Check the server endpoint.
+    if(server_endpoint.empty())
+        throw std::invalid_argument(this->kScope + " The server endpoint can't be empty.");
 
     // Check if we have active interfaces.
     if(interfcs.empty())
-    {
-        std::string module = "[LibZMQUtils,CommandServerClient,CommandClientBase] ";
-        throw std::invalid_argument(module + "No active network interfaces found.");
-    }
+        throw std::invalid_argument(this->kScope + " No active network interfaces found.");
 
     // If no interface name provided, use the first active one.
-    if (net_interface.empty())
+    if (client_iface.empty())
     {
         // Store the interface.
         sel_interf = interfcs.front();
@@ -109,15 +119,12 @@ CommandClientBase::CommandClientBase(const std::string& server_endpoint,
     {
         // Search the interface we need.
         auto it = std::find_if(interfcs.begin(), interfcs.end(),
-                               [&net_interface](const internal_helpers::network::NetworkAdapterInfo& info)
-                               {return info.name == net_interface;});
+                               [&client_iface](const internal_helpers::network::NetworkAdapterInfo& info)
+                               {return info.name == client_iface;});
 
         // Check if the interface exists.
         if (it == interfcs.end())
-        {
-            std::string module = "[LibZMQUtils,CommandServerClient,CommandClientBase] ";
-            throw std::invalid_argument(module + "Network interface not found <" + net_interface + ">.");
-        }
+            throw std::invalid_argument(this->kScope + " Network interface not found <" + client_iface + ">.");
 
         // Store the interface.
         sel_interf = *it;
@@ -228,7 +235,7 @@ bool CommandClientBase::internalResetClient()
         this->mtx_.unlock();
 
         // Call to the internal callback.
-        this->onClientError(error, "CommandClientBase: Error while creating the client.");
+        this->onClientError(error, this->kScope + " Error while creating the client.");
         return false;
     }
 
@@ -354,7 +361,7 @@ OperationResult CommandClientBase::sendCommand(ServerCommand command, RequestDat
     catch (const zmq::error_t &error)
     {
         // Call to the error callback and stop the client for safety.
-        this->onClientError(error, "CommandClientBase: Error while sending a request. Stopping the client.");
+        this->onClientError(error, this->kScope + " Error while sending a request. Stopping the client.");
         this->internalStopClient();
         return OperationResult::INTERNAL_ZMQ_ERROR;
     }
@@ -638,7 +645,7 @@ void CommandClientBase::recvFromSocket(CommandReply& reply,
             }
 
             // Call to the error callback and stop the client for safety.
-            this->onClientError(error, "CommandClientBase: Error while receiving a reply. Stopping the client.");
+            this->onClientError(error, this->kScope + " Error while receiving a reply. Stopping the client.");
             this->internalStopClient();
 
             // Store the error result.
@@ -738,7 +745,7 @@ void CommandClientBase::aliveWorker()
         std::unique_lock<std::mutex> lock(this->mtx_);
 
         // Call to the error callback and stop the client for safety.
-        this->onClientError(error, "CommandClientBase: Error while creating automatic alive worker. Stopping the client.");
+        this->onClientError(error, this->kScope + " Error while creating automatic alive worker. Stopping the client.");
         if(alive_socket)
             delete alive_socket;
         if (pull_close_socket)
@@ -786,7 +793,7 @@ void CommandClientBase::aliveWorker()
         catch (const zmq::error_t &error)
         {
             // Call to the error callback and stop the client for safety.
-            this->onClientError(error, "CommandClientBase: Error while sending automatic alive. Stopping the client.");
+            this->onClientError(error, this->kScope + " Error while sending automatic alive. Stopping the client.");
 
             // If was  connected, call to the disconnected callback.
             if(this->flag_server_connected_)

@@ -1,15 +1,19 @@
 /***********************************************************************************************************************
  *   LibZMQUtils (ZeroMQ High-Level Utilities C++ Library).                                                            *
  *                                                                                                                     *
- *   A modern open-source C++ library with high-level utilities based on the well-known ZeroMQ open-source universal   *
- *   messaging library. Includes custom command based server-client and publisher-subscriber with automatic binary     *
- *   serialization capabilities, specially designed for system infraestructure. Developed as a free software under the *
- *   context of Degoras Project for the Spanish Navy Observatory SLR station (SFEL) in San Fernando and, of course,    *
- *   for any other station that wants to use it!                                                                       *
+ *   A modern open-source and cross-platform C++ library with high-level utilities based on the well-known ZeroMQ      *
+ *   open-source universal messaging library. Includes a suite of modules that encapsulates the ZMQ communication      *
+ *   patterns as well as automatic binary serialization capabilities, specially designed for system infraestructure.   *
+ *   The library is suited for the quick and easy integration of new and old systems and can be used in different      *
+ *   sectors and disciplines seeking robust messaging and serialization solutions.                                     *
+ *                                                                                                                     *
+ *   Developed as free software within the context of the Degoras Project for the Satellite Laser Ranging Station      *
+ *   (SFEL) at the Spanish Navy Observatory (ROA) in San Fernando, Cádiz. The library is open for use by other SLR     *
+ *   stations and organizations, so we warmly encourage you to give it a try and feel free to contact us anytime!      *
  *                                                                                                                     *
  *   Copyright (C) 2024 Degoras Project Team                                                                           *
  *                      < Ángel Vera Herrera, avera@roa.es - angeldelaveracruz@gmail.com >                             *
- *                      < Jesús Relinque Madroñal >                                                                    *                                                            *
+ *                      < Jesús Relinque Madroñal >                                                                    *
  *                                                                                                                     *
  *   This file is part of LibZMQUtils.                                                                                 *
  *                                                                                                                     *
@@ -75,25 +79,33 @@ PublisherBase::PublisherBase(unsigned publisher_port,
     socket_(nullptr),
     flag_working_(false)
 {
+    // Auxiliar variables and containers.
+    std::string inter_aux = publisher_iface;
+
     // Generate a unique UUID (v4) for the publisher.
     utils::UUID uuid = utils::UUIDGenerator::getInstance().generateUUIDv4();
 
     // Get the adapters.
-    std::vector<NetworkAdapterInfo> interfcs = internal_helpers::network::getHostIPsWithInterfaces();
+    std::vector<NetworkAdapterInfo> ifaces = internal_helpers::network::getHostIPsWithInterfaces();
 
-    // Auxiliar ip.
-    std::string inter_aux = publisher_iface;
+    // Check if we have active interfaces.
+    if(ifaces.empty())
+        throw std::invalid_argument(this->kScope + "No active network interfaces found.");
+
+    // Check the server interface.
+    if(publisher_iface.empty())
+        throw std::invalid_argument(this->kScope + "The server network interface can't be empty.");
 
     // Update if localhost.
-    if(inter_aux == "localhost")
+    if(publisher_iface == "localhost")
         inter_aux = "127.0.0.1";
 
     // Store the adapters.
-    if(inter_aux == "*")
-        this->publisher_adapters_ = interfcs;
+    if(publisher_iface == "*")
+        this->publisher_adapters_ = ifaces;
     else
     {
-        for(const auto& intrfc : interfcs)
+        for(const auto& intrfc : ifaces)
         {
             if(intrfc.ip == inter_aux)
                 this->publisher_adapters_.push_back(intrfc);
@@ -104,10 +116,7 @@ PublisherBase::PublisherBase(unsigned publisher_port,
 
     // Check for valid configuration.
     if(this->publisher_adapters_.empty())
-    {
-        std::string module = "[LibZMQUtils,PublisherSubscriber,PublisherBase] ";
-        throw std::invalid_argument(module + "No interfaces found for <" + publisher_iface + ">.");
-    }
+        throw std::invalid_argument(this->kScope + "No interfaces found for <" + publisher_iface + ">.");
 
     // Update the publisher information.
     this->pub_info_.uuid = uuid;
@@ -264,8 +273,7 @@ OperationResult PublisherBase::sendMsg(const TopicType& topic, PublishedData& da
     catch (const zmq::error_t &error)
     {
         // Call to the error callback and stop the publisher for safety.
-        std::string module = "[LibZMQUtils,PublisherSubscriber,PublisherBase] ";
-        this->onPublisherError(error, module + "Error while sending a request. Stopping the publisher.");
+        this->onPublisherError(error, this->kScope + " Error while sending a request. Stopping the publisher.");
         this->internalStopPublisher();
         return OperationResult::INTERNAL_ZMQ_ERROR;
     }
@@ -330,7 +338,7 @@ bool PublisherBase::internalResetPublisher()
         this->mtx_.unlock();
 
         // Call to the internal callback.
-        this->onPublisherError(error, "PublisherBase: Error while creating the publisher.");
+        this->onPublisherError(error, this->kScope + " Error while creating the publisher.");
         return false;
     }
 

@@ -1,15 +1,19 @@
 /***********************************************************************************************************************
  *   LibZMQUtils (ZeroMQ High-Level Utilities C++ Library).                                                            *
  *                                                                                                                     *
- *   A modern open-source C++ library with high-level utilities based on the well-known ZeroMQ open-source universal   *
- *   messaging library. Includes custom command based server-client and publisher-subscriber with automatic binary     *
- *   serialization capabilities, specially designed for system infraestructure. Developed as a free software under the *
- *   context of Degoras Project for the Spanish Navy Observatory SLR station (SFEL) in San Fernando and, of course,    *
- *   for any other station that wants to use it!                                                                       *
+ *   A modern open-source and cross-platform C++ library with high-level utilities based on the well-known ZeroMQ      *
+ *   open-source universal messaging library. Includes a suite of modules that encapsulates the ZMQ communication      *
+ *   patterns as well as automatic binary serialization capabilities, specially designed for system infraestructure.   *
+ *   The library is suited for the quick and easy integration of new and old systems and can be used in different      *
+ *   sectors and disciplines seeking robust messaging and serialization solutions.                                     *
+ *                                                                                                                     *
+ *   Developed as free software within the context of the Degoras Project for the Satellite Laser Ranging Station      *
+ *   (SFEL) at the Spanish Navy Observatory (ROA) in San Fernando, Cádiz. The library is open for use by other SLR     *
+ *   stations and organizations, so we warmly encourage you to give it a try and feel free to contact us anytime!      *
  *                                                                                                                     *
  *   Copyright (C) 2024 Degoras Project Team                                                                           *
  *                      < Ángel Vera Herrera, avera@roa.es - angeldelaveracruz@gmail.com >                             *
- *                      < Jesús Relinque Madroñal >                                                                    *                                                            *
+ *                      < Jesús Relinque Madroñal >                                                                    *
  *                                                                                                                     *
  *   This file is part of LibZMQUtils.                                                                                 *
  *                                                                                                                     *
@@ -74,10 +78,7 @@ SubscriberBase::SubscriberBase(const std::string& subscriber_name,
 
     // Check if we have active interfaces.
     if(interfcs.empty())
-    {
-        std::string module = "[LibZMQUtils,PublisherSubscriber,SubscriberBase] ";
-        throw std::invalid_argument(module + "No active network interfaces found.");
-    }
+        throw std::invalid_argument(this->kScope + " No active network interfaces found.");
 
     // Update the subscriber info.
     this->sub_info_.uuid = utils::UUIDGenerator::getInstance().generateUUIDv4();
@@ -149,6 +150,10 @@ void SubscriberBase::stopSubscriber()
 
 void SubscriberBase::subscribe(const std::string& pub_endpoint)
 {
+    // Check the publisher endpoint.
+    if(pub_endpoint.empty())
+        throw std::invalid_argument(this->kScope + " The publisher endpoint can't be empty.");
+
     // Check if endpoint is already subscribed
     auto it = std::find_if(this->subscribed_publishers_.begin(), this->subscribed_publishers_.end(),
                           [&pub_endpoint](const auto& pair)
@@ -169,6 +174,10 @@ void SubscriberBase::subscribe(const std::string& pub_endpoint)
 
 void SubscriberBase::unsubscribe(const std::string &pub_endpoint)
 {
+    // Check the publisher endpoint.
+    if(pub_endpoint.empty())
+        return;
+
     // Check if endpoint is subscribed
     auto it = std::find_if(this->subscribed_publishers_.begin(), this->subscribed_publishers_.end(),
     [&pub_endpoint](const auto& pair)
@@ -367,7 +376,7 @@ OperationResult SubscriberBase::recvFromSocket(PublishedMessage& msg)
             return OperationResult::MSG_OK;
 
         // Else, call to error callback.
-        this->onSubscriberError(error, "SubscriberBase: Error while receiving a request.");
+        this->onSubscriberError(error, this->kScope + " Error while receiving a request.");
         return OperationResult::INTERNAL_ZMQ_ERROR;
     }
 
@@ -504,7 +513,7 @@ void SubscriberBase::resetSocket()
         last_error = &error;
 
         // Update the working flag and calls to the callback.
-        this->onSubscriberError(*last_error, "Error during socket creation.");
+        this->onSubscriberError(*last_error, this->kScope + " Error during socket creation.");
         this->flag_working_ = false;
         this->cv_worker_depl_.notify_all();
         return;

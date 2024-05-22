@@ -1,15 +1,19 @@
 /***********************************************************************************************************************
  *   LibZMQUtils (ZeroMQ High-Level Utilities C++ Library).                                                            *
  *                                                                                                                     *
- *   A modern open-source C++ library with high-level utilities based on the well-known ZeroMQ open-source universal   *
- *   messaging library. Includes custom command based server-client and publisher-subscriber with automatic binary     *
- *   serialization capabilities, specially designed for system infraestructure. Developed as a free software under the *
- *   context of Degoras Project for the Spanish Navy Observatory SLR station (SFEL) in San Fernando and, of course,    *
- *   for any other station that wants to use it!                                                                       *
+ *   A modern open-source and cross-platform C++ library with high-level utilities based on the well-known ZeroMQ      *
+ *   open-source universal messaging library. Includes a suite of modules that encapsulates the ZMQ communication      *
+ *   patterns as well as automatic binary serialization capabilities, specially designed for system infraestructure.   *
+ *   The library is suited for the quick and easy integration of new and old systems and can be used in different      *
+ *   sectors and disciplines seeking robust messaging and serialization solutions.                                     *
+ *                                                                                                                     *
+ *   Developed as free software within the context of the Degoras Project for the Satellite Laser Ranging Station      *
+ *   (SFEL) at the Spanish Navy Observatory (ROA) in San Fernando, Cádiz. The library is open for use by other SLR     *
+ *   stations and organizations, so we warmly encourage you to give it a try and feel free to contact us anytime!      *
  *                                                                                                                     *
  *   Copyright (C) 2024 Degoras Project Team                                                                           *
  *                      < Ángel Vera Herrera, avera@roa.es - angeldelaveracruz@gmail.com >                             *
- *                      < Jesús Relinque Madroñal >                                                                    *                                                            *
+ *                      < Jesús Relinque Madroñal >                                                                    *
  *                                                                                                                     *
  *   This file is part of LibZMQUtils.                                                                                 *
  *                                                                                                                     *
@@ -81,20 +85,29 @@ CommandServerBase::CommandServerBase(unsigned port,
     server_reconn_attempts_(kDefaultServerReconnAttempts),
     max_connected_clients_(kDefaultMaxNumberOfClients)
 {
+    // Auxiliar variables and containers.
+    std::string inter_aux = server_iface;
+
     // Generate a unique UUID (v4) for the server.
     utils::UUID uuid = utils::UUIDGenerator::getInstance().generateUUIDv4();
 
-    // Get the adapters.
+    // Get the server interfaces..
     std::vector<NetworkAdapterInfo> ifaces = internal_helpers::network::getHostIPsWithInterfaces();
 
-    std::string inter_aux = server_iface;
+    // Check if we have active interfaces.
+    if(ifaces.empty())
+        throw std::invalid_argument(this->kScope + " No active network interfaces found.");
+
+    // Check the server interface.
+    if(server_iface.empty())
+        throw std::invalid_argument(this->kScope + " The server network interface can't be empty.");
 
     // Update if localhost.
-    if(inter_aux == "localhost")
+    if(server_iface == "localhost")
         inter_aux = "127.0.0.1";
 
     // Store the adapters.
-    if(inter_aux == "*")
+    if(server_iface == "*")
         this->server_adapters_ = ifaces;
     else
     {
@@ -109,10 +122,7 @@ CommandServerBase::CommandServerBase(unsigned port,
 
     // Check for valid configuration.
     if(this->server_adapters_.empty())
-    {
-        std::string module = "[LibZMQUtils,CommandServerClient,CommandServerBase] ";
-        throw std::invalid_argument(module + "No interfaces found for <" + server_iface + ">.");
-    }
+        throw std::invalid_argument(this->kScope + " No interfaces found for <" + server_iface + ">.");
 
     // Update the server information.
     this->server_info_.uuid = uuid;
@@ -484,8 +494,7 @@ void CommandServerBase::serverWorker()
     }
     else
     {
-        std::string module = "[LibZMQUtils,CommandServerClient,CommandServerBase] ";
-        this->onServerError(this->last_zmq_error_, module + "Error during socket creation.");
+        this->onServerError(this->last_zmq_error_, this->kScope + " Error during socket creation.");
     }
 
     // Notify all the deployment.
@@ -553,8 +562,7 @@ void CommandServerBase::serverWorker()
                 // The error code is for ZMQ EFSM error.
                 if(!(error.num() == kZmqEFSMError && !this->flag_server_working_))
                 {
-                    std::string module = "[LibZMQUtils,CommandServerClient,CommandServerBase] ";
-                    this->onServerError(this->last_zmq_error_, module + "Error while sending a response.");
+                    this->onServerError(this->last_zmq_error_, this->kScope + " Error while sending a response.");
                 }
             }
         }
@@ -614,8 +622,7 @@ void CommandServerBase::serverWorker()
                     // Store the last error.
                     this->last_zmq_error_ = error;
                     // Call to the internal callback.
-                    std::string module = "[LibZMQUtils,CommandServerClient,CommandServerBase] ";
-                    this->onServerError(this->last_zmq_error_, module + "Error while sending a response.");
+                    this->onServerError(this->last_zmq_error_, this->kScope + " Error while sending a response.");
                 }
             }
         }
@@ -652,9 +659,7 @@ OperationResult CommandServerBase::recvFromSocket(CommandRequest& request)
         this->last_zmq_error_ = error;
 
         // Call to the internal callback.
-        std::string module = "[LibZMQUtils,CommandServerClient,CommandServerBase] ";
-
-        this->onServerError(this->last_zmq_error_, module + "Error while receiving a request.");
+        this->onServerError(this->last_zmq_error_, this->kScope + " Error while receiving a request.");
         return OperationResult::INTERNAL_ZMQ_ERROR;
     }
 

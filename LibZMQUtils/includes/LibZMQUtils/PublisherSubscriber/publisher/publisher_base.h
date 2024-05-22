@@ -1,15 +1,19 @@
 /***********************************************************************************************************************
  *   LibZMQUtils (ZeroMQ High-Level Utilities C++ Library).                                                            *
  *                                                                                                                     *
- *   A modern open-source C++ library with high-level utilities based on the well-known ZeroMQ open-source universal   *
- *   messaging library. Includes custom command based server-client and publisher-subscriber with automatic binary     *
- *   serialization capabilities, specially designed for system infraestructure. Developed as a free software under the *
- *   context of Degoras Project for the Spanish Navy Observatory SLR station (SFEL) in San Fernando and, of course,    *
- *   for any other station that wants to use it!                                                                       *
+ *   A modern open-source and cross-platform C++ library with high-level utilities based on the well-known ZeroMQ      *
+ *   open-source universal messaging library. Includes a suite of modules that encapsulates the ZMQ communication      *
+ *   patterns as well as automatic binary serialization capabilities, specially designed for system infraestructure.   *
+ *   The library is suited for the quick and easy integration of new and old systems and can be used in different      *
+ *   sectors and disciplines seeking robust messaging and serialization solutions.                                     *
+ *                                                                                                                     *
+ *   Developed as free software within the context of the Degoras Project for the Satellite Laser Ranging Station      *
+ *   (SFEL) at the Spanish Navy Observatory (ROA) in San Fernando, Cádiz. The library is open for use by other SLR     *
+ *   stations and organizations, so we warmly encourage you to give it a try and feel free to contact us anytime!      *
  *                                                                                                                     *
  *   Copyright (C) 2024 Degoras Project Team                                                                           *
  *                      < Ángel Vera Herrera, avera@roa.es - angeldelaveracruz@gmail.com >                             *
- *                      < Jesús Relinque Madroñal >                                                                    *                                                            *
+ *                      < Jesús Relinque Madroñal >                                                                    *
  *                                                                                                                     *
  *   This file is part of LibZMQUtils.                                                                                 *
  *                                                                                                                     *
@@ -75,7 +79,7 @@ public:
      *
      * @param publisher_port    The publisher_port number on which the publisher will listen for incoming connections.
      * @param publisher_iface   The interface address on which the publisher will accept connections. By default, it listens
-     *                              on all available interfaces ("*").
+     *                          on all available interfaces ("*").
      * @param publisher_name    Optional parameter to specify the publisher name. By default is empty.
      * @param publisher_version Optional parameter to specify the publisher version (like "1.1.1"). By default is empty.
      * @param publisher_info    Optional parameter to specify the publisher information. By default is empty.
@@ -89,8 +93,10 @@ public:
      * @warning When specifying the `ip_address`, ensure it is a valid IP address present on the system. Incorrect or
      * unavailable addresses may result in connection failures.
      */
-    PublisherBase(unsigned publisher_port, const std::string& publisher_iface = "*",
-                  const std::string& publisher_name = "", const std::string& publisher_version = "",
+    PublisherBase(unsigned publisher_port,
+                  const std::string& publisher_iface = "*",
+                  const std::string& publisher_name = "",
+                  const std::string& publisher_version = "",
                   const std::string& publisher_info = "");
     
     /**
@@ -258,6 +264,9 @@ private:
 
     // Usefull flags.
     std::atomic_bool flag_working_;  ///< Flag for check the working status.
+
+    /// Specific class scope (for debug purposes).
+    inline static const std::string kScope = "[LibZMQUtils,PublisherSubscriber,PublisherBase]";
 };
 
 }} // END NAMESPACES.

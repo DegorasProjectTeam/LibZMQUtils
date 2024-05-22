@@ -1,15 +1,19 @@
 /***********************************************************************************************************************
  *   LibZMQUtils (ZeroMQ High-Level Utilities C++ Library).                                                            *
  *                                                                                                                     *
- *   A modern open-source C++ library with high-level utilities based on the well-known ZeroMQ open-source universal   *
- *   messaging library. Includes custom command based server-client and publisher-subscriber with automatic binary     *
- *   serialization capabilities, specially designed for system infraestructure. Developed as a free software under the *
- *   context of Degoras Project for the Spanish Navy Observatory SLR station (SFEL) in San Fernando and, of course,    *
- *   for any other station that wants to use it!                                                                       *
+ *   A modern open-source and cross-platform C++ library with high-level utilities based on the well-known ZeroMQ      *
+ *   open-source universal messaging library. Includes a suite of modules that encapsulates the ZMQ communication      *
+ *   patterns as well as automatic binary serialization capabilities, specially designed for system infraestructure.   *
+ *   The library is suited for the quick and easy integration of new and old systems and can be used in different      *
+ *   sectors and disciplines seeking robust messaging and serialization solutions.                                     *
+ *                                                                                                                     *
+ *   Developed as free software within the context of the Degoras Project for the Satellite Laser Ranging Station      *
+ *   (SFEL) at the Spanish Navy Observatory (ROA) in San Fernando, Cádiz. The library is open for use by other SLR     *
+ *   stations and organizations, so we warmly encourage you to give it a try and feel free to contact us anytime!      *
  *                                                                                                                     *
  *   Copyright (C) 2024 Degoras Project Team                                                                           *
  *                      < Ángel Vera Herrera, avera@roa.es - angeldelaveracruz@gmail.com >                             *
- *                      < Jesús Relinque Madroñal >                                                                    *                                                            *
+ *                      < Jesús Relinque Madroñal >                                                                    *
  *                                                                                                                     *
  *   This file is part of LibZMQUtils.                                                                                 *
  *                                                                                                                     *
@@ -66,10 +70,15 @@ class LIBZMQUTILS_EXPORT DebugClbkCommandServerBase : public ClbkCommandServerBa
 {
 public:
 
-    DebugClbkCommandServerBase(unsigned port, const std::string& local_addr = "*", bool log_internal_callbacks = true);
+    DebugClbkCommandServerBase(unsigned server_port,
+                               const std::string& server_iface = "*",
+                               bool log_internal_callbacks = true);
 
-    DebugClbkCommandServerBase(unsigned port, const std::string& local_addr = "*", const std::string& server_name = "",
-                               const std::string& server_version = "", const std::string& server_info = "",
+    DebugClbkCommandServerBase(unsigned server_port,
+                               const std::string& server_iface = "*",
+                               const std::string& server_name = "",
+                               const std::string& server_version = "",
+                               const std::string& server_info = "",
                                bool log_internal_callbacks = true);
 
 protected:
@@ -79,41 +88,45 @@ protected:
     using ClbkCommandServerBase::registerCallback;
     // -----------------------------------------------------------------------------------------------------------------
 
-    // Internal overrided custom command received callback.
+    /// Internal overrided onCustomCommandReceived callback that logs when executing.
     virtual void onCustomCommandReceived(zmqutils::reqrep::CommandRequest&) override;
 
-    // Internal overrided start callback.
+    /// Internal overrided onServerStart callback that logs when executing.
     virtual void onServerStart() override;
 
-    // Internal overrided close callback.
+    /// Internal overrided onServerStop callback that logs when executing.
     virtual void onServerStop() override;
 
-    // Internal waiting command callback.
+    /// Internal onWaitingCommand callback that logs when executing.
     virtual void onWaitingCommand() override;
 
-    // Internal dead client callback.
+    /// Internal onDeadClient callback that logs when executing..
     virtual void onDeadClient(const zmqutils::reqrep::CommandClientInfo&) override;
 
-    // Internal overrided connect callback.
+    /// Internal overrided onConnected callback that logs when executing.
     virtual void onConnected(const zmqutils::reqrep::CommandClientInfo&) override;
 
-    // Internal overrided disconnect callback.
+    /// Internal overrided onDisconnected callback that logs when executing.
     virtual void onDisconnected(const zmqutils::reqrep::CommandClientInfo&) override;
 
-    // Internal overrided command received callback.
+    /// Internal overrided onCommandReceived callback that logs when executing.
     virtual void onCommandReceived(const zmqutils::reqrep::CommandRequest&) override;
 
-    // Internal overrided bad command received callback.
+    /// Internal overrided onInvalidMsgReceived callback that logs when executing.
     virtual void onInvalidMsgReceived(const zmqutils::reqrep::CommandRequest&) override;
 
-    // Internal overrided sending response callback.
+    /// Internal overrided onSendingResponse callback that logs when executing.
     virtual void onSendingResponse(const zmqutils::reqrep::CommandReply&) override;
 
-    // Internal overrided server error callback.
+    /// Internal overridedonServerError callback that logs when executing.
     virtual void onServerError(const zmq::error_t&, const std::string& ext_info) override;
 
 private:
 
+    // Auxiliar flags.
+    std::atomic_bool log_internal_callbacks_;
+
+    // Auxiliar function to generate the log string.
     std::string generateStringHeader(const std::string& clbk_name, const std::vector<std::string>& data);
 };
 
