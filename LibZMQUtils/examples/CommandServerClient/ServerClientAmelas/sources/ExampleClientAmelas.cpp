@@ -329,7 +329,7 @@ int main(int, char**)
     // Other configurations.
     bool enable_alive_callbacks = false;                    // Disable or enable the alive callbacks.
     std::chrono::milliseconds alive_timeout_ms = 2000ms;    // Timeout to consider a client dead.
-    std::chrono::milliseconds alive_period_ms = 1000ms;     // Timeout to consider a client dead.
+    std::chrono::milliseconds alive_period_ms = 1000ms;     // Period to send the keep alive msg.
 
     // Instanciate the client.
     AmelasControllerClient client(server_endpoint, client_iface, client_name, client_version, client_info);
