@@ -56,15 +56,19 @@
 #include <mutex>
 #include <type_traits>
 #include <iostream>
+#include <fstream>
+#include <istream>
+#include <sstream>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
 // -----------------------------------------------------------------------
+#include "LibZMQUtils/InternalHelpers/file_helpers.h"
 // WARNING
 // REMEMBER COMMENT THIS INCLUDE TO AVOID CIRCULAR DEPENDENCIES
 // UNCOMMENT ONLY TO HELP THE DEVELOPMENT WITH CLANG
-//#include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
+// #include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
 // -----------------------------------------------------------------------
 // =====================================================================================================================
 
@@ -125,6 +129,30 @@ void BinarySerializer::binarySerializeDeserialize(const TSRC* src, SizeUnit data
     }
 }
 
+template<typename T, size_t L>
+SizeUnit BinarySerializer::calcTotalSize(const std::array<T, L>&)
+{
+    // Check the types.
+    (BinarySerializer::checkTriviallyCopyable<T>());
+    (BinarySerializer::checkTrivial<T>());
+    // Get the total size.
+    constexpr SizeUnit array_size = L;
+    constexpr SizeUnit elem_size = sizeof(T);
+    return sizeof(SizeUnit) + sizeof(SizeUnit) + elem_size * array_size;
+}
+
+template<typename T>
+SizeUnit BinarySerializer::calcTotalSize(const std::vector<T>& data)
+{
+    // Check the types.
+    (BinarySerializer::checkTriviallyCopyable<T>());
+    (BinarySerializer::checkTrivial<T>());
+    // Get the total size.
+    const SizeUnit vector_size = data.size();
+    constexpr SizeUnit elem_size = sizeof(T);
+    return sizeof(SizeUnit) + sizeof(SizeUnit) + elem_size * vector_size;
+}
+
 template<typename T>
 SizeUnit BinarySerializer::calcTotalSize(const T& data)
 {
@@ -143,30 +171,6 @@ SizeUnit BinarySerializer::calcTotalSize(const T& data)
     else
         static_assert(sizeof(T) == 0, "Unsupported type for total size calculation.");
     return 0;
-}
-
-template<typename T, size_t L>
-SizeUnit BinarySerializer::calcTotalSize(const std::array<T, L>&)
-{
-    // Check the types.
-    (BinarySerializer::checkTriviallyCopyable<T>());
-    (BinarySerializer::checkTrivial<T>());
-    // Get the total size and reserve.
-    constexpr SizeUnit array_size = L;
-    constexpr SizeUnit elem_size = sizeof(T);
-    return sizeof(SizeUnit) + sizeof(SizeUnit) + elem_size * array_size;
-}
-
-template<typename T>
-SizeUnit BinarySerializer::calcTotalSize(const std::vector<T>& data)
-{
-    // Check the types.
-    (BinarySerializer::checkTriviallyCopyable<T>());
-    (BinarySerializer::checkTrivial<T>());
-    // Get the total size and reserve.
-    const SizeUnit vector_size = data.size();
-    constexpr SizeUnit elem_size = sizeof(T);
-    return sizeof(SizeUnit) + sizeof(SizeUnit) + elem_size * vector_size;
 }
 
 template<typename T, typename... Args>
@@ -277,6 +281,7 @@ typename std::enable_if_t<
         !BinarySerializer::is_container<T>::value &&
         !std::is_base_of_v<Serializable, T> &&
         !std::is_same_v<std::nullptr_t &&, T> &&
+        !std::is_same_v<std::filesystem::path, T> &&
         !std::is_pointer_v<T>, void>
 BinarySerializer::writeSingle(const T& data)
 {
@@ -361,10 +366,11 @@ void BinarySerializer::writeSingle(const std::vector<T>& v)
 
 template<typename T>
 typename std::enable_if_t<
-        !BinarySerializer::is_container<T>::value &&
-        !std::is_base_of_v<Serializable, T> &&
-        !std::is_same_v<std::nullptr_t &&, T> &&
-        !std::is_pointer_v<T>, void>
+    !BinarySerializer::is_container<T>::value &&
+    !std::is_base_of_v<Serializable, T> &&
+    !std::is_same_v<std::nullptr_t &&, T> &&
+    !std::is_same_v<std::filesystem::path, T> &&
+    !std::is_pointer_v<T>, void>
 BinarySerializer::readSingle(T& value)
 {
     // Check the types.
@@ -533,7 +539,6 @@ SizeUnit BinarySerializer::calcTotalSize(const Args&... args)
 {
     return Serializable::calcTotalSize(args...);
 }
-
 
 }} // END NAMESPACES.
 // =====================================================================================================================

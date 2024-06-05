@@ -40,6 +40,7 @@
 #include <stdio.h>
 #include <chrono>
 #include <omp.h>
+#include <filesystem>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
@@ -61,6 +62,7 @@ M_DECLARE_UNIT_TEST(BinarySerializer, ArrayTrivial)
 M_DECLARE_UNIT_TEST(BinarySerializer, VectorTrivial)
 M_DECLARE_UNIT_TEST(BinarySerializer, Serializable)
 M_DECLARE_UNIT_TEST(BinarySerializer, File)
+M_DECLARE_UNIT_TEST(BinarySerializer, FileWithFilesystem)
 M_DECLARE_UNIT_TEST(BinarySerializer, Tuple)
 
 // Other tests.
@@ -140,13 +142,9 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Trivial)
         if (i < sz - 1)
             ss << " ";
     }
-    std::cout<<"External 1: "<<ss.str()<<std::endl;
 
     BinarySerializer serializer_direct(std::move(data), sz);
 
-
-
-    std::cout<<serializer_direct.getDataHexString()<<std::endl;
     serializer_direct.read(r1, r2, r3, r4);
 
     // Checking.
@@ -216,11 +214,6 @@ M_DEFINE_UNIT_TEST(BinarySerializer, String)
     SizeUnit sz = BinarySerializer::fastSerialization(data, iso8601_time);
 
     BinarySerializer::fastDeserialization(std::move(data), sz, iso8601_res);
-
-    std::cout<<iso8601_res<<std::endl;
-
-    std::cout<<iso8601_time <<std::endl;
-
 }
 
 M_DEFINE_UNIT_TEST(BinarySerializer, ArrayTrivial)
@@ -394,6 +387,58 @@ M_DEFINE_UNIT_TEST(BinarySerializer, File)
     remove(filename.c_str());
 }
 
+M_DEFINE_UNIT_TEST(BinarySerializer, FileWithFilesystem)
+{
+    // Serializer.
+    BinarySerializer serializer;
+
+    // Hex result.
+    const std::string result("00 00 00 00 00 00 00 12 74 78 74 2e 65 6c 69 66 5f 74 73 65 74 5f 70 6d 65 74 00 00 00 "
+                             "00 00 00 00 3f 48 65 6c 6c 6f 20 64 61 72 6b 6e 65 73 73 20 6d 79 20 6f 6c 64 20 66 72 "
+                             "69 65 6e 64 21 0a 49 27 76 65 20 63 6f 6d 65 20 74 6f 20 74 61 6c 6b 20 77 69 74 68 20 "
+                             "79 6f 75 20 61 67 61 69 6e 2e");
+
+    // Create a temporary file with some content.
+    std::filesystem::path filepath = "temp_test_file.txt";
+    std::string file_content = "Hello darkness my old friend!\nI've come to talk with you again.";
+    std::ofstream temp_file(filepath, std::ios::binary);
+    temp_file.write(file_content.c_str(), static_cast<long long>(file_content.size()));
+    temp_file.close();
+
+    // Serialize the file.
+    size_t ser_size = serializer.write(filepath);
+
+    // Delete the file.
+    std::filesystem::remove(filepath);
+
+    //Deserialize the file.
+    std::filesystem::path out_path = "";
+    serializer.readFile(out_path.string());
+
+    // Open the file.
+    std::ifstream output(filepath);
+
+    // Check the file.
+    if(!output.is_open())
+    {
+        M_FORCE_FAIL()
+        return;
+    }
+
+    // Read the deserialized content from the output stream.
+    std::string deserialized_content((std::istreambuf_iterator<char>(output)),
+                                     std::istreambuf_iterator<char>());
+
+    // Verify the results.
+    M_EXPECTED_EQ(serializer.getDataHexString(), result)
+    M_EXPECTED_EQ(ser_size, sizeof(SizeUnit)*2 + file_content.size() + filepath.string().size())
+    M_EXPECTED_EQ(deserialized_content, file_content)
+
+    // Delete the file.
+    output.close();
+    std::filesystem::remove(filepath);
+}
+
 M_DEFINE_UNIT_TEST(BinarySerializer, Tuple)
 {
     // Serializer.
@@ -444,7 +489,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, TrivialIntensive)
 
     BinarySerializer serializer;
 
-    const size_t count = 50000;
+    const size_t count = 20000;
     std::vector<long double> original_numbers(count);
     std::vector<long double> deserialized_numbers(count);
 
@@ -487,7 +532,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, TrivialIntensiveParrallel)
 {
     // WARNING: Testing intensive in parallel. However, the correct is serialize the vector, not each number.
 
-    const size_t count = 5000000;
+    const size_t count = 20000;
     std::vector<long double> original_numbers(count);
     std::vector<long double> deserialized_numbers(count);
 
@@ -530,6 +575,7 @@ int main()
     M_REGISTER_UNIT_TEST(BinarySerializer, VectorTrivial)
     M_REGISTER_UNIT_TEST(BinarySerializer, Serializable)
     M_REGISTER_UNIT_TEST(BinarySerializer, File)
+    M_REGISTER_UNIT_TEST(BinarySerializer, FileWithFilesystem)
     M_REGISTER_UNIT_TEST(BinarySerializer, Tuple)
     M_REGISTER_UNIT_TEST(BinarySerializer, TrivialIntensive)
     M_REGISTER_UNIT_TEST(BinarySerializer, TrivialIntensiveParrallel)

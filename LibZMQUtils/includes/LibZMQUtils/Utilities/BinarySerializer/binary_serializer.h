@@ -52,6 +52,7 @@
 #include <memory>
 #include <cstddef>
 #include <tuple>
+#include <filesystem>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
@@ -302,7 +303,7 @@ public:
      * @warning The @a src parameter is a void pointer, so be careful.
      * @warning This constructor implies deep copy.
      */
-     BinarySerializer(void* src, SizeUnit size);
+    BinarySerializer(void* src, SizeUnit size);
 
     BinarySerializer(BytesSmartPtr&& src, SizeUnit size);
 
@@ -477,7 +478,9 @@ public:
      * trivial, directly supported by this class, or being a subclass of the Serializable interface.
      */
     template<typename T, typename... Args,
-             typename = std::enable_if_t<!is_tuple<T>::value && !trait_has_nullptr_t<T, Args...>::value>>
+        typename = std::enable_if_t<
+            !is_tuple<T>::value &&
+            !trait_has_nullptr_t<T, Args...>::value>>
     SizeUnit write(const T& value, const Args&... args);
 
     template<typename... Args>
@@ -555,13 +558,6 @@ public:
 
     // -----------------------------------------------------------------------------------------------------------------
 
-    // Size calculator function.
-    template<typename T>
-    static SizeUnit calcTotalSize(const T& data);
-
-    template<typename... Args>
-    static SizeUnit calcTotalSize(const Args&... args);
-
     // Size calculator function for vectors.
     template<typename T>
     static SizeUnit calcTotalSize(const std::vector<T>& data);
@@ -569,6 +565,17 @@ public:
     // Size calculator function for arrays.
     template<typename T, size_t L>
     static SizeUnit calcTotalSize(const std::array<T, L>& data);
+
+    // Size calculator function for files.
+    static SizeUnit calcTotalSize(const std::filesystem::path& data);
+
+    // Size calculator function.
+    template<typename T>
+    static SizeUnit calcTotalSize(const T& data);
+
+    // Generic size calculator for multiple arguments.
+    template<typename... Args>
+    static SizeUnit calcTotalSize(const Args&... args);
 
 protected:
 
@@ -628,6 +635,7 @@ protected:
             !is_container<T>::value &&
             !std::is_base_of_v<Serializable, T> &&
             !std::is_same_v<std::nullptr_t &&, T> &&
+            !std::is_same_v<std::filesystem::path, T> &&
             !std::is_pointer_v<T>, void>
     writeSingle(const T& obj);
 
@@ -650,6 +658,9 @@ protected:
     // void writeSingle(const std::vector<std::string>& v)
     // {}
 
+    // For write files using std::filesystem::path
+    void writeSingle(const std::filesystem::path& file_path);
+
     // -----------------------------------------------------------------------------------------------------------------
 
     // Read data functions.
@@ -657,10 +668,11 @@ protected:
     // Generic reading.
     template<typename T>
     typename std::enable_if_t<
-            !is_container<T>::value &&
-            !std::is_base_of_v<Serializable, T> &&
-            !std::is_same_v<std::nullptr_t &&, T> &&
-            !std::is_pointer_v<T>, void>
+        !BinarySerializer::is_container<T>::value &&
+        !std::is_base_of_v<Serializable, T> &&
+        !std::is_same_v<std::nullptr_t &&, T> &&
+        !std::is_same_v<std::filesystem::path, T> &&
+        !std::is_pointer_v<T>, void>
     readSingle(T& value);
 
     // For read Serializable objects.
@@ -668,6 +680,9 @@ protected:
 
     // For read strings.
     void readSingle(std::string& str);
+
+    // For read files using std::filesystem::path
+    void readSingle(const std::filesystem::path& file_path);
 
     // For arrays of trivial types.
     template<typename T, size_t L>
