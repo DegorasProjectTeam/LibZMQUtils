@@ -138,7 +138,7 @@ public:
         // Process function lambda.
         auto lambda_proc_func = [this](const CommandRequest& request, CommandReply& reply)
         {
-            this->processCbRequest<CallbackType, RetT, InputTuple, OutputTuple>(request, reply);
+            this->processClbkRequest<CallbackType, RetT, InputTuple, OutputTuple>(request, reply);
         };
 
         // Automatic command process function registration.
@@ -187,7 +187,7 @@ protected:
      * @param reply A reference to the CommandReply object to store the results of the callback invocation.
      */
     template<typename CallbackType, typename RetT, typename InputTuple, typename OutputTuple>
-    void processCbRequest(const zmqutils::reqrep::CommandRequest& request,
+    void processClbkRequest(const zmqutils::reqrep::CommandRequest& request,
                             zmqutils::reqrep::CommandReply& reply)
     {
         // Prepare the input and output parameters
