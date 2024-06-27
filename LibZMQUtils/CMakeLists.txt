@@ -61,7 +61,7 @@ macro_cmakemodules_init("24.04.22")
 
 # Base project configuration.
 set(LIB_NAME LibZMQUtils)
-set(LIB_VER 1.7.6)
+set(LIB_VER 1.7.7)
 set(LIB_BUILD_MODE Debug)
 set(LIB_LANGUAGES CXX C)
 
@@ -154,7 +154,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     if (CMAKE_BUILD_TYPE STREQUAL "Debug")
         set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wpedantic -Wall -Wextra -O0 -fopenmp")
     else()
-        set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wpedantic -Wall -Wextra -m64 -O3 -pthread -fopenmp")
+        set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wpedantic -Wall -Wextra -O3 -fopenmp")
     endif()
 else()
     message(FATAL_ERROR "Compiler not supported by default.")
