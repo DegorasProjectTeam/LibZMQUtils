@@ -60,6 +60,7 @@ M_DECLARE_UNIT_TEST(BinarySerializer, Trivial)
 M_DECLARE_UNIT_TEST(BinarySerializer, String)
 M_DECLARE_UNIT_TEST(BinarySerializer, ArrayTrivial)
 M_DECLARE_UNIT_TEST(BinarySerializer, VectorTrivial)
+M_DECLARE_UNIT_TEST(BinarySerializer, VectorVectorTrivial)
 M_DECLARE_UNIT_TEST(BinarySerializer, Serializable)
 M_DECLARE_UNIT_TEST(BinarySerializer, File)
 M_DECLARE_UNIT_TEST(BinarySerializer, FileWithFilesystem)
@@ -274,6 +275,46 @@ M_DEFINE_UNIT_TEST(BinarySerializer, VectorTrivial)
     M_EXPECTED_EQ(size1 + size2, serializer.getSize())
     M_EXPECTED_EQ(v1, r1)
     M_EXPECTED_EQ(v2, r2)
+}
+
+M_DEFINE_UNIT_TEST(BinarySerializer, VectorVectorTrivial)
+{
+    // Alias.
+    using VectorOfVectors = std::vector<std::vector<int>>;
+
+    // Serializer.
+    BinarySerializer serializer;
+
+    // Data.
+    const std::vector<int> v1 = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    const std::vector<int> v2 = {-2, -1, 0, 1, 2, 3, 4, 5, 6, 7 ,8 ,9 ,10, 11, 12, -13, -14, -15, -16, 20};
+    VectorOfVectors vtest;
+    VectorOfVectors rtest;
+
+    // Insert data.
+    vtest.push_back(v1);
+    vtest.push_back(v2);
+
+    // Calculate the sizes.
+    size_t size1 = v1.size()*sizeof(int) + sizeof(SizeUnit);
+    size_t size2 = v2.size()*sizeof(int) + sizeof(SizeUnit);
+    size_t sizetest = sizeof(SizeUnit) + sizeof(SizeUnit) + size1 + size2;
+
+    // Write, read.
+    serializer.write(vtest);
+    serializer.read(rtest);
+
+    // Checking.
+    M_EXPECTED_EQ(sizetest, serializer.getSize())
+    M_EXPECTED_EQ(vtest.size(), rtest.size())
+    for(std::size_t i = 0; i< vtest.size(); i++)
+    {
+        M_EXPECTED_EQ(vtest[i].size(), rtest[i].size())
+        for(std::size_t j = 0; j< vtest[i].size(); j++)
+        {
+            M_EXPECTED_EQ(vtest[i].at(j), rtest[i].at(j))
+        }
+    }
 }
 
 M_DEFINE_UNIT_TEST(BinarySerializer, Serializable)
@@ -498,7 +539,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, TrivialIntensive)
     std::mt19937 gen(rd());
     std::uniform_real_distribution<> dis(-1000000.0, 1000000.0);
     for (long double &num : original_numbers)
-        num = dis(gen);
+        num = static_cast<long double>(dis(gen));
 
     auto now = std::chrono::steady_clock::now();
 
@@ -541,7 +582,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, TrivialIntensiveParrallel)
     std::mt19937 gen(rd());
     std::uniform_real_distribution<> dis(-1000000.0, 1000000.0);
     for (long double &num : original_numbers)
-        num = dis(gen);
+        num = static_cast<long double>(dis(gen));
 
     std::vector<BinarySerializer> serializers;
     serializers.resize(original_numbers.size());
@@ -573,6 +614,7 @@ int main()
     M_REGISTER_UNIT_TEST(BinarySerializer, String)
     M_REGISTER_UNIT_TEST(BinarySerializer, ArrayTrivial)
     M_REGISTER_UNIT_TEST(BinarySerializer, VectorTrivial)
+    M_REGISTER_UNIT_TEST(BinarySerializer, VectorVectorTrivial)
     M_REGISTER_UNIT_TEST(BinarySerializer, Serializable)
     M_REGISTER_UNIT_TEST(BinarySerializer, File)
     M_REGISTER_UNIT_TEST(BinarySerializer, FileWithFilesystem)

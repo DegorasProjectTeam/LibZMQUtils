@@ -562,6 +562,10 @@ public:
     template<typename T>
     static SizeUnit calcTotalSize(const std::vector<T>& data);
 
+    // Size calculator function for vectors of vectors.
+    template<typename T>
+    static SizeUnit calcTotalSize(const std::vector<std::vector<T>>& data);
+
     // Size calculator function for arrays.
     template<typename T, size_t L>
     static SizeUnit calcTotalSize(const std::array<T, L>& data);
@@ -653,6 +657,12 @@ protected:
     template<typename T>
     void writeSingle(const std::vector<T>& v);
 
+    // For vectors of vectors of trivial types.
+    template<typename T>
+    void writeSingle(const std::vector<std::vector<T>>& v);
+
+
+
     // For vectors of trivial types.
     // TODO
     // void writeSingle(const std::vector<std::string>& v)
@@ -691,6 +701,10 @@ protected:
     // For vectors of trivial types.
     template<typename T>
     void readSingle(std::vector<T>& v);
+
+    // For vector of vectors of trivial types.
+    template<typename T>
+    void readSingle(std::vector<std::vector<T>>& v);
 
     template<typename... Args>
     void readSingle(std::tuple<Args...>& tup);
