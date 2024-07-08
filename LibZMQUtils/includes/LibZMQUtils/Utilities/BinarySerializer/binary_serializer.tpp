@@ -68,7 +68,7 @@
 // WARNING
 // REMEMBER COMMENT THIS INCLUDE TO AVOID CIRCULAR DEPENDENCIES
 // UNCOMMENT ONLY TO HELP THE DEVELOPMENT WITH CLANG
-// #include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
+ #include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
 // -----------------------------------------------------------------------
 // =====================================================================================================================
 
@@ -129,87 +129,24 @@ void BinarySerializer::binarySerializeDeserialize(const TSRC* src, SizeUnit data
     }
 }
 
-template<typename T, size_t L>
-SizeUnit BinarySerializer::calcTotalSize(const std::array<T, L>&)
+template<typename T, typename... Args>
+SizeUnit BinarySerializer::serializedSizeRecursive(const T& value, const Args&... args)
 {
-    // Check the types.
-    (BinarySerializer::checkTriviallyCopyable<T>());
-    (BinarySerializer::checkTrivial<T>());
-    // Get the total size.
-    constexpr SizeUnit array_size = L;
-    constexpr SizeUnit elem_size = sizeof(T);
-    return sizeof(SizeUnit) + sizeof(SizeUnit) + elem_size * array_size;
-}
+    SizeUnit t_size = BinarySerializer::serializedSizeSingle(value);
 
-template<typename T>
-SizeUnit BinarySerializer::calcTotalSize(const std::vector<T>& data)
-{
-    // Check the types.
-    (BinarySerializer::checkTriviallyCopyable<T>());
-    (BinarySerializer::checkTrivial<T>());
-    // Get the total size.
-    const SizeUnit vector_size = data.size();
-    constexpr SizeUnit elem_size = sizeof(T);
-    return sizeof(SizeUnit) + sizeof(SizeUnit) + elem_size * vector_size;
-}
+    if constexpr (sizeof...(args) > 0)
+        t_size += BinarySerializer::serializedSizeRecursive(std::forward<const Args&>(args)...);
 
-template<typename T>
-SizeUnit BinarySerializer::calcTotalSize(const std::vector<std::vector<T>>& data)
-{
-    // Check the types.
-    (BinarySerializer::checkTriviallyCopyable<T>());
-    (BinarySerializer::checkTrivial<T>());
-
-    // Get the total size.
-    SizeUnit total_size = 0;
-    constexpr SizeUnit elem_size = sizeof(T);
-
-    // Size of vector size storage and element size storage.
-    total_size += sizeof(SizeUnit);
-    total_size += sizeof(SizeUnit);
-
-    // Size of each subvector.
-    for(const auto& sub_vector : data)
-    {
-        const SizeUnit subvector_size = sub_vector.size();
-        total_size += sizeof(SizeUnit);
-        total_size += elem_size * subvector_size;
-    }
-
-    // Return the total size.
-    return total_size;
-}
-
-template<typename T>
-SizeUnit BinarySerializer::calcTotalSize(const T& data)
-{
-    if constexpr(std::is_base_of_v<Serializable, std::decay_t<T>>)
-    {
-        return data.serializedSize();
-    }
-    else if constexpr(std::is_same_v<std::decay_t<T>, std::string>)
-    {
-        return sizeof(SizeUnit) + data.size();
-    }
-    else if constexpr(std::is_trivially_copyable_v<std::decay_t<T>> && std::is_trivial_v<std::decay_t<T>>)
-    {
-        return sizeof(SizeUnit) + sizeof(data);
-    }
-    else
-        static_assert(sizeof(T) == 0, "Unsupported type for total size calculation.");
-    return 0;
+    return t_size;
 }
 
 template<typename T, typename... Args>
 void BinarySerializer::writeRecursive(const T& value, const Args&... args)
 {
-    if constexpr (sizeof...(args) == 0)
-        this->writeSingle(value);
-    else
-    {
-        this->writeSingle(value);
+    this->writeSingle(value);
+
+    if constexpr (sizeof...(args) > 0)
         this->writeRecursive(std::forward<const Args&>(args)...);
-    }
 }
 
 template<typename T, typename... Args>
@@ -245,7 +182,7 @@ void BinarySerializer::fastDeserialization(void* src, SizeUnit size, Args&... ar
     BinarySerializer serializer(src, size);
     serializer.read(std::forward<Args&>(args)...);
     if(!serializer.allReaded())
-        throw std::out_of_range("BinarySerializer: Not all data was deserialized.");
+        throw std::out_of_range(BinarySerializer::kClassScope + " Not all data was deserialized.");
 }
 
 template<typename... Args>
@@ -255,14 +192,121 @@ void BinarySerializer::fastDeserialization(BytesSmartPtr&& src, SizeUnit size, A
     BinarySerializer serializer(std::move(src), size);
     serializer.read(std::forward<Args&>(args)...);
     if(!serializer.allReaded())
-        throw std::out_of_range("BinarySerializer: Not all data was deserialized.");
+        throw std::out_of_range(BinarySerializer::kClassScope + " Not all data was deserialized.");
+}
+
+// -----------------------------------------------------------------------------------------------------------------
+
+template<typename T, typename... Args>
+SizeUnit BinarySerializer::serializedSize(const T& value, const Args&... args)
+{
+    // Calculate the serialized size.
+    return BinarySerializer::serializedSizeRecursive(value, args...);
+}
+
+template<typename T>
+typename std::enable_if_t<
+        !BinarySerializer::is_container<T>::value &&
+        !std::is_same_v<std::nullptr_t &&, T> &&
+        !std::is_pointer_v<T>, SizeUnit>
+BinarySerializer::serializedSizeSingle(const T& data)
+{
+    if constexpr(std::is_base_of_v<Serializable, std::decay_t<T>>)
+    {
+        return data.serializedSize();
+    }
+    else if constexpr(std::is_same_v<std::decay_t<T>, std::string>)
+    {
+        return sizeof(SizeUnit) + data.size();
+    }
+    else if constexpr(std::is_trivially_copyable_v<std::decay_t<T>> && std::is_trivial_v<std::decay_t<T>>)
+    {
+        return sizeof(SizeUnit) + sizeof(data);
+    }
+    else
+        static_assert(sizeof(T) == 0,
+                      "[LibDegorasBase,Serialization,BinarySerializer] Unsupported type for total size calculation.");
+}
+
+template<typename T, size_t L>
+SizeUnit BinarySerializer::serializedSizeSingle(const std::array<T, L>&)
+{
+    // Check the types.
+    (BinarySerializer::checkTriviallyCopyable<T>());
+    (BinarySerializer::checkTrivial<T>());
+    // Get the total size.
+    constexpr SizeUnit array_size = L;
+    constexpr SizeUnit elem_size = sizeof(T);
+    return sizeof(SizeUnit) + sizeof(SizeUnit) + elem_size * array_size;
+}
+
+template<typename T>
+SizeUnit BinarySerializer::serializedSizeSingle(const std::vector<T>& data)
+{
+    SizeUnit total_size = 0;
+
+    if constexpr(std::is_base_of_v<Serializable, std::decay_t<T>>)
+    {
+        total_size = sizeof(SizeUnit);
+        for(const auto& obj : data)
+            total_size += obj.serializedSize();
+    }
+    else
+    {
+        // Check the types.
+        (BinarySerializer::checkTriviallyCopyable<T>());
+        (BinarySerializer::checkTrivial<T>());
+        // Get the total size.
+        const SizeUnit vector_size = data.size();
+        constexpr SizeUnit elem_size = sizeof(T);
+        total_size = sizeof(SizeUnit) + sizeof(SizeUnit) + elem_size * vector_size;
+    }
+
+    return total_size;
+}
+
+template<typename T>
+SizeUnit BinarySerializer::serializedSizeSingle(const std::vector<std::vector<T>>& data)
+{
+    SizeUnit total_size = 0;
+
+    if constexpr(std::is_base_of_v<Serializable, std::decay_t<T>>)
+    {
+        total_size = sizeof(SizeUnit);
+        for(const auto& vec : data)
+            total_size += BinarySerializer::serializedSizeSingle(vec);
+    }
+    else
+    {
+        // Check the types.
+        (BinarySerializer::checkTriviallyCopyable<T>());
+        (BinarySerializer::checkTrivial<T>());
+
+        // Get the total size.
+        constexpr SizeUnit elem_size = sizeof(T);
+
+        // Size of vector size storage and element size storage.
+        total_size += sizeof(SizeUnit);
+        total_size += sizeof(SizeUnit);
+
+        // Size of each subvector.
+        for(const auto& sub_vector : data)
+        {
+            const SizeUnit subvector_size = sub_vector.size();
+            total_size += sizeof(SizeUnit);
+            total_size += elem_size * subvector_size;
+        }
+    }
+
+    // Return the total size.
+    return total_size;
 }
 
 template<typename T, typename... Args, typename>
 SizeUnit BinarySerializer::write(const T& value, const Args&... args)
 {
     // Calculate total size of all arguments.
-    const SizeUnit t_size = (BinarySerializer::calcTotalSize(value) + ... + BinarySerializer::calcTotalSize(args));
+    const SizeUnit t_size = BinarySerializer::serializedSizeRecursive(value, args...);
 
     // Reserve space in one go.
     this->reserve(this->size_ + t_size);
@@ -280,7 +324,7 @@ SizeUnit BinarySerializer::write(const std::tuple<Args...>& tup)
     // Calculate the total size of all tuple elements
     const SizeUnit t_size = std::apply([&](const auto&... args)
     {
-        return (BinarySerializer::calcTotalSize(args) + ...);
+        return (BinarySerializer::serializedSizeSingle(args) + ...);
     }, tup);
 
     // Reserve space in one go
@@ -364,68 +408,111 @@ void BinarySerializer::writeSingle(const std::array<T, L>& arr)
 template<typename T>
 void BinarySerializer::writeSingle(const std::vector<T>& v)
 {
-    // Check the types.
-    BinarySerializer::checkTriviallyCopyable<T>();
-    BinarySerializer::checkTrivial<T>();
-
-    // Get the size.
-    const SizeUnit vector_size = v.size();
-    constexpr SizeUnit elem_size = sizeof(T);
-
-    // Safety mutex.
-    std::lock_guard<std::mutex> lock(this->mtx_);
-
-    // Serialize vector size.
-    BinarySerializer::binarySerialize(&vector_size, sizeof(SizeUnit), this->data_.get() + size_);
-    this->size_ += sizeof(SizeUnit);
-
-    // Serialize the size of each element.
-    BinarySerializer::binarySerialize(&elem_size, sizeof(SizeUnit), this->data_.get() + size_);
-    this->size_ += sizeof(SizeUnit);
-
-    // Write each value of the vector.
-    for(const auto& val : v)
+    if constexpr(std::is_base_of_v<Serializable, std::decay_t<T>>)
     {
-        BinarySerializer::binarySerialize(&val, elem_size, this->data_.get() + this->size_);
-        this->size_ += elem_size;
+        // Get the size.
+        const SizeUnit vector_size = v.size();
+
+        // Safety mutex block.
+        {
+            std::lock_guard<std::mutex> lock(this->mtx_);
+
+            // Serialize vector size.
+            BinarySerializer::binarySerialize(&vector_size, sizeof(SizeUnit), this->data_.get() + size_);
+            this->size_ += sizeof(SizeUnit);
+        }
+
+        // Write each value of the vector.
+        for(const auto& val : v)
+            val.serialize(*this);
+    }
+    else
+    {
+        // Check the types.
+        BinarySerializer::checkTriviallyCopyable<T>();
+        BinarySerializer::checkTrivial<T>();
+
+        // Get the size.
+        const SizeUnit vector_size = v.size();
+        constexpr SizeUnit elem_size = sizeof(T);
+
+        // Safety mutex.
+        std::lock_guard<std::mutex> lock(this->mtx_);
+
+        // Serialize vector size.
+        BinarySerializer::binarySerialize(&vector_size, sizeof(SizeUnit), this->data_.get() + size_);
+        this->size_ += sizeof(SizeUnit);
+
+        // Serialize the size of each element.
+        BinarySerializer::binarySerialize(&elem_size, sizeof(SizeUnit), this->data_.get() + size_);
+        this->size_ += sizeof(SizeUnit);
+
+        // Write each value of the vector.
+        for(const auto& val : v)
+        {
+            BinarySerializer::binarySerialize(&val, elem_size, this->data_.get() + this->size_);
+            this->size_ += elem_size;
+        }
     }
 }
 
 template<typename T>
 void BinarySerializer::writeSingle(const std::vector<std::vector<T>>& v)
 {
-    // Check the types.
-    BinarySerializer::checkTriviallyCopyable<T>();
-    BinarySerializer::checkTrivial<T>();
-
-    // Get the size.
-    const SizeUnit vector_size = v.size();
-    constexpr SizeUnit elem_size = sizeof(T);
-
-    // Safety mutex.
-    std::lock_guard<std::mutex> lock(this->mtx_);
-
-    // Serialize vector size.
-    BinarySerializer::binarySerialize(&vector_size, sizeof(SizeUnit), this->data_.get() + size_);
-    this->size_ += sizeof(SizeUnit);
-
-    // Serialize the size of each element.
-    BinarySerializer::binarySerialize(&elem_size, sizeof(SizeUnit), this->data_.get() + size_);
-    this->size_ += sizeof(SizeUnit);
-
-    // Write each vector.
-    for(const auto& sub_vector : v)
+    if constexpr(std::is_base_of_v<Serializable, std::decay_t<T>>)
     {
-        // Serialize vector size.
-        const SizeUnit sub_vector_size = sub_vector.size();
-        BinarySerializer::binarySerialize(&sub_vector_size, sizeof(SizeUnit), this->data_.get() + size_);
-        this->size_ += sizeof(SizeUnit);
+        // Get the size.
+        const SizeUnit vector_size = v.size();
+
+        // Safety mutex block.
+        {
+            std::lock_guard<std::mutex> lock(this->mtx_);
+
+            // Serialize vector size.
+            BinarySerializer::binarySerialize(&vector_size, sizeof(SizeUnit), this->data_.get() + size_);
+            this->size_ += sizeof(SizeUnit);
+        }
 
         // Write each value of the vector.
-        for(const auto& val : sub_vector)
+        for(const auto& vec : v)
+            this->writeSingle(vec);
+    }
+
+    else
+    {
+        // Check the types.
+        BinarySerializer::checkTriviallyCopyable<T>();
+        BinarySerializer::checkTrivial<T>();
+
+        // Get the size.
+        const SizeUnit vector_size = v.size();
+        constexpr SizeUnit elem_size = sizeof(T);
+
+        // Safety mutex.
+        std::lock_guard<std::mutex> lock(this->mtx_);
+
+        // Serialize vector size.
+        BinarySerializer::binarySerialize(&vector_size, sizeof(SizeUnit), this->data_.get() + size_);
+        this->size_ += sizeof(SizeUnit);
+
+        // Serialize the size of each element.
+        BinarySerializer::binarySerialize(&elem_size, sizeof(SizeUnit), this->data_.get() + size_);
+        this->size_ += sizeof(SizeUnit);
+
+        // Write each vector.
+        for(const auto& sub_vector : v)
         {
-            BinarySerializer::binarySerialize(&val, elem_size, this->data_.get() + this->size_);
-            this->size_ += elem_size;
+            // Serialize vector size.
+            const SizeUnit sub_vector_size = sub_vector.size();
+            BinarySerializer::binarySerialize(&sub_vector_size, sizeof(SizeUnit), this->data_.get() + size_);
+            this->size_ += sizeof(SizeUnit);
+
+            // Write each value of the vector.
+            for(const auto& val : sub_vector)
+            {
+                BinarySerializer::binarySerialize(&val, elem_size, this->data_.get() + this->size_);
+                this->size_ += elem_size;
+            }
         }
     }
 }
@@ -448,7 +535,7 @@ BinarySerializer::readSingle(T& value)
 
     // Ensure that there's enough data left to read the size of the value.
     if (this->offset_ + sizeof(SizeUnit) > this->size_)
-        throw std::out_of_range("BinarySerializer: Not enough data left to read the size of the value.");
+        throw std::out_of_range(BinarySerializer::kClassScope + " Not enough data left to read the size of the value.");
 
     // Read the size of the value.
     SizeUnit size;
@@ -459,11 +546,11 @@ BinarySerializer::readSingle(T& value)
 
     // Check if we have enough data left to read the value.
     if (this->offset_ + size > this->size_)
-        throw std::out_of_range("BinarySerializer: Read value beyond the data size.");
+        throw std::out_of_range(BinarySerializer::kClassScope + " Read value beyond the data size.");
 
     // Check if the size is greater than the expected size for the type.
     if (size > sizeof(T))
-        throw std::logic_error("BinarySerializer: The serialized value size is greater than type for storage.");
+        throw std::logic_error(BinarySerializer::kClassScope + " The serialized value size is greater than type for storage.");
 
     // Read the value.
     BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, size, &value);
@@ -478,7 +565,8 @@ void BinarySerializer::readSingle(std::array<T, L>& arr)
 
     // Ensure that there's enough data left to read the size of the array.
     if (this->offset_ + sizeof(SizeUnit) > this->size_)
-        throw std::out_of_range("BinarySerializer: Not enough data left to read the size of the array.");
+        throw std::out_of_range(
+            BinarySerializer::kClassScope + " Not enough data left to read the size of the array.");
 
     // Read the size of the array.
     SizeUnit size_array;
@@ -493,7 +581,8 @@ void BinarySerializer::readSingle(std::array<T, L>& arr)
 
     // Ensure that there's enough data left to read the size of each elements.
     if (this->offset_ + sizeof(SizeUnit) > this->size_)
-        throw std::out_of_range("BinarySerializer: Not enough data left to read the size of elements of the array.");
+        throw std::out_of_range(
+            BinarySerializer::kClassScope + " Not enough data left to read the size of elements of the array.");
 
     // Read the size of the elements.
     SizeUnit size_elem;
@@ -521,126 +610,162 @@ void BinarySerializer::readSingle(std::array<T, L>& arr)
 template<typename T>
 void BinarySerializer::readSingle(std::vector<T>& v)
 {
-    // Safety mutex.
-    std::lock_guard<std::mutex> lock(this->mtx_);
-
-    // Ensure that there's enough data left to read the size of the vector.
-    if (this->offset_ + sizeof(SizeUnit) > this->size_)
-        throw std::out_of_range("BinarySerializer: Not enough data left to read the size of the vector.");
-
-    // Read the size of the array.
     SizeUnit size_vector;
-    BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, sizeof(SizeUnit), &size_vector);
+    {
+        // Safety mutex.
+        std::lock_guard<std::mutex> lock(this->mtx_);
 
-    // Update the offset.
-    this->offset_ += sizeof(SizeUnit);
+        // Ensure that there's enough data left to read the size of the vector.
+        if (this->offset_ + sizeof(SizeUnit) > this->size_)
+            throw std::out_of_range("BinarySerializer: Not enough data left to read the size of the vector.");
+
+        // Read the size of the array.
+        BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, sizeof(SizeUnit), &size_vector);
+
+        // Update the offset.
+        this->offset_ += sizeof(SizeUnit);
+    }
 
     // Check if the vector is empty.
     if(size_vector == 0)
         return;
 
-    // Ensure that there's enough data left to read the size of each elements.
-    if (this->offset_ + sizeof(SizeUnit) > this->size_)
-        throw std::out_of_range("BinarySerializer: Not enough data left to read the size of elements of the vector.");
-
-    // Read the size of the elements.
-    SizeUnit size_elem;
-    BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, sizeof(SizeUnit), &size_elem);
-
-    // Update the offset.
-    this->offset_ += sizeof(SizeUnit);
-
-    // Check if the size is 0.
-    if(size_elem == 0)
-        throw std::out_of_range("BinarySerializer: Unknow size of elements of the vector.");
-
-    // Check if we have enough data left to read the data.
-    if (this->offset_ + size_elem*size_vector > this->size_)
-        throw std::out_of_range("BinarySerializer: Read vector data beyond the data size.");
-
-    // Prepare the vector.
-    v.clear();
-    v.resize(size_vector);
-
-    // Read all the elements.
-    for(std::uint64_t i = 0; i < size_vector; i++)
+    if constexpr(std::is_base_of_v<Serializable, std::decay_t<T>>)
     {
-        BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, size_elem, &v[i]);
-        this->offset_ += size_elem;
+        // Prepare the vector.
+        v.clear();
+        v.resize(size_vector);
+
+        for (SizeUnit i = 0; i < size_vector; i++)
+        {
+            this->readSingle(v[i]);
+        }
+    }
+
+    else
+    {
+        // Ensure that there's enough data left to read the size of each elements.
+        if (this->offset_ + sizeof(SizeUnit) > this->size_)
+            throw std::out_of_range("BinarySerializer: Not enough data left to read the size of elements of the vector.");
+
+        // Read the size of the elements.
+        SizeUnit size_elem;
+        BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, sizeof(SizeUnit), &size_elem);
+
+        // Update the offset.
+        this->offset_ += sizeof(SizeUnit);
+
+        // Check if the size is 0.
+        if(size_elem == 0)
+            throw std::out_of_range("BinarySerializer: Unknow size of elements of the vector.");
+
+        // Check if we have enough data left to read the data.
+        if (this->offset_ + size_elem*size_vector > this->size_)
+            throw std::out_of_range("BinarySerializer: Read vector data beyond the data size.");
+
+        // Prepare the vector.
+        v.clear();
+        v.resize(size_vector);
+
+        // Read all the elements.
+        for(std::uint64_t i = 0; i < size_vector; i++)
+        {
+            BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, size_elem, &v[i]);
+            this->offset_ += size_elem;
+        }
     }
 }
 
 template<typename T>
 void BinarySerializer::readSingle(std::vector<std::vector<T>>& v)
 {
-    // Safety mutex.
-    std::lock_guard<std::mutex> lock(this->mtx_);
-
-    // Ensure that there's enough data left to read the size of the vector.
-    if (this->offset_ + sizeof(SizeUnit) > this->size_)
-        throw std::out_of_range("BinarySerializer: Not enough data left to read the size of the vector.");
-
-    // Read the size of the vector.
     SizeUnit size_vector;
-    BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, sizeof(SizeUnit), &size_vector);
 
-    // Update the offset.
-    this->offset_ += sizeof(SizeUnit);
+    {
+        // Safety mutex.
+        std::lock_guard<std::mutex> lock(this->mtx_);
+
+        // Ensure that there's enough data left to read the size of the vector.
+        if (this->offset_ + sizeof(SizeUnit) > this->size_)
+            throw std::out_of_range("BinarySerializer: Not enough data left to read the size of the vector.");
+
+        // Read the size of the vector.
+        BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, sizeof(SizeUnit), &size_vector);
+
+        // Update the offset.
+        this->offset_ += sizeof(SizeUnit);
+    }
 
     // Check if the vector is empty.
     if(size_vector == 0)
         return;
 
-    // Ensure that there's enough data left to read the size of each elements.
-    if (this->offset_ + sizeof(SizeUnit) > this->size_)
-        throw std::out_of_range("BinarySerializer: Not enough data left to read the size of elements of the vector.");
-
-    // Read the size of the elements.
-    SizeUnit size_elem;
-    BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, sizeof(SizeUnit), &size_elem);
-
-    // Update the offset.
-    this->offset_ += sizeof(SizeUnit);
-
-    // Check if the size is 0.
-    if(size_elem == 0)
-        throw std::out_of_range("BinarySerializer: Unknow size of elements of the vector.");
-
-    // Prepare the vector.
-    v.clear();
-    v.resize(size_vector);
-
-    // Read all the subvectors.
-    for(std::uint64_t i = 0; i < size_vector; i++)
+    if constexpr(std::is_base_of_v<Serializable, std::decay_t<T>>)
     {
-        // Ensure that there's enough data left to read the size of the subvector.
-        if (this->offset_ + sizeof(SizeUnit) > this->size_)
-            throw std::out_of_range("BinarySerializer: Not enough data left to read the size of the subvector.");
+        // Prepare the vector.
+        v.clear();
+        v.resize(size_vector);
 
-        // Read the size of the subvector.
-        SizeUnit size_subvector;
-        BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, sizeof(SizeUnit), &size_subvector);
+        for (SizeUnit i = 0; i < size_vector; i++)
+        {
+            this->readSingle(v[i]);
+        }
+    }
+
+    else
+    {
+
+        // Ensure that there's enough data left to read the size of each elements.
+        if (this->offset_ + sizeof(SizeUnit) > this->size_)
+            throw std::out_of_range("BinarySerializer: Not enough data left to read the size of elements of the vector.");
+
+        // Read the size of the elements.
+        SizeUnit size_elem;
+        BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, sizeof(SizeUnit), &size_elem);
 
         // Update the offset.
         this->offset_ += sizeof(SizeUnit);
 
-        // Check if we have enough data left to read the data.
-        if (this->offset_ + size_elem*size_subvector > this->size_)
-            throw std::out_of_range("BinarySerializer: Read subvector data beyond the data size.");
+        // Check if the size is 0.
+        if(size_elem == 0)
+            throw std::out_of_range("BinarySerializer: Unknow size of elements of the vector.");
 
-        // Prepare the subvector.
-        std::vector<T> subv;
-        subv.resize(size_subvector);
+        // Prepare the vector.
+        v.clear();
+        v.resize(size_vector);
 
-        // Read all the elements of the subvector.
-        for(std::uint64_t j = 0; j < size_subvector; j++)
+        // Read all the subvectors.
+        for(std::uint64_t i = 0; i < size_vector; i++)
         {
-            BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, size_elem, &subv[j]);
-            this->offset_ += size_elem;
-        }
+            // Ensure that there's enough data left to read the size of the subvector.
+            if (this->offset_ + sizeof(SizeUnit) > this->size_)
+                throw std::out_of_range("BinarySerializer: Not enough data left to read the size of the subvector.");
 
-        // Store the subvector.
-        v[i] = subv;
+            // Read the size of the subvector.
+            SizeUnit size_subvector;
+            BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, sizeof(SizeUnit), &size_subvector);
+
+            // Update the offset.
+            this->offset_ += sizeof(SizeUnit);
+
+            // Check if we have enough data left to read the data.
+            if (this->offset_ + size_elem*size_subvector > this->size_)
+                throw std::out_of_range("BinarySerializer: Read subvector data beyond the data size.");
+
+            // Prepare the subvector.
+            std::vector<T> subv;
+            subv.resize(size_subvector);
+
+            // Read all the elements of the subvector.
+            for(std::uint64_t j = 0; j < size_subvector; j++)
+            {
+                BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, size_elem, &subv[j]);
+                this->offset_ += size_elem;
+            }
+
+            // Store the subvector.
+            v[i] = subv;
+        }
     }
 }
 
@@ -662,22 +787,10 @@ BinarySerializer::readTupleElements(std::tuple<Tp...>& t)
     this->readTupleElements<I + 1, Tp...>(t);
 }
 
-template<typename T>
-SizeUnit Serializable::calcTotalSizeHelper(const T& single)
-{
-    return BinarySerializer::calcTotalSize(single);
-}
-
 template<typename T, typename... Args>
-SizeUnit Serializable::calcTotalSizeHelper(const T& first, const Args&... rest)
+SizeUnit Serializable::calcSizeHelper(const T& value, const Args&... args)
 {
-    return BinarySerializer::calcTotalSize(first) + Serializable::calcTotalSizeHelper(rest...);
-}
-
-template<typename... Args>
-SizeUnit BinarySerializer::calcTotalSize(const Args&... args)
-{
-    return Serializable::calcTotalSize(args...);
+    return BinarySerializer::serializedSize(value, args...);
 }
 
 }} // END NAMESPACES.

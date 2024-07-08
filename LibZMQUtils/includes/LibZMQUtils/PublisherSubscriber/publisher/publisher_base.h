@@ -265,8 +265,8 @@ private:
     // Usefull flags.
     std::atomic_bool flag_working_;  ///< Flag for check the working status.
 
-    /// Specific class scope (for debug purposes).
-    inline static const std::string kScope = "[LibZMQUtils,PublisherSubscriber,PublisherBase]";
+    // Specific class scope (for debug purposes).
+    inline static const std::string kClassScope = "[LibZMQUtils,PublisherSubscriber,PublisherBase]";
 };
 
 }} // END NAMESPACES.

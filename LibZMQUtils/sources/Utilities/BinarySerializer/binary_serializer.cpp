@@ -518,7 +518,7 @@ void BinarySerializer::readSingle(const std::filesystem::path &out_filepath)
     file_output.close();
 }
 
-SizeUnit BinarySerializer::calcTotalSize(const std::filesystem::path& data)
+SizeUnit BinarySerializer::serializedSizeSingle(const std::filesystem::path& data)
 {
     // Get the filename.
     std::string filename = internal_helpers::files::getFileName(data.string());

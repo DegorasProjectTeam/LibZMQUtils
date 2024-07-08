@@ -94,8 +94,8 @@ void CommandClientInfo::deserialize(serializer::BinarySerializer &serializer)
 
 size_t CommandClientInfo::serializedSize() const
 {
-    return Serializable::calcTotalSize(this->uuid.getBytes(), this->ip, this->pid, this->hostname,
-                                       this->name, this->info, this->version);
+    return Serializable::calcSizeHelper(this->uuid.getBytes(), this->ip, this->pid, this->hostname,
+                                        this->name, this->info, this->version);
 }
 
 std::string CommandClientInfo::toJsonString() const

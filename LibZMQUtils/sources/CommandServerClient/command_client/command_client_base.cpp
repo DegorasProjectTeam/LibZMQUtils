@@ -103,11 +103,11 @@ CommandClientBase::CommandClientBase(const std::string& server_endpoint,
 
     // Check the server endpoint.
     if(server_endpoint.empty())
-        throw std::invalid_argument(this->kScope + " The server endpoint can't be empty.");
+        throw std::invalid_argument(CommandClientBase::kScope + " The server endpoint can't be empty.");
 
     // Check if we have active interfaces.
     if(interfcs.empty())
-        throw std::invalid_argument(this->kScope + " No active network interfaces found.");
+        throw std::invalid_argument(CommandClientBase::kScope + " No active network interfaces found.");
 
     // If no interface name provided, use the first active one.
     if (client_iface.empty())
@@ -124,7 +124,8 @@ CommandClientBase::CommandClientBase(const std::string& server_endpoint,
 
         // Check if the interface exists.
         if (it == interfcs.end())
-            throw std::invalid_argument(this->kScope + " Network interface not found <" + client_iface + ">.");
+            throw std::invalid_argument(
+                CommandClientBase::kScope + " Network interface not found <" + client_iface + ">.");
 
         // Store the interface.
         sel_interf = *it;

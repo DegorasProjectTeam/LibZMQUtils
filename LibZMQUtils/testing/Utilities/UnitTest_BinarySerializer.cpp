@@ -56,12 +56,15 @@ using zmqutils::serializer::SizeUnit;
 // =====================================================================================================================
 
 // Basic tests.
+// TODO SERIALIZED SIZE TESTS
 M_DECLARE_UNIT_TEST(BinarySerializer, Trivial)
 M_DECLARE_UNIT_TEST(BinarySerializer, String)
+M_DECLARE_UNIT_TEST(BinarySerializer, Serializable)
 M_DECLARE_UNIT_TEST(BinarySerializer, ArrayTrivial)
 M_DECLARE_UNIT_TEST(BinarySerializer, VectorTrivial)
+M_DECLARE_UNIT_TEST(BinarySerializer, VectorSerializable)
 M_DECLARE_UNIT_TEST(BinarySerializer, VectorVectorTrivial)
-M_DECLARE_UNIT_TEST(BinarySerializer, Serializable)
+M_DECLARE_UNIT_TEST(BinarySerializer, VectorVectorSerializable)
 M_DECLARE_UNIT_TEST(BinarySerializer, File)
 M_DECLARE_UNIT_TEST(BinarySerializer, FileWithFilesystem)
 M_DECLARE_UNIT_TEST(BinarySerializer, Tuple)
@@ -69,6 +72,7 @@ M_DECLARE_UNIT_TEST(BinarySerializer, Tuple)
 // Other tests.
 M_DECLARE_UNIT_TEST(BinarySerializer, TrivialIntensive)
 M_DECLARE_UNIT_TEST(BinarySerializer, TrivialIntensiveParrallel)
+// TODO INTENSIVE SERIALIZATION PARRALLEL WITH VECTORS
 
 // Implementations.
 
@@ -99,7 +103,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Trivial)
     // Checking.
     M_EXPECTED_EQ(serializer.getDataHexString(), result)
     M_EXPECTED_EQ(serializer.getSize(), sizeof(double)*2 + sizeof(int) + sizeof(unsigned) + 4*sizeof(SizeUnit))
-    M_EXPECTED_EQ(serializer.getSize(), BinarySerializer::calcTotalSize(n1,n2,n3,n4))
+    M_EXPECTED_EQ(serializer.getSize(), BinarySerializer::serializedSize(n1,n2,n3,n4))
     M_EXPECTED_EQ(r1, n1)
     M_EXPECTED_EQ(r2, n2)
     M_EXPECTED_EQ(r3, n3)
@@ -177,11 +181,23 @@ M_DEFINE_UNIT_TEST(BinarySerializer, String)
 
     // Write, read.
     serializer.write(in1, in2, in3, in4);
+
+    M_EXPECTED_EQ(serializer.allReaded(), false)
+
+    std::cout<<serializer.getSize()<<std::endl;
+
+    serializer.read(out1, out2, out3, out4);
+
+    std::cout<<serializer.getSize()<<std::endl;
+
+    serializer.resetReading();
     serializer.read(out1, out2, out3, out4);
 
     // Checking.
     M_EXPECTED_EQ(serializer.getDataHexString(), result)
     M_EXPECTED_EQ(serializer.getSize(), size)
+    M_EXPECTED_EQ(serializer.getSize(), BinarySerializer::serializedSize(in1,in2,in3,in4))
+    M_EXPECTED_EQ(serializer.allReaded(), true)
     M_EXPECTED_EQ(in1, out1)
     M_EXPECTED_EQ(in2, out2)
     M_EXPECTED_EQ(in3, out3)
@@ -215,6 +231,67 @@ M_DEFINE_UNIT_TEST(BinarySerializer, String)
     SizeUnit sz = BinarySerializer::fastSerialization(data, iso8601_time);
 
     BinarySerializer::fastDeserialization(std::move(data), sz, iso8601_res);
+}
+
+M_DEFINE_UNIT_TEST(BinarySerializer, Serializable)
+{
+    class TestSer : public Serializable
+    {
+    public:
+
+        TestSer() = default;
+
+        inline TestSer(double number, const std::string& str):
+            number_(number), str_(str)
+        {}
+
+        inline size_t serialize(zmqutils::serializer::BinarySerializer& serializer) const final
+        {
+            return serializer.write(this->number_, this->str_);
+        }
+
+        inline void deserialize(zmqutils::serializer::BinarySerializer& serializer) final
+        {
+            serializer.read(this->number_, this->str_);
+        }
+
+        inline size_t serializedSize() const final
+        {
+            return Serializable::calcSizeHelper(this->number_, this->str_);
+        }
+
+        inline bool operator ==(const TestSer& other) const
+        {
+            static constexpr double epsilon = 1e-9;
+            if (std::abs(number_ - other.number_) > epsilon) return false;
+            return str_ == other.str_;
+        }
+
+    private:
+        double number_;
+        std::string str_;
+    };
+
+    // Serializer.
+    BinarySerializer serializer;
+
+    // Hex result.
+    std::string result("00 00 00 00 00 00 00 08 c0 7c b5 58 e2 19 65 2c 00 00 00 00 00 00 00 1e 2e 2e 2e "
+                       "6f 67 6e 65 76 20 6f 64 6e 61 6c 6f 76 20 79 20 79 6f 76 20 6f 64 6e 61 6c 6f 56");
+
+    // Data.
+    TestSer test_in(-459.3342, "Volando voy y volando vengo...");
+    TestSer test_out;
+
+    // Write, read.
+    serializer.write(test_in);
+    serializer.read(test_out);
+
+    // Checking.
+    M_EXPECTED_EQ(test_in, test_out)
+    M_EXPECTED_EQ(test_in.serializedSize(), serializer.getSize())
+    M_EXPECTED_EQ(result, serializer.getDataHexString())
+    M_EXPECTED_EQ(test_in.serializedSize(), test_out.serializedSize())
 }
 
 M_DEFINE_UNIT_TEST(BinarySerializer, ArrayTrivial)
@@ -266,13 +343,86 @@ M_DEFINE_UNIT_TEST(BinarySerializer, VectorTrivial)
     size_t size2 = v2.size()*sizeof(int) + sizeof(SizeUnit)*2;
 
     // Write, read.
-    serializer.write(v1);
-    serializer.write(v2);
-    serializer.read(r1);
-    serializer.read(r2);
+    serializer.write(v1, v2);
+    serializer.read(r1, r2);
 
     // Checking.
     M_EXPECTED_EQ(size1 + size2, serializer.getSize())
+    M_EXPECTED_EQ(v1, r1)
+    M_EXPECTED_EQ(v2, r2)
+}
+
+M_DEFINE_UNIT_TEST(BinarySerializer, VectorSerializable)
+{
+    class TestSer : public Serializable
+    {
+    public:
+
+        TestSer() = default;
+
+        inline TestSer(double number, const std::string& str):
+            number_(number), str_(str)
+        {}
+
+        inline size_t serialize(zmqutils::serializer::BinarySerializer& serializer) const final
+        {
+            return serializer.write(this->number_, this->str_);
+        }
+
+        inline void deserialize(zmqutils::serializer::BinarySerializer& serializer) final
+        {
+            serializer.read(this->number_, this->str_);
+        }
+
+        inline size_t serializedSize() const final
+        {
+            std::cout << "HERE" << std::endl;
+
+            return Serializable::calcSizeHelper(this->number_, this->str_);
+        }
+
+        inline bool operator ==(const TestSer& other) const
+        {
+            static constexpr double epsilon = 1e-9;
+            if (std::abs(number_ - other.number_) > epsilon) return false;
+            return str_ == other.str_;
+        }
+
+        inline bool operator !=(const TestSer& other) const
+        {
+            return !(*this == other);
+        }
+
+    private:
+        double number_;
+        std::string str_;
+    };
+
+    // Serializer.
+    BinarySerializer serializer;
+
+    // Data.
+    const std::vector<TestSer> v1 = {{-459.3342, "Volando voy y volando vengo..."},{0.1,"En un lugar de la Mancha."}};
+    const std::vector<TestSer> v2 = {{0, "0"},{1, "1"},{2, "2"},{3, "3"}};
+    std::vector<TestSer> r1;
+    std::vector<TestSer> r2;
+    // Size 1 = 111.
+    size_t size1 = sizeof(SizeUnit) +
+                   sizeof(SizeUnit) + sizeof(double) + sizeof(SizeUnit) + 30 +
+                   sizeof(SizeUnit) + sizeof(double) + sizeof(SizeUnit) + 25;
+    size_t size2 = sizeof(SizeUnit) +
+                   sizeof(SizeUnit) + sizeof(double) + sizeof(SizeUnit) + 1 +
+                   sizeof(SizeUnit) + sizeof(double) + sizeof(SizeUnit) + 1 +
+                   sizeof(SizeUnit) + sizeof(double) + sizeof(SizeUnit) + 1 +
+                   sizeof(SizeUnit) + sizeof(double) + sizeof(SizeUnit) + 1;
+
+    // Write, read.
+    serializer.write(v1, v2);
+    serializer.read(r1, r2);
+
+    // Checking.
+    M_EXPECTED_EQ(size1 + size2, serializer.getSize())
+    M_EXPECTED_EQ(serializer.getSize(), BinarySerializer::serializedSize(v1,v2))
     M_EXPECTED_EQ(v1, r1)
     M_EXPECTED_EQ(v2, r2)
 }
@@ -317,7 +467,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, VectorVectorTrivial)
     }
 }
 
-M_DEFINE_UNIT_TEST(BinarySerializer, Serializable)
+M_DEFINE_UNIT_TEST(BinarySerializer, VectorVectorSerializable)
 {
     class TestSer : public Serializable
     {
@@ -325,22 +475,25 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Serializable)
 
         TestSer() = default;
 
-        TestSer(double number, const std::string& str):
-            number_(number), str_(str){}
+        inline TestSer(double number, const std::string& str):
+            number_(number), str_(str)
+        {}
 
-        size_t serialize(zmqutils::serializer::BinarySerializer& serializer) const final
+        inline size_t serialize(zmqutils::serializer::BinarySerializer& serializer) const final
         {
             return serializer.write(this->number_, this->str_);
         }
 
-        void deserialize(zmqutils::serializer::BinarySerializer& serializer) final
+        inline void deserialize(zmqutils::serializer::BinarySerializer& serializer) final
         {
             serializer.read(this->number_, this->str_);
         }
 
-        size_t serializedSize() const final
+        inline size_t serializedSize() const final
         {
-            return Serializable::calcTotalSize(this->number_, this->str_);
+            std::cout << "HERE" << std::endl;
+
+            return Serializable::calcSizeHelper(this->number_, this->str_);
         }
 
         inline bool operator ==(const TestSer& other) const
@@ -348,6 +501,11 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Serializable)
             static constexpr double epsilon = 1e-9;
             if (std::abs(number_ - other.number_) > epsilon) return false;
             return str_ == other.str_;
+        }
+
+        inline bool operator !=(const TestSer& other) const
+        {
+            return !(*this == other);
         }
 
     private:
@@ -358,23 +516,36 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Serializable)
     // Serializer.
     BinarySerializer serializer;
 
-    // Hex result.
-    std::string result("00 00 00 00 00 00 00 08 c0 7c b5 58 e2 19 65 2c 00 00 00 00 00 00 00 1e 2e 2e 2e "
-                       "6f 67 6e 65 76 20 6f 64 6e 61 6c 6f 76 20 79 20 79 6f 76 20 6f 64 6e 61 6c 6f 56");
-
     // Data.
-    TestSer test_in(-459.3342, "Volando voy y volando vengo...");
-    TestSer test_out;
+    const std::vector<std::vector<TestSer>> v1 =
+        {{{-459.3342, "Volando voy y volando vengo..."},{0.1,"En un lugar de la Mancha."}}};
+    const std::vector<std::vector<TestSer>> v2 =
+        {{{0, "0"},{1, "1"},{2, "2"}},{{3, "3"}}};
+    std::vector<std::vector<TestSer>> r1;
+    std::vector<std::vector<TestSer>> r2;
+    // Size 1 = 111.
+    size_t size1 = sizeof(SizeUnit) +
+                   sizeof(SizeUnit) +
+                   sizeof(SizeUnit) + sizeof(double) + sizeof(SizeUnit) + 30 +
+                   sizeof(SizeUnit) + sizeof(double) + sizeof(SizeUnit) + 25;
+    size_t size2 = sizeof(SizeUnit) +
+                   sizeof(SizeUnit) +
+                   sizeof(SizeUnit) + sizeof(double) + sizeof(SizeUnit) + 1 +
+                   sizeof(SizeUnit) + sizeof(double) + sizeof(SizeUnit) + 1 +
+                   sizeof(SizeUnit) + sizeof(double) + sizeof(SizeUnit) + 1 +
+                   sizeof(SizeUnit) +
+                   sizeof(SizeUnit) + sizeof(double) + sizeof(SizeUnit) + 1;
 
     // Write, read.
-    serializer.write(test_in);
-    serializer.read(test_out);
+    serializer.write(v1, v2);
+    serializer.read(r1, r2);
+
 
     // Checking.
-    M_EXPECTED_EQ(test_in, test_out)
-    M_EXPECTED_EQ(result, serializer.getDataHexString())
-    M_EXPECTED_EQ(test_in.serializedSize(), test_out.serializedSize())
-    M_EXPECTED_EQ(test_in.serializedSize(), serializer.getSize())
+    M_EXPECTED_EQ(size1 + size2, serializer.getSize())
+    M_EXPECTED_EQ(serializer.getSize(), BinarySerializer::serializedSize(v1,v2))
+    M_EXPECTED_EQ(v1, r1)
+    M_EXPECTED_EQ(v2, r2)
 }
 
 M_DEFINE_UNIT_TEST(BinarySerializer, File)
@@ -571,9 +742,10 @@ M_DEFINE_UNIT_TEST(BinarySerializer, TrivialIntensive)
 
 M_DEFINE_UNIT_TEST(BinarySerializer, TrivialIntensiveParrallel)
 {
-    // WARNING: Testing intensive in parallel. However, the correct is serialize the vector, not each number.
+    // WARNING: Testing intensive in parallel. However, the correct is serialize the vector in parallel way, not
+    // each separate number. TODO check this.
 
-    const size_t count = 20000;
+    const size_t count = 200000;
     std::vector<long double> original_numbers(count);
     std::vector<long double> deserialized_numbers(count);
 
@@ -585,9 +757,11 @@ M_DEFINE_UNIT_TEST(BinarySerializer, TrivialIntensiveParrallel)
         num = static_cast<long double>(dis(gen));
 
     std::vector<BinarySerializer> serializers;
-    serializers.resize(original_numbers.size());
 
     auto now = std::chrono::steady_clock::now();
+
+    // Resize the containers.
+    serializers.resize(original_numbers.size());
 
     // Serialize all the numbers
     omp_set_num_threads(16);
@@ -612,10 +786,12 @@ int main()
     // Register the tests.
     M_REGISTER_UNIT_TEST(BinarySerializer, Trivial)
     M_REGISTER_UNIT_TEST(BinarySerializer, String)
+    M_REGISTER_UNIT_TEST(BinarySerializer, Serializable)
     M_REGISTER_UNIT_TEST(BinarySerializer, ArrayTrivial)
     M_REGISTER_UNIT_TEST(BinarySerializer, VectorTrivial)
+    M_REGISTER_UNIT_TEST(BinarySerializer, VectorSerializable)
     M_REGISTER_UNIT_TEST(BinarySerializer, VectorVectorTrivial)
-    M_REGISTER_UNIT_TEST(BinarySerializer, Serializable)
+    M_REGISTER_UNIT_TEST(BinarySerializer, VectorVectorSerializable)
     M_REGISTER_UNIT_TEST(BinarySerializer, File)
     M_REGISTER_UNIT_TEST(BinarySerializer, FileWithFilesystem)
     M_REGISTER_UNIT_TEST(BinarySerializer, Tuple)

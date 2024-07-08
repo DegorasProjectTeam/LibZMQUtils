@@ -64,7 +64,7 @@ void AmelasLog::deserialize(zmqutils::serializer::BinarySerializer &serializer)
 
 zmqutils::serializer::SizeUnit AmelasLog::serializedSize() const
 {
-    return zmqutils::serializer::Serializable::calcTotalSize(this->level, this->str_info);
+    return zmqutils::serializer::Serializable::calcSizeHelper(this->level, this->str_info);
 }
 
 }} // END NAMESPACES.

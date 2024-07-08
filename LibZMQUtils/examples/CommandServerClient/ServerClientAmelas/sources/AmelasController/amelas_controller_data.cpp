@@ -68,7 +68,7 @@ void AltAzPos::deserialize(zmqutils::serializer::BinarySerializer &serializer)
 
 size_t AltAzPos::serializedSize() const
 {
-    return Serializable::calcTotalSize(this->az, this->el);
+    return Serializable::calcSizeHelper(this->az, this->el);
 }
 
 // =====================================================================================================================

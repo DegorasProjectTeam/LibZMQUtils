@@ -104,35 +104,6 @@ using BytesDataPtr = std::unique_ptr<Bytes>;  ///< Type use for represent a uniq
  *
  * Implementing these methods allows the object to be easily serialized and deserialized using a BinarySerializer.
  *
- * Example of a class that implements Serializable:
- *
- * @code{.cpp}
- * struct AltAzPos : Serializable
- * {
- *     AltAzPos(double az, double el): az(az), el(el){}
- *
- *     AltAzPos(): az(-1), el(-1){}
- *
- *     double az;
- *     double el;
- *
- *     size_t serialize(BinarySerializer& serializer) const override
- *     {
- *         return serializer.write(az, el);
- *     }
- *
- *     void deserialize(BinarySerializer& serializer) override
- *     {
- *         serializer.read(az, el);
- *     }
- *
- *     size_t serializedSize() const override
- *     {
- *         return (sizeof(double) + sizeof(double));
- *     }
- * };
- * @endcode
- *
  * @see BinarySerializer
  */
 class LIBZMQUTILS_EXPORT Serializable
@@ -173,22 +144,16 @@ public:
      */
     virtual SizeUnit serializedSize() const = 0;
 
-    template<typename... Args>
-    static SizeUnit calcTotalSize(const Args&... args)
-    {
-        return Serializable::calcTotalSizeHelper(args...);
-    }
-
-private:
-
-    template<typename T>
-    static SizeUnit calcTotalSizeHelper(const T& single);
+protected:
 
     template<typename T, typename... Args>
-    static SizeUnit calcTotalSizeHelper(const T& first, const Args&... rest);
+    static SizeUnit calcSizeHelper(const T& value, const Args&... args);
+
 };
 
 // ---------------------------------------------------------------------------------------------------------------------
+
+// TODO MOVE TO OTHER FILE
 
 struct LIBZMQUTILS_EXPORT BinarySerializedData
 {
@@ -409,7 +374,6 @@ public:
     template<typename... Args>
     static SizeUnit fastSerialization(BytesSmartPtr& out, const Args&... args);
 
-
     /**
      * @brief A static function that deserializes binary data into its original data items.
      *
@@ -556,30 +520,22 @@ public:
      */
     void readFile(const std::string& out_filepath);
 
-    // -----------------------------------------------------------------------------------------------------------------
-
-    // Size calculator function for vectors.
-    template<typename T>
-    static SizeUnit calcTotalSize(const std::vector<T>& data);
-
-    // Size calculator function for vectors of vectors.
-    template<typename T>
-    static SizeUnit calcTotalSize(const std::vector<std::vector<T>>& data);
-
-    // Size calculator function for arrays.
-    template<typename T, size_t L>
-    static SizeUnit calcTotalSize(const std::array<T, L>& data);
-
-    // Size calculator function for files.
-    static SizeUnit calcTotalSize(const std::filesystem::path& data);
-
-    // Size calculator function.
-    template<typename T>
-    static SizeUnit calcTotalSize(const T& data);
-
-    // Generic size calculator for multiple arguments.
-    template<typename... Args>
-    static SizeUnit calcTotalSize(const Args&... args);
+    /**
+     * @brief Deserializes and writes the content of a previously serialized file to a new file.
+     *
+     * This function reads the serialized data from the internal buffer and deserializes it to reconstruct the content
+     * of a previously serialized file. It then writes the deserialized content to a new file in the specified path.
+     *
+     * @param out_filepath The path of the new file to be created.
+     *
+     * @throws std::out_of_range If there's not enough data left to read the size of the filename or file content.
+     * @throws std::runtime_error If the file for can't be opened or if an empty filename is encountered.
+     *
+     * @note The types must meet the required conditions, such as being trivially copyable and trivial, directly
+     * supported by this class, or being a subclass of the Serializable interface.
+     */
+    template<typename T, typename... Args>
+    static SizeUnit serializedSize(const T& value, const Args&... args);
 
 protected:
 
@@ -621,13 +577,44 @@ protected:
     template<typename T, typename C>
     void binaryDeserialize(const T *src, SizeUnit data_size_bytes, C *dst);
 
-    // Recursive writing helper.
+    // Recursive size calculator helper.
+    template<typename T, typename... Args>
+    static SizeUnit serializedSizeRecursive(const T& value, const Args&... args);
+
+    // Recursive write helper.
     template<typename T, typename... Args>
     void writeRecursive(const T& value, const Args&... args);
 
-    // Recursive reaad helper.
+    // Recursive read helper.
     template<typename T, typename... Args>
     void readRecursive(T& value, Args&... args);
+
+    // -----------------------------------------------------------------------------------------------------------------
+
+    // Calc size functions.
+
+    // Generic size calculator function.
+    template<typename T>
+    typename std::enable_if_t<
+            !is_container<T>::value &&
+            !std::is_same_v<std::nullptr_t &&, T> &&
+            !std::is_pointer_v<T>, SizeUnit>
+    static serializedSizeSingle(const T& data);
+
+    // Size calculator function for vectors.
+    template<typename T>
+    static SizeUnit serializedSizeSingle(const std::vector<T>& data);
+
+    // Size calculator function for vectors of vectors.
+    template<typename T>
+    static SizeUnit serializedSizeSingle(const std::vector<std::vector<T>>& data);
+
+    // Size calculator function for arrays.
+    template<typename T, size_t L>
+    static SizeUnit serializedSizeSingle(const std::array<T, L>& data);
+
+    // Size calculator function for files.
+    static SizeUnit serializedSizeSingle(const std::filesystem::path& data);
 
     // -----------------------------------------------------------------------------------------------------------------
 
@@ -660,13 +647,6 @@ protected:
     // For vectors of vectors of trivial types.
     template<typename T>
     void writeSingle(const std::vector<std::vector<T>>& v);
-
-
-
-    // For vectors of trivial types.
-    // TODO
-    // void writeSingle(const std::vector<std::string>& v)
-    // {}
 
     // For write files using std::filesystem::path
     void writeSingle(const std::filesystem::path& file_path);
@@ -726,6 +706,9 @@ protected:
     std::atomic<SizeUnit> offset_;        ///< Offset when reading.
     Endianess endianess_;                 ///< Represent the endianess of the system.
     mutable std::mutex mtx_;              ///< Mutex for thread safety
+
+    // Specific class scope (for debug purposes).
+    inline static const std::string kClassScope = "[LibDegorasBase,Serialization,BinarySerializer]";
 };
 
 }} // END NAMESPACES

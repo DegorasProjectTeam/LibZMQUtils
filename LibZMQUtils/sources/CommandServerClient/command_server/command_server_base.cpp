@@ -96,11 +96,11 @@ CommandServerBase::CommandServerBase(unsigned port,
 
     // Check if we have active interfaces.
     if(ifaces.empty())
-        throw std::invalid_argument(this->kScope + " No active network interfaces found.");
+        throw std::invalid_argument(CommandServerBase::kScope + " No active network interfaces found.");
 
     // Check the server interface.
     if(server_iface.empty())
-        throw std::invalid_argument(this->kScope + " The server network interface can't be empty.");
+        throw std::invalid_argument(CommandServerBase::kScope + " The server network interface can't be empty.");
 
     // Update if localhost.
     if(server_iface == "localhost")
@@ -122,7 +122,7 @@ CommandServerBase::CommandServerBase(unsigned port,
 
     // Check for valid configuration.
     if(this->server_adapters_.empty())
-        throw std::invalid_argument(this->kScope + " No interfaces found for <" + server_iface + ">.");
+        throw std::invalid_argument(CommandServerBase::kScope + " No interfaces found for <" + server_iface + ">.");
 
     // Update the server information.
     this->server_info_.uuid = uuid;
@@ -494,7 +494,7 @@ void CommandServerBase::serverWorker()
     }
     else
     {
-        this->onServerError(this->last_zmq_error_, this->kScope + " Error during socket creation.");
+        this->onServerError(this->last_zmq_error_, CommandServerBase::kScope + " Error during socket creation.");
     }
 
     // Notify all the deployment.
@@ -562,7 +562,8 @@ void CommandServerBase::serverWorker()
                 // The error code is for ZMQ EFSM error.
                 if(!(error.num() == kZmqEFSMError && !this->flag_server_working_))
                 {
-                    this->onServerError(this->last_zmq_error_, this->kScope + " Error while sending a response.");
+                    this->onServerError(this->last_zmq_error_,
+                                        CommandServerBase::kScope + " Error while sending a response.");
                 }
             }
         }
@@ -622,7 +623,8 @@ void CommandServerBase::serverWorker()
                     // Store the last error.
                     this->last_zmq_error_ = error;
                     // Call to the internal callback.
-                    this->onServerError(this->last_zmq_error_, this->kScope + " Error while sending a response.");
+                    this->onServerError(this->last_zmq_error_,
+                                        CommandServerBase::kScope + " Error while sending a response.");
                 }
             }
         }
@@ -659,7 +661,7 @@ OperationResult CommandServerBase::recvFromSocket(CommandRequest& request)
         this->last_zmq_error_ = error;
 
         // Call to the internal callback.
-        this->onServerError(this->last_zmq_error_, this->kScope + " Error while receiving a request.");
+        this->onServerError(this->last_zmq_error_, CommandServerBase::kScope + " Error while receiving a request.");
         return OperationResult::INTERNAL_ZMQ_ERROR;
     }
 

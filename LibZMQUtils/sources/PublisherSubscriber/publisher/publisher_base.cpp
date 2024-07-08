@@ -90,11 +90,11 @@ PublisherBase::PublisherBase(unsigned publisher_port,
 
     // Check if we have active interfaces.
     if(ifaces.empty())
-        throw std::invalid_argument(this->kScope + "No active network interfaces found.");
+        throw std::invalid_argument(PublisherBase::kClassScope + " No active network interfaces found.");
 
     // Check the server interface.
     if(publisher_iface.empty())
-        throw std::invalid_argument(this->kScope + "The server network interface can't be empty.");
+        throw std::invalid_argument(PublisherBase::kClassScope + " The server network interface can't be empty.");
 
     // Update if localhost.
     if(publisher_iface == "localhost")
@@ -116,7 +116,7 @@ PublisherBase::PublisherBase(unsigned publisher_port,
 
     // Check for valid configuration.
     if(this->publisher_adapters_.empty())
-        throw std::invalid_argument(this->kScope + "No interfaces found for <" + publisher_iface + ">.");
+        throw std::invalid_argument(PublisherBase::kClassScope + " No interfaces found for <" + publisher_iface + ">.");
 
     // Update the publisher information.
     this->pub_info_.uuid = uuid;
@@ -273,7 +273,7 @@ OperationResult PublisherBase::sendMsg(const TopicType& topic, PublishedData& da
     catch (const zmq::error_t &error)
     {
         // Call to the error callback and stop the publisher for safety.
-        this->onPublisherError(error, this->kScope + " Error while sending a request. Stopping the publisher.");
+        this->onPublisherError(error, this->kClassScope + " Error while sending a request. Stopping the publisher.");
         this->internalStopPublisher();
         return OperationResult::INTERNAL_ZMQ_ERROR;
     }
@@ -338,7 +338,7 @@ bool PublisherBase::internalResetPublisher()
         this->mtx_.unlock();
 
         // Call to the internal callback.
-        this->onPublisherError(error, this->kScope + " Error while creating the publisher.");
+        this->onPublisherError(error, this->kClassScope + " Error while creating the publisher.");
         return false;
     }
 
