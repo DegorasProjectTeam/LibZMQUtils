@@ -147,8 +147,10 @@ HRTimePointStd iso8601DatetimeToTimePoint(const std::string &datetime)
     std::smatch match;
 
     // Regex.
-    const std::regex iso8601_regex_extended(R"(^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?Z$)");
-    const std::regex iso8601_regex_basic(R"(^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(?:\.(\d+))?Z$)");
+    const std::regex iso8601_regex_extended(
+        R"(^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(?:(Z)|((\+|\-)(\d{2}):(\d{2})))?$)");
+    const std::regex iso8601_regex_basic(
+        R"(^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(?:\.(\d+))?(?:(Z)|((\+|\-)(\d{2}):(\d{2})))?$)");
 
     // Check the regexes.
     if (!std::regex_search(datetime, match, iso8601_regex_extended) &&
@@ -199,8 +201,10 @@ bool isValidIso8601Datetime(const std::string &datetime)
     std::smatch match;
 
     // Regex.
-    const std::regex iso8601_regex_extended(R"(^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?Z$)");
-    const std::regex iso8601_regex_basic(R"(^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(?:\.(\d+))?Z$)");
+    const std::regex iso8601_regex_extended(
+        R"(^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(?:(Z)|((\+|\-)(\d{2}):(\d{2})))?$)");
+    const std::regex iso8601_regex_basic(
+        R"(^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(?:\.(\d+))?(?:(Z)|((\+|\-)(\d{2}):(\d{2})))?$)");
 
     // Check if datetime matches one of ISO datetime patterns.
     return std::regex_search(datetime, match, iso8601_regex_extended) ||
