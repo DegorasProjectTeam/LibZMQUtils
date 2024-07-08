@@ -338,6 +338,10 @@ OperationResult CommandClientBase::sendCommand(ServerCommand command, RequestDat
     // Clean the reply.
     reply = CommandReply();
 
+    // Declare start and end time points to calculate the elapsed time.
+    std::chrono::steady_clock::time_point start_tp;
+    std::chrono::steady_clock::time_point end_tp;
+
     // Prepare the CommandRequest.
     CommandRequest command_request(command, this->client_info_.uuid, utils::currentISO8601Date(true, false, true),
                                    std::move(request_data));
@@ -355,6 +359,9 @@ OperationResult CommandClientBase::sendCommand(ServerCommand command, RequestDat
         // Call to the internal sending command callback.
         if (command_request.command != ServerCommand::REQ_ALIVE || this->flag_alive_callbacks_)
             this->onSendingCommand(command_request);
+
+        // Start time point to calculate the elapsed time.
+        start_tp = std::chrono::steady_clock::now();
 
         // Send the msg.
         multipart_msg.send(*this->client_socket_);
@@ -378,7 +385,13 @@ OperationResult CommandClientBase::sendCommand(ServerCommand command, RequestDat
                                       std::ref(reply), this->client_socket_, this->recv_close_socket_);
 
     // Retrieve the result and reset the future
-    while (this->fut_recv_send_.wait_for(std::chrono::milliseconds(10)) != std::future_status::ready);
+    while (this->fut_recv_send_.wait_for(std::chrono::milliseconds(1)) != std::future_status::ready);
+
+    // End time point to calculate the elapsed time.
+    end_tp = std::chrono::steady_clock::now();
+
+    // Update the elapsed time in the response.
+    reply.elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_tp - start_tp);
 
     // Use the cv for notify the auto alive worker.
     if (this->flag_autoalive_enabled_)
@@ -963,15 +976,11 @@ OperationResult CommandClientBase::doPing(std::chrono::milliseconds &elapsed_tim
     CommandReply reply;
     OperationResult result;
 
-    auto start_ping_tp = std::chrono::steady_clock::now();
-
     // Send the command.
     result = this->sendCommand(ServerCommand::REQ_PING, reply);
 
-    auto end_ping_tp = std::chrono::steady_clock::now();
-
     // Calculate elapsed time.
-    elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_ping_tp - start_ping_tp);
+    elapsed_time = reply.elapsed;
 
     // Return the result.
     return result;

@@ -143,10 +143,9 @@ void DebugCommandClientBase::onDisconnected(const CommandServerInfo& server)
 void DebugCommandClientBase::onBadOperation(const CommandReply &rep)
 {
     // Log.
-    auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(utils::HRClock::now() - rep.tp);
     std::stringstream data;
     data << "Reply Timestamp:  " << rep.timestamp                          << std::endl;
-    data << "Elapsed ms:       " << elapsed_ms.count()                     << std::endl;
+    data << "Elapsed ms:        " << rep.elapsed.count()                   << std::endl;
     data << "Server UUID:      " << rep.server_uuid.toRFC4122String()      << std::endl;
     data << "Server Command:   " << std::to_string(static_cast<CommandType>(rep.command))
          << " (" << this->serverCommandToString(rep.command) << ")"        << std::endl;
@@ -158,11 +157,10 @@ void DebugCommandClientBase::onBadOperation(const CommandReply &rep)
 void DebugCommandClientBase::onReplyReceived(const CommandReply &rep)
 {
     // Log.
-    auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(utils::HRClock::now() - rep.tp);
     BinarySerializer serializer(rep.data.bytes.get(), rep.data.size);
     std::stringstream data;
     data << "Reply Timestamp:   " << rep.timestamp                         << std::endl;
-    data << "Elapsed ms:        " << elapsed_ms.count()                    << std::endl;
+    data << "Elapsed ms:        " << rep.elapsed.count()                   << std::endl;
     data << "Server UUID:       " << rep.server_uuid.toRFC4122String()     << std::endl;
     data << "Server Command:    " << std::to_string(static_cast<CommandType>(rep.command))
          << " (" << this->serverCommandToString(rep.command) << ")"        << std::endl;

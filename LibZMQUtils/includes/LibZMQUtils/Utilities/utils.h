@@ -84,6 +84,8 @@ using HRTimePointStd = std::chrono::high_resolution_clock::time_point;
 using SCTimePointStd =  std::chrono::steady_clock::time_point;
 /// High resolution clock.
 using HRClock = std::chrono::high_resolution_clock;
+/// Std milliseconds.
+using MsStd = std::chrono::milliseconds;
 // =====================================================================================================================
 
 LIBZMQUTILS_EXPORT long long daysFromCivil(int y, unsigned m, unsigned d);

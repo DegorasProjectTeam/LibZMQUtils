@@ -290,6 +290,8 @@ struct LIBZMQUTILS_EXPORT CommandRequest
 
 struct LIBZMQUTILS_EXPORT CommandReply
 {
+    // TODO All the data that needs the real response from the server must be optional.
+
     CommandReply();
 
     /**
@@ -304,6 +306,7 @@ struct LIBZMQUTILS_EXPORT CommandReply
     ReplyData data;           ///< Reply data. Can be empty depending on the result of executing the command.
     std::string timestamp;    ///< ISO8601 timestamp that represents the time when the message was created in server.
     utils::HRTimePointStd tp; ///< Time point that represents the time when the message was created in server.
+    utils::MsStd elapsed;     ///< Elapsed time between sending the request and receiving the response.
 };
 
 // =====================================================================================================================
