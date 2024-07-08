@@ -153,8 +153,8 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Trivial)
     serializer_direct.read(r1, r2, r3, r4);
 
     // Checking.
-    M_EXPECTED_EQ(serializer.getSize(), SizeUnit{0})
     M_EXPECTED_EQ(serializer.allReaded(), true)
+    M_EXPECTED_EQ(serializer.getSize(), SizeUnit{0})
     M_EXPECTED_EQ(r1, n1)
     M_EXPECTED_EQ(r2, n2)
     M_EXPECTED_EQ(r3, n3)
@@ -181,23 +181,13 @@ M_DEFINE_UNIT_TEST(BinarySerializer, String)
 
     // Write, read.
     serializer.write(in1, in2, in3, in4);
-
-    M_EXPECTED_EQ(serializer.allReaded(), false)
-
-    std::cout<<serializer.getSize()<<std::endl;
-
-    serializer.read(out1, out2, out3, out4);
-
-    std::cout<<serializer.getSize()<<std::endl;
-
-    serializer.resetReading();
     serializer.read(out1, out2, out3, out4);
 
     // Checking.
+    M_EXPECTED_EQ(serializer.allReaded(), true)
     M_EXPECTED_EQ(serializer.getDataHexString(), result)
     M_EXPECTED_EQ(serializer.getSize(), size)
     M_EXPECTED_EQ(serializer.getSize(), BinarySerializer::serializedSize(in1,in2,in3,in4))
-    M_EXPECTED_EQ(serializer.allReaded(), true)
     M_EXPECTED_EQ(in1, out1)
     M_EXPECTED_EQ(in2, out2)
     M_EXPECTED_EQ(in3, out3)
@@ -288,6 +278,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Serializable)
     serializer.read(test_out);
 
     // Checking.
+    M_EXPECTED_EQ(serializer.allReaded(), true)
     M_EXPECTED_EQ(test_in, test_out)
     M_EXPECTED_EQ(test_in.serializedSize(), serializer.getSize())
     M_EXPECTED_EQ(result, serializer.getDataHexString())
@@ -324,6 +315,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, ArrayTrivial)
     serializer.read(r_uuid, r_arr);
 
     // Checking.
+    M_EXPECTED_EQ(serializer.allReaded(), true)
     M_EXPECTED_EQ(serializer.getDataHexString(), result)
     M_EXPECTED_EQ(uuid, r_uuid)
     M_EXPECTED_EQ(arr, r_arr)
@@ -347,6 +339,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, VectorTrivial)
     serializer.read(r1, r2);
 
     // Checking.
+    M_EXPECTED_EQ(serializer.allReaded(), true)
     M_EXPECTED_EQ(size1 + size2, serializer.getSize())
     M_EXPECTED_EQ(v1, r1)
     M_EXPECTED_EQ(v2, r2)
@@ -376,8 +369,6 @@ M_DEFINE_UNIT_TEST(BinarySerializer, VectorSerializable)
 
         inline size_t serializedSize() const final
         {
-            std::cout << "HERE" << std::endl;
-
             return Serializable::calcSizeHelper(this->number_, this->str_);
         }
 
@@ -421,6 +412,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, VectorSerializable)
     serializer.read(r1, r2);
 
     // Checking.
+    M_EXPECTED_EQ(serializer.allReaded(), true)
     M_EXPECTED_EQ(size1 + size2, serializer.getSize())
     M_EXPECTED_EQ(serializer.getSize(), BinarySerializer::serializedSize(v1,v2))
     M_EXPECTED_EQ(v1, r1)
@@ -455,8 +447,9 @@ M_DEFINE_UNIT_TEST(BinarySerializer, VectorVectorTrivial)
     serializer.read(rtest);
 
     // Checking.
+    M_EXPECTED_EQ(serializer.allReaded(), true)
     M_EXPECTED_EQ(sizetest, serializer.getSize())
-    M_EXPECTED_EQ(vtest.size(), rtest.size())
+    M_EXPECTED_EQ(serializer.getSize(), BinarySerializer::serializedSize(vtest))
     for(std::size_t i = 0; i< vtest.size(); i++)
     {
         M_EXPECTED_EQ(vtest[i].size(), rtest[i].size())
@@ -491,15 +484,14 @@ M_DEFINE_UNIT_TEST(BinarySerializer, VectorVectorSerializable)
 
         inline size_t serializedSize() const final
         {
-            std::cout << "HERE" << std::endl;
-
             return Serializable::calcSizeHelper(this->number_, this->str_);
         }
 
         inline bool operator ==(const TestSer& other) const
         {
             static constexpr double epsilon = 1e-9;
-            if (std::abs(number_ - other.number_) > epsilon) return false;
+            if (std::abs(number_ - other.number_) > epsilon)
+                return false;
             return str_ == other.str_;
         }
 
@@ -513,17 +505,19 @@ M_DEFINE_UNIT_TEST(BinarySerializer, VectorVectorSerializable)
         std::string str_;
     };
 
+    // Alias.
+    using VectorOfVectors = std::vector<std::vector<TestSer>>;
+
     // Serializer.
     BinarySerializer serializer;
 
     // Data.
-    const std::vector<std::vector<TestSer>> v1 =
-        {{{-459.3342, "Volando voy y volando vengo..."},{0.1,"En un lugar de la Mancha."}}};
-    const std::vector<std::vector<TestSer>> v2 =
-        {{{0, "0"},{1, "1"},{2, "2"}},{{3, "3"}}};
+    const VectorOfVectors v1 = {{{-459.3342, "Volando voy y volando vengo..."},{0.1,"En un lugar de la Mancha."}}};
+    const VectorOfVectors v2 = {{{0, "0"},{1, "1"},{2, "2"}},{{3, "3"}}};
     std::vector<std::vector<TestSer>> r1;
     std::vector<std::vector<TestSer>> r2;
-    // Size 1 = 111.
+
+    // Calculate the sizes.
     size_t size1 = sizeof(SizeUnit) +
                    sizeof(SizeUnit) +
                    sizeof(SizeUnit) + sizeof(double) + sizeof(SizeUnit) + 30 +
@@ -540,8 +534,8 @@ M_DEFINE_UNIT_TEST(BinarySerializer, VectorVectorSerializable)
     serializer.write(v1, v2);
     serializer.read(r1, r2);
 
-
     // Checking.
+    M_EXPECTED_EQ(serializer.allReaded(), true)
     M_EXPECTED_EQ(size1 + size2, serializer.getSize())
     M_EXPECTED_EQ(serializer.getSize(), BinarySerializer::serializedSize(v1,v2))
     M_EXPECTED_EQ(v1, r1)
@@ -590,6 +584,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, File)
                                      std::istreambuf_iterator<char>());
 
     // Verify the results.
+    M_EXPECTED_EQ(serializer.allReaded(), true)
     M_EXPECTED_EQ(serializer.getDataHexString(), result)
     M_EXPECTED_EQ(ser_size, sizeof(SizeUnit)*2 + file_content.size() + filename.size())
     M_EXPECTED_EQ(deserialized_content, file_content)
@@ -642,6 +637,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, FileWithFilesystem)
                                      std::istreambuf_iterator<char>());
 
     // Verify the results.
+    M_EXPECTED_EQ(serializer.allReaded(), true)
     M_EXPECTED_EQ(serializer.getDataHexString(), result)
     M_EXPECTED_EQ(ser_size, sizeof(SizeUnit)*2 + file_content.size() + filepath.string().size())
     M_EXPECTED_EQ(deserialized_content, file_content)
@@ -656,8 +652,6 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Tuple)
     // Serializer.
     BinarySerializer serializer;
 
-    // Data and tuple.
-
     // Data.
     int in_1 = 42;
     double in_2 = 3.1415;
@@ -671,6 +665,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Tuple)
     serializer.read(out_1);
 
     // Checking.
+    M_EXPECTED_EQ(serializer.allReaded(), true)
     M_EXPECTED_EQ(in_1, std::get<0>(out_1))
     M_EXPECTED_EQ(in_2, std::get<1>(out_1))
     M_EXPECTED_EQ(in_3, std::get<2>(out_1))
@@ -690,6 +685,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Tuple)
     serializer.read(out_2, out_3, out_4);
 
     // Checking.
+    M_EXPECTED_EQ(serializer.allReaded(), true)
     M_EXPECTED_EQ(out_2, std::get<0>(in_4))
     M_EXPECTED_EQ(out_3, std::get<1>(in_4))
     M_EXPECTED_EQ(out_4, std::get<2>(in_4))
@@ -735,7 +731,8 @@ M_DEFINE_UNIT_TEST(BinarySerializer, TrivialIntensive)
     std::cout << "Elapsed time for deserialize: " << elapsed << " microseconds" << std::endl;
 
     // Check that the deserialized numbers match the original
-    for (size_t i = 0; i < count; i++) {
+    for (size_t i = 0; i < count; i++)
+    {
         M_EXPECTED_EQ(deserialized_numbers[i], original_numbers[i])
     }
 }
