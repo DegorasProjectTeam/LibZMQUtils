@@ -67,6 +67,7 @@ M_DECLARE_UNIT_TEST(BinarySerializer, VectorVectorTrivial)
 M_DECLARE_UNIT_TEST(BinarySerializer, VectorVectorSerializable)
 M_DECLARE_UNIT_TEST(BinarySerializer, File)
 M_DECLARE_UNIT_TEST(BinarySerializer, FileWithFilesystem)
+M_DECLARE_UNIT_TEST(BinarySerializer, FileInCustomPath)
 M_DECLARE_UNIT_TEST(BinarySerializer, Tuple)
 
 // Other tests.
@@ -606,24 +607,26 @@ M_DEFINE_UNIT_TEST(BinarySerializer, FileWithFilesystem)
                              "79 6f 75 20 61 67 61 69 6e 2e");
 
     // Create a temporary file with some content.
-    std::filesystem::path filepath = "temp_test_file.txt";
+    std::string filename = "temp_test_file.txt";
+    std::filesystem::path filepath(filename);
     std::string file_content = "Hello darkness my old friend!\nI've come to talk with you again.";
     std::ofstream temp_file(filepath, std::ios::binary);
     temp_file.write(file_content.c_str(), static_cast<long long>(file_content.size()));
     temp_file.close();
 
     // Serialize the file.
-    size_t ser_size = serializer.write(filepath);
+    serializer.write(filepath);
 
     // Delete the file.
     std::filesystem::remove(filepath);
+    filepath.clear();
 
     //Deserialize the file.
     std::filesystem::path out_path = "";
     serializer.read(out_path);
 
     // Open the file.
-    std::ifstream output(filepath);
+    std::ifstream output(out_path);
 
     // Check the file.
     if(!output.is_open())
@@ -639,12 +642,83 @@ M_DEFINE_UNIT_TEST(BinarySerializer, FileWithFilesystem)
     // Verify the results.
     M_EXPECTED_EQ(serializer.allReaded(), true)
     M_EXPECTED_EQ(serializer.getDataHexString(), result)
-    M_EXPECTED_EQ(ser_size, sizeof(SizeUnit)*2 + file_content.size() + filepath.string().size())
+    M_EXPECTED_EQ(serializer.getSize(), sizeof(SizeUnit)*2 + file_content.size() + filename.size())
     M_EXPECTED_EQ(deserialized_content, file_content)
 
     // Delete the file.
     output.close();
-    std::filesystem::remove(filepath);
+    std::filesystem::remove(out_path);
+}
+
+M_DEFINE_UNIT_TEST(BinarySerializer, FileInCustomPath)
+{
+    // Serializer.
+    BinarySerializer serializer;
+
+    std::filesystem::path out_path = "test_custom_path";
+
+    std::string filename = "starlette_cpf_240710_19201.sgf";
+
+    std::filesystem::path in_path = "C:/0-SALARA_PROJECT/SP_DataFiles/SP_CPF/SP_CurrentCPF/" + filename;
+
+    // Open the file.
+    std::ifstream input(in_path);
+    if(!input.is_open())
+    {
+        std::cout<<"INPUT FILE NOT EXISTS"<<std::endl;
+        M_FORCE_FAIL()
+        return;
+    }
+    std::string in_file_content((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
+    const SizeUnit in_file_size = std::filesystem::file_size(in_path);
+
+
+    // Serialize the file.
+    serializer.write(in_path);
+
+    //Deserialize the file.
+    serializer.read(out_path);
+
+    // Open the file.
+    std::ifstream output(out_path);
+
+    // Check the file.
+    if(!output.is_open())
+    {
+        M_FORCE_FAIL()
+        return;
+    }
+
+    // Read the deserialized content from the output stream.
+    std::string out_file_content((std::istreambuf_iterator<char>(output)), std::istreambuf_iterator<char>());
+
+    // Get the deserialized file size.
+    const SizeUnit out_file_size = std::filesystem::file_size(out_path);
+
+
+    std::cout<<in_file_size<<std::endl;
+    std::cout<<out_file_size<<std::endl;
+    std::cout<<filename.size()<<std::endl;
+    std::cout<<sizeof(SizeUnit)<<std::endl;
+    std::cout<<sizeof(SizeUnit)<<std::endl;
+    std::cout<<""<<std::endl;
+
+    std::cout<<serializer.getSize()<<std::endl;
+
+    std::cout<<serializer.getSize()-(sizeof(SizeUnit)*2 + in_file_size + filename.size())<<std::endl;
+
+    // Verify the results.
+    M_EXPECTED_EQ(serializer.allReaded(), true)
+    M_EXPECTED_EQ(serializer.getSize(), sizeof(SizeUnit)*2 + out_file_size + filename.size())
+    M_EXPECTED_EQ(in_file_content, out_file_content)
+
+    // Delete the file.
+    output.close();
+
+
+    // TODO NOT WORKS
+    std::filesystem::remove_all(out_path);
+
 }
 
 M_DEFINE_UNIT_TEST(BinarySerializer, Tuple)
@@ -791,6 +865,7 @@ int main()
     M_REGISTER_UNIT_TEST(BinarySerializer, VectorVectorSerializable)
     M_REGISTER_UNIT_TEST(BinarySerializer, File)
     M_REGISTER_UNIT_TEST(BinarySerializer, FileWithFilesystem)
+    M_REGISTER_UNIT_TEST(BinarySerializer, FileInCustomPath)
     M_REGISTER_UNIT_TEST(BinarySerializer, Tuple)
     M_REGISTER_UNIT_TEST(BinarySerializer, TrivialIntensive)
     M_REGISTER_UNIT_TEST(BinarySerializer, TrivialIntensiveParrallel)

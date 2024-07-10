@@ -372,7 +372,7 @@ public:
      * @return The size of the serialized data.
      */
     template<typename... Args>
-    static SizeUnit fastSerialization(BytesSmartPtr& out, const Args&... args);
+    [[nodiscard]] static SizeUnit fastSerialization(BytesSmartPtr& out, const Args&... args);
 
     /**
      * @brief A static function that deserializes binary data into its original data items.
@@ -675,7 +675,7 @@ protected:
     void readSingle(std::string& str);
 
     // For read files using std::filesystem::path
-    void readSingle(const std::filesystem::path& file_path);
+    void readSingle(std::filesystem::path& file_path);
 
     // For arrays of trivial types.
     template<typename T, size_t L>

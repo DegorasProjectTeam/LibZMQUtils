@@ -219,7 +219,7 @@ SizeUnit BinarySerializer::writeFile(const std::string &in_filenamepath)
     std::string filename = internal_helpers::files::getFileName(in_filenamepath);
 
     // Create the ifstream.
-    std::ifstream file(in_filenamepath, std::ios::binary);
+    std::ifstream file(in_filenamepath, std::ios::in | std::ios::binary);
 
     // Check if the file is open.
     if(!file.is_open())
@@ -379,16 +379,14 @@ void BinarySerializer::writeSingle(const std::filesystem::path &file_path)
     std::string filename = internal_helpers::files::getFileName(file_path.string());
 
     // Create the ifstream.
-    std::ifstream file(file_path.string(), std::ios::binary);
+    std::ifstream file(file_path, std::ios::in | std::ios::binary);
 
     // Check if the file is open.
     if(!file.is_open())
         throw std::runtime_error("BinarySerializer: File for serialization can't be opened.");
 
     // Get the size of the file.
-    file.seekg(0, std::ios::end);
-    const SizeUnit file_size = static_cast<SizeUnit>(file.tellg());
-    file.seekg(0, std::ios::beg);
+    const SizeUnit file_size = std::filesystem::file_size(file_path);
 
     // Get the size of the filename.
     SizeUnit filename_size = filename.size();
@@ -456,7 +454,7 @@ void BinarySerializer::readSingle(std::string &str)
     this->offset_ += size;
 }
 
-void BinarySerializer::readSingle(const std::filesystem::path &out_filepath)
+void BinarySerializer::readSingle(std::filesystem::path& out_filepath)
 {
     // Mutex.
     std::lock_guard<std::mutex> lock(this->mtx_);
@@ -505,9 +503,22 @@ void BinarySerializer::readSingle(const std::filesystem::path &out_filepath)
     if (this->offset_ + file_size > this->size_)
         throw std::out_of_range("BinarySerializer: Not enough data left to read the file content.");
 
+    // Prepare the directory.
+    if(!out_filepath.empty())
+    {
+        try
+        {
+            std::filesystem::create_directories(out_filepath);
+        }
+        catch(...)
+        {
+            throw std::runtime_error("BinarySerializer: Can't create the ouput path for store the file.");
+        }
+    }
+
     // Prepare the stream.
-    std::string final_path = out_filepath.empty() ? filename : (out_filepath.string() + "/" + filename);
-    std::ofstream file_output(final_path, std::ios::binary);
+    std::filesystem::path final_path = out_filepath.append(filename);
+    std::ofstream file_output(final_path.string(), std::ios::out | std::ios::binary);
     if (!file_output.is_open())
         throw std::runtime_error("BinarySerializer: File for deserialization can't be opened.");
 
@@ -518,6 +529,9 @@ void BinarySerializer::readSingle(const std::filesystem::path &out_filepath)
 
     // Close the file.
     file_output.close();
+
+    // Update the filepath.
+    out_filepath = final_path;
 }
 
 SizeUnit BinarySerializer::serializedSizeSingle(const std::filesystem::path& data)
@@ -526,7 +540,7 @@ SizeUnit BinarySerializer::serializedSizeSingle(const std::filesystem::path& dat
     std::string filename = internal_helpers::files::getFileName(data.string());
 
     // Create the ifstream.
-    std::ifstream file(data.string(), std::ios::binary);
+    std::ifstream file(data, std::ios::in | std::ios::binary);
 
     // Check if the file is open.
     if(!file.is_open())
