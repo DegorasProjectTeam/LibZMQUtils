@@ -512,13 +512,16 @@ public:
      *
      * @param out_filepath The path of the new file to be created.
      *
+     * @return The filepath of the file read. It is a concatenation of out_filepath and file name. If file is empty
+     *         the filepath is also empty.
+     *
      * @throws std::out_of_range If there's not enough data left to read the size of the filename or file content.
      * @throws std::runtime_error If the file for can't be opened or if an empty filename is encountered.
      *
      * @note This function assumes that the serialized data in the internal buffer corresponds to a previously
      * serialized file created using the `writeFile` function.
      */
-    void readFile(const std::string& out_filepath);
+    std::string readFile(const std::string& out_filepath);
 
     /**
      * @brief Deserializes and writes the content of a previously serialized file to a new file.

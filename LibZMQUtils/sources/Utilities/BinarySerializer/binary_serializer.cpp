@@ -265,7 +265,7 @@ SizeUnit BinarySerializer::writeFile(const std::string &in_filenamepath)
     return total_size;
 }
 
-void BinarySerializer::readFile(const std::string& out_filepath)
+std::string BinarySerializer::readFile(const std::string& out_path)
 {
     // Mutex.
     std::lock_guard<std::mutex> lock(this->mtx_);
@@ -308,14 +308,14 @@ void BinarySerializer::readFile(const std::string& out_filepath)
 
     // Check if the file is empty.
     if(file_size == 0)
-        return;
+        return {};
 
     // Ensure that there's enough data left to read the file content.
     if (this->offset_ + file_size > this->size_)
         throw std::out_of_range("BinarySerializer: Not enough data left to read the file content.");
 
     // Prepare the stream.
-    std::string final_path = out_filepath.empty() ? filename : (out_filepath + "/" + filename);
+    std::string final_path = out_path.empty() ? filename : (out_path + "/" + filename);
     std::ofstream file_output(final_path, std::ios::binary);
     if (!file_output.is_open())
         throw std::runtime_error("BinarySerializer: File for deserialization can't be opened.");
@@ -327,6 +327,8 @@ void BinarySerializer::readFile(const std::string& out_filepath)
 
     // Close the file.
     file_output.close();
+
+    return final_path;
 }
 
 BinarySerializer::Endianess BinarySerializer::determineEndianess()

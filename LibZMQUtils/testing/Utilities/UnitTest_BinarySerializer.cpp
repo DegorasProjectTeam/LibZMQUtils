@@ -620,7 +620,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, FileWithFilesystem)
 
     //Deserialize the file.
     std::filesystem::path out_path = "";
-    serializer.readFile(out_path.string());
+    serializer.read(out_path);
 
     // Open the file.
     std::ifstream output(filepath);
