@@ -4,7 +4,6 @@
 <!-- PROJECT SHIELDS -->
 [![Cplusplus][cplusplus-shield]][cplusplus-url]
 [![EUPL License][license-shield]][license-url]
-[![LinkedIn][linkedin-shield]][linkedin-url]
 
 <!-- PROJECT LOGO -->
   <h1 align="center">LibZMQUtils - ZMQ Utilitites Library</h1>
@@ -139,5 +138,3 @@ Distributed under the European Union Public License. See `LICENSE` file for more
 [cplusplus-url]: https://en.cppreference.com/w/cpp/17
 [license-shield]: https://img.shields.io/badge/EUPL%201.2-green.svg?style=for-the-badge
 [license-url]: https://eupl.eu/
-[linkedin-shield]: https://img.shields.io/badge/LinkedIn-blue?style=for-the-badge&logo=linkedin
-[linkedin-url]: https://www.linkedin.com/in/angelveraherrera/
