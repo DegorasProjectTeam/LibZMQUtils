@@ -672,7 +672,6 @@ M_DEFINE_UNIT_TEST(BinarySerializer, FileInCustomPath)
     std::string in_file_content((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
     const SizeUnit in_file_size = std::filesystem::file_size(in_path);
 
-
     // Serialize the file.
     serializer.write(in_path);
 

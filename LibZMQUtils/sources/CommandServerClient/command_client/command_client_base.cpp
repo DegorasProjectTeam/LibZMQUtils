@@ -385,13 +385,13 @@ OperationResult CommandClientBase::sendCommand(ServerCommand command, RequestDat
                                       std::ref(reply), this->client_socket_, this->recv_close_socket_);
 
     // Retrieve the result and reset the future
-    while (this->fut_recv_send_.wait_for(std::chrono::milliseconds(1)) != std::future_status::ready);
+    while (this->fut_recv_send_.wait_for(std::chrono::microseconds(100)) != std::future_status::ready);
 
     // End time point to calculate the elapsed time.
     end_tp = std::chrono::steady_clock::now();
 
     // Update the elapsed time in the response.
-    reply.elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_tp - start_tp);
+    reply.elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end_tp - start_tp);
 
     // Use the cv for notify the auto alive worker.
     if (this->flag_autoalive_enabled_)
@@ -543,7 +543,7 @@ void CommandClientBase::recvFromSocket(CommandReply& reply,
         try
         {
             // Use zmq::poll to set a timeout for receiving a message
-            zmq::poll(items.data(), items.size(), std::chrono::milliseconds(10));
+            zmq::poll(items.data(), items.size(), std::chrono::milliseconds(1));
 
             // Check if we must to close.
             if(!this->flag_client_working_ || (items[1].revents & ZMQ_POLLIN))
