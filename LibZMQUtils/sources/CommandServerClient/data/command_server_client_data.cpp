@@ -64,8 +64,7 @@ CommandRequest::CommandRequest(ServerCommand command, const utils::UUID &uuid,
     command(command),
     client_uuid(uuid),
     data(std::move(data)),
-    timestamp(timestamp),
-    tp(utils::iso8601DatetimeToTimePoint(this->timestamp))
+    timestamp(timestamp)
 {}
 
 void CommandRequest::clear()
@@ -74,7 +73,6 @@ void CommandRequest::clear()
     this->client_uuid.clear();
     this->data.clear();
     this->timestamp = "";
-    this->tp = utils::HRTimePointStd();
 }
 
 CommandReply::CommandReply()
@@ -88,7 +86,6 @@ void CommandReply::clear()
     this->result = OperationResult::INVALID_RESULT;
     this->data.clear();
     this->timestamp = "";
-    this->tp = utils::HRTimePointStd();
 }
 
 }} // END NAMESPACES.

@@ -60,9 +60,9 @@ namespace reqrep{
 // =====================================================================================================================
 
 /**
- * @brief The DebugCommandServerBase class implements a CommandServerBase that includes internal callbacks that
+ * @brief The DebugCommandClientBase class implements a CommandClientBase that includes internal callbacks that
  * prints all the input and output data in each internal callback call to facilitate debugging and development. At any
- * time you can toggle inheritance between DebugCommandServerBase and the original CommandServerBase one to monitor
+ * time you can toggle inheritance between DebugCommandClientBase and the original CommandClientBase one to monitor
  * what is happening on the screen. This class is for support and does not imply that a robust logging system should
  * not be used in the override implementation of the system being developed.
  */
@@ -110,7 +110,7 @@ protected:
     /// Internal overrided onSendingCommand callback that logs when executing.
     void onSendingCommand(const CommandRequest&) override;
 
-    /// Internal overrided
+    /// Internal overrided onClientError callback that logs when executing.
     void onClientError(const zmq::error_t&, const std::string&) override;
 
 private:

@@ -110,7 +110,7 @@ std::string CommandClientInfo::toJsonString() const
        << "\"name\":\"" << this->name << "\","
        << "\"info\":\"" << this->info << "\","
        << "\"version\":\"" << this->version << "\","
-       << "\"last_seen\":\"" << utils::timePointToIso8601(this->last_seen) << "\""
+       << "\"seen_timestamp\":\"" << this->seen_timestamp << "\""
        << "}";
 
     return ss.str();
@@ -154,7 +154,7 @@ std::string CommandServerInfo::toJsonString() const
        << "\"name\":\"" << this->name << "\","
        << "\"info\":\"" << this->info << "\","
        << "\"version\":\"" << this->version << "\","
-       << "\"last_seen\":\"" << utils::timePointToIso8601(this->last_seen) << "\","
+       << "\"seen_timestamp\":\"" << this->seen_timestamp << "\","
        << "\"ips\":[";
 
     // Add each IP address in the "ips" vector to the JSON array
@@ -181,7 +181,7 @@ std::string CommandClientInfo::toString() const
     ss << "Client Name:     " << this->name                   << std::endl;
     ss << "Client Info:     " << this->info                   << std::endl;
     ss << "Client Version:  " << this->version                << std::endl;
-    ss << "Client Seen:     " << utils::timePointToIso8601(this->last_seen);
+    ss << "Client Seen:     " << this->seen_timestamp;
 
     // Return the string.
     return ss.str();
@@ -219,7 +219,7 @@ std::string CommandServerInfo::toString(bool only_basic_info) const
     ss << "Server Info:      " << this->info << std::endl;
     ss << "Server Version:   " << this->version << std::endl;
     ss << "Server Addresses: " << ip_list << std::endl;
-    ss << "Server Seen:      " << utils::timePointToIso8601(this->last_seen);
+    ss << "Server Seen:      " << this->seen_timestamp;
 
     // Return the string.
     return ss.str();

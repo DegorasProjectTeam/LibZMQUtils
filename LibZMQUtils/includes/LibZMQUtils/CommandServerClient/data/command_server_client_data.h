@@ -84,7 +84,7 @@ enum class ServerCommand : CommandType
     REQ_DISCONNECT      = 1,  ///< Request to disconnect from the server.
     REQ_ALIVE           = 2,  ///< Request to check if the server is alive and for notify that the client is alive too.
     REQ_GET_SERVER_TIME = 3,  ///< Request to get the server ISO 8601 UTC datetime (uses the system clock).
-    REQ_PING            = 4,  ///< Request to ping server.
+    REQ_PING            = 4,  ///< Request to ping server. It can be used to know the delay of communications.
     END_IMPL_COMMANDS   = 5,  ///< Sentinel value indicating the end of the base implemented commands (invalid command).
     END_BASE_COMMANDS   = 50  ///< Sentinel value indicating the end of the base commands (invalid command).
 };
@@ -285,7 +285,6 @@ struct LIBZMQUTILS_EXPORT CommandRequest
     utils::UUID client_uuid;  ///< Client UUID unique identification.
     RequestData data;         ///< Request data with the associated command request parameters.
     std::string timestamp;    ///< ISO8601 timestamp that represents the time when the message was created in client.
-    utils::HRTimePointStd tp; ///< Time point that represents the time when the message was created in client.
 };
 
 struct LIBZMQUTILS_EXPORT CommandReply
@@ -300,13 +299,12 @@ struct LIBZMQUTILS_EXPORT CommandReply
     void clear();
 
     // Struct data.
-    ServerCommand command;    ///< Command whose execution generated this reply data.
-    utils::UUID server_uuid;  ///< Server UUID unique identification.
-    OperationResult result;   ///< Reply result from the server.
-    ReplyData data;           ///< Reply data. Can be empty depending on the result of executing the command.
-    std::string timestamp;    ///< ISO8601 timestamp that represents the time when the message was created in server.
-    utils::HRTimePointStd tp; ///< Time point that represents the time when the message was created in server.
-    utils::MsStd elapsed;     ///< Elapsed time between sending the request and receiving the response.
+    ServerCommand command;   ///< Command whose execution generated this reply data.
+    utils::UUID server_uuid; ///< Server UUID unique identification.
+    OperationResult result;  ///< Reply result of the operation.
+    ReplyData data;          ///< Reply data. Can be empty depending on the result of executing the command.
+    std::string timestamp;   ///< ISO8601 timestamp that represents the time when the message was created in server.
+    utils::UsStd elapsed;    ///< Elapsed time between sending the request and receiving the response from server.
 };
 
 // =====================================================================================================================

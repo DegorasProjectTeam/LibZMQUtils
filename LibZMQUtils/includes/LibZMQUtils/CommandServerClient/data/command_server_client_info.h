@@ -113,15 +113,15 @@ struct LIBZMQUTILS_EXPORT CommandClientInfo : public zmqutils::serializer::Seria
     std::string toString() const;
 
     // Struct data.
-    utils::UUID uuid;                  ///< Unique client host UUID.
-    std::string ip;                    ///< Host client ip.
-    std::string pid;                   ///< PID of the host client process.
-    std::string hostname;              ///< Host client name.
-    std::string name;                  ///< Client name, optional.
-    std::string info;                  ///< Client information, optional.
-    std::string version;               ///< Client version, optional.
-    utils::HRTimePointStd last_seen;   ///< Time point with the last moment that the client was seen by the server.
-    utils::SCTimePointStd last_seen_steady; ///< Auxiliar steady time point to allow calculate time diferences.
+    utils::UUID uuid;              ///< Unique client host UUID.
+    std::string ip;                ///< Host client ip.
+    std::string pid;               ///< PID of the host client process.
+    std::string hostname;          ///< Host client name.
+    std::string name;              ///< Client name, optional.
+    std::string info;              ///< Client information, optional.
+    std::string version;           ///< Client version, optional.
+    std::string seen_timestamp;    ///< ISO8601 timestamp with the last moment that the client was seen by the server.
+    utils::SCTimePointStd seen_tp; ///< Auxiliar steady time point to allow calculate time diferences.
 };
 
 /**
@@ -177,15 +177,15 @@ struct LIBZMQUTILS_EXPORT CommandServerInfo
     std::string toString(bool only_basic_info = false) const;
 
     // Struct data.
-    utils::UUID uuid;                ///< Unique server UUID.
-    unsigned port;                   ///< Server port.
-    std::string endpoint;            ///< Final server endpoint.
-    std::string hostname;            ///< Host server name.
-    std::string name;                ///< Server name, optional.
-    std::string info;                ///< Server information, optional.
-    std::string version;             ///< Server version, optional.
-    std::vector<std::string> ips;    ///< Vector of server ips.
-    utils::HRTimePointStd last_seen; ///< Time point with the last moment that the server was seen by the client.
+    utils::UUID uuid;              ///< Unique server UUID.
+    unsigned port;                 ///< Server port.
+    std::string endpoint;          ///< Final server endpoint.
+    std::string hostname;          ///< Host server name.
+    std::string name;              ///< Server name, optional.
+    std::string info;              ///< Server information, optional.
+    std::string version;           ///< Server version, optional.
+    std::vector<std::string> ips;  ///< Vector of server ips.
+    std::string seen_timestamp;    ///< ISO8601 timestamp with the last moment that the server was seen by the client.
 };
 
 // =====================================================================================================================

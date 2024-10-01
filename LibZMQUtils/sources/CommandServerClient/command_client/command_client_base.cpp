@@ -278,11 +278,11 @@ bool CommandClientBase::serverWasSeen()
     return this->flag_server_seen_;
 }
 
-bool CommandClientBase::serverWasSeen(utils::HRTimePointStd &tp)
+bool CommandClientBase::serverWasSeen(std::string& seen_timestamp)
 {
     std::unique_lock<std::mutex> lock(this->mtx_);
     if(this->flag_server_seen_)
-        tp = this->connected_server_info_.last_seen;
+        seen_timestamp = this->connected_server_info_.seen_timestamp;
     return this->flag_server_seen_;
 }
 
@@ -450,8 +450,8 @@ OperationResult CommandClientBase::sendCommand(ServerCommand command, RequestDat
     std::unique_lock<std::mutex> lock(this->mtx_);
 
     // Store the times.
-    this->client_info_.last_seen = std::chrono::high_resolution_clock::now();
-    this->client_info_.last_seen_steady = std::chrono::steady_clock::now();
+    this->client_info_.seen_timestamp = utils::timePointToIso8601(std::chrono::high_resolution_clock::now());
+    this->client_info_.seen_tp = std::chrono::steady_clock::now();
 
     // Return the result.
     return reply.result;
@@ -570,7 +570,8 @@ void CommandClientBase::recvFromSocket(CommandReply& reply,
                 this->flag_server_seen_ = true;
 
                 // Store the last time the server was seen.
-                this->connected_server_info_.last_seen = utils::HRTimePointStd::clock::now();
+                this->connected_server_info_.seen_timestamp =
+                    utils::timePointToIso8601(utils::HRTimePointStd::clock::now());
 
                 // Get the multipart msg.
                 zmq::multipart_t multipart_msg;
@@ -622,9 +623,6 @@ void CommandClientBase::recvFromSocket(CommandReply& reply,
 
                 // Get the timestamp.
                 serializer::BinarySerializer::fastDeserialization(msg_time.data(), msg_time.size(), reply.timestamp);
-
-                // Convert timestamp string to timepoint.
-                reply.tp = utils::iso8601DatetimeToTimePoint(reply.timestamp);
 
                 // If there is still one more part, they are the parameters.
                 if (multipart_msg.size() == 1)
@@ -963,14 +961,14 @@ OperationResult CommandClientBase::doGetServerTime(std::string &datetime)
     if(result != OperationResult::COMMAND_OK)
         return result;
 
-    // Get the ISO 8601 datetime string.
+    // Get the ISO8601 datetime string.
     serializer::BinarySerializer::fastDeserialization(std::move(reply.data.bytes), reply.data.size, datetime);
 
     // Return the result.
     return result;
 }
 
-OperationResult CommandClientBase::doPing(std::chrono::milliseconds &elapsed_time)
+OperationResult CommandClientBase::doPing(std::chrono::microseconds& elapsed_time)
 {
     // Containers.
     CommandReply reply;
@@ -979,7 +977,7 @@ OperationResult CommandClientBase::doPing(std::chrono::milliseconds &elapsed_tim
     // Send the command.
     result = this->sendCommand(ServerCommand::REQ_PING, reply);
 
-    // Calculate elapsed time.
+    // Get the elapsed time.
     elapsed_time = reply.elapsed;
 
     // Return the result.

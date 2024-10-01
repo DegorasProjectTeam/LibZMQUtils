@@ -71,7 +71,7 @@ namespace reqrep{
 
 // CONSTANTS
 // =====================================================================================================================
-constexpr unsigned kDefaultServerAliveTimeoutMsec = 2000;     ///< Default timeout for consider a server dead (msec).
+constexpr unsigned kDefaultServerAliveTimeoutMsec = 2000;      ///< Default timeout for consider a server dead (msec).
 constexpr unsigned kDefaultClientSendAlivePeriodMsec = 1000;   ///< Default period for sending alive commands (msec).
 // =====================================================================================================================
 
@@ -189,12 +189,12 @@ public:
      * This allows callers to not only check if the server has been detected at any point but also to
      * retrieve the exact moment of the last interaction if it occurred.
      *
-     * @param[out] tp Reference to a time point variable that will be set to the last seen time of the server.
+     * @param[out] seen_timestamp Reference to a variable that will be set to the last seen time of the server.
      *                This parameter is only modified if the server was indeed seen.
      *
-     * @return True if the server was seen at any time, allowing the tp parameter to be updated; false otherwise.
+     * @return True if the server was seen at any time, allowing the seen_timestamp parameter to be updated; false otherwise.
      */
-    bool serverWasSeen(utils::HRTimePointStd& tp);
+    bool serverWasSeen(std::string &seen_timestamp);
 
     /**
      * @brief Try to connect to the Command Server.
@@ -229,7 +229,7 @@ public:
      * @return The result of the operation.
      * @note elapsed_time is calculated whether if operation is successful or not.
      */
-    OperationResult doPing(std::chrono::milliseconds &elapsed_time);
+    OperationResult doPing(std::chrono::microseconds &elapsed_time);
 
     /**
      * @brief Send a command to the Command Server.

@@ -152,7 +152,7 @@ public:
         else if (command_id == static_cast<CommandType>(ServerCommand::REQ_PING))
         {
             std::cout << "Sending REQ_PING command." << std::endl;
-            std::chrono::milliseconds elapsed_time;
+            std::chrono::microseconds elapsed_time;
             res = this->client_.doPing(elapsed_time);
 
             if(res == OperationResult::COMMAND_OK)
@@ -161,7 +161,7 @@ public:
             else
                 std::cout << "PING command failed. ";
 
-            std::cout << "Elapsed time is: " << std::to_string(elapsed_time.count()) << " ms." << std::endl;
+            std::cout << "Elapsed time is: " << std::to_string(elapsed_time.count()) << " us." << std::endl;
         }
         else if (command_id == static_cast<CommandType>(AmelasServerCommand::REQ_GET_HOME_POSITION))
         {

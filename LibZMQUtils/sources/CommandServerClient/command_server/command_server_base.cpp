@@ -133,7 +133,7 @@ CommandServerBase::CommandServerBase(unsigned port,
     this->server_info_.endpoint = "tcp://" + server_iface + ":" + std::to_string(port);
     this->server_info_.ips = this->getServerIps();
     this->server_info_.hostname = internal_helpers::network::getHostname();
-    this->server_info_.last_seen = std::chrono::high_resolution_clock::now();
+    this->server_info_.seen_timestamp = "";
 }
 
 const std::future<void> &CommandServerBase::getServerWorkerFuture() const
@@ -406,8 +406,8 @@ OperationResult CommandServerBase::execReqConnect(CommandRequest& cmd_req, Comma
             return OperationResult::MAX_CLIENTS_REACH;
 
         // Store the client last seen time.
-        client_info.last_seen = std::chrono::high_resolution_clock::now();
-        client_info.last_seen_steady = std::chrono::steady_clock::now();
+        client_info.seen_timestamp = utils::timePointToIso8601(std::chrono::high_resolution_clock::now());
+        client_info.seen_tp = std::chrono::steady_clock::now();
 
         // Add the new client.
         this->connected_clients_[cmd_req.client_uuid] = client_info;
@@ -642,7 +642,7 @@ OperationResult CommandServerBase::recvFromSocket(CommandRequest& request)
     zmq::multipart_t multipart_msg;
 
     // Update timestamp of the server information.
-    this->server_info_.last_seen = utils::HRTimePointStd::clock::now();
+    this->server_info_.seen_timestamp = utils::timePointToIso8601(utils::HRTimePointStd::clock::now());
 
     // Try to receive data. If an execption is thrown, receiving fails and an error code is generated.
     try
@@ -726,7 +726,6 @@ OperationResult CommandServerBase::recvFromSocket(CommandRequest& request)
         try
         {
             serializer::BinarySerializer::fastDeserialization(msg_time.data(), msg_time.size(), request.timestamp);
-            request.tp = utils::iso8601DatetimeToTimePoint(request.timestamp);
         }
         catch(...)
         {
@@ -859,7 +858,7 @@ void CommandServerBase::checkClientsAliveStatus()
         for(const auto& client : this->connected_clients_)
         {
             // Get the last connection time.
-            const auto& last_conn = client.second.last_seen_steady;
+            const auto& last_conn = client.second.seen_tp;
             // Check if the client reaches the timeout checking the last connection time.
             auto since_last_conn = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_conn);
             if(since_last_conn >= timeout)
@@ -906,8 +905,8 @@ void CommandServerBase::updateClientLastConnection(const UUID& uuid)
     auto client_itr = this->connected_clients_.find(uuid);
     if(client_itr != this->connected_clients_.end())
     {
-        client_itr->second.last_seen = std::chrono::high_resolution_clock::now();
-        client_itr->second.last_seen_steady = std::chrono::steady_clock::now();
+        client_itr->second.seen_timestamp = utils::timePointToIso8601(std::chrono::high_resolution_clock::now());
+        client_itr->second.seen_tp = std::chrono::steady_clock::now();
     }
 }
 
@@ -918,9 +917,9 @@ void CommandServerBase::updateServerTimeout()
         [](const auto& a, const auto& b)
         {
         auto diff_a = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - a.second.last_seen_steady);
+            std::chrono::steady_clock::now() - a.second.seen_tp);
         auto diff_b = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - b.second.last_seen_steady);
+            std::chrono::steady_clock::now() - b.second.seen_tp);
         return diff_a.count() < diff_b.count();
         });
 
@@ -928,7 +927,7 @@ void CommandServerBase::updateServerTimeout()
     {
         auto remain_time = this->client_alive_timeout_ -
                            std::chrono::duration_cast<std::chrono::milliseconds>(
-                                       std::chrono::steady_clock::now() - min_timeout->second.last_seen_steady).count();
+                                       std::chrono::steady_clock::now() - min_timeout->second.seen_tp).count();
         this->server_socket_->set(zmq::sockopt::rcvtimeo, std::max(0, static_cast<int>(remain_time)));
     }
     else
@@ -952,7 +951,7 @@ void CommandServerBase::resetSocket()
         try
         {
             // Create the ZMQ rep socket.
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
             this->server_socket_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::rep);
             this->server_socket_->bind(this->server_info_.endpoint);
             this->server_socket_->set(zmq::sockopt::linger, 0);

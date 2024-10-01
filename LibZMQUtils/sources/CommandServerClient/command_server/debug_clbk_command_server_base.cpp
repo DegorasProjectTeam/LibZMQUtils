@@ -166,12 +166,10 @@ void DebugClbkCommandServerBase::onServerError(const zmq::error_t& error, const 
 void DebugClbkCommandServerBase::onCommandReceived(const CommandRequest &request)
 {
     // Log.
-    auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(utils::HRClock::now() - request.tp);
     BinarySerializer serializer(request.data.bytes.get(), request.data.size);
     std::stringstream data;
     data << "Client UUID:        " << request.client_uuid.toRFC4122String()                 << std::endl;
     data << "Request Timestamp:  " << request.timestamp                                     << std::endl;
-    data << "Elapsed ms:         " << elapsed_ms.count()                                    << std::endl;
     data << "Server Command:     "
          << std::to_string(static_cast<CommandType>(request.command))
          << " (" << this->serverCommandToString(request.command) << ")"                     << std::endl;
@@ -183,12 +181,10 @@ void DebugClbkCommandServerBase::onCommandReceived(const CommandRequest &request
 void DebugClbkCommandServerBase::onInvalidMsgReceived(const CommandRequest &request)
 {
     // Log.
-    auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(utils::HRClock::now() - request.tp);
     BinarySerializer serializer(request.data.bytes.get(), request.data.size);
     std::stringstream data;
     data << "Client UUID:        " << request.client_uuid.toRFC4122String()                 << std::endl;
     data << "Request Timestamp:  " << request.timestamp                                     << std::endl;
-    data << "Elapsed ms:         " << elapsed_ms.count()                                    << std::endl;
     data << "Server Command:     "
          << std::to_string(static_cast<CommandType>(request.command))
          << " (" << this->serverCommandToString(request.command) << ")"                     << std::endl;
