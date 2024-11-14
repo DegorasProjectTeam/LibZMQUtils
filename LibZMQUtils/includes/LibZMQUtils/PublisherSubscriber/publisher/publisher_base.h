@@ -45,8 +45,12 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
+#include <condition_variable>
+#include <queue>
 #include <string>
 #include <atomic>
+#include <shared_mutex>
+#include <thread>
 // =====================================================================================================================
 
 // LIBZMQUTILS INCLUDES
@@ -138,6 +142,7 @@ public:
      * @brief Get the IPs of the interfaces this publisher is bound to.
      * @return A vector with the IPs this publisher is bound to.
      */
+    void extracted() const;
     std::vector<std::string> getPublisherIps() const;
 
     /**
@@ -166,21 +171,23 @@ public:
     /**
      * @brief Sends a PubSubMsg.
      * @param topic, the topic associated to the message that will be sent.
+     * @param priority, the message priority.
      * @param data, the data that will be sent in the message.
      * @return The result of sending operation as an OperationResult enum.
      * @note This method is thread-safe, since it is protected by a mutex.
      * @todo Queued functionality.
      */
-    OperationResult sendMsg(const TopicType& topic, PublishedData& data);
+    OperationResult enqueueMsg(const TopicType& topic, MessagePriority priority, PublishedData& data);
 
     /**
      * @brief Sends a PubSubMsg serializing the arguments.
      * @param topic, the topic of the msg.
+     * @param priority, the message priority.
      * @param args, the arguments to serialize into the message.
      * @return the result of the sending operation.
      */
     template <typename Topic, typename... Args>
-    OperationResult sendMsg(const Topic &topic, const Args&... args)
+    OperationResult enqueueMsg(const Topic &topic, MessagePriority priority, const Args&... args)
     {
         PublishedData data;
 
@@ -188,7 +195,7 @@ public:
             data.size = zmqutils::serializer::BinarySerializer::fastSerialization(
                 data.bytes, std::forward<const Args&>(args)...);
 
-        return this->sendMsg(static_cast<TopicType>(topic), data);
+        return this->enqueueMsg(static_cast<TopicType>(topic), priority, data);
     }
 
     /**
@@ -237,6 +244,12 @@ private:
     // Helper aliases.
     using NetworkAdapterInfoV = std::vector<internal_helpers::network::NetworkAdapterInfo>;
 
+    /// Internal method for the queue worker thread.
+    void messageQueueWorker();
+
+    /// Internal method for enqueue messages.
+    void internalEnqueueMsg(PublishedMessage &msg);
+
     /// Internal helper to delete the ZMQ sockets.
     void deleteSockets();
 
@@ -257,13 +270,28 @@ private:
     PublisherInfo pub_info_;                  ///< Publisher information.
 
     // ZMQ sockets and endpoint.
-    zmq::socket_t *socket_;       ///< ZMQ publisher socket.
+    zmq::socket_t *publisher_socket_;       ///< ZMQ publisher socket.
+    zmq::error_t last_zmq_error_;    ///< Last ZMQ error.
 
     // Mutex.
-    mutable std::mutex mtx_;      ///< Safety mutex.
+    mutable std::shared_mutex pub_mtx_;  ///< Safety mutex.
 
-    // Usefull flags.
-    std::atomic_bool flag_working_;  ///< Flag for check the working status.
+    // Usefull flags and parameters.
+    std::atomic_bool flag_publisher_working_;               ///< Flag for check the working status.
+    std::atomic_uint publisher_reconn_attempts_;  ///< Publisher reconnection number of attempts.
+
+    // Queues for each priority level
+    std::queue<PublishedMessage> queue_prio_critical_;  ///< Queue for critical priority messages.
+    std::queue<PublishedMessage> queue_prio_high_;      ///< Queue for high priority messages.
+    std::queue<PublishedMessage> queue_prio_normal_;    ///< Queue for normal priority messages.
+    std::queue<PublishedMessage> queue_prio_low_;       ///< Queue for low priority messages.
+    std::queue<PublishedMessage> queue_prio_no_;        ///< Queue for no priority messages.
+
+    // Queues related members.
+    std::mutex queue_mutex_;
+    std::condition_variable queue_cv_;
+    std::atomic_bool stop_queue_worker_;
+    std::thread queue_worker_th_;
 
     // Specific class scope (for debug purposes).
     inline static const std::string kClassScope = "[LibZMQUtils,PublisherSubscriber,PublisherBase]";

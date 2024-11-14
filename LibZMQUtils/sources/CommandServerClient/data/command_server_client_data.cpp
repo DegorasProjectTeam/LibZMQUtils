@@ -72,7 +72,7 @@ void CommandRequest::clear()
     this->command = ServerCommand::INVALID_COMMAND;
     this->client_uuid.clear();
     this->data.clear();
-    this->timestamp = "";
+    this->timestamp.clear();
 }
 
 CommandReply::CommandReply()
@@ -85,7 +85,7 @@ void CommandReply::clear()
     this->command = ServerCommand::INVALID_COMMAND;
     this->result = OperationResult::INVALID_RESULT;
     this->data.clear();
-    this->timestamp = "";
+    this->timestamp.clear();
 }
 
 }} // END NAMESPACES.

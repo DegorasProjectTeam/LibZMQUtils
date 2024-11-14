@@ -110,14 +110,12 @@ void DebugClbkSubscriberBase::onSubscriberError(const zmq::error_t &error, const
 void DebugClbkSubscriberBase::onInvalidMsgReceived(const PublishedMessage& msg, OperationResult res)
 {
     // Log.
-    auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(utils::HRClock::now() - msg.tp);
     serializer::BinarySerializer serializer(msg.data.bytes.get(), msg.data.size);
     std::stringstream data;
     data << msg.pub_info.toString()                           << std::endl;
     data << std::string(20, '-')                              << std::endl;
     data << "Topic:       " << msg.topic                      << std::endl;
     data << "Timestamp:   " << msg.timestamp                  << std::endl;
-    data << "Elapsed ms:  " << elapsed_ms.count()             << std::endl;
     data << "Result:      " << static_cast<ResultType>(res)
          << " (" << operationResultToString(res) << ")"       << std::endl;
     data << "Params size: " << msg.data.size                  << std::endl;
@@ -131,14 +129,12 @@ void DebugClbkSubscriberBase::onInvalidMsgReceived(const PublishedMessage& msg, 
 void DebugClbkSubscriberBase::onMsgReceived(const PublishedMessage &msg, OperationResult res)
 {
     // Log.
-    auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(utils::HRClock::now() - msg.tp);
     serializer::BinarySerializer serializer(msg.data.bytes.get(), msg.data.size);
     std::stringstream data;
     data << msg.pub_info.toString()                           << std::endl;
     data << std::string(20, '-')                              << std::endl;
     data << "Topic:       " << msg.topic                      << std::endl;
     data << "Timestamp:   " << msg.timestamp                  << std::endl;
-    data << "Elapsed ms:  " << elapsed_ms.count()             << std::endl;
     data << "Result:      " << static_cast<ResultType>(res)
          << " (" << operationResultToString(res) << ")"       << std::endl;
     data << "Params size: " << msg.data.size                  << std::endl;

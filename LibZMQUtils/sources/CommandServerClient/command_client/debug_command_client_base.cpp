@@ -145,7 +145,7 @@ void DebugCommandClientBase::onBadOperation(const CommandReply &rep)
     // Log.
     std::stringstream data;
     data << "Reply Timestamp:  " << rep.timestamp                          << std::endl;
-    data << "Elapsed ms:        " << rep.elapsed.count()                   << std::endl;
+    data << "Elapsed ms:       " << rep.elapsed.count()                   << std::endl;
     data << "Server UUID:      " << rep.server_uuid.toRFC4122String()      << std::endl;
     data << "Server Command:   " << std::to_string(static_cast<CommandType>(rep.command))
          << " (" << this->serverCommandToString(rep.command) << ")"        << std::endl;

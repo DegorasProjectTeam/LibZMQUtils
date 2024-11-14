@@ -353,7 +353,7 @@ void CommandServerBase::internalStopServer()
     }
 
     // Safe sleep.
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
     // Clean the clients.
     this->connected_clients_.clear();
@@ -951,7 +951,7 @@ void CommandServerBase::resetSocket()
         try
         {
             // Create the ZMQ rep socket.
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
             this->server_socket_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::rep);
             this->server_socket_->bind(this->server_info_.endpoint);
             this->server_socket_->set(zmq::sockopt::linger, 0);
@@ -970,7 +970,6 @@ void CommandServerBase::resetSocket()
 
             // Store the last error.
             this->last_zmq_error_ = error;
-
             last_error_code = error.num();
             reconnect_count--;
 

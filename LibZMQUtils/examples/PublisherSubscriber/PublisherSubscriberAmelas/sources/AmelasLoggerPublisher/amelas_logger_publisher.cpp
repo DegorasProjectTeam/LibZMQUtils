@@ -52,10 +52,13 @@ namespace amelas{
 namespace communication{
 // =====================================================================================================================
 
-zmqutils::pubsub::OperationResult AmelasLoggerPublisher::sendLog(const controller::AmelasLog &log)
+using zmqutils::pubsub::MessagePriority;
+
+zmqutils::pubsub::OperationResult AmelasLoggerPublisher::enqueueLog(const controller::AmelasLog &log,
+                                                                 MessagePriority priority)
 {
     std::string log_topic = AmelasLoggerTopic[static_cast<size_t>(log.level)];
-    return this->sendMsg(log_topic, log);
+    return this->enqueueMsg(log_topic, priority, log);
 }
 
 

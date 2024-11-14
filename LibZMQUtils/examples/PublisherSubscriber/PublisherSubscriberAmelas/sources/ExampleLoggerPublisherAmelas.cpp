@@ -102,7 +102,7 @@ public:
             }
 
             std::string token_msg(token);
-            OperationResult res = OperationResult::INVALID_MSG;
+            OperationResult res;
             AmelasLog log;
 
             if (token_command == "info")
@@ -110,28 +110,28 @@ public:
                 std::cout << "Sending info log with msg: " << token_msg << std::endl;
                 log.level = AmelasLogLevel::AMELAS_INFO;
                 log.str_info = token_msg;
-                res = this->publisher_.sendLog(log);
+                res = this->publisher_.enqueueLog(log);
             }
             else if (token_command == "debug")
             {
                 std::cout << "Sending debug log with msg: " << token_msg << std::endl;
                 log.level = AmelasLogLevel::AMELAS_DEBUG;
                 log.str_info = token_msg;
-                res = this->publisher_.sendLog(log);
+                res = this->publisher_.enqueueLog(log);
             }
             else if (token_command == "warning")
             {
                 std::cout << "Sending warning log with msg: " << token_msg << std::endl;
                 log.level = AmelasLogLevel::AMELAS_WARNING;
                 log.str_info = token_msg;
-                res = this->publisher_.sendLog(log);
+                res = this->publisher_.enqueueLog(log);
             }
             else if (token_command == "error")
             {
                 std::cout << "Sending error log with msg: " << token_msg << std::endl;
                 log.level = AmelasLogLevel::AMELAS_ERROR;
                 log.str_info = token_msg;
-                res = this->publisher_.sendLog(log);
+                res = this->publisher_.enqueueLog(log);
             }
             else
             {
@@ -140,7 +140,7 @@ public:
                 return;
             }
 
-            if (res != OperationResult::MSG_OK)
+            if (res != OperationResult::OPERATION_OK)
             {
                 std::cerr << "Error at sending log message. Error reason: " << static_cast<int>(res) << std::endl;
             }
@@ -155,7 +155,6 @@ public:
 
     AmelasLoggerPublisher& publisher_;
 };
-
 
 /**
  * @brief Main entry point of the program `ExampleLoggerPublisherAmelas`.
@@ -191,9 +190,13 @@ int main(int, char**)
     // Start the publisher.
     bool started = pub.startPublisher();
 
+    // Check if started.
     if(!started)
     {
-        std::cout<<"Unable to start the publisher.";
+        std::cout << "Publisher start failed!! Press Enter to exit!" << std::endl;
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        std::cin.clear();
+        console_cfg.restoreConsole();
         return 1;
     }
 

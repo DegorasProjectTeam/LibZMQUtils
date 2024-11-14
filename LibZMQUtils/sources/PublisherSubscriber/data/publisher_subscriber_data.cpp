@@ -53,13 +53,18 @@
 namespace zmqutils{
 namespace pubsub{
 
-PublishedMessage::PublishedMessage(const TopicType &topic, const PublisherInfo &pub_info,
-                                   PublishedData &&data, const std::string &timestamp) :
+PublishedMessage::PublishedMessage()
+{
+    this->clear();
+}
+
+PublishedMessage::PublishedMessage(const TopicType &topic, const PublisherInfo &pub_info, const std::string &timestamp,
+                                   PublishedData &&data, MessagePriority priority) :
     topic(topic),
+    priority(priority),
     pub_info(pub_info),
     data(std::move(data)),
-    timestamp(timestamp),
-    tp(utils::iso8601DatetimeToTimePoint(this->timestamp))
+    timestamp(timestamp)
 {}
 
 void PublishedMessage::clear()
@@ -67,6 +72,7 @@ void PublishedMessage::clear()
     this->topic.clear();
     this->data.clear();
     this->timestamp.clear();
+    this->priority = MessagePriority::NormalPriority;
 }
 
 // =====================================================================================================================

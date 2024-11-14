@@ -52,7 +52,6 @@
 // =====================================================================================================================
 #include "LibZMQUtils/Global/libzmqutils_global.h"
 #include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
-#include "LibZMQUtils/Utilities/utils.h"
 #include "LibZMQUtils/PublisherSubscriber/data/publisher_subscriber_info.h"
 // =====================================================================================================================
 
@@ -66,10 +65,12 @@ namespace pubsub{
 // =====================================================================================================================
 using ResultType = std::int32_t;    ///< Type used for the BaseServerResult enumeration.
 using TopicType = std::string;      ///< Type used for representing the publisher-subscriber topics.
+using PriorityType = std::uint8_t;  ///< Type used for the BaseServerResult enumeration.
 // =====================================================================================================================
 
 // PUBLISHER - SUBSCRIBER COMMON ENUMS AND CONSTEXPR
 // =====================================================================================================================
+
 /**
  * @enum OperationResult
  * @brief Enumerates the possible results of a base publisher subscriber operation. They can be extended in a subclass.
@@ -79,13 +80,11 @@ using TopicType = std::string;      ///< Type used for representing the publishe
 enum class OperationResult : ResultType
 {
     INVALID_RESULT         = -1,  ///< Invalid operation result.
-    MSG_OK                 = 0,   ///< All the operation was ok (publish data or receive the data).
+    OPERATION_OK           = 0,   ///< All the operation was ok (enqueue data or receive the data).
     INTERNAL_ZMQ_ERROR     = 1,   ///< An internal ZeroMQ error occurred.
     EMPTY_MSG              = 2,   ///< The message is empty.
-    PUB_NOT_REGISTERED     = 3,   ///< The publisher is not registered in the client.                               TODO
     EMPTY_PARAMS           = 6,   ///< The command parameters are missing or empty.
     INVALID_PARTS          = 8,   ///< The message has invalid parts.
-    INVALID_MSG            = 10,  ///< The message is invalid.
     BAD_PARAMETERS         = 13,  ///< The parameters sent are not valid.
     NOT_IMPLEMENTED        = 15,  ///< The message process function is not implemented.
     EMPTY_EXT_CALLBACK     = 16,  ///< The associated external callback is empty.
@@ -93,6 +92,15 @@ enum class OperationResult : ResultType
     INVALID_PUB_UUID       = 18,  ///< The publisher UUID is invalid (could be invalid, missing or empty).
     PUBLISHER_STOPPED      = 19,  ///< The publisher is stopped.
     END_BASE_RESULTS       = 50   ///< Sentinel value indicating the end of the base server results.
+};
+
+enum class MessagePriority : PriorityType
+{
+    NoPriority       = 0,
+    LowPriority      = 1,
+    NormalPriority   = 2,
+    HighPriority     = 3,
+    CriticalPriority = 4
 };
 
 /// Minimum valid base enum result identifier (related to OperationResult enum).
@@ -107,17 +115,17 @@ constexpr int kMaxBaseResultSrings = static_cast<int>(OperationResult::END_BASE_
 /// Lookup array with strings that represents the different OperationResult enum values.
 static constexpr std::array<const char*, kMaxBaseResultSrings>  OperationResultStr
 {
-    "MSG_OK - All the operation was ok (publish data or receive the data).",
+    "OPERATION_OK - All the operation was ok (publish data or receive the data).",
     "INTERNAL_ZMQ_ERROR - Internal ZeroMQ error.",
     "EMPTY_MSG - Message is empty.",
-    "PUB_NOT_REGISTERED - The publisher is not registered in the client.",
+    "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
     "EMPTY_PARAMS - The data parameters missing or empty.",
     "RESERVED_BASE_RESULT",
     "INVALID_PARTS - The message has invalid parts.",
     "RESERVED_BASE_RESULT",
-    "INVALID_MSG - The message is invalid.",
+    "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
     "BAD PARAMETERS - The parameters received are not valid.",
@@ -177,10 +185,10 @@ struct LIBZMQUTILS_EXPORT PublishedData : serializer::BinarySerializedData
  */
 struct LIBZMQUTILS_EXPORT PublishedMessage
 {
-    PublishedMessage() = default;
+    PublishedMessage();
 
-    PublishedMessage(const TopicType& topic, const PublisherInfo& pub_info,
-                     PublishedData&& data, const std::string& timestamp);
+    PublishedMessage(const TopicType& topic, const PublisherInfo& pub_info, const std::string& timestamp,
+                     PublishedData&& data, MessagePriority priority = MessagePriority::NormalPriority);
 
     /**
      * @brief Resets the PublishedMessage clearing all the contents.
@@ -189,10 +197,10 @@ struct LIBZMQUTILS_EXPORT PublishedMessage
 
     // Struct data.
     TopicType topic;          ///< Topic associated to the published message.
+    MessagePriority priority; ///< Priority associated to the published message.
     PublisherInfo pub_info;   ///< Publisher information.
-    PublishedData data;       ///< Reply data. Can be empty.
+    PublishedData data;       ///< Published data.
     std::string timestamp;    ///< ISO8601 string timestamp that represents the time when the message was created.
-    utils::HRTimePointStd tp; ///< Time point that represents the time when the message was created.
 };
 
 

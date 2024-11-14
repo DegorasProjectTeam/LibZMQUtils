@@ -57,6 +57,7 @@
 #include "LibZMQUtils/Global/constants.h"
 #include "LibZMQUtils/InternalHelpers/network_helpers.h"
 #include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
+#include "LibZMQUtils/Utilities/utils.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
@@ -300,8 +301,7 @@ void SubscriberBase::internalStopSubscriber()
     }
 
     // Safe sleep.
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
-
+    //std::this_thread::sleep_for(std::chrono::milliseconds(20));
 }
 
 SubscriberBase::~SubscriberBase()
@@ -325,23 +325,23 @@ void SubscriberBase::startWorker()
         result = this->recvFromSocket(msg);
 
         // Process the data.
-        if(result == OperationResult::MSG_OK && !this->flag_working_)
+        if(result == OperationResult::OPERATION_OK && !this->flag_working_)
         {
             // In this case, we will close the subscriber. Call to the internal callback.
             this->onSubscriberStop();
         }
-        else if (result != OperationResult::MSG_OK)
+        else if (result != OperationResult::OPERATION_OK)
         {
             // Internal callback.
             this->onInvalidMsgReceived(msg, result);
         }
-        else if (result == OperationResult::MSG_OK)
+        else if (result == OperationResult::OPERATION_OK)
         {
             // Fin the functor.
             auto iter = process_fnc_map_.find(msg.topic);
 
             // Update the result value.
-            result = (iter == process_fnc_map_.end()) ? OperationResult::NOT_IMPLEMENTED : OperationResult::MSG_OK;
+            result = (iter == process_fnc_map_.end()) ? OperationResult::NOT_IMPLEMENTED : OperationResult::OPERATION_OK;
 
             // Call callback for msg received.
             this->onMsgReceived(msg, result);
@@ -356,7 +356,7 @@ void SubscriberBase::startWorker()
 OperationResult SubscriberBase::recvFromSocket(PublishedMessage& msg)
 {
     // Result variable.
-    OperationResult result = OperationResult::MSG_OK;
+    OperationResult result = OperationResult::OPERATION_OK;
 
     // Containers.
     bool recv_result;
@@ -373,7 +373,7 @@ OperationResult SubscriberBase::recvFromSocket(PublishedMessage& msg)
         // Check if we want to close the subscriber.
         // The error code is for ZMQ EFSM error.
         if(error.num() == kZmqEFSMError && !this->flag_working_)
-            return OperationResult::MSG_OK;
+            return OperationResult::OPERATION_OK;
 
         // Else, call to error callback.
         this->onSubscriberError(error, this->kScope + " Error while receiving a request.");
@@ -411,14 +411,13 @@ OperationResult SubscriberBase::recvFromSocket(PublishedMessage& msg)
         if (kReservedExitTopic == msg.topic)
         {
             if (this->socket_close_uuid_ == msg.pub_info.uuid)
-                return OperationResult::MSG_OK;
+                return OperationResult::OPERATION_OK;
             else
                 return OperationResult::INVALID_PARTS;
         }
 
         // Get the timestamp.
         serializer::BinarySerializer::fastDeserialization(msg_time.data(), msg_time.size(), msg.timestamp);
-        msg.tp = utils::iso8601DatetimeToTimePoint(msg.timestamp);
 
         // Get the publisher information.
         serializer::BinarySerializer::fastDeserialization(msg_pub.data(), msg_pub.size(),

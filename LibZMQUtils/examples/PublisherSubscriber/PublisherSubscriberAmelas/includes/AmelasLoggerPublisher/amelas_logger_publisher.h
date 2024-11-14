@@ -83,11 +83,13 @@ public:
     using zmqutils::pubsub::DebugPublisherBase::DebugPublisherBase;
 
     // Function to allow easily send logs.
-    zmqutils::pubsub::OperationResult sendLog(const controller::AmelasLog& log);
+    zmqutils::pubsub::OperationResult enqueueLog(
+        const controller::AmelasLog& log,
+        zmqutils::pubsub::MessagePriority priority = zmqutils::pubsub::MessagePriority::NormalPriority);
 
 private:
 
-    using zmqutils::pubsub::PublisherBase::sendMsg;
+    using zmqutils::pubsub::PublisherBase::enqueueMsg;
 
 };
 

@@ -85,7 +85,7 @@ void ClbkSubscriberBase::onInvalidMsgReceived(const PublishedMessage& msg, Opera
 
 void ClbkSubscriberBase::onMsgReceived(const PublishedMessage &msg, OperationResult res)
 {
-    if (OperationResult::MSG_OK != res)
+    if (OperationResult::OPERATION_OK != res)
         this->invokeErrorCallback(msg, res);
 }
 

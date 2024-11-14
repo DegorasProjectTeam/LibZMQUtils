@@ -357,7 +357,10 @@ int main(int, char**)
     // Check if all ok.
     if(!started)
     {
-        std::cout<<"Unable to start the client.";
+        std::cout << "Client start failed!! Press Enter to exit!" << std::endl;
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        std::cin.clear();
+        console_cfg.restoreConsole();
         return 1;
     }
 

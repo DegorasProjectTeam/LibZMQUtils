@@ -59,6 +59,7 @@
 #include "LibZMQUtils/PublisherSubscriber/publisher/publisher_base.h"
 #include "LibZMQUtils/InternalHelpers/network_helpers.h"
 #include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
+#include "LibZMQUtils/Utilities/utils.h"
 // =====================================================================================================================
 
 // =====================================================================================================================
@@ -71,13 +72,20 @@ namespace zmqutils{
 namespace pubsub{
 // =====================================================================================================================
 
+// CONSTANTS
+// =====================================================================================================================
+constexpr unsigned kDefaultPublisherReconnAttempts = 5;        ///< Default publisher reconnection number of attempts.
+// =====================================================================================================================
+
 PublisherBase::PublisherBase(unsigned publisher_port,
                              const std::string& publisher_iface,
                              const std::string& publisher_name,
                              const std::string& publisher_version,
                              const std::string& publisher_info) :
-    socket_(nullptr),
-    flag_working_(false)
+    publisher_socket_(nullptr),
+    flag_publisher_working_(false),
+    publisher_reconn_attempts_(kDefaultPublisherReconnAttempts),
+    stop_queue_worker_(false)
 {
     // Auxiliar variables and containers.
     std::string inter_aux = publisher_iface;
@@ -129,10 +137,125 @@ PublisherBase::PublisherBase(unsigned publisher_port,
     this->pub_info_.ips = this->getPublisherIps();
 }
 
-PublisherBase::~PublisherBase()
+void PublisherBase::internalEnqueueMsg(PublishedMessage &msg)
 {
+    std::unique_lock<std::mutex> lock(this->queue_mutex_);
+
+    switch (msg.priority)
+    {
+    case MessagePriority::CriticalPriority:
+        this->queue_prio_critical_.push(std::move(msg));
+        break;
+    case MessagePriority::HighPriority:
+        this->queue_prio_high_.push(std::move(msg));
+        break;
+    case MessagePriority::NormalPriority:
+        this->queue_prio_normal_.push(std::move(msg));
+        break;
+    case MessagePriority::LowPriority:
+        this->queue_prio_low_.push(std::move(msg));
+        break;
+    case MessagePriority::NoPriority:
+        this->queue_prio_no_.push(std::move(msg));
+        break;
+    }
+
+    // Unlock and signal the worker thread to process messages.
+    lock.unlock();
+    this->queue_cv_.notify_one();
+}
+
+void PublisherBase::messageQueueWorker()
+{
+    // Worker infinite loop.
+    while (!this->stop_queue_worker_)
+    {
+        // Lock for cv.
+        std::unique_lock<std::mutex> lock(this->queue_mutex_);
+
+        // Wait for a new msg in the queue.
+        this->queue_cv_.wait(lock, [this]
+        {
+            return stop_queue_worker_ ||
+                   !this->queue_prio_critical_.empty() ||
+                   !this->queue_prio_high_.empty() ||
+                   !this->queue_prio_normal_.empty() ||
+                   !this->queue_prio_low_.empty() ||
+                   !this->queue_prio_no_.empty();
+        });
+
+        // Stop the worker case.
+        if (this->stop_queue_worker_)
+            break;
+
+        // Storage for published msg.
+        PublishedMessage msg;
+
+        // Move the msg.
+        if (!this->queue_prio_critical_.empty())
+        {
+            msg = std::move(this->queue_prio_critical_.front());
+            this->queue_prio_critical_.pop();
+        }
+        else if (!this->queue_prio_high_.empty())
+        {
+            msg = std::move(this->queue_prio_high_.front());
+            this->queue_prio_high_.pop();
+        }
+        else if (!this->queue_prio_normal_.empty())
+        {
+            msg = std::move(this->queue_prio_normal_.front());
+            this->queue_prio_normal_.pop();
+        }
+        else if (!queue_prio_low_.empty())
+        {
+            msg = std::move(this->queue_prio_low_.front());
+            this->queue_prio_low_.pop();
+        }
+        else if (!this->queue_prio_no_.empty())
+        {
+            msg = std::move(this->queue_prio_no_.front());
+            this->queue_prio_no_.pop();
+        }
+        else
+        {
+            continue;
+        }
+
+        // Unlock.
+        lock.unlock();
+
+        // Send the message via ZMQ
+        try
+        {
+            // Prepare the multipart msg.
+            zmq::multipart_t multipart_msg(this->prepareMessage(msg.topic, msg));
+
+            // Call to the internal sending command callback.
+            this->onSendingMsg(msg);
+
+            // Send the msg.
+            bool res = multipart_msg.send(*this->publisher_socket_);
+            if (!res)
+            {
+                // Custom error for 0 bytes sent.
+                this->onPublisherError(zmq::error_t(), this->kClassScope + " No data was sent (0 bytes).");
+            }
+        }
+        catch (const zmq::error_t& error)
+        {
+            // Call to the error callback and stop the publisher for safety.
+            this->onPublisherError(error, this->kClassScope + " Error while sending a request. Stopping the publisher.");
+            this->internalStopPublisher();
+        }
+    }
+}
+
+PublisherBase::~PublisherBase()
+{   
     // Stop the publisher.
     // Warning: In this case the onPublisher callback can't be executed.
+    std::unique_lock<std::shared_mutex> lock(this->pub_mtx_);
     this->internalStopPublisher();
 }
 
@@ -151,7 +274,7 @@ void PublisherBase::onSendingMsg(const PublishedMessage&)
 bool PublisherBase::startPublisher()
 {
     // If publisher is already started, do nothing
-    if (this->flag_working_)
+    if (this->flag_publisher_working_)
         return false;
 
     // Start the publisher.
@@ -165,11 +288,11 @@ void PublisherBase::stopPublisher()
 {    
     // Atomic.
     // If publisher is already stopped, do nothing.
-    if (!this->flag_working_)
+    if (!this->flag_publisher_working_)
         return;
 
     // Safe mutex lock
-    std::unique_lock<std::mutex> lock(this->mtx_);
+    std::unique_lock<std::shared_mutex> lock(this->pub_mtx_);
 
     // Call to the internal stop.
     this->internalStopPublisher();
@@ -181,7 +304,7 @@ void PublisherBase::stopPublisher()
 bool PublisherBase::resetPublisher()
 {
     // Safe mutex lock
-    std::unique_lock<std::mutex> lock(this->mtx_);
+    std::unique_lock<std::shared_mutex> lock(this->pub_mtx_);
 
     // Call to the internal method.
     return this->internalResetPublisher();
@@ -206,7 +329,7 @@ const utils::UUID &PublisherBase::getUUID() const
 
 std::vector<std::string> PublisherBase::getPublisherIps() const
 {
-    std::unique_lock<std::mutex> lock(this->mtx_);
+    std::shared_lock<std::shared_mutex> lock(this->pub_mtx_);
     std::vector<std::string> ips;
     for(const auto& intrfc : this->internalGetPublisherAddresses())
         ips.push_back(intrfc.ip);
@@ -215,7 +338,7 @@ std::vector<std::string> PublisherBase::getPublisherIps() const
 
 std::string PublisherBase::getPublisherIpsStr(const std::string &separator) const
 {
-    std::unique_lock<std::mutex> lock(this->mtx_);
+    std::shared_lock<std::shared_mutex> lock(this->pub_mtx_);
     std::string ips;
     for(const auto& intrfc : this->internalGetPublisherAddresses())
     {
@@ -229,57 +352,33 @@ std::string PublisherBase::getPublisherIpsStr(const std::string &separator) cons
 
 const PublisherBase::NetworkAdapterInfoV PublisherBase::getPublisherAddresses() const
 {
-    std::unique_lock<std::mutex> lock(this->mtx_);
+    std::unique_lock<std::shared_mutex> lock(this->pub_mtx_);
     return this->publisher_adapters_;
 }
 
 bool PublisherBase::isWorking() const
 {
-    return this->flag_working_;
+    return this->flag_publisher_working_;
 }
 
-OperationResult PublisherBase::sendMsg(const TopicType& topic, PublishedData& data)
+OperationResult PublisherBase::enqueueMsg(const TopicType& topic, MessagePriority priority, PublishedData& data)
 {
     // Safe mutex lock
-    std::unique_lock<std::mutex> lock(this->mtx_);
-
-    // Result.
-    OperationResult result = OperationResult::MSG_OK;
+    std::unique_lock<std::shared_mutex> lock(this->pub_mtx_);
 
     // Check if we started the publisher.
-    if (!this->socket_)
+    if (!this->publisher_socket_)
         return OperationResult::PUBLISHER_STOPPED;
 
-    // Send the msg.
-    try
-    {
-        // Prepare the message.
-        PublishedMessage msg(topic, this->pub_info_, std::move(data), utils::currentISO8601Date(true, false, true));
+    // Prepare the message.
+    PublishedMessage msg(topic, this->pub_info_, utils::currentISO8601Date(true, false, true),
+                         std::move(data), priority);
 
-        // Prepare the multipart msg.
-        zmq::multipart_t multipart_msg(this->prepareMessage(topic, msg));
-
-        // Call to the internal sending command callback.
-        this->onSendingMsg(msg);
-
-        // Send the msg.
-        bool res = multipart_msg.send(*this->socket_);
-        if (!res)
-        {
-            return OperationResult::INTERNAL_ZMQ_ERROR;
-        }
-
-    }
-    catch (const zmq::error_t &error)
-    {
-        // Call to the error callback and stop the publisher for safety.
-        this->onPublisherError(error, this->kClassScope + " Error while sending a request. Stopping the publisher.");
-        this->internalStopPublisher();
-        return OperationResult::INTERNAL_ZMQ_ERROR;
-    }
+    // Enqueue the msg.
+    this->internalEnqueueMsg(msg);
 
     // Return the result.
-    return result;
+    return OperationResult::OPERATION_OK;
 }
 
 const std::vector<NetworkAdapterInfo> &PublisherBase::getBoundInterfaces() const
@@ -309,41 +408,71 @@ std::string PublisherBase::operationResultToString(ResultType result)
 
 bool PublisherBase::internalResetPublisher()
 {
+    // Auxiliar variables.
+    int last_error_code = 0;
+    int reconnect_count = static_cast<int>(this->publisher_reconn_attempts_);
+
     // Lock.
-    this->mtx_.lock();
+    this->pub_mtx_.lock();
 
     // Close the previous sockets to flush.
     this->deleteSockets();
 
-    // Create the ZMQ socket.
-    try
-    {
-        // Zmq publisher socket.
-        this->socket_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::pub);
-        this->socket_->bind(this->pub_info_.endpoint);
-        this->socket_->set(zmq::sockopt::linger, 0);
+    // Stop the worker thread.
+    this->stop_queue_worker_ = true;
+    this->queue_cv_.notify_all();
+    if (this->queue_worker_th_.joinable())
+        this->queue_worker_th_.join();
+    this->stop_queue_worker_ = false;
 
-        // Update the working flag.
-        this->flag_working_ = true;
-    }
-    catch (const zmq::error_t &error)
-    {
-        // Delete the sockets.
-        this->deleteSockets();
+    // Try creating a new socket.
+    do{
+        try
+        {
+            // Zmq publisher socket.
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            this->publisher_socket_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::pub);
+            this->publisher_socket_->bind(this->pub_info_.endpoint);
+            this->publisher_socket_->set(zmq::sockopt::linger, 0);
 
-        // Update the working flag.
-        this->flag_working_ = false;
+            // Prepare the queues worker thread.
+            this->queue_worker_th_ = std::thread(&PublisherBase::messageQueueWorker, this);
 
-        // Unlock.
-        this->mtx_.unlock();
+            // Update the working flag.
+            this->flag_publisher_working_ = true;
+        }
+        catch (const zmq::error_t &error)
+        {
+            // Delete the socket and store the last error.
+            if (this->publisher_socket_)
+            {
+                delete this->publisher_socket_;
+                this->publisher_socket_ = nullptr;
+            }
 
-        // Call to the internal callback.
-        this->onPublisherError(error, this->kClassScope + " Error while creating the publisher.");
-        return false;
-    }
+            // Store the last error.
+            this->last_zmq_error_ = error;
+            last_error_code = error.num();
+            reconnect_count--;
+
+            // Check reconnection case.
+            if (reconnect_count <= 0 || last_error_code != EADDRINUSE)
+            {
+                // Update the working flag.
+                this->flag_publisher_working_ = false;
+
+                // Unlock.
+                this->pub_mtx_.unlock();
+
+                // Call to the internal callback.
+                this->onPublisherError(error, this->kClassScope + " Error while creating the publisher.");
+                return false;
+            }
+        }
+    }while(reconnect_count > 0 && !this->flag_publisher_working_);
 
     // Unlock.
-    this->mtx_.unlock();
+    this->pub_mtx_.unlock();
 
     // All ok
     return true;
@@ -357,27 +486,33 @@ const PublisherBase::NetworkAdapterInfoV &PublisherBase::internalGetPublisherAdd
 void PublisherBase::deleteSockets()
 {
     // Delete the pointers.
-    if(this->socket_)
+    if(this->publisher_socket_)
     {
-        delete this->socket_;
-        this->socket_ = nullptr;
+        delete this->publisher_socket_;
+        this->publisher_socket_ = nullptr;
     }
 }
 
 void PublisherBase::internalStopPublisher()
 {
     // If server is already stopped, do nothing.
-    if (!this->flag_working_)
+    if (!this->flag_publisher_working_)
         return;
 
+    // Stop the worker thread.
+    this->stop_queue_worker_ = true;
+    this->queue_cv_.notify_all();
+    if (this->queue_worker_th_.joinable())
+        this->queue_worker_th_.join();
+
     // Set the shared working flag to false (is atomic).
-    this->flag_working_ = false;
+    this->flag_publisher_working_ = false;
 
     // Delete the sockets.
     this->deleteSockets();
 
     // Safe sleep.
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    //std::this_thread::sleep_for(std::chrono::milliseconds(10));
 }
 
 zmq::multipart_t PublisherBase::prepareMessage(const TopicType& topic, PublishedMessage& msg)
