@@ -87,22 +87,26 @@ void Test_##Module##_##TestName::runTest()      \
             std::pair<std::string, TestBase*>(#Module, Test_##Module##_##TestName::instance()));   \
 
 #define M_RUN_UNIT_TESTS()        \
-UnitTest::instance().runTests();  \
-return 0;                         \
+    UnitTest::instance().runTests();  \
+    return 0;                         \
 
-#define M_EXPECTED_EQ(arg1, arg2)        \
-this->result_ &= expectEQ(arg1, arg2);   \
+#define M_EXPECTED_EQ(arg1, arg2) \
+[&] { bool expected = this->result_.load(); \
+this->result_.compare_exchange_strong(expected, expected && expectEQ(arg1, arg2)); }();
 
-#define M_EXPECTED_EQ_F(arg1, arg2, eps)    \
-this->result_ &= expectEQ(arg1, arg2, eps); \
+#define M_EXPECTED_EQ_F(arg1, arg2, eps) \
+    [&] { bool expected = this->result_.load(); \
+this->result_.compare_exchange_strong(expected, expected && expectEQ(arg1, arg2, eps)); }();
 
-#define M_EXPECTED_NE(arg1, arg2)      \
-this->result_ &= expectNE(arg1, arg2); \
+#define M_EXPECTED_NE(arg1, arg2) \
+    [&] { bool expected = this->result_.load(); \
+this->result_.compare_exchange_strong(expected, expected && expectNE(arg1, arg2)); }();
 
-#define M_FORCE_FAIL()        \
-this->result_ &= forceFail(); \
+#define M_FORCE_FAIL() \
+    [&] { bool expected = this->result_.load(); \
+this->result_.compare_exchange_strong(expected, expected && forceFail()); }();
 
 #define M_SLEEP_US(arg1)                                        \
-std::this_thread::sleep_for(std::chrono::microseconds(arg1));   \
+    std::this_thread::sleep_for(std::chrono::microseconds(arg1));   \
  \
 // =====================================================================================================================

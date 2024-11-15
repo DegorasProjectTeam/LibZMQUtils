@@ -41,6 +41,7 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
+#include <shared_mutex>
 #include <thread>
 #include <chrono>
 // =====================================================================================================================
@@ -117,14 +118,14 @@ bool SubscriberBase::isWorking() const
 bool SubscriberBase::startSubscriber()
 {
     // Safe mutex lock
-    std::unique_lock<std::mutex> lock(this->mtx_);
+    std::unique_lock<std::shared_mutex> lock(this->sub_mtx_);
 
     // If worker is already started, do nothing
     if (this->flag_working_)
         return true;
 
     // Launch worker in other thread.
-    this->fut_worker_ = std::async(std::launch::async, &SubscriberBase::startWorker, this);
+    this->fut_worker_ = std::async(std::launch::async, &SubscriberBase::subscriberWorker, this);
 
     // Wait for the worker deployment.
     std::unique_lock<std::mutex> depl_lock(this->depl_mtx_);
@@ -137,7 +138,7 @@ bool SubscriberBase::startSubscriber()
 void SubscriberBase::stopSubscriber()
 {
     // Safe mutex lock
-    std::unique_lock<std::mutex> lock(this->mtx_);
+    std::unique_lock<std::shared_mutex> lock(this->sub_mtx_);
 
     // Call to the internal stop.
     this->internalStopSubscriber();
@@ -147,6 +148,9 @@ void SubscriberBase::stopSubscriber()
 
     // Clean the topics.
     this->topic_filters_.clear();
+
+    // Call to the internal callback.
+    this->onSubscriberStop();
 }
 
 void SubscriberBase::subscribe(const std::string& pub_endpoint)
@@ -301,15 +305,20 @@ void SubscriberBase::internalStopSubscriber()
     }
 
     // Safe sleep.
-    //std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    //std::this_thread::sleep_for(std::chrono::milliseconds(1));
 }
 
 SubscriberBase::~SubscriberBase()
 {
+    // Stop the publisher.
+    // Warning: In this case the onSubscriberStop callback can't be executed.
+    std::unique_lock<std::shared_mutex> lock(this->sub_mtx_);
     this->internalStopSubscriber();
+    this->subscribed_publishers_.clear();
+    this->topic_filters_.clear();
 }
 
-void SubscriberBase::startWorker()
+void SubscriberBase::subscriberWorker()
 {
     // Containers.
     OperationResult result;
@@ -319,7 +328,7 @@ void SubscriberBase::startWorker()
     this->resetSocket();
 
     // Worker loop.
-    while(this->socket_ && this->flag_working_)
+    while(this->flag_working_ && this->socket_)
     {
         // Receive the data.
         result = this->recvFromSocket(msg);
@@ -327,8 +336,7 @@ void SubscriberBase::startWorker()
         // Process the data.
         if(result == OperationResult::OPERATION_OK && !this->flag_working_)
         {
-            // In this case, we will close the subscriber. Call to the internal callback.
-            this->onSubscriberStop();
+            // In this case, we will close the subscriber.
         }
         else if (result != OperationResult::OPERATION_OK)
         {
@@ -391,7 +399,7 @@ OperationResult SubscriberBase::recvFromSocket(PublishedMessage& msg)
         zmq::message_t msg_topic = multipart_msg.pop();
         zmq::message_t msg_uuid = multipart_msg.pop();
         zmq::message_t msg_time = multipart_msg.pop();
-        zmq::message_t msg_pub = multipart_msg.pop();
+        //zmq::message_t msg_pub = multipart_msg.pop();
 
         // Get the topic. Topic is not serialized using BinarySerializer, since it must come plain.
         msg.topic = msg_topic.to_string();
@@ -420,9 +428,9 @@ OperationResult SubscriberBase::recvFromSocket(PublishedMessage& msg)
         serializer::BinarySerializer::fastDeserialization(msg_time.data(), msg_time.size(), msg.timestamp);
 
         // Get the publisher information.
-        serializer::BinarySerializer::fastDeserialization(msg_pub.data(), msg_pub.size(),
-            msg.pub_info.endpoint, msg.pub_info.hostname, msg.pub_info.name, msg.pub_info.info,
-                                                          msg.pub_info.version);
+        // serializer::BinarySerializer::fastDeserialization(msg_pub.data(), msg_pub.size(),
+        //     msg.pub_info.endpoint, msg.pub_info.hostname, msg.pub_info.name, msg.pub_info.info,
+        //                                                   msg.pub_info.version);
 
         // TODO WARNING: WE CANT UPDATE THE STORED INFO BECAUSE IN ZMQ YOU CANT KNOW WHAT PUBLISHER SENDS THE MSG.
 
@@ -465,17 +473,17 @@ void SubscriberBase::resetSocket()
         // Create the ZMQ sub socket.
         auto close_endpoint = "inproc://" + this->sub_info_.uuid.toRFC4122String();
         this->socket_ = new zmq::socket_t(*this->getContext().get(), zmq::socket_type::sub);
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
         this->socket_->set(zmq::sockopt::linger, 0);
         this->socket_->connect(close_endpoint);
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
         this->socket_->set(zmq::sockopt::subscribe, kReservedExitTopic);
 
         // Connect to subscribed publishers
         for (const auto& publishers : this->subscribed_publishers_)
         {
             this->socket_->connect(publishers.second.endpoint);
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
 
         // Set all topic filters
@@ -516,7 +524,6 @@ void SubscriberBase::resetSocket()
         this->flag_working_ = false;
         this->cv_worker_depl_.notify_all();
         return;
-
     }
 }
 

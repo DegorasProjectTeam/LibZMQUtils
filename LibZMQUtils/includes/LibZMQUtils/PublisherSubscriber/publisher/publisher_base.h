@@ -198,6 +198,18 @@ public:
         return this->enqueueMsg(static_cast<TopicType>(topic), priority, data);
     }
 
+    template <typename Topic, typename... Args>
+    OperationResult enqueueMsg(const Topic &topic, MessagePriority priority, Args&... args)
+    {
+        PublishedData data;
+
+        if constexpr (sizeof...(args) > 0)
+            data.size = zmqutils::serializer::BinarySerializer::fastSerialization(
+                data.bytes, std::forward<const Args&>(args)...);
+
+        return this->enqueueMsg(static_cast<TopicType>(topic), priority, data);
+    }
+
     /**
      * @brief Get the network adapter information of interfaces that this publisher is bound to.
      *

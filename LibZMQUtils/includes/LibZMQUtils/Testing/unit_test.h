@@ -46,6 +46,7 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
+#include <atomic>
 #include <iostream>
 #include <sstream>
 #include <list>
@@ -239,7 +240,8 @@ public:
     LIBZMQUTILS_EXPORT virtual ~TestBase();
 
     std::string test_name_;
-    bool result_;
+    std::atomic_bool result_;
+
 };
 
 

@@ -254,7 +254,7 @@ void PublisherBase::messageQueueWorker()
 PublisherBase::~PublisherBase()
 {   
     // Stop the publisher.
-    // Warning: In this case the onPublisher callback can't be executed.
+    // Warning: In this case the onPublisherStop callback can't be executed.
     std::unique_lock<std::shared_mutex> lock(this->pub_mtx_);
     this->internalStopPublisher();
 }
@@ -510,9 +510,6 @@ void PublisherBase::internalStopPublisher()
 
     // Delete the sockets.
     this->deleteSockets();
-
-    // Safe sleep.
-    //std::this_thread::sleep_for(std::chrono::milliseconds(10));
 }
 
 zmq::multipart_t PublisherBase::prepareMessage(const TopicType& topic, PublishedMessage& msg)
@@ -542,7 +539,7 @@ zmq::multipart_t PublisherBase::prepareMessage(const TopicType& topic, Published
     multipart_msg.add(std::move(msg_topic));
     multipart_msg.add(std::move(msg_uuid));
     multipart_msg.add(std::move(msg_tp));
-    multipart_msg.add(std::move(msg_info));
+    //multipart_msg.add(std::move(msg_info));
 
     // Add command parameters if they exist
     if (msg.data.size > 0)

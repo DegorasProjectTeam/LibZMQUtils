@@ -34,7 +34,6 @@
 
 // C++ INCLUDES
 // =====================================================================================================================
-
 #include <iostream>
 #include <vector>
 #include <omp.h>
@@ -46,14 +45,11 @@
 #include <LibZMQUtils/Modules/Testing>
 // =====================================================================================================================
 
-
-
-
-
-
 // Basic tests.
 M_DECLARE_UNIT_TEST(PublisherSubscriber, BasicPublishSubscribe)
-//M_DECLARE_UNIT_TEST(PublisherSubscriber, PublishMultithread)
+
+// Advanced tests.
+M_DECLARE_UNIT_TEST(PublisherSubscriber, MultithreadPublishSubscribe)
 
 
 // Implementations.
@@ -77,18 +73,18 @@ M_DEFINE_UNIT_TEST(PublisherSubscriber, BasicPublishSubscribe)
     {
     private:
 
-        std::promise<std::string> promise;
+        std::promise<std::string> promise_;
 
     public:
 
-        SubscriberCallbackHandler() : future(promise.get_future()) {}
+        SubscriberCallbackHandler() : future_(promise_.get_future()) {}
 
         void handleMsg(const std::string &msg)
         {
-            this->promise.set_value(msg);
+            this->promise_.set_value(msg);
         }
 
-        std::future<std::string> future;
+        std::future<std::string> future_;
     };
 
     // Publisher configuration variables.
@@ -106,7 +102,7 @@ M_DEFINE_UNIT_TEST(PublisherSubscriber, BasicPublishSubscribe)
 
     // Test data.
     const std::string test_topic = "TEST_TOPIC";
-    const std::string test_string = "HOLA MUNDO";
+    std::string test_string = "HOLA MUNDO";
     std::string received_string;
 
     // Instanciate the publisher.
@@ -148,119 +144,200 @@ M_DEFINE_UNIT_TEST(PublisherSubscriber, BasicPublishSubscribe)
     }
 
     // Send and get the test msg.
-    publisher.enqueueMsg(test_topic, zmqutils::pubsub::MessagePriority::NormalPriority, test_string);
-    handler.future.wait();
-    received_string = handler.future.get();
+    publisher.enqueueMsg(test_topic, zmqutils::pubsub::MessagePriority::NormalPriority, std::move(test_string));
+    handler.future_.wait();
+    received_string = handler.future_.get();
 
     // Stop all.
     publisher.stopPublisher();
     subscriber.stopSubscriber();
 
+    // Check results.
     M_EXPECTED_EQ(received_string, test_string)
-
-    std::cout << "End test..." << std::endl;
 }
 
-// M_DEFINE_UNIT_TEST(PublisherSubscriber, PublishMultithread)
-// {
-//     const std::string test_string = "HOLA MUNDO";
-//     const int messages_to_receive = 100000;
+M_DEFINE_UNIT_TEST(PublisherSubscriber, MultithreadPublishSubscribe)
+{
+    class TestData : public zmqutils::serializer::Serializable
+    {
+    public:
 
-//     class SubscriberCallbackHandler
-//     {
-//     private:
-//         std::promise<bool> promise;
-//         std::atomic_int messages;
+        TestData() :
+            n_msg_(1), test_str_("")
+        {}
 
-//         const std::string test_msg;
-//         const int messages_to_receive;
+        inline TestData(const std::string& test_str, const unsigned& n_msg):
+            n_msg_(n_msg), test_str_(test_str)
+        {}
 
-//     public:
-//         SubscriberCallbackHandler(const std::string &test_string, int messages_to_receive) :
-//             messages(0),
-//             test_msg(test_string),
-//             messages_to_receive(messages_to_receive),
-//             future(promise.get_future()) {}
+        inline size_t serialize(zmqutils::serializer::BinarySerializer& serializer) const final
+        {
+            return serializer.write(this->n_msg_, this->test_str_);
+        }
 
-//         void handleMsg(const std::string &msg)
-//         {
-//             if (msg == this->test_msg)
-//             {
-//                 messages++;
-//                 if (messages == this->messages_to_receive)
-//                     this->promise.set_value(true);
-//             }
-//             else
-//             {
-//                 std::cout << "Invalid message received" << std::endl;
-//                 this->promise.set_value(false);
-//             }
-//         }
+        inline void deserialize(zmqutils::serializer::BinarySerializer& serializer) final
+        {
+            serializer.read(this->n_msg_, this->test_str_);
+        }
 
+        inline size_t serializedSize() const final
+        {
+            return Serializable::calcSizeHelper(this->n_msg_, this->test_str_);
+        }
 
-//         std::future<bool> future;
-//     };
+        unsigned n_msg_;
+        std::string test_str_;
+    };
 
-//     std::cout << "Start test..." << std::endl;
+    class TestSubscriber : public zmqutils::pubsub::ClbkSubscriberBase
+    {
+    private:
 
-//     SubscriberCallbackHandler handler(test_string, messages_to_receive);
+        using zmqutils::pubsub::ClbkSubscriberBase::ClbkSubscriberBase;
 
-//     // Publisher.
-//     zmqutils::pubsub::PublisherBase publisher(port, ip, "Test publisher");
+        void onSubscriberStart() override {}
 
-//     // Start the publisher.
-//     bool publisher_started = publisher.startPublisher();
+        void onSubscriberStop() override {}
 
-//     if(!publisher_started)
-//     {
-//         std::cout << "Failed at start publisher " << std::endl;
-//         M_FORCE_FAIL()
-//         return;
-//     }
+        void onSubscriberError(const zmq::error_t &, const std::string &) override {}
+    };
 
-//     // Subscriber
-//     TestSubscriber subscriber;
+    class SubscriberCallbackHandler
+    {
+    private:
 
-//     subscriber.subscribe(endpoint);
-//     subscriber.addTopicFilter("Test");
+        std::promise<bool> promise_;
+        std::atomic_int n_messages_;
+        const std::string test_string_;
+        const std::atomic_int messages_to_receive_;
 
-//     // Start the subscriber.
-//     bool subscriber_started = subscriber.startSubscriber();
+    public:
 
-//     // Check if the subscriber starts ok.
-//     if(!subscriber_started)
-//     {
-//         std::cout << "Failed at start subscriber" << std::endl;
-//         M_FORCE_FAIL()
-//         return;
-//     }
+        SubscriberCallbackHandler(const std::string &test_string, const int& messages_to_receive) :
+            n_messages_(0),
+            test_string_(test_string),
+            messages_to_receive_(messages_to_receive),
+            future_(promise_.get_future())
+        {
+            this->test_v_.reserve(static_cast<std::size_t>(this->messages_to_receive_));
+            this->test_v_.resize(static_cast<std::size_t>(this->messages_to_receive_));
+        }
 
+        void handleMsg(const TestData& test_data)
+        {
+            if (test_data.test_str_ == this->test_string_)
+            {
+                this->test_v_[test_data.n_msg_] = test_data;
+                this->n_messages_++;
+                if (this->n_messages_ == this->messages_to_receive_)
+                    this->promise_.set_value(true);
+            }
+            else
+            {
+                this->promise_.set_value(false);
+            }
+        }
 
-//     subscriber.registerCbAndReqProcFunc<std::function<void(const std::string&)>>(
-//         "Test", &handler, &SubscriberCallbackHandler::handleMsg);
+        std::vector<TestData> test_v_;
+        std::future<bool> future_;
+    };
 
+    // Publisher configuration variables.
+    unsigned publisher_port = 9999;
+    std::string publisher_iface = "*";
+    std::string publisher_name = "TEST PUBLISHER";
+    std::string publisher_version = "1.1.1";
+    std::string publisher_info = "This is the TEST publisher";
 
-//     std::vector<std::future<void>> publisher_futures;
+    // Subscriber configuration variables.
+    std::string subscriber_name = "TEST SUBSCRIBER";
+    std::string subscriber_version = "1.1.1";
+    std::string subscriber_info = "This is the TEST subscriber.";
+    std::string publisher_endpoint = "tcp://127.0.0.1:9999";
 
+    // Test data.
+    const std::string test_topic = "TEST_TOPIC";
+    const std::string test_string = "HOLA MUNDO";
+    const int messages_to_receive = 50000;
+    std::vector<TestData> test_v;
+    std::vector<std::future<void>> publisher_futures;
 
-//     for (int i = 0; i < messages_to_receive; i++)
-//     {
-//         publisher_futures.push_back(std::async(std::launch::async, [&publisher, &test_string]
-//         {
-//             publisher.sendMsg("Test", test_string);
-//         }));
-//     }
+    // Instanciate the publisher.
+    zmqutils::pubsub::PublisherBase publisher(publisher_port, publisher_iface, publisher_name,
+                                              publisher_version, publisher_info);
 
-//     if (!this->result_)
-//         return;
+    // Start the publisher.
+    bool started = publisher.startPublisher();
 
-//     bool ok = handler.future.get();
+    // Check if started.
+    if(!started)
+    {
+        std::cout << "Publisher start failed!!" << std::endl;
+        M_FORCE_FAIL()
+        return;
+    }
 
-//     M_EXPECTED_EQ(ok, true)
+    // Subscriber and callback handler.
+    TestSubscriber subscriber(subscriber_name, subscriber_version, subscriber_info);
+    SubscriberCallbackHandler handler(test_string, messages_to_receive);
 
-//     std::cout << "End test..." << std::endl;
+    // Configure the subscriber.
+    subscriber.subscribe(publisher_endpoint);
+    subscriber.addTopicFilter(test_topic);
 
-// }
+    // Register the callback.
+    subscriber.registerCbAndReqProcFunc<std::function<void(const TestData&)>>(
+        test_topic, &handler, &SubscriberCallbackHandler::handleMsg);
+
+    // Start the subscriber.
+    started = subscriber.startSubscriber();
+
+    // Check if the subscriber starts ok.
+    if(!started)
+    {
+        std::cout << "Subscriber start failed!!" << std::endl;
+        M_FORCE_FAIL()
+        return;
+    }
+
+    // Prepare the data.
+    test_v.reserve(messages_to_receive);
+    test_v.resize(messages_to_receive);
+    omp_set_num_threads(omp_get_max_threads());
+    #pragma omp parallel for
+    for (size_t i = 0; i < messages_to_receive; i++)
+    {
+        test_v[i] = TestData(test_string, static_cast<unsigned>(i));
+    }
+
+    // Send the data.
+    #pragma omp parallel for
+    for (size_t i = 0; i < messages_to_receive; i++)
+    {
+        publisher.enqueueMsg(test_topic,
+                             zmqutils::pubsub::MessagePriority::CriticalPriority,
+                             std::move(test_v[i]));
+    }
+
+    // Wait all finish.
+    handler.future_.wait();
+    bool result = handler.future_.get();
+
+    // Stop all.
+    publisher.stopPublisher();
+    subscriber.stopSubscriber();
+
+    // Check results.
+    M_EXPECTED_EQ(result, true)
+    M_EXPECTED_EQ(handler.test_v_.size(), static_cast<size_t>(messages_to_receive))
+    for (size_t i = 0; i < messages_to_receive; i++)
+    {
+        M_EXPECTED_EQ(handler.test_v_[i].n_msg_, static_cast<unsigned>(i))
+        M_EXPECTED_EQ(handler.test_v_[i].test_str_, test_string)
+    }
+
+    std::cout<<"DONE"<<std::endl;
+}
 
 
 
@@ -271,8 +348,7 @@ int main()
 
     // Register the tests.
     M_REGISTER_UNIT_TEST(PublisherSubscriber, BasicPublishSubscribe)
-    //M_REGISTER_UNIT_TEST(PublisherSubscriber, PublishMultithread)
-
+    M_REGISTER_UNIT_TEST(PublisherSubscriber, MultithreadPublishSubscribe)
 
     // Run the unit tests.
     M_RUN_UNIT_TESTS()

@@ -48,6 +48,7 @@
 #include <future>
 #include <string>
 #include <map>
+#include <shared_mutex>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
@@ -306,7 +307,7 @@ private:
     void internalStopSubscriber();
 
     // Subscriber worker (will be executed asynchronously).
-    void startWorker();
+    void subscriberWorker();
 
     // Function for receiving data from the socket.
     OperationResult recvFromSocket(PublishedMessage&);
@@ -325,11 +326,11 @@ private:
     SubscriberInfo sub_info_;
 
     // Mutex.
-    mutable std::mutex mtx_;        ///< Safety mutex.
-    mutable std::mutex depl_mtx_;   ///< Worker deploy mutex.
+    mutable std::shared_mutex sub_mtx_;  ///< Safety mutex.
+    mutable std::mutex depl_mtx_;        ///< Worker deploy mutex.
 
     // Future and condition variable for the worker.
-    std::future<void> fut_worker_;     ///< Future that stores the worker status.
+    std::future<void> fut_worker_;            ///< Future that stores the worker status.
     std::condition_variable cv_worker_depl_;  ///< Condition variable to notify the deployment status of the worker.
 
     // Clients container.
