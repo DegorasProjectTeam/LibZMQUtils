@@ -62,11 +62,11 @@ M_DEFINE_UNIT_TEST(PublisherSubscriber, BasicPublishSubscribe)
 
         using zmqutils::pubsub::ClbkSubscriberBase::ClbkSubscriberBase;
 
-        void onSubscriberStart() override {}
+        inline void onSubscriberStart() override {}
 
-        void onSubscriberStop() override {}
+        inline void onSubscriberStop() override {}
 
-        void onSubscriberError(const zmq::error_t &, const std::string &) override {}
+        inline void onSubscriberError(const zmq::error_t &, const std::string &) override {}
     };
 
     class SubscriberCallbackHandler
@@ -77,9 +77,9 @@ M_DEFINE_UNIT_TEST(PublisherSubscriber, BasicPublishSubscribe)
 
     public:
 
-        SubscriberCallbackHandler() : future_(promise_.get_future()) {}
+        inline SubscriberCallbackHandler() : future_(promise_.get_future()) {}
 
-        void handleMsg(const std::string &msg)
+        inline void handleMsg(const std::string &msg)
         {
             this->promise_.set_value(msg);
         }
@@ -162,7 +162,7 @@ M_DEFINE_UNIT_TEST(PublisherSubscriber, MultithreadPublishSubscribe)
     {
     public:
 
-        TestData() :
+        inline TestData() :
             n_msg_(1), test_str_("")
         {}
 
@@ -335,11 +335,7 @@ M_DEFINE_UNIT_TEST(PublisherSubscriber, MultithreadPublishSubscribe)
         M_EXPECTED_EQ(handler.test_v_[i].n_msg_, static_cast<unsigned>(i))
         M_EXPECTED_EQ(handler.test_v_[i].test_str_, test_string)
     }
-
-    std::cout<<"DONE"<<std::endl;
 }
-
-
 
 int main()
 {

@@ -10,8 +10,6 @@ MAX_PRIORITY:
 
 PRIORITY:
 
-- Add a queue functionality to publisher. The idea is that send msg always will be blocking and something like addToPublishQueue is non blocking to avoid performance issues.
-
 - Improve concurrency control in client.
 
 - Add a toolchain to facilitate the compilation for ARM (like RPi devices or FPGAs).

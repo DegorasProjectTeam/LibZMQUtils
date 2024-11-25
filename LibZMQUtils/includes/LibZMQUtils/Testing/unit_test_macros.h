@@ -86,7 +86,7 @@ void Test_##Module##_##TestName::runTest()      \
     UnitTest::instance().addTest(                                                                  \
             std::pair<std::string, TestBase*>(#Module, Test_##Module##_##TestName::instance()));   \
 
-#define M_RUN_UNIT_TESTS()        \
+#define M_RUN_UNIT_TESTS()            \
     UnitTest::instance().runTests();  \
     return 0;                         \
 
@@ -95,18 +95,18 @@ void Test_##Module##_##TestName::runTest()      \
 this->result_.compare_exchange_strong(expected, expected && expectEQ(arg1, arg2)); }();
 
 #define M_EXPECTED_EQ_F(arg1, arg2, eps) \
-    [&] { bool expected = this->result_.load(); \
+[&] { bool expected = this->result_.load(); \
 this->result_.compare_exchange_strong(expected, expected && expectEQ(arg1, arg2, eps)); }();
 
 #define M_EXPECTED_NE(arg1, arg2) \
-    [&] { bool expected = this->result_.load(); \
+[&] { bool expected = this->result_.load(); \
 this->result_.compare_exchange_strong(expected, expected && expectNE(arg1, arg2)); }();
 
 #define M_FORCE_FAIL() \
-    [&] { bool expected = this->result_.load(); \
+[&] { bool expected = this->result_.load(); \
 this->result_.compare_exchange_strong(expected, expected && forceFail()); }();
 
 #define M_SLEEP_US(arg1)                                        \
-    std::this_thread::sleep_for(std::chrono::microseconds(arg1));   \
+std::this_thread::sleep_for(std::chrono::microseconds(arg1));   \
  \
 // =====================================================================================================================
