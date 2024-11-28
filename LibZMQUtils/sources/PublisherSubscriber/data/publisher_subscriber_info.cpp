@@ -55,9 +55,9 @@ namespace zmqutils{
 namespace pubsub{
 // =====================================================================================================================
 
-PublisherInfo::PublisherInfo(const utils::UUID& uuid, unsigned port, const std::string &pid, const std::string& endpoint,
-                             const std::string &hostname, const std::string &name, const std::string &info,
-                             const std::string &version, const std::vector<std::string> &ips) :
+PublisherInfo::PublisherInfo(const utils::UUID& uuid, unsigned port, const std::string &pid,
+                             const std::string& endpoint, const std::string &hostname, const std::string &name,
+                             const std::string &info, const std::string &version, const std::vector<std::string> &ips) :
     uuid(uuid),
     port(port),
     pid(pid),

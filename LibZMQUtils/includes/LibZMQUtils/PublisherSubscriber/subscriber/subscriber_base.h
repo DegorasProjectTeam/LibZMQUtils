@@ -68,7 +68,8 @@ namespace pubsub{
 
 // SUBSCRIBER CONSTANTS
 // =====================================================================================================================
-constexpr std::string_view kReservedExitTopic = "quit";
+constexpr std::string_view kReservedTopicExit = "RESERVED_TOPIC_EXIT";
+constexpr std::string_view kReservedTopicPubinfo = "RESERVED_TOPIC_PUBINFO";
 // =====================================================================================================================
 
 /**

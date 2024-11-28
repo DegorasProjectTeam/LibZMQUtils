@@ -208,7 +208,7 @@ void SubscriberBase::unsubscribe(const std::string &pub_endpoint)
 void SubscriberBase::addTopicFilter(const TopicType &filter)
 {
     // Avoid reserved topic
-    if (filter != kReservedExitTopic)
+    if (filter != kReservedTopicExit)
     {
         auto res = this->topic_filters_.insert(filter);
         // If filter was applied, reset socket to apply the change if it is working.
@@ -220,7 +220,7 @@ void SubscriberBase::addTopicFilter(const TopicType &filter)
 void SubscriberBase::removeTopicFilter(const TopicType &filter)
 {
     // Avoid reserved topic
-    if (filter != kReservedExitTopic)
+    if (filter != kReservedTopicExit)
     {
         auto res = this->topic_filters_.erase(filter);
         // If filter was applied, reset socket to apply the change if it is working.
@@ -269,7 +269,7 @@ void SubscriberBase::internalStopSubscriber()
         serializer::BinarySerializer serializer;
 
         // Prepare the topic. This must come plain, since it is used by ZMQ topic filtering.
-        zmq::message_t msg_topic{TopicType(kReservedExitTopic)};
+        zmq::message_t msg_topic{TopicType(kReservedTopicExit)};
 
         // Prepare the close socket uuid.
         size_t uuid_size = serializer.write(this->socket_close_uuid_.getBytes());
@@ -420,7 +420,7 @@ OperationResult SubscriberBase::recvFromSocket(PublishedMessage& msg)
 
         // If exit topic was issued, check if uuid matches the close publisher and return.
         // No more info is necessary.
-        if (kReservedExitTopic == msg.topic)
+        if (kReservedTopicExit == msg.topic)
         {
             if (this->socket_close_uuid_ == msg.publisher_uuid)
                 return OperationResult::OPERATION_OK;
@@ -477,7 +477,7 @@ void SubscriberBase::resetSocket()
         this->socket_->set(zmq::sockopt::linger, 0);
         this->socket_->connect(close_endpoint);
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        this->socket_->set(zmq::sockopt::subscribe, kReservedExitTopic);
+        this->socket_->set(zmq::sockopt::subscribe, kReservedTopicExit);
 
         // Connect to subscribed publishers
         for (const auto& publishers : this->subscribed_publishers_)
