@@ -165,12 +165,17 @@ void SubscriberBase::subscribe(const std::string& pub_endpoint)
     {
         return pair.second.endpoint == pub_endpoint;
     });
+
+    // If endpoint is not subscribed, then store information.
     if (it == this->subscribed_publishers_.end())
     {
-        // If endpoint is not subscribed, then store information.
+        // TODO ¿De que sirve aqui usar un uuid inventado? pub-sub abstrae de esa parte.
+        // Tal vez seria interesante actualizar la información a partir de los mensajes recibidos.
+
         unsigned port = static_cast<unsigned>(std::stoi(pub_endpoint.substr(pub_endpoint.rfind(':') + 1)));
-        PublisherInfo pub_info(utils::UUID(),port, pub_endpoint);
+        PublisherInfo pub_info(utils::UUID(), port, pub_endpoint);
         this->subscribed_publishers_.insert({pub_info.uuid, pub_info});
+
         // If socket is started, then reset to apply the change.
         if (this->flag_working_)
             this->resetSocket();
@@ -399,7 +404,6 @@ OperationResult SubscriberBase::recvFromSocket(PublishedMessage& msg)
         zmq::message_t msg_topic = multipart_msg.pop();
         zmq::message_t msg_uuid = multipart_msg.pop();
         zmq::message_t msg_time = multipart_msg.pop();
-        //zmq::message_t msg_pub = multipart_msg.pop();
 
         // Get the topic. Topic is not serialized using BinarySerializer, since it must come plain.
         msg.topic = msg_topic.to_string();
@@ -409,7 +413,7 @@ OperationResult SubscriberBase::recvFromSocket(PublishedMessage& msg)
         {
             std::array<std::byte, 16> uuid_bytes;
             serializer::BinarySerializer::fastDeserialization(msg_uuid.data(), msg_uuid.size(), uuid_bytes);
-            msg.pub_info.uuid = utils::UUID(uuid_bytes);
+            msg.publisher_uuid = utils::UUID(uuid_bytes);
         }
         else
             return OperationResult::INVALID_PUB_UUID;
@@ -418,7 +422,7 @@ OperationResult SubscriberBase::recvFromSocket(PublishedMessage& msg)
         // No more info is necessary.
         if (kReservedExitTopic == msg.topic)
         {
-            if (this->socket_close_uuid_ == msg.pub_info.uuid)
+            if (this->socket_close_uuid_ == msg.publisher_uuid)
                 return OperationResult::OPERATION_OK;
             else
                 return OperationResult::INVALID_PARTS;
@@ -427,12 +431,9 @@ OperationResult SubscriberBase::recvFromSocket(PublishedMessage& msg)
         // Get the timestamp.
         serializer::BinarySerializer::fastDeserialization(msg_time.data(), msg_time.size(), msg.timestamp);
 
-        // Get the publisher information.
-        // serializer::BinarySerializer::fastDeserialization(msg_pub.data(), msg_pub.size(),
-        //     msg.pub_info.endpoint, msg.pub_info.hostname, msg.pub_info.name, msg.pub_info.info,
-        //                                                   msg.pub_info.version);
-
-        // TODO WARNING: WE CANT UPDATE THE STORED INFO BECAUSE IN ZMQ YOU CANT KNOW WHAT PUBLISHER SENDS THE MSG.
+        // TODO WARNING: WE CANT UPDATE THE STORED INFO BECAUSE IN ZMQ YOU CANT KNOW WHAT PUBLISHER SENDS THE MSG. IN
+        // THIS CASE MAYBE YOU CAN PUBLISH A PUBLISHER INFORMATION TOPIC FOR ASSOCIATE THE UUID WITH SPECIFIC
+        // PUBLISHER INFORMATION IN THE PUBLISHERS MAP.
 
         // If there is still one more part, it is the message data.
         if (multipart_msg.size() == 1)
@@ -446,7 +447,6 @@ OperationResult SubscriberBase::recvFromSocket(PublishedMessage& msg)
                 // Get and store the parameters data.
                 serializer::BinarySerializer serializer(message_data.data(), message_data.size());
                 msg.data.size = serializer.moveUnique(msg.data.bytes);
-
             }
             else
                 return OperationResult::EMPTY_PARAMS;

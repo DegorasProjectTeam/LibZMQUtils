@@ -187,7 +187,7 @@ struct LIBZMQUTILS_EXPORT PublishedMessage
 {
     PublishedMessage();
 
-    PublishedMessage(const TopicType& topic, const PublisherInfo& pub_info, const std::string& timestamp,
+    PublishedMessage(const TopicType& topic, const utils::UUID& uuid, const std::string& timestamp,
                      PublishedData&& data, MessagePriority priority = MessagePriority::NormalPriority);
 
     /**
@@ -196,11 +196,11 @@ struct LIBZMQUTILS_EXPORT PublishedMessage
     void clear();
 
     // Struct data.
-    TopicType topic;          ///< Topic associated to the published message.
-    MessagePriority priority; ///< Priority associated to the published message.
-    PublisherInfo pub_info;   ///< Publisher information.
-    PublishedData data;       ///< Published data.
-    std::string timestamp;    ///< ISO8601 string timestamp that represents the time when the message was created.
+    TopicType topic;             ///< Topic associated to the published message.
+    MessagePriority priority;    ///< Priority associated to the published message.
+    utils::UUID publisher_uuid;  ///< Publisher UUID unique identification.
+    PublishedData data;          ///< Published data.
+    std::string timestamp;       ///< ISO8601 string timestamp that represents the time when the message was created.
 };
 
 

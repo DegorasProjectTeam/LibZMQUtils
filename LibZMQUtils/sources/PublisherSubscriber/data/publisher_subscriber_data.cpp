@@ -58,11 +58,11 @@ PublishedMessage::PublishedMessage()
     this->clear();
 }
 
-PublishedMessage::PublishedMessage(const TopicType &topic, const PublisherInfo &pub_info, const std::string &timestamp,
+PublishedMessage::PublishedMessage(const TopicType &topic, const utils::UUID &uuid, const std::string &timestamp,
                                    PublishedData &&data, MessagePriority priority) :
     topic(topic),
     priority(priority),
-    pub_info(pub_info),
+    publisher_uuid(uuid),
     data(std::move(data)),
     timestamp(timestamp)
 {}

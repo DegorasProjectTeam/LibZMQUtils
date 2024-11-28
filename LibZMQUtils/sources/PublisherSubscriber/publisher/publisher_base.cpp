@@ -129,6 +129,7 @@ PublisherBase::PublisherBase(unsigned publisher_port,
     // Update the publisher information.
     this->pub_info_.uuid = uuid;
     this->pub_info_.port = publisher_port;
+    this->pub_info_.pid = std::to_string(internal_helpers::network::getCurrentPID());
     this->pub_info_.endpoint = "tcp://" + publisher_iface + ":" + std::to_string(publisher_port);
     this->pub_info_.hostname = internal_helpers::network::getHostname();
     this->pub_info_.name = publisher_name;
@@ -229,7 +230,7 @@ void PublisherBase::messageQueueWorker()
         try
         {
             // Prepare the multipart msg.
-            zmq::multipart_t multipart_msg(this->prepareMessage(msg.topic, msg));
+            zmq::multipart_t multipart_msg(this->prepareMessage(msg));
 
             // Call to the internal sending command callback.
             this->onSendingMsg(msg);
@@ -371,7 +372,7 @@ OperationResult PublisherBase::enqueueMsg(const TopicType& topic, MessagePriorit
         return OperationResult::PUBLISHER_STOPPED;
 
     // Prepare the message.
-    PublishedMessage msg(topic, this->pub_info_, utils::currentISO8601Date(true, false, true),
+    PublishedMessage msg(topic, this->pub_info_.uuid, utils::currentISO8601Date(true, false, true),
                          std::move(data), priority);
 
     // Enqueue the msg.
@@ -512,40 +513,33 @@ void PublisherBase::internalStopPublisher()
     this->deleteSockets();
 }
 
-zmq::multipart_t PublisherBase::prepareMessage(const TopicType& topic, PublishedMessage& msg)
+zmq::multipart_t PublisherBase::prepareMessage(PublishedMessage& publication)
 {
     // Serializer.
     serializer::BinarySerializer serializer;
 
     // Prepare the topic. This must come plain, since it is used by ZMQ topic filtering.
-    zmq::message_t msg_topic(topic);
+    zmq::message_t msg_topic(publication.topic);
 
     // Prepare the uuid.
-    size_t uuid_size = serializer.write(msg.pub_info.uuid.getBytes());
+    size_t uuid_size = serializer.write(publication.publisher_uuid.getBytes());
     zmq::message_t msg_uuid(serializer.release(), uuid_size);
 
     // Prepare the timestamp.
-    size_t tp_size = serializer.write(msg.timestamp);
+    size_t tp_size = serializer.write(publication.timestamp);
     zmq::message_t msg_tp(serializer.release(), tp_size);
-
-    // Prepare the information.
-    // TODO SEND THE IPS
-    size_t info_size = serializer.write(msg.pub_info.endpoint, msg.pub_info.hostname, msg.pub_info.name,
-                                        msg.pub_info.info, msg.pub_info.version);
-    zmq::message_t msg_info(serializer.release(), info_size);
 
     // Prepare the multipart msg.
     zmq::multipart_t multipart_msg;
     multipart_msg.add(std::move(msg_topic));
     multipart_msg.add(std::move(msg_uuid));
     multipart_msg.add(std::move(msg_tp));
-    //multipart_msg.add(std::move(msg_info));
 
-    // Add command parameters if they exist
-    if (msg.data.size > 0)
+    // Add publication custom data if they exist.
+    if (publication.data.size > 0)
     {
-        // Prepare the command parameters
-        zmq::message_t message_params(msg.data.bytes.get(), msg.data.size);
+        // Prepare the custom data.
+        zmq::message_t message_params(publication.data.bytes.get(), publication.data.size);
         multipart_msg.add(std::move(message_params));
     }
 

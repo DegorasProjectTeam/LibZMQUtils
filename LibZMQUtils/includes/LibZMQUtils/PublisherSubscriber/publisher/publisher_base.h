@@ -275,7 +275,7 @@ private:
     const NetworkAdapterInfoV& internalGetPublisherAddresses() const;
 
     /// Internal static function to prepare the data.
-    static zmq::multipart_t prepareMessage(const TopicType &topic, PublishedMessage& msg);
+    static zmq::multipart_t prepareMessage(PublishedMessage& publication);
 
     // Endpoint data and publisher info.
     NetworkAdapterInfoV publisher_adapters_;  ///< Interfaces bound by publisher.

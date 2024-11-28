@@ -135,6 +135,8 @@ void BinarySerializer::resetReading()
 
 SizeUnit BinarySerializer::moveUnique(BinarySerializer::BytesSmartPtr& out)
 {
+    // TODO CHECK
+
     std::lock_guard<std::mutex> lock(this->mtx_);
 
     std::stringstream ss;
@@ -158,14 +160,6 @@ SizeUnit BinarySerializer::moveUnique(BinarySerializer::BytesSmartPtr& out)
     // Copy the data from the existing data_ to new_data.
     //std::copy(this->data_.get(), this->data_.get() + aux, new_data.get());
 
-    std::stringstream new_ss;
-    for(size_t i = 0; i < size; i++)
-    {
-        new_ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned int>(out[i]);
-        if (i < size - 1)
-            new_ss << " ";
-    }
-
     return size;
 }
 
@@ -186,6 +180,7 @@ std::byte* BinarySerializer::release()
 
 std::byte *BinarySerializer::release(SizeUnit& size)
 {
+    std::lock_guard<std::mutex> lock(this->mtx_);
     size = this->size_;
     return this->release();
 }

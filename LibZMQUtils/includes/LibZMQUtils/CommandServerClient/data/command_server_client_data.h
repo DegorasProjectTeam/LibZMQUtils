@@ -283,7 +283,7 @@ struct LIBZMQUTILS_EXPORT CommandRequest
     // Struct data.
     ServerCommand command;    ///< Command to be executed in the server.
     utils::UUID client_uuid;  ///< Client UUID unique identification.
-    RequestData data;         ///< Request data with the associated command request parameters.
+    RequestData data;         ///< Serialized request data with the associated command request parameters.
     std::string timestamp;    ///< ISO8601 timestamp that represents the time when the message was created in client.
 };
 
@@ -302,7 +302,7 @@ struct LIBZMQUTILS_EXPORT CommandReply
     ServerCommand command;   ///< Command whose execution generated this reply data.
     utils::UUID server_uuid; ///< Server UUID unique identification.
     OperationResult result;  ///< Reply result of the operation.
-    ReplyData data;          ///< Reply data. Can be empty depending on the result of executing the command.
+    ReplyData data;          ///< Serialized reply data. Can be empty depending on the result of executing the command.
     std::string timestamp;   ///< ISO8601 timestamp that represents the time when the message was created in server.
     utils::UsStd elapsed;    ///< Elapsed time between sending the request and receiving the response from server.
 };

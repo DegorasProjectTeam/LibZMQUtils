@@ -56,8 +56,11 @@ namespace pubsub{
 // =====================================================================================================================
 
 /**
- * @brief The DebugClbkSubscriberBase class implements a ClbkSubscriberBase that override status callback methods
- * logging the information at standard output.
+ * @brief The DebugClbkSubscriberBase class implements a ClbkSubscriberBase that includes internal callbacks that
+ * prints all the input and output data in each internal callback call to facilitate debugging and development. At any
+ * time you can toggle inheritance between DebugClbkSubscriberBase and the original ClbkSubscriberBase one to monitor
+ * what is happening on the screen. This class is for support and does not imply that a robust logging system should
+ * not be used in the override implementation of the system being developed.
  */
 class LIBZMQUTILS_EXPORT DebugClbkSubscriberBase : public ClbkSubscriberBase
 {

@@ -89,7 +89,6 @@ std::string DebugPublisherBase::generateStringHeader(const std::string &clbk_nam
     ss << "<" << this->getPublisherInfo().name << ">"                        << std::endl;
     ss << "-> TIME: " << zmqutils::utils::currentISO8601Date()               << std::endl;
     ss << "-> " << clbk_name                                                 << std::endl;
-
     for(const auto& str : data)
     {
         ss << std::string(20, '-') << std::endl;
@@ -126,10 +125,11 @@ void DebugPublisherBase::onSendingMsg(const PublishedMessage &msg)
     // Log.
     serializer::BinarySerializer serializer(msg.data.bytes.get(), msg.data.size);
     std::stringstream data;
-    data << "Topic:       " << msg.topic                      << std::endl;
-    data << "Timestamp:   " << msg.timestamp                  << std::endl;
-    data << "Params size: " << msg.data.size                  << std::endl;
-    data << "Params Hex:  " << serializer.getDataHexString();
+    data << "Publisher UUID: " << msg.publisher_uuid.toRFC4122String() << std::endl;
+    data << "Topic:          " << msg.topic                      << std::endl;
+    data << "Timestamp:      " << msg.timestamp                  << std::endl;
+    data << "Params size:    " << msg.data.size                  << std::endl;
+    data << "Params Hex:     " << serializer.getDataHexString();
     std::cout << this->generateStringHeader("ON SENDING MSG", {data.str()});
 }
 

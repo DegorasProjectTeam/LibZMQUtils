@@ -55,11 +55,12 @@ namespace zmqutils{
 namespace pubsub{
 // =====================================================================================================================
 
-PublisherInfo::PublisherInfo(const utils::UUID& uuid, unsigned port, const std::string& endpoint,
+PublisherInfo::PublisherInfo(const utils::UUID& uuid, unsigned port, const std::string &pid, const std::string& endpoint,
                              const std::string &hostname, const std::string &name, const std::string &info,
                              const std::string &version, const std::vector<std::string> &ips) :
     uuid(uuid),
     port(port),
+    pid(pid),
     endpoint(endpoint),
     hostname(hostname),
     name(name),
@@ -74,11 +75,12 @@ PublisherInfo::PublisherInfo(const utils::UUID& uuid, unsigned port, const std::
     endpoint(endpoint)
 {}
 
-PublisherInfo::PublisherInfo(utils::UUID& uuid, unsigned& port, std::string& endpoint,
+PublisherInfo::PublisherInfo(utils::UUID& uuid, unsigned& port, std::string &pid, std::string& endpoint,
                              std::string &hostname, std::string &name, std::string &info,
                              std::string &version, std::vector<std::string>& ips) :
     uuid(std::move(uuid)),
     port(std::move(port)),
+    pid(std::move(pid)),
     endpoint(std::move(endpoint)),
     hostname(std::move(hostname)),
     name(std::move(name)),
@@ -92,8 +94,9 @@ std::string PublisherInfo::toJsonString() const
     std::stringstream ss;
 
     ss << "{"
-       << "\"port\":" << this->port << ","
        << "\"uuid\":" << this->uuid.toRFC4122String() << ","
+       << "\"port\":" << this->port << ","
+       << "\"pid\":\"" << this->pid << "\","
        << "\"endpoint\":\"" << this->endpoint << "\","
        << "\"hostname\":\"" << this->hostname << "\","
        << "\"name\":\"" << this->name << "\","
@@ -130,6 +133,7 @@ std::string PublisherInfo::toString() const
     // Generate the string.
     ss << "Publisher UUID:      "        << this->uuid.toRFC4122String() << std::endl;
     ss << "Publisher Port:      "        << this->port                   << std::endl;
+    ss << "Publisher PID:       "        << this->pid                    << std::endl;
     ss << "Publisher Endpoint:  "        << this->endpoint               << std::endl;
     ss << "Publisher Hostname:  "        << this->hostname               << std::endl;
     ss << "Publisher Name:      "        << this->name                   << std::endl;

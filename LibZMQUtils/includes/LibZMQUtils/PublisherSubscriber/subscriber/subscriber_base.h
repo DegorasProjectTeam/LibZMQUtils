@@ -201,7 +201,7 @@ protected:
     // -----------------------------------------------------------------------------------------------------------------
 
     /**
-     * @brief Register a function to process a `PubSubMsg` object.
+     * @brief Register a function to process a PublishedMessage object.
      *
      * @tparam ClassT The class type of the object that contains the member function to be called.
      *

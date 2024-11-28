@@ -73,14 +73,14 @@ struct LIBZMQUTILS_EXPORT PublisherInfo
      * @param endpoint
      * @param name
      */
-    PublisherInfo(const utils::UUID& uuid, unsigned port, const std::string& endpoint, const std::string& hostname,
-                  const std::string& name, const std::string& info, const std::string& version,
-                  const std::vector<std::string>& ips);
+    PublisherInfo(const utils::UUID& uuid, unsigned port, const std::string& pid, const std::string& endpoint,
+                  const std::string& hostname, const std::string& name, const std::string& info,
+                  const std::string& version, const std::vector<std::string>& ips);
 
     PublisherInfo(const utils::UUID& uuid, unsigned port, const std::string& endpoint);
 
-    PublisherInfo(utils::UUID& uuid, unsigned& port, std::string& endpoint, std::string& hostname, std::string& name,
-                  std::string& info, std::string& version, std::vector<std::string>& ips);
+    PublisherInfo(utils::UUID& uuid, unsigned& port, std::string& pid, std::string& endpoint, std::string& hostname,
+                  std::string& name, std::string& info, std::string& version, std::vector<std::string>& ips);
 
 
     // Default constructor, copy and move
@@ -104,6 +104,7 @@ struct LIBZMQUTILS_EXPORT PublisherInfo
     // Struct data.
     utils::UUID uuid;              ///< Unique publisher host UUID.
     unsigned port;                 ///< Publisher port.
+    std::string pid;               ///< PID of the publisher process.
     std::string endpoint;          ///< Final publisher endpoint.
     std::string hostname;          ///< Host publisher name.
     std::string name;              ///< Publisher name, optional.

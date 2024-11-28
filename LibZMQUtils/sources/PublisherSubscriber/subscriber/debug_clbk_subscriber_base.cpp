@@ -75,7 +75,6 @@ std::string DebugClbkSubscriberBase::generateStringHeader(const std::string &clb
     ss << "<" << this->getSubscriberInfo().name << ">"                       << std::endl;
     ss << "-> TIME: " << zmqutils::utils::currentISO8601Date()               << std::endl;
     ss << "-> " << clbk_name                                                 << std::endl;
-
     for(const auto& str : data)
     {
         ss << std::string(20, '-')                                           << std::endl;
@@ -112,14 +111,13 @@ void DebugClbkSubscriberBase::onInvalidMsgReceived(const PublishedMessage& msg, 
     // Log.
     serializer::BinarySerializer serializer(msg.data.bytes.get(), msg.data.size);
     std::stringstream data;
-    data << msg.pub_info.toString()                           << std::endl;
-    data << std::string(20, '-')                              << std::endl;
-    data << "Topic:       " << msg.topic                      << std::endl;
-    data << "Timestamp:   " << msg.timestamp                  << std::endl;
-    data << "Result:      " << static_cast<ResultType>(res)
-         << " (" << operationResultToString(res) << ")"       << std::endl;
-    data << "Params size: " << msg.data.size                  << std::endl;
-    data << "Params Hex:  " << serializer.getDataHexString();
+    data << "Publisher UUID: " << msg.publisher_uuid.toRFC4122String() << std::endl;
+    data << "Topic:          " << msg.topic                            << std::endl;
+    data << "Timestamp:      " << msg.timestamp                        << std::endl;
+    data << "Result:         " << static_cast<ResultType>(res)
+         << " (" << operationResultToString(res) << ")"                << std::endl;
+    data << "Params size:    " << msg.data.size                        << std::endl;
+    data << "Params Hex:     " << serializer.getDataHexString();
     std::cout << this->generateStringHeader("ON INVALID MSG RECEIVED", {data.str()});
 
     // Call parent method.
@@ -131,14 +129,13 @@ void DebugClbkSubscriberBase::onMsgReceived(const PublishedMessage &msg, Operati
     // Log.
     serializer::BinarySerializer serializer(msg.data.bytes.get(), msg.data.size);
     std::stringstream data;
-    data << msg.pub_info.toString()                           << std::endl;
-    data << std::string(20, '-')                              << std::endl;
-    data << "Topic:       " << msg.topic                      << std::endl;
-    data << "Timestamp:   " << msg.timestamp                  << std::endl;
-    data << "Result:      " << static_cast<ResultType>(res)
-         << " (" << operationResultToString(res) << ")"       << std::endl;
-    data << "Params size: " << msg.data.size                  << std::endl;
-    data << "Params Hex:  " << serializer.getDataHexString();
+    data << "Publisher UUID: " << msg.publisher_uuid.toRFC4122String() << std::endl;
+    data << "Topic:          " << msg.topic                            << std::endl;
+    data << "Timestamp:      " << msg.timestamp                        << std::endl;
+    data << "Result:         " << static_cast<ResultType>(res)
+         << " (" << operationResultToString(res) << ")"                << std::endl;
+    data << "Params size:    " << msg.data.size                        << std::endl;
+    data << "Params Hex:     " << serializer.getDataHexString();
     std::cout << this->generateStringHeader("ON MSG RECEIVED", {data.str()});
 
     // Call parent method.
