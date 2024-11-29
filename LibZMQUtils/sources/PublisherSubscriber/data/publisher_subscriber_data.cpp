@@ -69,6 +69,7 @@ PublishedMessage::PublishedMessage(const TopicType &topic, const utils::UUID &uu
 
 void PublishedMessage::clear()
 {
+    this->publisher_uuid.clear();
     this->topic.clear();
     this->data.clear();
     this->timestamp.clear();

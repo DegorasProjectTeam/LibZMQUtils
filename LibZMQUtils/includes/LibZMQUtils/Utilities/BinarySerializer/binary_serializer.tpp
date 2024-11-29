@@ -111,12 +111,15 @@ void BinarySerializer::binarySerializeDeserialize(const TSRC* src, SizeUnit data
     (BinarySerializer::checkTriviallyCopyable<TDEST>());
     (BinarySerializer::checkTrivial<TDEST>());
 
+    // TODO I think this is not neccesary (better performance without).
     // Zero-fill the entire output first.
-    std::memset(dst, 0, sizeof(TDEST));
+    //std::memset(dst, 0, sizeof(TDEST));
 
     // Serialize the data.
     const std::byte* data_bytes = reinterpret_cast<const std::byte*>(src);
     std::byte* dest_bytes = reinterpret_cast<std::byte*>(dst);
+
+    // TODO New mode for avoid the data copy for improve performance.
 
     // Copy the data (with reverse if neccesary).
     if (reverse)

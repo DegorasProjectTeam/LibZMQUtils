@@ -280,7 +280,6 @@ protected:
                 return;
             }
 
-
             // Invoke the callback with unpacked parameters
             std::apply([this, &msg, &res](auto&&... args)
             {

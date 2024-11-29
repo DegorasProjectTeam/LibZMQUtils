@@ -199,10 +199,36 @@ struct LIBZMQUTILS_EXPORT PublishedMessage
     TopicType topic;             ///< Topic associated to the published message.
     MessagePriority priority;    ///< Priority associated to the published message.
     utils::UUID publisher_uuid;  ///< Publisher UUID unique identification.
-    PublishedData data;          ///< Published data.
+    PublishedData data;          ///< Original binary serialized published data.
     std::string timestamp;       ///< ISO8601 string timestamp that represents the time when the message was created.
 };
 
+template <typename T>
+struct LIBZMQUTILS_EXPORT PublishedMessageDeserialized
+{
+    PublishedMessageDeserialized(PublishedMessage& msg) :
+        topic(std::move(msg.topic)),
+        priority(std::move(msg.priority)),
+        publisher_uuid(std::move(msg.publisher_uuid)),
+        timestamp(std::move(msg.timestamp))
+    {}
+
+    void clear()
+    {
+        this->publisher_uuid.clear();
+        this->topic.clear();
+        this->data = T();
+        this->timestamp.clear();
+        this->priority = MessagePriority::NormalPriority;
+    }
+
+    // Struct data
+    TopicType topic;             ///< Topic associated to the published message.
+    MessagePriority priority;    ///< Priority associated to the published message.
+    utils::UUID publisher_uuid;  ///< Publisher UUID unique identification.
+    T data;                      ///< Deserialized published data.
+    std::string timestamp;       ///< ISO8601 string timestamp that represents the time when the message was created.
+};
 
 // =====================================================================================================================
 

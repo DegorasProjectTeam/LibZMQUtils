@@ -337,6 +337,7 @@ private:
     // Clients container.
     std::map<utils::UUID, PublisherInfo> subscribed_publishers_;   ///< Dictionary with the connected clients.
 
+    // Set of topic filters.
     std::set<TopicType> topic_filters_; ///< Set of topics allowed on this publisher.
 
     // Process functions container.

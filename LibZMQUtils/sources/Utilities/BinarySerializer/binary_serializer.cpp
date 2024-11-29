@@ -180,7 +180,6 @@ std::byte* BinarySerializer::release()
 
 std::byte *BinarySerializer::release(SizeUnit& size)
 {
-    std::lock_guard<std::mutex> lock(this->mtx_);
     size = this->size_;
     return this->release();
 }
