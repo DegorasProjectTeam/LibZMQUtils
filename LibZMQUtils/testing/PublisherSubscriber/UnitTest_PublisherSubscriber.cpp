@@ -47,6 +47,7 @@
 
 // Basic tests.
 M_DECLARE_UNIT_TEST(PublisherSubscriber, BasicPublishSubscribe)
+M_DECLARE_UNIT_TEST(PublisherSubscriber, RegisterCbAndReqProcFunc)
 
 // Advanced tests.
 M_DECLARE_UNIT_TEST(PublisherSubscriber, MultithreadPublishSubscribe)
@@ -154,6 +155,155 @@ M_DEFINE_UNIT_TEST(PublisherSubscriber, BasicPublishSubscribe)
 
     // Check results.
     M_EXPECTED_EQ(received_string, test_string)
+}
+
+M_DEFINE_UNIT_TEST(PublisherSubscriber, RegisterCbAndReqProcFunc)
+{
+    class TestData : public zmqutils::serializer::Serializable
+    {
+    public:
+
+        inline TestData() :
+            test_number_(0), test_str_("")
+        {}
+
+        inline TestData(const std::string& test_str, const double& test_number):
+            test_number_(test_number), test_str_(test_str)
+        {}
+
+        inline size_t serialize(zmqutils::serializer::BinarySerializer& serializer) const final
+        {
+            return serializer.write(this->test_number_, this->test_str_);
+        }
+
+        inline void deserialize(zmqutils::serializer::BinarySerializer& serializer) final
+        {
+            serializer.read(this->test_number_, this->test_str_);
+        }
+
+        inline size_t serializedSize() const final
+        {
+            return Serializable::calcSizeHelper(this->test_number_, this->test_str_);
+        }
+
+        double test_number_;
+        std::string test_str_;
+    };
+
+    using PublishedTestData = zmqutils::pubsub::PublishedMessageDeserialized<TestData>;
+
+    class TestSubscriber : public zmqutils::pubsub::ClbkSubscriberBase
+    {
+    private:
+
+        using zmqutils::pubsub::ClbkSubscriberBase::ClbkSubscriberBase;
+
+        inline void onSubscriberStart() override {}
+
+        inline void onSubscriberStop() override {}
+
+        inline void onSubscriberError(const zmq::error_t &, const std::string &) override {}
+    };
+
+    class SubscriberCallbackHandler
+    {
+    private:
+
+        std::promise<PublishedTestData> promise_;
+
+    public:
+
+        inline SubscriberCallbackHandler() : future_(promise_.get_future()) {}
+
+        inline void handlePublishedTestData(const PublishedTestData& publication)
+        {
+            this->promise_.set_value(publication);
+        }
+
+        std::future<PublishedTestData> future_;
+    };
+
+    // Publisher configuration variables.
+    unsigned publisher_port = 9999;
+    std::string publisher_iface = "*";
+    std::string publisher_name = "TEST PUBLISHER";
+    std::string publisher_version = "1.1.1";
+    std::string publisher_info = "This is the TEST publisher";
+
+    // Subscriber configuration variables.
+    std::string subscriber_name = "TEST SUBSCRIBER";
+    std::string subscriber_version = "1.1.1";
+    std::string subscriber_info = "This is the TEST subscriber.";
+    std::string publisher_endpoint = "tcp://127.0.0.1:9999";
+
+    // Test data.
+    const std::string test_topic = "TEST_TOPIC";
+    std::string test_string = "HOLA MUNDO";
+    double test_number = 3.14;
+    PublishedTestData received_publication;
+    std::future_status fut_status;
+    using HandlePublishedTestDataFunction = std::function<void(const PublishedTestData&)>;
+
+    // Instanciate the publisher.
+    zmqutils::pubsub::PublisherBase publisher(publisher_port, publisher_iface, publisher_name,
+                                              publisher_version, publisher_info);
+
+    // Start the publisher.
+    bool started = publisher.startPublisher();
+
+    // Check if started.
+    if(!started)
+    {
+        std::cout << "Publisher start failed!!" << std::endl;
+        M_FORCE_FAIL()
+        return;
+    }
+
+    // Subscriber and callback handler.
+    TestSubscriber subscriber(subscriber_name, subscriber_version, subscriber_info);
+    SubscriberCallbackHandler handler;
+
+    // Configure the subscriber.
+    subscriber.subscribe(publisher_endpoint);
+    subscriber.addTopicFilter(test_topic);
+
+    // Register the callback.
+    subscriber.registerDeserializedCallback<TestData>(
+         test_topic, &handler, &SubscriberCallbackHandler::handlePublishedTestData);
+
+    // Start the subscriber.
+    started = subscriber.startSubscriber();
+
+    // Check if the subscriber starts ok.
+    if(!started)
+    {
+        std::cout << "Subscriber start failed!!" << std::endl;
+        M_FORCE_FAIL()
+        return;
+    }
+
+    // Send and wait the msg.
+    publisher.enqueueMsg(test_topic, zmqutils::pubsub::MessagePriority::NormalPriority,
+                         std::move(TestData({test_string, test_number})));
+    fut_status = handler.future_.wait_for(std::chrono::milliseconds(500));
+
+    // Check the future.
+    if(fut_status != std::future_status::ready)
+    {
+        M_FORCE_FAIL()
+        return;
+    }
+
+    // Get the future.
+    received_publication = handler.future_.get();
+
+    // Stop all.
+    publisher.stopPublisher();
+    subscriber.stopSubscriber();
+
+    // Check results.
+    M_EXPECTED_EQ(received_publication.data.test_str_, test_string)
+    M_EXPECTED_EQ_F(received_publication.data.test_number_, test_number, 0.000001)
 }
 
 M_DEFINE_UNIT_TEST(PublisherSubscriber, MultithreadPublishSubscribe)
@@ -344,6 +494,7 @@ int main()
 
     // Register the tests.
     M_REGISTER_UNIT_TEST(PublisherSubscriber, BasicPublishSubscribe)
+    M_REGISTER_UNIT_TEST(PublisherSubscriber, RegisterCbAndReqProcFunc)
     M_REGISTER_UNIT_TEST(PublisherSubscriber, MultithreadPublishSubscribe)
 
     // Run the unit tests.

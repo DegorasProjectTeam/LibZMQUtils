@@ -206,6 +206,11 @@ struct LIBZMQUTILS_EXPORT PublishedMessage
 template <typename T>
 struct LIBZMQUTILS_EXPORT PublishedMessageDeserialized
 {
+    PublishedMessageDeserialized()
+    {
+        this->clear();
+    }
+
     PublishedMessageDeserialized(PublishedMessage& msg) :
         topic(std::move(msg.topic)),
         priority(std::move(msg.priority)),

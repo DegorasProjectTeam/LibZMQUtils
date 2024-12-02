@@ -146,6 +146,23 @@ public:
         this->registerRequestProcFunc(topic, lambdaProcFunc);
     }
 
+    template<typename T, typename ClassT, typename RetT = void>
+    void registerDeserializedCallback(const TopicType& topic, ClassT* object,
+                                      RetT(ClassT::*callback)(const PublishedMessageDeserialized<T>&))
+    {
+        using CallbackType = std::function<RetT(const PublishedMessageDeserialized<T>&)>;
+
+        this->registerCallback(topic, object, callback);
+
+        // Register a processing function to deserialize and invoke the callback
+        auto lambdaProcFunc = [this](const PublishedMessage& msg) {
+            this->processClbkRequest<CallbackType, RetT, T>(msg);
+        };
+        this->registerRequestProcFunc(topic, lambdaProcFunc);
+    }
+
+
+
     /**
      * @brief Remove the registered callback for a specific topic.
      * @param topic, the topic whose callback will be erased.
@@ -199,7 +216,7 @@ protected:
     std::conditional_t<std::is_void_v<RetT>, void, std::optional<RetT>>
     invokeCallback(const PublishedMessage& msg, OperationResult& res, Args&&... args)
     {
-        // Get the command.
+        // Get the topic.
         TopicType topic = msg.topic;
 
         // Check the callback.
