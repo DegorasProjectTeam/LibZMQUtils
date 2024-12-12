@@ -37,4 +37,5 @@
 #include <LibZMQUtils/Utilities/callback_handler.h>
 #include <LibZMQUtils/Utilities/uuid_generator.h>
 #include <LibZMQUtils/Utilities/console_config.h>
+#include <LibZMQUtils/Utilities/console_redirect.h>
 #include <LibZMQUtils/InternalHelpers/string_helpers.h>

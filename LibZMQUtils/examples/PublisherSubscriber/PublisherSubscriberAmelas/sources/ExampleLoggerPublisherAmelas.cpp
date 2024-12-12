@@ -156,6 +156,7 @@ public:
     AmelasLoggerPublisher& publisher_;
 };
 
+
 /**
  * @brief Main entry point of the program `ExampleLoggerPublisherAmelas`.
  */

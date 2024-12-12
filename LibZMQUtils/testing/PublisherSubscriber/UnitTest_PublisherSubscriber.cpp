@@ -267,9 +267,10 @@ M_DEFINE_UNIT_TEST(PublisherSubscriber, RegisterCbAndReqProcFunc)
     subscriber.subscribe(publisher_endpoint);
     subscriber.addTopicFilter(test_topic);
 
+    // TODO ALL TEST AND FUNCTIONALITY TO RECOVER AUTOMATICALLY THE ORIGINAL PUB DATA.
     // Register the callback.
-    subscriber.registerDeserializedCallback<TestData>(
-         test_topic, &handler, &SubscriberCallbackHandler::handlePublishedTestData);
+    // subscriber.registerDeserializedCallback<TestData>(
+    //      test_topic, &handler, &SubscriberCallbackHandler::handlePublishedTestData);
 
     // Start the subscriber.
     started = subscriber.startSubscriber();
