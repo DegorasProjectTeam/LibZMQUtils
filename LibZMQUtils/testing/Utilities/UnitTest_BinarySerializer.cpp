@@ -40,7 +40,9 @@
 #include <stdio.h>
 #include <chrono>
 #include <omp.h>
+#if __MINGW64_VERSION_MAJOR == 8
 #include <filesystem>
+#endif
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
@@ -66,8 +68,10 @@ M_DECLARE_UNIT_TEST(BinarySerializer, VectorSerializable)
 M_DECLARE_UNIT_TEST(BinarySerializer, VectorVectorTrivial)
 M_DECLARE_UNIT_TEST(BinarySerializer, VectorVectorSerializable)
 M_DECLARE_UNIT_TEST(BinarySerializer, File)
+#if __MINGW64_VERSION_MAJOR == 8
 M_DECLARE_UNIT_TEST(BinarySerializer, FileWithFilesystem)
 M_DECLARE_UNIT_TEST(BinarySerializer, FileInCustomPath)
+#endif
 M_DECLARE_UNIT_TEST(BinarySerializer, Tuple)
 
 // Other tests.
@@ -595,6 +599,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, File)
     remove(filename.c_str());
 }
 
+#if __MINGW64_VERSION_MAJOR == 8
 M_DEFINE_UNIT_TEST(BinarySerializer, FileWithFilesystem)
 {
     // Serializer.
@@ -719,6 +724,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, FileInCustomPath)
     std::filesystem::remove_all(out_path);
 
 }
+#endif
 
 M_DEFINE_UNIT_TEST(BinarySerializer, Tuple)
 {
@@ -863,8 +869,10 @@ int main()
     M_REGISTER_UNIT_TEST(BinarySerializer, VectorVectorTrivial)
     M_REGISTER_UNIT_TEST(BinarySerializer, VectorVectorSerializable)
     M_REGISTER_UNIT_TEST(BinarySerializer, File)
+#if __MINGW64_VERSION_MAJOR == 8
     M_REGISTER_UNIT_TEST(BinarySerializer, FileWithFilesystem)
     M_REGISTER_UNIT_TEST(BinarySerializer, FileInCustomPath)
+#endif
     M_REGISTER_UNIT_TEST(BinarySerializer, Tuple)
     M_REGISTER_UNIT_TEST(BinarySerializer, TrivialIntensive)
     M_REGISTER_UNIT_TEST(BinarySerializer, TrivialIntensiveParrallel)

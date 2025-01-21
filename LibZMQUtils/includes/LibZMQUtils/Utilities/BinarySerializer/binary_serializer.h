@@ -52,7 +52,9 @@
 #include <memory>
 #include <cstddef>
 #include <tuple>
+#if __MINGW64_VERSION_MAJOR == 8
 #include <filesystem>
+#endif
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
@@ -616,8 +618,10 @@ protected:
     template<typename T, size_t L>
     static SizeUnit serializedSizeSingle(const std::array<T, L>& data);
 
+#if __MINGW64_VERSION_MAJOR == 8
     // Size calculator function for files.
     static SizeUnit serializedSizeSingle(const std::filesystem::path& data);
+#endif
 
     // -----------------------------------------------------------------------------------------------------------------
 
@@ -629,7 +633,9 @@ protected:
             !is_container<T>::value &&
             !std::is_base_of_v<Serializable, T> &&
             !std::is_same_v<std::nullptr_t &&, T> &&
+#if __MINGW64_VERSION_MAJOR == 8
             !std::is_same_v<std::filesystem::path, T> &&
+#endif
             !std::is_pointer_v<T>, void>
     writeSingle(const T& obj);
 
@@ -651,8 +657,10 @@ protected:
     template<typename T>
     void writeSingle(const std::vector<std::vector<T>>& v);
 
+#if __MINGW64_VERSION_MAJOR == 8
     // For write files using std::filesystem::path
     void writeSingle(const std::filesystem::path& file_path);
+#endif
 
     // -----------------------------------------------------------------------------------------------------------------
 
@@ -664,7 +672,9 @@ protected:
         !BinarySerializer::is_container<T>::value &&
         !std::is_base_of_v<Serializable, T> &&
         !std::is_same_v<std::nullptr_t &&, T> &&
+#if __MINGW64_VERSION_MAJOR == 8
         !std::is_same_v<std::filesystem::path, T> &&
+#endif
         !std::is_pointer_v<T>, void>
     readSingle(T& value);
 
@@ -674,8 +684,10 @@ protected:
     // For read strings.
     void readSingle(std::string& str);
 
+#if __MINGW64_VERSION_MAJOR == 8
     // For read files using std::filesystem::path
     void readSingle(std::filesystem::path& file_path);
+#endif
 
     // For arrays of trivial types.
     template<typename T, size_t L>

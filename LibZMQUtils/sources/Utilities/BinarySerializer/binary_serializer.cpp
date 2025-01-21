@@ -367,6 +367,7 @@ void BinarySerializer::writeSingle(const std::string& str)
     this->size_ += str_size;
 }
 
+#if __MINGW64_VERSION_MAJOR == 8
 void BinarySerializer::writeSingle(const std::filesystem::path &file_path)
 {
     // Get the filename.
@@ -407,6 +408,7 @@ void BinarySerializer::writeSingle(const std::filesystem::path &file_path)
     // Close the file.
     file.close();
 }
+#endif
 
 void BinarySerializer::readSingle(Serializable &obj)
 {
@@ -448,6 +450,7 @@ void BinarySerializer::readSingle(std::string &str)
     this->offset_ += size;
 }
 
+#if __MINGW64_VERSION_MAJOR == 8
 void BinarySerializer::readSingle(std::filesystem::path& out_filepath)
 {
     // Mutex.
@@ -528,6 +531,7 @@ void BinarySerializer::readSingle(std::filesystem::path& out_filepath)
     out_filepath = final_path;
 }
 
+
 SizeUnit BinarySerializer::serializedSizeSingle(const std::filesystem::path& data)
 {
     // Get the filename.
@@ -551,6 +555,7 @@ SizeUnit BinarySerializer::serializedSizeSingle(const std::filesystem::path& dat
     // Get the total size.
     return sizeof(SizeUnit) + filename_size + sizeof(SizeUnit) + file_size;
 }
+#endif
 
 BinarySerializedData::BinarySerializedData() :
     bytes(nullptr),
