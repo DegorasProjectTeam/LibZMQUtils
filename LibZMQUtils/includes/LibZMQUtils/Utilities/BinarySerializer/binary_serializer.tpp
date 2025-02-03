@@ -355,7 +355,7 @@ typename std::enable_if_t<
         !BinarySerializer::is_container<T>::value &&
         !std::is_base_of_v<Serializable, T> &&
         !std::is_same_v<std::nullptr_t &&, T> &&
-#if __MINGW64_VERSION_MAJOR == 8
+#if __MINGW64_VERSION_MAJOR > 6
         !std::is_same_v<std::filesystem::path, T> &&
 #endif
         !std::is_pointer_v<T>, void>
@@ -527,7 +527,7 @@ typename std::enable_if_t<
     !BinarySerializer::is_container<T>::value &&
     !std::is_base_of_v<Serializable, T> &&
     !std::is_same_v<std::nullptr_t &&, T> &&
-#if __MINGW64_VERSION_MAJOR == 8
+#if __MINGW64_VERSION_MAJOR > 6
     !std::is_same_v<std::filesystem::path, T> &&
 #endif
     !std::is_pointer_v<T>, void>

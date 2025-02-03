@@ -367,7 +367,7 @@ void BinarySerializer::writeSingle(const std::string& str)
     this->size_ += str_size;
 }
 
-#if __MINGW64_VERSION_MAJOR == 8
+#if __MINGW64_VERSION_MAJOR > 6
 void BinarySerializer::writeSingle(const std::filesystem::path &file_path)
 {
     // Get the filename.
@@ -450,7 +450,7 @@ void BinarySerializer::readSingle(std::string &str)
     this->offset_ += size;
 }
 
-#if __MINGW64_VERSION_MAJOR == 8
+#if __MINGW64_VERSION_MAJOR > 6
 void BinarySerializer::readSingle(std::filesystem::path& out_filepath)
 {
     // Mutex.

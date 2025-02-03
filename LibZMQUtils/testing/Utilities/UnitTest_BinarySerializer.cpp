@@ -40,7 +40,7 @@
 #include <stdio.h>
 #include <chrono>
 #include <omp.h>
-#if __MINGW64_VERSION_MAJOR == 8
+#if __MINGW64_VERSION_MAJOR > 6
 #include <filesystem>
 #endif
 // =====================================================================================================================
@@ -68,7 +68,7 @@ M_DECLARE_UNIT_TEST(BinarySerializer, VectorSerializable)
 M_DECLARE_UNIT_TEST(BinarySerializer, VectorVectorTrivial)
 M_DECLARE_UNIT_TEST(BinarySerializer, VectorVectorSerializable)
 M_DECLARE_UNIT_TEST(BinarySerializer, File)
-#if __MINGW64_VERSION_MAJOR == 8
+#if __MINGW64_VERSION_MAJOR > 6
 M_DECLARE_UNIT_TEST(BinarySerializer, FileWithFilesystem)
 M_DECLARE_UNIT_TEST(BinarySerializer, FileInCustomPath)
 #endif
@@ -599,7 +599,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, File)
     remove(filename.c_str());
 }
 
-#if __MINGW64_VERSION_MAJOR == 8
+#if __MINGW64_VERSION_MAJOR > 6
 M_DEFINE_UNIT_TEST(BinarySerializer, FileWithFilesystem)
 {
     // Serializer.
@@ -869,7 +869,7 @@ int main()
     M_REGISTER_UNIT_TEST(BinarySerializer, VectorVectorTrivial)
     M_REGISTER_UNIT_TEST(BinarySerializer, VectorVectorSerializable)
     M_REGISTER_UNIT_TEST(BinarySerializer, File)
-#if __MINGW64_VERSION_MAJOR == 8
+#if __MINGW64_VERSION_MAJOR > 6
     M_REGISTER_UNIT_TEST(BinarySerializer, FileWithFilesystem)
     M_REGISTER_UNIT_TEST(BinarySerializer, FileInCustomPath)
 #endif
