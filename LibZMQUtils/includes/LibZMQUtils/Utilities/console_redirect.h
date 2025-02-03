@@ -127,7 +127,7 @@ public:
         SetHandleInformation(hChildStd_IN_Wr, HANDLE_FLAG_INHERIT, 0);
 
         // Set up the STARTUPINFO structure for the child process
-        STARTUPINFO siStartInfo;
+        STARTUPINFOA siStartInfo;
         ZeroMemory(&siStartInfo, sizeof(STARTUPINFO));
         siStartInfo.cb = sizeof(STARTUPINFO);
         siStartInfo.hStdInput = hChildStd_IN_Rd; // Redirect stdin
@@ -137,7 +137,7 @@ public:
         std::string command = "cmd /q /K"; // Keep the console running
 
         ZeroMemory(&piProcInfo, sizeof(PROCESS_INFORMATION));
-        if (!CreateProcess(nullptr, const_cast<char*>(command.c_str()), nullptr, nullptr, TRUE,
+        if (!CreateProcessA(nullptr, const_cast<char*>(command.c_str()), nullptr, nullptr, TRUE,
                            CREATE_NEW_CONSOLE, nullptr, nullptr, &siStartInfo, &piProcInfo)) {
             std::cerr << "Failed to create child process.\n";
             CloseHandle(hChildStd_IN_Rd);
@@ -271,7 +271,7 @@ public:
         SetHandleInformation(hChildStd_IN_Wr, HANDLE_FLAG_INHERIT, 0);
 
         // Set up the STARTUPINFO structure for the child process
-        STARTUPINFO siStartInfo;
+        STARTUPINFOA siStartInfo;
         ZeroMemory(&siStartInfo, sizeof(STARTUPINFO));
         siStartInfo.cb = sizeof(STARTUPINFO);
         siStartInfo.hStdInput = hChildStd_IN_Rd; // Redirect stdin
@@ -279,7 +279,7 @@ public:
 
         // Create the child process
         ZeroMemory(&piProcInfo, sizeof(PROCESS_INFORMATION));
-        if (!CreateProcess(nullptr, const_cast<char*>(command.c_str()), nullptr, nullptr, TRUE,
+        if (!CreateProcessA(nullptr, const_cast<char*>(command.c_str()), nullptr, nullptr, TRUE,
                            CREATE_NEW_CONSOLE, nullptr, nullptr, &siStartInfo, &piProcInfo))
         {
             std::cerr << "Failed to create child process.\n";
