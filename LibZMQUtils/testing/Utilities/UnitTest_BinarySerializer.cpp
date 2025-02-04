@@ -82,7 +82,30 @@ M_DECLARE_UNIT_TEST(BinarySerializer, TrivialIntensiveParrallel)
 // Implementations.
 
 M_DEFINE_UNIT_TEST(BinarySerializer, Trivial)
-{    
+{
+    using zmqutils::utils::HRTimePointStd;
+
+    std::string dt_1 = "2025-01-09T18:58:41.87";
+    std::string dt_2 = "2025-01-09T18:58:41.87Z";
+    std::string dt_3 = "2025-01-09T18:58:41.870";
+    std::string dt_4 = "2025-01-09T18:58:41.870Z";
+
+    HRTimePointStd dt_tp_1 = zmqutils::utils::iso8601DatetimeToTimePoint(dt_1);
+    HRTimePointStd dt_tp_2 = zmqutils::utils::iso8601DatetimeToTimePoint(dt_2);
+    HRTimePointStd dt_tp_3 = zmqutils::utils::iso8601DatetimeToTimePoint(dt_3);
+    HRTimePointStd dt_tp_4 = zmqutils::utils::iso8601DatetimeToTimePoint(dt_4);
+
+    auto dt_tp_ms_1 = std::chrono::duration_cast<std::chrono::milliseconds>(dt_tp_1.time_since_epoch()).count();
+    auto dt_tp_ms_2 = std::chrono::duration_cast<std::chrono::milliseconds>(dt_tp_2.time_since_epoch()).count();
+    auto dt_tp_ms_3 = std::chrono::duration_cast<std::chrono::milliseconds>(dt_tp_3.time_since_epoch()).count();
+    auto dt_tp_ms_4 = std::chrono::duration_cast<std::chrono::milliseconds>(dt_tp_4.time_since_epoch()).count();
+
+    std::cout<<std::to_string(dt_tp_ms_1)<<std::endl;
+    std::cout<<std::to_string(dt_tp_ms_2)<<std::endl;
+    std::cout<<std::to_string(dt_tp_ms_3)<<std::endl;
+    std::cout<<std::to_string(dt_tp_ms_4)<<std::endl;
+
+
     // Serializer.
     BinarySerializer serializer;
 
