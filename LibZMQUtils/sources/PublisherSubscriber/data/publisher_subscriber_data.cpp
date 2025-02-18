@@ -58,6 +58,11 @@ PublishedMessage::PublishedMessage()
     this->clear();
 }
 
+PublishedMessage::~PublishedMessage()
+{
+
+}
+
 PublishedMessage::PublishedMessage(const TopicType &topic, const utils::UUID &uuid, const std::string &timestamp,
                                    PublishedData &&data, MessagePriority priority) :
     topic(topic),
@@ -75,6 +80,14 @@ void PublishedMessage::clear()
     this->timestamp.clear();
     this->priority = MessagePriority::NormalPriority;
 }
+
+
+
+
+
+
+
+
 
 // =====================================================================================================================
 

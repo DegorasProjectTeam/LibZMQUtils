@@ -169,7 +169,7 @@ public:
     bool isWorking() const;
 
     /**
-     * @brief Sends a PubSubMsg.
+     * @brief Enqueues a messgae to be sent by the publisher worker.
      * @param topic, the topic associated to the message that will be sent.
      * @param priority, the message priority.
      * @param data, the data that will be sent in the message.
@@ -177,7 +177,7 @@ public:
      * @note This method is thread-safe, since it is protected by a mutex.
      * @todo Queued functionality.
      */
-    OperationResult enqueueMsg(const TopicType& topic, MessagePriority priority, PublishedData& data);
+    OperationResult enqueueMsg(const TopicType& topic, MessagePriority priority, PublishedData &&data);
 
     /**
      * @brief Sends a PubSubMsg serializing the arguments.
@@ -195,7 +195,7 @@ public:
             data.size = zmqutils::serializer::BinarySerializer::fastSerialization(
                 data.bytes, std::forward<const Args&>(args)...);
 
-        return this->enqueueMsg(static_cast<TopicType>(topic), priority, data);
+        return this->enqueueMsg(static_cast<TopicType>(topic), priority, std::move(data));
     }
 
     template <typename Topic, typename... Args>
@@ -207,7 +207,7 @@ public:
             data.size = zmqutils::serializer::BinarySerializer::fastSerialization(
                 data.bytes, std::forward<const Args&>(args)...);
 
-        return this->enqueueMsg(static_cast<TopicType>(topic), priority, data);
+        return this->enqueueMsg(static_cast<TopicType>(topic), priority, std::move(data));
     }
 
     /**
@@ -260,7 +260,7 @@ private:
     void messageQueueWorker();
 
     /// Internal method for enqueue messages.
-    void internalEnqueueMsg(PublishedMessage &msg);
+    bool internalEnqueueMsg(PublishedMessage &&msg);
 
     /// Internal helper to delete the ZMQ sockets.
     void deleteSockets();
@@ -274,8 +274,9 @@ private:
     /// Intermal helper to get the publisher addresses.
     const NetworkAdapterInfoV& internalGetPublisherAddresses() const;
 
-    /// Internal static function to prepare the data.
-    static zmq::multipart_t prepareMessage(PublishedMessage& publication);
+    /// Internal function to prepare the data.
+    /// Be careful with this function, since it takes the ownership of the data.
+    zmq::multipart_t prepareMessage(PublishedMessage &publication);
 
     // Endpoint data and publisher info.
     NetworkAdapterInfoV publisher_adapters_;  ///< Interfaces bound by publisher.

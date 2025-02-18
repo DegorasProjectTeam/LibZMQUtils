@@ -90,6 +90,9 @@ using SizeUnit = std::uint64_t;               ///< Alias for the size unit.
 using Bytes = std::byte[];                    ///< Type used for representing an array of std bytes,
 using BytesDataPtr = std::unique_ptr<Bytes>;  ///< Type use for represent a unique pointer that contains bytes.
 
+///< Functor for deleting array of bytes.
+void del_byte_ptr(void*, void*);
+
 // ---------------------------------------------------------------------------------------------------------------------
 
 /**
@@ -124,7 +127,7 @@ public:
     Serializable& operator =(Serializable&&) = default;
 
     /**
-     * @brief Virtual destructor to allow proper cleanup of derived classes.
+     * @brief Virtual destructor. It does nothing.
      */
     virtual ~Serializable();
 
@@ -134,6 +137,8 @@ public:
      * @return The size of the serialized data in bytes.
      */
     virtual SizeUnit serialize(BinarySerializer& serializer) const = 0;
+
+    // TODO: maybe a && overload should be interesting for serialize method, so the serialization could be done by move
 
     /**
      * @brief Method to deserialize the object from its binary representation.
@@ -164,6 +169,28 @@ struct LIBZMQUTILS_EXPORT BinarySerializedData
      * @brief Default constructor for creating an empty serialized data.
      */
     BinarySerializedData();
+
+    /**
+     * @brief BinarySerializedData copy constructor deleted.
+     */
+    BinarySerializedData(BinarySerializedData&) = delete;
+    /**
+     * @brief Default BinarySerializedData move constructor.
+     */
+    BinarySerializedData(BinarySerializedData&&) = default;
+    /**
+     * @brief BinarySerializedData copy assign operator deleted.
+     */
+    BinarySerializedData& operator=(BinarySerializedData&) = delete;
+    /**
+     * @brief Default BinarySerializedData move assign operator.
+     */
+    BinarySerializedData& operator=(BinarySerializedData&&) = default;
+
+    /**
+     * @brief BinarySerializedData virtual destructor. It does nothing.
+     */
+    virtual ~BinarySerializedData();
 
     /**
      * @brief Checks if the serialized data is empty.
@@ -235,8 +262,6 @@ class LIBZMQUTILS_EXPORT BinarySerializer
 {
 public:
 
-    using BytesSmartPtr = std::unique_ptr<std::byte[]>;  ///< Alias for the bytes storage smart pointer.
-
     /// Enumeration representing the byte order (endianness) of data.
     enum class Endianess
     {
@@ -244,8 +269,15 @@ public:
         BG_ENDIAN     ///< Big-endian byte order (MSB first).
     };
 
+    /**
+     * @brief BinarySerializer copy constructor is deleted.
+     */
     BinarySerializer(const BinarySerializer&) = delete;
 
+    /**
+     * @brief BinarySerializer move constructor.
+     * @param other
+     */
     BinarySerializer(BinarySerializer&& other) :
         data_(std::move(other.data_)),
         size_(other.size_.load()),
@@ -254,9 +286,29 @@ public:
         endianess_(std::move(other.endianess_))
     {}
 
+    /**
+     * @brief BinarySerializer copy assignment operator is deleted.
+     * @return Reference to itself.
+     */
     BinarySerializer& operator =(const Serializable&) = delete;
 
-    BinarySerializer& operator =(BinarySerializer&&) = delete;
+    /**
+     * @brief BinarySerializer move assignment operator.
+     * @param other
+     * @return Reference to itself.
+     */
+    BinarySerializer& operator =(BinarySerializer&& other)
+    {
+        if (this != &other)
+        {
+            this->data_ = std::move(other.data_);
+            this->size_ = other.size_.load();
+            this->capacity_ = other.capacity_.load();
+            this->offset_ = other.offset_.load();
+            this->endianess_ = std::move(other.endianess_);
+        }
+        return *this;
+    }
 
     /**
      * @brief Construct a new ´BinarySerializer´ object with a given capacity.
@@ -273,7 +325,12 @@ public:
      */
     BinarySerializer(void* src, SizeUnit size);
 
-    BinarySerializer(BytesSmartPtr&& src, SizeUnit size);
+    /**
+     * @brief Constructs a new BinarySerializer by getting the ownership of a BytesDataPtr.
+     * @param src Pointer to the data source to take ownership.
+     * @param size Size of the data.
+     */
+    BinarySerializer(BytesDataPtr&& src, SizeUnit size);
 
 
     /**
@@ -305,6 +362,10 @@ public:
     /**
      * @brief Release the data held by the serializer and return a raw pointer to it.
      * @return Raw pointer to the data.
+     * @warning This method must be used EXTREMELY CAREFULLY. This method releases the ownership of the data,
+     *          so the caller must ensure that the memory is properly cleaned later. The pointer returned
+     *          must be held until proper deletion. Otherwise, the memory will leak. Maybe moveUnique method should
+     *          be used instead, since it returns a smart pointer.
      */
     std::byte* release();
 
@@ -312,15 +373,19 @@ public:
      * @brief Release the data held by the serializer, return a raw pointer to it, and set the size variable.
      * @param[out] size The size of the data.
      * @return Raw pointer to the data.
+     * @warning This method must be used EXTREMELY CAREFULLY. This method releases the ownership of the data,
+     *          so the caller must ensure that the memory is properly cleaned later. The pointer returned
+     *          must be held until proper deletion. Otherwise, the memory will leak. Maybe moveUnique method should
+     *          be used instead, since it returns a smart pointer.
      */
     std::byte* release(SizeUnit& size);
 
     /**
-     * @brief Move the unique pointer to the data held by the serializer and return it.
+     * @brief Move the data held by the serializer to the out smart pointer.
      * @param[out] out The smart pointer with the data.
      * @return The current size of the data.
      */
-    SizeUnit moveUnique(BinarySerializer::BytesSmartPtr& out);
+    SizeUnit moveUnique(BytesDataPtr& out);
 
     /**
      * @brief Get the current size of the data held by the serializer.
@@ -375,7 +440,7 @@ public:
      * @return The size of the serialized data.
      */
     template<typename... Args>
-    [[nodiscard]] static SizeUnit fastSerialization(BytesSmartPtr& out, const Args&... args);
+    [[nodiscard]] static SizeUnit fastSerialization(BytesDataPtr& out, const Args&... args);
 
     /**
      * @brief A static function that deserializes binary data into its original data items.
@@ -411,8 +476,41 @@ public:
     template<typename... Args>
     static void fastDeserialization(void* src, SizeUnit size, Args&... args);
 
+    /**
+     * @brief A static function that deserializes binary data into its original data items.
+     *
+     * This function takes binary data and deserializes it into the original data items, storing them in the provided
+     * variables. It first checks that all output data types are both trivially copyable and trivial, and then
+     * deserializes the binary data in order, storing each resulting data item in its respective variable.
+     *
+     * Usage Example:
+     *
+     * @code{.cpp}
+     *   BinarySerializer serializer;
+     *   int x = 42;
+     *   double y = 3.14;
+     *   serializer.write(x, y);
+     *   int read_x;
+     *   double read_y;
+     *   BytesDataPtr ptr;
+     *   SizeUnit size;
+     *   size = serializer.moveUnique(ptr)
+     *   BinarySerializer::fastDeserialization(ptr, size, read_x, read_y);
+     * @endcode
+     *
+     * @tparam Args Variadic template argument for types.
+     * @param[in] src The smart pointer to binary data to be deserialized.
+     * @param[in] size The size of the binary data.
+     * @param[out] args The variables where the deserialized data items are stored.
+     *
+     * @throw std::out_of_range If not all data was deserialized.
+     * @throw std::out_of_range If you read beyond the size of the stored data.
+
+     * @warning This function implies deep copy.
+     * @note This function must always read all the data of the buffer.
+     */
     template<typename... Args>
-    static void fastDeserialization(BytesSmartPtr&& src, SizeUnit size, Args&... args);
+    static void fastDeserialization(BytesDataPtr&& src, SizeUnit size, Args&... args);
 
     /**
      * @brief Serializes the given values into the binary stream.
@@ -450,6 +548,11 @@ public:
             !trait_has_nullptr_t<T, Args...>::value>>
     SizeUnit write(const T& value, const Args&... args);
 
+    /**
+     * @brief Serializes arguments given in a tuple.
+     * @param tup The arguments to serialize. Each type of the tuple must be serializable by any of the overloads.
+     * @return The size of the data written into the serializer.
+     */
     template<typename... Args>
     SizeUnit write(const std::tuple<Args...>& tup);
 
@@ -716,7 +819,7 @@ protected:
     // -----------------------------------------------------------------------------------------------------------------
 
     // Internal containers and variables.
-    BytesSmartPtr data_;                  ///< Internal data pointer.
+    BytesDataPtr data_;                  ///< Internal data pointer.
     std::atomic<SizeUnit> size_;          ///< Current size of the data.
     std::atomic<SizeUnit> capacity_;      ///< Current capacity.
     std::atomic<SizeUnit> offset_;        ///< Offset when reading.

@@ -353,12 +353,13 @@ OperationResult CommandClientBase::sendCommand(ServerCommand command, RequestDat
     // Send the command.
     try
     {
-        // Prepare the multipart msg.
-        zmq::multipart_t multipart_msg(this->prepareMessage(command_request));
-
         // Call to the internal sending command callback.
         if (command_request.command != ServerCommand::REQ_ALIVE || this->flag_alive_callbacks_)
             this->onSendingCommand(command_request);
+
+        // Prepare the multipart msg.
+        zmq::multipart_t multipart_msg(this->prepareMessage(command_request));
+
 
         // Start time point to calculate the elapsed time.
         start_tp = std::chrono::steady_clock::now();
@@ -792,12 +793,12 @@ void CommandClientBase::aliveWorker()
         // Send the command.
         try
         {
-            // Prepare the multipart msg. The msg id will be the same of the original client socket.
-            zmq::multipart_t multipart_msg(this->prepareMessage(command_request));
-
             // Call to the internal sending command callback.
             if (this->flag_alive_callbacks_)
                 this->onSendingCommand(command_request);
+
+            // Prepare the multipart msg. The msg id will be the same of the original client socket.
+            zmq::multipart_t multipart_msg(this->prepareMessage(command_request));
 
             // Send the msg.
             multipart_msg.send(*alive_socket);
@@ -984,22 +985,22 @@ OperationResult CommandClientBase::doPing(std::chrono::microseconds& elapsed_tim
     return result;
 }
 
-zmq::multipart_t CommandClientBase::prepareMessage(const CommandRequest& command_request)
+zmq::multipart_t CommandClientBase::prepareMessage(CommandRequest& command_request)
 {
     // Serializer.
     serializer::BinarySerializer serializer;
 
     // Prepare the uuid message.
     size_t uuid_size = serializer.write(command_request.client_uuid.getBytes());
-    zmq::message_t msg_uuid(serializer.release(), uuid_size);
+    zmq::message_t msg_uuid(serializer.release(), uuid_size, serializer::del_byte_ptr);
 
     // Preprare the command message.
     size_t cmd_size = serializer.write(command_request.command);
-    zmq::message_t msg_command(serializer.release(), cmd_size);
+    zmq::message_t msg_command(serializer.release(), cmd_size, serializer::del_byte_ptr);
 
     // Prepare the timestamp.
-    size_t tp_size = serializer.write(command_request.timestamp);
-    zmq::message_t msg_tp(serializer.release(), tp_size);
+    size_t ts_size = serializer.write(command_request.timestamp);
+    zmq::message_t msg_tp(serializer.release(), ts_size, serializer::del_byte_ptr);
 
     // Prepare the multipart msg.
     zmq::multipart_t multipart_msg;
@@ -1011,7 +1012,9 @@ zmq::multipart_t CommandClientBase::prepareMessage(const CommandRequest& command
     if (command_request.data.size > 0)
     {
         // Prepare the command parameters
-        zmq::message_t message_params(command_request.data.bytes.get(), command_request.data.size);
+        // Be careful, from now on, the zmq message takes the ownership of the data
+        zmq::message_t message_params(command_request.data.bytes.release(),
+                                      command_request.data.size, serializer::del_byte_ptr);
         multipart_msg.add(std::move(message_params));
     }
 

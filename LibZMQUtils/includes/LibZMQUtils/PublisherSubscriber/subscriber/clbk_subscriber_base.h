@@ -156,7 +156,7 @@ public:
 
         // Register a processing function to deserialize and invoke the callback
         auto lambdaProcFunc = [this](const PublishedMessage& msg) {
-            this->processClbkRequest<CallbackType, RetT, T>(msg);
+            this->processClbkRequest<CallbackType, RetT, const PublishedMessageDeserialized<T>&>(msg);
         };
         this->registerRequestProcFunc(topic, lambdaProcFunc);
     }

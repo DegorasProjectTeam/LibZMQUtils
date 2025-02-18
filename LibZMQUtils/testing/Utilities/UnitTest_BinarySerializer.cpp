@@ -152,6 +152,8 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Trivial)
     std::size_t size;
     std::byte* bytes = serializer.release(size);
     BinarySerializer::fastDeserialization(bytes, size, r1, r2, r3, r4);
+    // Warning. This is important:
+    delete[] bytes;
 
     // Checking.
     M_EXPECTED_EQ(r1, n1)
@@ -232,6 +234,8 @@ M_DEFINE_UNIT_TEST(BinarySerializer, String)
     serializer.write(in1, in2, in3, in4);
     std::byte* bytes = serializer.release(size);
     BinarySerializer::fastDeserialization(bytes, size, out1, out2, out3, out4);
+    // Warning. This is important:
+    delete[] bytes;
 
     // Checking.
     M_EXPECTED_EQ(in1, out1)
@@ -245,7 +249,7 @@ M_DEFINE_UNIT_TEST(BinarySerializer, String)
     std::string iso8601_time = "2023-09-19T13:29:12.473Z";
     serializer.write(iso8601_time);
 
-    BinarySerializer::BytesSmartPtr data;
+    zmqutils::serializer::BytesDataPtr data;
     SizeUnit sz = BinarySerializer::fastSerialization(data, iso8601_time);
 
     BinarySerializer::fastDeserialization(std::move(data), sz, iso8601_res);

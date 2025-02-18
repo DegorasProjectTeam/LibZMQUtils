@@ -273,11 +273,11 @@ void SubscriberBase::internalStopSubscriber()
 
         // Prepare the close socket uuid.
         size_t uuid_size = serializer.write(this->socket_close_uuid_.getBytes());
-        zmq::message_t msg_uuid(serializer.release(), uuid_size);
+        zmq::message_t msg_uuid(serializer.release(), uuid_size, serializer::del_byte_ptr);
 
         // Prepare the timestamp.
         size_t ts_size = serializer.write(utils::currentISO8601Date(true, false, true));
-        zmq::message_t msg_ts(serializer.release(), ts_size);
+        zmq::message_t msg_ts(serializer.release(), ts_size, serializer::del_byte_ptr);
 
         // Information is empty.
         zmq::message_t msg_info;

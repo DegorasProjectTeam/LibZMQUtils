@@ -201,7 +201,6 @@ int main(int, char**)
         return 1;
     }
 
-    //client.startAutoAlive();
     std::string command;
 
     // Infinite loop for test.

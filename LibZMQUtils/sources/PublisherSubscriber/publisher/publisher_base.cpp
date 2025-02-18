@@ -138,32 +138,61 @@ PublisherBase::PublisherBase(unsigned publisher_port,
     this->pub_info_.ips = this->getPublisherIps();
 }
 
-void PublisherBase::internalEnqueueMsg(PublishedMessage &msg)
+bool PublisherBase::internalEnqueueMsg(PublishedMessage &&msg)
 {
     std::unique_lock<std::mutex> lock(this->queue_mutex_);
+
+    bool inserted = false;
 
     switch (msg.priority)
     {
     case MessagePriority::CriticalPriority:
-        this->queue_prio_critical_.push(std::move(msg));
+        if (this->queue_prio_critical_.size() < kMaxSendingQueueSize)
+        {
+            this->queue_prio_critical_.push(std::move(msg));
+            inserted = true;
+        }
         break;
     case MessagePriority::HighPriority:
-        this->queue_prio_high_.push(std::move(msg));
+        if (this->queue_prio_high_.size() < kMaxSendingQueueSize)
+        {
+            this->queue_prio_high_.push(std::move(msg));
+            inserted = true;
+        }
         break;
     case MessagePriority::NormalPriority:
-        this->queue_prio_normal_.push(std::move(msg));
+        if (this->queue_prio_normal_.size() < kMaxSendingQueueSize)
+        {
+            this->queue_prio_normal_.push(std::move(msg));
+            inserted = true;
+        }
         break;
     case MessagePriority::LowPriority:
-        this->queue_prio_low_.push(std::move(msg));
+        if (this->queue_prio_low_.size() < kMaxSendingQueueSize)
+        {
+            this->queue_prio_low_.push(std::move(msg));
+            inserted = true;
+        }
         break;
     case MessagePriority::NoPriority:
-        this->queue_prio_no_.push(std::move(msg));
+        if (this->queue_prio_no_.size() < kMaxSendingQueueSize)
+        {
+            this->queue_prio_no_.push(std::move(msg));
+            inserted = true;
+        }
         break;
     }
 
-    // Unlock and signal the worker thread to process messages.
+    // Unlock queue mutex.
     lock.unlock();
-    this->queue_cv_.notify_one();
+
+    // If a message was inserted, signal the worker to send the message.
+    if (inserted)
+    {
+        this->queue_cv_.notify_one();
+    }
+
+    return inserted;
 }
 
 void PublisherBase::messageQueueWorker()
@@ -229,11 +258,13 @@ void PublisherBase::messageQueueWorker()
         // Send the message via ZMQ
         try
         {
+            // Call to the internal sending command callback.
+            this->onSendingMsg(msg);
+
+
             // Prepare the multipart msg.
             zmq::multipart_t multipart_msg(this->prepareMessage(msg));
 
-            // Call to the internal sending command callback.
-            this->onSendingMsg(msg);
 
             // Send the msg.
             bool res = multipart_msg.send(*this->publisher_socket_);
@@ -362,7 +393,7 @@ bool PublisherBase::isWorking() const
     return this->flag_publisher_working_;
 }
 
-OperationResult PublisherBase::enqueueMsg(const TopicType& topic, MessagePriority priority, PublishedData& data)
+OperationResult PublisherBase::enqueueMsg(const TopicType& topic, MessagePriority priority, PublishedData&& data)
 {
     // Safe mutex lock
     std::unique_lock<std::shared_mutex> lock(this->pub_mtx_);
@@ -375,11 +406,11 @@ OperationResult PublisherBase::enqueueMsg(const TopicType& topic, MessagePriorit
     PublishedMessage msg(topic, this->pub_info_.uuid, utils::currentISO8601Date(true, false, true),
                          std::move(data), priority);
 
-    // Enqueue the msg.
-    this->internalEnqueueMsg(msg);
+    // Enqueue the msg. If the enqueue fails, the queue is overflown.
+    bool result = this->internalEnqueueMsg(std::move(msg));
 
     // Return the result.
-    return OperationResult::OPERATION_OK;
+    return result ? OperationResult::OPERATION_OK : OperationResult::OVERFLOW_QUEUE;
 }
 
 const std::vector<NetworkAdapterInfo> &PublisherBase::getBoundInterfaces() const
@@ -523,23 +554,24 @@ zmq::multipart_t PublisherBase::prepareMessage(PublishedMessage& publication)
 
     // Prepare the uuid.
     size_t uuid_size = serializer.write(publication.publisher_uuid.getBytes());
-    zmq::message_t msg_uuid(serializer.release(), uuid_size);
+    zmq::message_t msg_uuid(serializer.release(), uuid_size, serializer::del_byte_ptr);
 
     // Prepare the timestamp.
-    size_t tp_size = serializer.write(publication.timestamp);
-    zmq::message_t msg_tp(serializer.release(), tp_size);
+    size_t ts_size = serializer.write(publication.timestamp);
+    zmq::message_t msg_ts(serializer.release(), ts_size, serializer::del_byte_ptr);
 
     // Prepare the multipart msg.
     zmq::multipart_t multipart_msg;
     multipart_msg.add(std::move(msg_topic));
     multipart_msg.add(std::move(msg_uuid));
-    multipart_msg.add(std::move(msg_tp));
+    multipart_msg.add(std::move(msg_ts));
 
     // Add publication custom data if they exist.
     if (publication.data.size > 0)
     {
         // Prepare the custom data.
-        zmq::message_t message_params(publication.data.bytes.get(), publication.data.size);
+        // Be careful, now zmq message takes ownership of data pointer.
+        zmq::message_t message_params(publication.data.bytes.release(), publication.data.size, serializer::del_byte_ptr);
         multipart_msg.add(std::move(message_params));
     }
 

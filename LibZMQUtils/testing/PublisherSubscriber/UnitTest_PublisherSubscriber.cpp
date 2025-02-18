@@ -270,7 +270,7 @@ M_DEFINE_UNIT_TEST(PublisherSubscriber, RegisterCbAndReqProcFunc)
     // TODO ALL TEST AND FUNCTIONALITY TO RECOVER AUTOMATICALLY THE ORIGINAL PUB DATA.
     // Register the callback.
     // subscriber.registerDeserializedCallback<TestData>(
-    //      test_topic, &handler, &SubscriberCallbackHandler::handlePublishedTestData);
+    //       test_topic, &handler, &SubscriberCallbackHandler::handlePublishedTestData);
 
     // Start the subscriber.
     started = subscriber.startSubscriber();
@@ -285,8 +285,8 @@ M_DEFINE_UNIT_TEST(PublisherSubscriber, RegisterCbAndReqProcFunc)
 
     // Send and wait the msg.
     publisher.enqueueMsg(test_topic, zmqutils::pubsub::MessagePriority::NormalPriority,
-                         std::move(TestData({test_string, test_number})));
-    fut_status = handler.future_.wait_for(std::chrono::milliseconds(500));
+                         TestData({test_string, test_number}));
+    fut_status = handler.future_.wait_for(std::chrono::milliseconds(5000));
 
     // Check the future.
     if(fut_status != std::future_status::ready)

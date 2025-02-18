@@ -162,19 +162,12 @@ void BinarySerializer::readRecursive(T& value, Args&... args)
 }
 
 template<typename... Args>
-SizeUnit BinarySerializer::fastSerialization(BytesSmartPtr& out, const Args&... args)
+SizeUnit BinarySerializer::fastSerialization(BytesDataPtr& out, const Args&... args)
 {
     // Do the serialization
     BinarySerializer serializer;
     const SizeUnit size = serializer.write(std::forward<const Args&>(args)...);
     serializer.moveUnique(out);
-    std::stringstream ss;
-    for(size_t i = 0; i < size; i++)
-    {
-        ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned int>(out[i]);
-        if (i < size - 1)
-            ss << " ";
-    }
     return size;
 }
 
@@ -189,7 +182,7 @@ void BinarySerializer::fastDeserialization(void* src, SizeUnit size, Args&... ar
 }
 
 template<typename... Args>
-void BinarySerializer::fastDeserialization(BytesSmartPtr&& src, SizeUnit size, Args&... args)
+void BinarySerializer::fastDeserialization(BytesDataPtr&& src, SizeUnit size, Args&... args)
 {
     // Do the deserialization.
     BinarySerializer serializer(std::move(src), size);

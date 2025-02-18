@@ -121,122 +121,12 @@ public:
     }
 };
 
-struct EventMessage : public zmqutils::serializer::Serializable
-{
-    inline EventMessage() :
-        channel(0), timetag(0)
-    {}
-
-    inline EventMessage(uint64_t ch, uint64_t ttag) :
-        channel(ch), timetag(ttag)
-    {}
-
-    inline size_t serialize(zmqutils::serializer::BinarySerializer& serializer) const final
-    {
-        return serializer.write(this->channel, this->timetag);
-    }
-
-    inline void deserialize(zmqutils::serializer::BinarySerializer& serializer) final
-    {
-        serializer.read(this->channel, this->timetag);
-    }
-
-    inline size_t serializedSize() const final
-    {
-        return Serializable::calcSizeHelper(this->channel, this->timetag);
-    }
-
-    // Convert the object to a JSON string
-    inline std::string toJsonString() const
-    {
-        std::ostringstream oss;
-        oss << "{"
-            << "\"channel\":" << channel << ","
-            << "\"timetag\":" << timetag
-            << "}";
-        return oss.str();
-    }
-
-    uint64_t channel;
-    uint64_t timetag;
-};
-
-class SubscriberCallbackHandler
-{
-
-public:
-
-    inline SubscriberCallbackHandler()
-    {
-    }
-
-    inline void handleMsg(const std::string &plc_time, const std::string &server_time)
-    {
-        std::cout<<"NEW PLC TIME: " + plc_time << std::endl;
-        std::cout<<"NEW SERVER TIME: " + server_time << std::endl;
-    }
-
-    std::unique_ptr<zmqutils::utils::DebugConsole> console_;
-};
-
-class AmelasSubscriberCallbackHandler
-{
-
-public:
-
-    inline AmelasSubscriberCallbackHandler()
-    {
-        this->console_ = std::make_unique<zmqutils::utils::DebugConsole>("AMELAS SUBSCRIBER CMD");
-        this->console_->startProcess();
-    }
-
-    inline void handleMsg(const std::string &plc_time, const std::string &server_time)
-    {
-        this->console_->sendString("NEW PLC TIME: " + plc_time);
-        this->console_->sendString("NEW SERVER TIME: " + server_time);
-    }
-
-    std::unique_ptr<zmqutils::utils::DebugConsole> console_;
-};
-
-class ESTTSubscriberCallbackHandler
-{
-
-public:
-
-    inline ESTTSubscriberCallbackHandler()
-    {
-        this->console_ = std::make_unique<zmqutils::utils::DebugConsole>("ESTT SUBSCRIBER CMD");
-        this->console_->startProcess();
-    }
-
-    inline void handleMsg(const std::vector<EventMessage>& events)
-    {
-        std::cout<<"HERE"<<std::endl;
-        for(const auto& event : events)
-            this->console_->sendString("NEW ESTT EVENT: " + event.toJsonString());
-    }
-
-    std::unique_ptr<zmqutils::utils::DebugConsole> console_;
-};
 
 /**
  * @brief Main entry point of the program `ExampleLoggerSubscriberAmelas`.
  */
 int main(int, char**)
 {
-    class TestSubscriber : public zmqutils::pubsub::ClbkSubscriberBase
-    {
-    private:
-
-        using zmqutils::pubsub::ClbkSubscriberBase::ClbkSubscriberBase;
-
-        inline void onSubscriberStart() override {}
-
-        inline void onSubscriberStop() override {}
-
-        inline void onSubscriberError(const zmq::error_t &, const std::string &) override {}
-    };
 
     // Configure the console.
     zmqutils::utils::ConsoleConfig& console_cfg = zmqutils::utils::ConsoleConfig::getInstance();
@@ -248,35 +138,25 @@ int main(int, char**)
     std::string subscriber_info = "This is the AMELAS subscriber.";  // Subscriber information.
 
     // Publisher endpoint.
-    //std::string publisher_endpoint = "tcp://127.0.0.1:9999";
-    std::string amelas_pub_endpoint = "tcp://192.168.3.244:9998";
-    std::string estt_pub_endpoint = "tcp://192.168.1.201:9999";
+    std::string amelas_pub_endpoint = "tcp://127.0.0.1:9999";
 
     // Configure the log processor.
     AmelasLogProcessor log_processor;
 
-    // Instantiate the amelas_sub.
-    //AmelasLoggerSubscriber amelas_sub(subscriber_name, subscriber_version, subscriber_info);
-    TestSubscriber amelas_sub(subscriber_name, subscriber_version, subscriber_info);
-    TestSubscriber estt_sub("", "", "");
-    AmelasSubscriberCallbackHandler amelas_handler;
-    ESTTSubscriberCallbackHandler estt_handler;
 
     // Configure the subscriber.
-    amelas_sub.subscribe(amelas_pub_endpoint);
-    amelas_sub.addTopicFilter("NEW_TIME");
+    AmelasLoggerSubscriber subscriber;
 
-    estt_sub.subscribe(estt_pub_endpoint);
-    estt_sub.addTopicFilter("ESTT_EVENTS");
+    subscriber.subscribe(amelas_pub_endpoint);
 
-    //subscriber.addTopicFilter(AmelasLogLevel::AMELAS_INFO);
-    //subscriber.addTopicFilter(AmelasLogLevel::AMELAS_WARNING);
-    //subscriber.addTopicFilter(AmelasLogLevel::AMELAS_ERROR);
-    // This topic will be allowed in to test topics with no callbacks.
-    //subscriber.addTopicFilter(AmelasLogLevel::AMELAS_DEBUG);
+    subscriber.addTopicFilter(AmelasLogLevel::AMELAS_INFO);
+    subscriber.addTopicFilter(AmelasLogLevel::AMELAS_WARNING);
+    subscriber.addTopicFilter(AmelasLogLevel::AMELAS_ERROR);
+    //This topic will be allowed in to test topics with no callbacks.
+    subscriber.addTopicFilter(AmelasLogLevel::AMELAS_DEBUG);
 
     // Set the callbacks in the subscriber.
-    /*
+
     subscriber.registerCallbackAndRequestProcFunc(AmelasLogLevel::AMELAS_INFO,
                                                   &log_processor,
                                                   &AmelasLogProcessor::processLogInfo);
@@ -291,16 +171,10 @@ int main(int, char**)
 
     subscriber.setErrorCallback(&log_processor,
                                 &AmelasLogProcessor::processErrorCallback);
-    */
 
-    amelas_sub.registerCbAndReqProcFunc<std::function<void(const std::string&, const std::string&)>>(
-        "NEW_TIME", &amelas_handler, &AmelasSubscriberCallbackHandler::handleMsg);
 
-    estt_sub.registerCbAndReqProcFunc<std::function<void(const std::vector<EventMessage>& events)>>(
-        "ESTT_EVENTS", &estt_handler, &ESTTSubscriberCallbackHandler::handleMsg);
-
-    // Start the amelas_sub.
-    bool started = amelas_sub.startSubscriber();
+    // Start the subscriber.
+    bool started = subscriber.startSubscriber();
 
     // Check if the subscriber starts ok.
     if(!started)
@@ -319,7 +193,7 @@ int main(int, char**)
     std::cout << "Stopping the subscriber..." << std::endl;
 
     // Stop the subscriber.
-    amelas_sub.stopSubscriber();
+    subscriber.stopSubscriber();
 
     // Final log.
     std::cout << "Subscriber stoped. All ok!!" << std::endl;

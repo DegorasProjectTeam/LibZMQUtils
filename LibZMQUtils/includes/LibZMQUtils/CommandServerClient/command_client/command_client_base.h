@@ -553,8 +553,9 @@ private:
     /// Internal alive function that acts as a thread worker.
     void aliveWorker();
 
-    /// Internal static function for preparing the messages with the request data.
-    static zmq::multipart_t prepareMessage(const CommandRequest& command_request);
+    /// Internal function for preparing the messages with the request data.
+    /// Be careful with this function, since it takes the ownership of the data.
+    zmq::multipart_t prepareMessage(CommandRequest &command_request);
 
     // Internal client identification.
     CommandClientInfo client_info_;       ///< External client information for identification.

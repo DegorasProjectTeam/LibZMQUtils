@@ -91,6 +91,7 @@ enum class OperationResult : ResultType
     INVALID_EXT_CALLBACK   = 17,  ///< The associated external callback is invalid.
     INVALID_PUB_UUID       = 18,  ///< The publisher UUID is invalid (could be invalid, missing or empty).
     PUBLISHER_STOPPED      = 19,  ///< The publisher is stopped.
+    OVERFLOW_QUEUE         = 20,  ///< The selected msg queue is overflown. You must wait or select another priority.
     END_BASE_RESULTS       = 50   ///< Sentinel value indicating the end of the base server results.
 };
 
@@ -102,6 +103,10 @@ enum class MessagePriority : PriorityType
     HighPriority     = 3,
     CriticalPriority = 4
 };
+
+/// Maximum sending queue size. This value is huge, the queue should not reach that size. This value is used to avoid
+/// overflows.
+constexpr std::size_t kMaxSendingQueueSize = 100000;
 
 /// Minimum valid base enum result identifier (related to OperationResult enum).
 constexpr int kMinBaseResultId = static_cast<int>(OperationResult::INVALID_RESULT) + 1;
@@ -135,7 +140,7 @@ static constexpr std::array<const char*, kMaxBaseResultSrings>  OperationResultS
     "INVALID_EXT_CALLBACK - The associated external callback for the message is invalid.",
     "INVALID_PUB_UUID - The publisher UUID is invalid (could be invalid, missing or empty).",
     "PUBLISHER_STOPPED - The publisher is stopped.",
-    "RESERVED_BASE_RESULT",
+    "OVERFLOW QUEUE - The selected priority queue is overflown. Wait or select another priority.",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
     "RESERVED_BASE_RESULT",
@@ -174,21 +179,54 @@ static constexpr std::array<const char*, kMaxBaseResultSrings>  OperationResultS
 // =====================================================================================================================
 
 /**
- * @brief The PublishedData struct contains the data of a message exchanged between publisher and subscribers.
+ * @brief The PublishedData contains the data of a message exchanged between publisher and subscribers.
  */
-struct LIBZMQUTILS_EXPORT PublishedData : serializer::BinarySerializedData
-{};
+using PublishedData = serializer::BinarySerializedData;
 
 /**
- * @brief The PubSubMsg struct represents a message exchanged between publisher and subscribers. It includes data and
- * publisher info.
+ * @brief The PublishedMessage struct represents a message exchanged between publisher and subscribers.
+ *        It includes data and publisher info.
  */
 struct LIBZMQUTILS_EXPORT PublishedMessage
 {
+
+    /**
+     * @brief PublishedMessage copy constructor is deleted.
+     */
+    PublishedMessage(const PublishedMessage&) = delete;
+    /**
+     * @brief PublishedMessage move constructor.
+     */
+    PublishedMessage(PublishedMessage&&) = default;
+    /**
+     * @brief PublishedMessage copy assign operator is deleted.
+     */
+    PublishedMessage& operator=(const PublishedMessage&) = delete;
+    /**
+     * @brief PublishedMessage move assign operator.
+     */
+    PublishedMessage& operator=(PublishedMessage&&) = default;
+
+    /**
+     * @brief PublishedMessage default constructor.
+     */
     PublishedMessage();
 
+    /**
+     * @brief PublishedMessage constructor taking parameters.
+     * @param topic The topic of the message.
+     * @param uuid The uuid of the publisher that sends the message.
+     * @param timestamp The timestamp when the message is sent. It is in ISO8601 format.
+     * @param data The data of the message.
+     * @param priority The priority associated to the message.
+     */
     PublishedMessage(const TopicType& topic, const utils::UUID& uuid, const std::string& timestamp,
                      PublishedData&& data, MessagePriority priority = MessagePriority::NormalPriority);
+
+    /**
+     * @brief PublishedMessage virtual destructor. It does nothing.
+     */
+    virtual ~PublishedMessage();
 
     /**
      * @brief Resets the PublishedMessage clearing all the contents.
@@ -203,6 +241,7 @@ struct LIBZMQUTILS_EXPORT PublishedMessage
     std::string timestamp;       ///< ISO8601 string timestamp that represents the time when the message was created.
 };
 
+// TODO: This is not fully functional
 template <typename T>
 struct LIBZMQUTILS_EXPORT PublishedMessageDeserialized
 {
@@ -211,7 +250,7 @@ struct LIBZMQUTILS_EXPORT PublishedMessageDeserialized
         this->clear();
     }
 
-    PublishedMessageDeserialized(PublishedMessage& msg) :
+    PublishedMessageDeserialized(PublishedMessage&& msg) :
         topic(std::move(msg.topic)),
         priority(std::move(msg.priority)),
         publisher_uuid(std::move(msg.publisher_uuid)),

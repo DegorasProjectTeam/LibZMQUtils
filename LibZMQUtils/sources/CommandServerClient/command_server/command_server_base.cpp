@@ -544,9 +544,9 @@ void CommandServerBase::serverWorker()
             this->onSendingResponse(reply);
 
             // Prepare the message.
-            serializer::BinarySerializer serializer;
-            size_t size_res = serializer.write(reply.result);
-            zmq::const_buffer buffer_res(serializer.release(), size_res);
+            serializer::BytesDataPtr data_ptr;
+            size_t size_res = serializer::BinarySerializer::fastSerialization(data_ptr, reply.result);
+            zmq::const_buffer buffer_res(data_ptr.get(), size_res);
 
             // Send the response.
             try
@@ -579,6 +579,10 @@ void CommandServerBase::serverWorker()
             // Store timestamp for processed command.
             reply.timestamp = utils::currentISO8601Date(true, false, true);
 
+            // Sending callback.
+            if (request.command != ServerCommand::REQ_ALIVE || this->flag_alive_callbacks_)
+                this->onSendingResponse(reply);
+
             // Binary serializer.
             serializer::BinarySerializer serializer;
 
@@ -587,27 +591,30 @@ void CommandServerBase::serverWorker()
 
             // Prepare the uuid.
             size_t uuid_size = serializer.write(this->server_info_.uuid.getBytes());
-            multipart_msg.addmem(serializer.release(), uuid_size);
+            zmq::message_t msg_uuid(serializer.release(), uuid_size, serializer::del_byte_ptr);
+
 
             // Prepare the command result.
             size_t res_size = serializer.write(reply.command, reply.result);
-            multipart_msg.addmem(serializer.release(), res_size);
+            zmq::message_t msg_res(serializer.release(), res_size, serializer::del_byte_ptr);
 
             // Prepare the timestamp.
-            size_t tp_size = serializer.write(reply.timestamp);
-            multipart_msg.addmem(serializer.release(), tp_size);
+            size_t ts_size = serializer.write(reply.timestamp);
+            zmq::message_t msg_ts(serializer.release(), ts_size, serializer::del_byte_ptr);
+
+            // Add parts to multipart message
+            multipart_msg.add(std::move(msg_uuid));
+            multipart_msg.add(std::move(msg_res));
+            multipart_msg.add(std::move(msg_ts));
 
             // Specific data.
             if(reply.result == OperationResult::COMMAND_OK && reply.data.size != 0)
             {
                 // Prepare the custom response.
-                zmq::message_t message_rep_custom(reply.data.bytes.get(), reply.data.size);
+                // Be careful, now zmq message takes ownership of data pointer.
+                zmq::message_t message_rep_custom(reply.data.bytes.release(), reply.data.size, serializer::del_byte_ptr);
                 multipart_msg.add(std::move(message_rep_custom));
             }
-
-            // Sending callback.
-            if (request.command != ServerCommand::REQ_ALIVE || this->flag_alive_callbacks_)
-                this->onSendingResponse(reply);
 
             // Send the message.
             try
