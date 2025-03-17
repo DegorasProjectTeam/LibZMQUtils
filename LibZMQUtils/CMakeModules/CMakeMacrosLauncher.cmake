@@ -35,7 +35,7 @@ MACRO(macro_setup_launcher launcher_name lib_opt lib_deb)
     set_target_properties(${launcher_name} PROPERTIES RELEASE_OUTPUT_NAME "${launcher_name}${CMAKE_RELEASE_POSTFIX}")
     set_target_properties(${launcher_name} PROPERTIES RELWITHDEBINFO_OUTPUT_NAME "${launcher_name}${CMAKE_RELWITHDEBINFO_POSTFIX}")
     set_target_properties(${launcher_name} PROPERTIES MINSIZEREL_OUTPUT_NAME "${launcher_name}${CMAKE_MINSIZEREL_POSTFIX}")
-    set_target_properties(${launcher_name} PROPERTIES FOLDER CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+    #set_target_properties(${launcher_name} PROPERTIES FOLDER CMAKE_RUNTIME_OUTPUT_DIRECTORY)
 
     # Add to launcher list.
     message(STATUS "  Adding to launcher dirs: ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")

@@ -61,7 +61,7 @@ macro_cmakemodules_init("24.04.22")
 
 # Base project configuration.
 set(LIB_NAME LibZMQUtils)
-set(LIB_VER 1.8.2)
+set(LIB_VER 1.8.4)
 set(LIB_BUILD_MODE Debug)
 set(LIB_LANGUAGES CXX C)
 

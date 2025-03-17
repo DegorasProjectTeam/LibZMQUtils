@@ -409,7 +409,7 @@ M_DEFINE_UNIT_TEST(PublisherSubscriber, MultithreadPublishSubscribe)
     // Test data.
     const std::string test_topic = "TEST_TOPIC";
     const std::string test_string = "HOLA MUNDO";
-    const int messages_to_receive = 100000;
+    const int messages_to_receive = 20000000;
     std::vector<TestData> test_v;
     std::vector<std::future<void>> publisher_futures;
 
