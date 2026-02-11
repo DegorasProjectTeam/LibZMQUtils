@@ -84,6 +84,7 @@ CommandClientBase::CommandClientBase(const std::string& server_endpoint,
     req_close_socket_(nullptr),
     flag_client_closed_(true),
     flag_client_working_(false),
+    flag_waiting_cmd_reply_(false),
     flag_autoalive_enabled_(false),
     flag_alive_callbacks_(false),
     flag_server_connected_(false),
@@ -382,11 +383,9 @@ OperationResult CommandClientBase::sendCommand(ServerCommand command, RequestDat
         this->onWaitingReply();
 
     // Receive the data.
-    this->fut_recv_send_ = std::async(std::launch::async, &CommandClientBase::recvFromSocket, this,
-                                      std::ref(reply), this->client_socket_, this->recv_close_socket_);
-
-    // Retrieve the result and reset the future
-    while (this->fut_recv_send_.wait_for(std::chrono::microseconds(100)) != std::future_status::ready);
+    this->flag_waiting_cmd_reply_ = true;
+    this->recvFromSocket(reply, this->client_socket_, this->recv_close_socket_);
+    this->flag_waiting_cmd_reply_ = false;
 
     // End time point to calculate the elapsed time.
     end_tp = std::chrono::steady_clock::now();
@@ -535,16 +534,13 @@ void CommandClientBase::recvFromSocket(CommandReply& reply,
           { static_cast<void*>(*recv_socket),  0, ZMQ_POLLIN, 0 },
           { static_cast<void*>(*close_socket), 0, ZMQ_POLLIN, 0 }};
 
-    // Start time for check the timeout.
-    auto start = std::chrono::steady_clock::now();
-
     // Poller loop.
     while(true)
     {
         try
         {
             // Use zmq::poll to set a timeout for receiving a message
-            zmq::poll(items.data(), items.size(), std::chrono::milliseconds(1));
+            int res = zmq::poll(items.data(), items.size(), std::chrono::milliseconds(this->server_alive_timeout_));
 
             // Check if we must to close.
             if(!this->flag_client_working_ || (items[1].revents & ZMQ_POLLIN))
@@ -553,12 +549,8 @@ void CommandClientBase::recvFromSocket(CommandReply& reply,
                 return;
             }
 
-            // Calculate elapsed time.
-            auto end = std::chrono::steady_clock::now();
-            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-
             // Check for timeout.
-            if (elapsed.count() >= this->server_alive_timeout_)
+            if (0 == res)
             {
                 reply.result = OperationResult::TIMEOUT_REACHED;
                 return;
@@ -659,6 +651,8 @@ void CommandClientBase::recvFromSocket(CommandReply& reply,
 
             // Call to the error callback and stop the client for safety.
             this->onClientError(error, this->kScope + " Error while receiving a reply. Stopping the client.");
+            // Ensure this flag is set to false. Otherwise, stop would wait for it.
+            this->flag_waiting_cmd_reply_ = false;
             this->internalStopClient();
 
             // Store the error result.
@@ -702,13 +696,12 @@ void CommandClientBase::internalStopClient()
     // Set the shared working flag to false (is atomic).
     this->flag_client_working_ = false;
 
-    // If the client is waiting a response.
-    if(this->fut_recv_send_.valid() &&
-        this->fut_recv_send_.wait_for(std::chrono::seconds(0)) == std::future_status::timeout)
+    // If the client is waiting a response for a command, then send close order.
+    if(this->flag_waiting_cmd_reply_)
     {
         // Send the close msg and wait the future.
         this->req_close_socket_->send(zmq::message_t(), zmq::send_flags::none);
-        this->fut_recv_send_.wait();
+        while(this->flag_waiting_cmd_reply_) std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
     // If autoalive is enabled stop it.
@@ -833,12 +826,7 @@ void CommandClientBase::aliveWorker()
             this->onWaitingReply();
 
         // Receive the data.
-        this->fut_recv_alive_ = std::async(std::launch::async, &CommandClientBase::recvFromSocket, this,
-                                           std::ref(reply), alive_socket, pull_close_socket);
-
-
-        // Retrieve the result and reset the future
-        while (this->fut_recv_alive_.wait_for(std::chrono::milliseconds(10)) != std::future_status::ready);
+        this->recvFromSocket(reply, alive_socket, pull_close_socket);
 
         // Check the result.
         if (reply.result == OperationResult::CLIENT_STOPPED)

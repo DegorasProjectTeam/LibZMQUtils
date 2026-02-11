@@ -577,10 +577,6 @@ private:
     mutable std::mutex mtx_;                    ///< Safety mutex.
     mutable std::mutex client_close_mtx_;       ///< Safety mutex for closing client.
 
-    // Futures for receiving response from send command and auto alive
-    std::future<void> fut_recv_send_;   ///< Future that stores the recv status for send command.
-    std::future<void> fut_recv_alive_;  ///< Future that stores the recv status for auto alive.
-
     // Auto alive functionality.
     std::future<void> auto_alive_future_;     ///< Future for the auto alive worker.
     std::condition_variable auto_alive_cv_;   ///< Auto alive condition variable for check status.
@@ -590,6 +586,7 @@ private:
 
     // Usefull flags.
     std::atomic_bool flag_client_working_;     ///< Flag for check the client working status.
+    std::atomic_bool flag_waiting_cmd_reply_;  ///< Flag for checking if a command is waiting for reply
     std::atomic_bool flag_autoalive_enabled_;  ///< Flag for enables or disables the automatic sending of alive messages.
     std::atomic_bool flag_alive_callbacks_;    ///< Flag for enables or disables the callbacks for alive messages.
     std::atomic_bool flag_server_connected_;   ///< Flag that indicates if the client considers connected to server.
