@@ -152,7 +152,6 @@ public:
      */
     virtual SizeUnit serializedSize() const = 0;
 
-protected:
 
     template<typename T, typename... Args>
     static SizeUnit calcSizeHelper(const T& value, const Args&... args);
@@ -734,13 +733,27 @@ protected:
     // Generic writing.
     template<typename T>
     typename std::enable_if_t<
-            !is_container<T>::value &&
-            !std::is_base_of_v<Serializable, T> &&
-            !std::is_same_v<std::nullptr_t &&, T> &&
+        !is_container<T>::value &&
+        !std::is_base_of_v<Serializable, T> &&
+        !std::is_same_v<std::nullptr_t &&, T> &&
 #if __MINGW64_VERSION_MAJOR > 6
-            !std::is_same_v<std::filesystem::path, T> &&
+        !std::is_same_v<std::filesystem::path, T> &&
 #endif
-            !std::is_pointer_v<T>, void>
+        !std::is_pointer_v<T> &&
+        std::is_trivial_v<T>, void>
+    writeSingle(const T& obj);
+
+    // Generic writing.
+    template<typename T>
+    typename std::enable_if_t<
+        !is_container<T>::value &&
+        !std::is_base_of_v<Serializable, T> &&
+        !std::is_same_v<std::nullptr_t &&, T> &&
+#if __MINGW64_VERSION_MAJOR > 6
+        !std::is_same_v<std::filesystem::path, T> &&
+#endif
+        !std::is_pointer_v<T> &&
+        !std::is_trivial_v<T>, void>
     writeSingle(const T& obj);
 
     // For writing Serializable objects.
@@ -779,7 +792,21 @@ protected:
 #if __MINGW64_VERSION_MAJOR > 6
         !std::is_same_v<std::filesystem::path, T> &&
 #endif
-        !std::is_pointer_v<T>, void>
+        !std::is_pointer_v<T> &&
+        std::is_trivial_v<T>, void>
+    readSingle(T& value);
+
+    // Generic reading.
+    template<typename T>
+    typename std::enable_if_t<
+        !BinarySerializer::is_container<T>::value &&
+        !std::is_base_of_v<Serializable, T> &&
+        !std::is_same_v<std::nullptr_t &&, T> &&
+#if __MINGW64_VERSION_MAJOR > 6
+        !std::is_same_v<std::filesystem::path, T> &&
+#endif
+        !std::is_pointer_v<T> &&
+        !std::is_trivial_v<T>, void>
     readSingle(T& value);
 
     // For read Serializable objects.
@@ -829,6 +856,16 @@ protected:
     // Specific class scope (for debug purposes).
     inline static const std::string kClassScope = "[LibDegorasBase,Serialization,BinarySerializer]";
 };
+
+// Implement this functions for your type to make it serializable without inheriting Serializable
+template <typename T>
+zmqutils::serializer::SizeUnit serialize(zmqutils::serializer::BinarySerializer &, const T&) = delete;
+
+template <typename T>
+void deserialize(zmqutils::serializer::BinarySerializer &, T&) = delete;
+
+template <typename T>
+zmqutils::serializer::SizeUnit objectSerializedSize(const T&) = delete;
 
 }} // END NAMESPACES
 // =====================================================================================================================

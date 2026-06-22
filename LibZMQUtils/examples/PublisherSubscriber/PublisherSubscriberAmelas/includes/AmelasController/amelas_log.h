@@ -70,7 +70,7 @@ enum class AmelasLogLevel : std::uint32_t
     AMELAS_ERROR = 3
 };
 
-struct AmelasLog : public zmqutils::serializer::Serializable
+struct AmelasLog
 {
     AmelasLog() = default;
 
@@ -79,15 +79,18 @@ struct AmelasLog : public zmqutils::serializer::Serializable
     AmelasLog& operator=(const AmelasLog&) = default;
     AmelasLog& operator=(AmelasLog&&) = default;
 
-    zmqutils::serializer::SizeUnit serialize(zmqutils::serializer::BinarySerializer& serializer) const override final;
-
-    void deserialize(zmqutils::serializer::BinarySerializer& serializer) override final;
-
-    zmqutils::serializer::SizeUnit serializedSize() const override final;
-
     AmelasLogLevel level;
     std::string str_info;
 };
+
+
+zmqutils::serializer::SizeUnit serialize(zmqutils::serializer::BinarySerializer& serializer,
+                                         const amelas::controller::AmelasLog&);
+
+void deserialize(zmqutils::serializer::BinarySerializer& serializer, amelas::controller::AmelasLog&);
+
+zmqutils::serializer::SizeUnit objectSerializedSize(const amelas::controller::AmelasLog &log);
+
 
 }} // END NAMESPACES.
 // =====================================================================================================================

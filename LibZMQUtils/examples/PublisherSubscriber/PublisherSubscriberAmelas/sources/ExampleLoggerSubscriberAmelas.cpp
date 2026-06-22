@@ -88,7 +88,7 @@ public:
         std::cout << std::string(100, '-') << std::endl;
         std::cout << "<AMELAS LOG PROCESSOR>"<<std::endl;
         std::cout << "Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
-        std::cout << "New log: [INFO] - " << log.str_info << ". Size: " << log.serializedSize() << std::endl;
+        std::cout << "New log: [INFO] - " << log.str_info << ". Size: " << objectSerializedSize(log) << std::endl;
         std::cout << std::string(100, '-') << std::endl;
     }
 
@@ -97,7 +97,7 @@ public:
         std::cout << std::string(100, '-') << std::endl;
         std::cout << "<AMELAS LOG PROCESSOR>"<<std::endl;
         std::cout << "Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
-        std::cout << "New log: [WARNING] - " << log.str_info << ". Size: " << log.serializedSize() << std::endl;
+        std::cout << "New log: [WARNING] - " << log.str_info << ". Size: " << objectSerializedSize(log) << std::endl;
         std::cout << std::string(100, '-') << std::endl;
     }
 
@@ -106,7 +106,7 @@ public:
         std::cout << std::string(100, '-') << std::endl;
         std::cout << "<AMELAS LOG PROCESSOR>"<<std::endl;
         std::cout << "Time: "<<zmqutils::utils::currentISO8601Date()<<std::endl;
-        std::cout << "New log: [ERROR] - " << log.str_info << ". Size: " << log.serializedSize() << std::endl;
+        std::cout << "New log: [ERROR] - " << log.str_info << ". Size: " << objectSerializedSize(log) << std::endl;
         std::cout << std::string(100, '-') << std::endl;
     }
 

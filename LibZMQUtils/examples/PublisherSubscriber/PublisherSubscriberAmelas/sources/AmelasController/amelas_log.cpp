@@ -52,19 +52,19 @@ namespace amelas{
 namespace controller{
 // =====================================================================================================================
 
-zmqutils::serializer::SizeUnit AmelasLog::serialize(zmqutils::serializer::BinarySerializer &serializer) const
+zmqutils::serializer::SizeUnit serialize(zmqutils::serializer::BinarySerializer &serializer, const AmelasLog& log)
 {
-    return serializer.write(this->level, this->str_info);
+    return serializer.write(log.level, log.str_info);
 }
 
-void AmelasLog::deserialize(zmqutils::serializer::BinarySerializer &serializer)
+void deserialize(zmqutils::serializer::BinarySerializer &serializer, AmelasLog& log)
 {
-    serializer.read(this->level, this->str_info);
+    serializer.read(log.level, log.str_info);
 }
 
-zmqutils::serializer::SizeUnit AmelasLog::serializedSize() const
+zmqutils::serializer::SizeUnit objectSerializedSize(const AmelasLog &log)
 {
-    return zmqutils::serializer::Serializable::calcSizeHelper(this->level, this->str_info);
+    return zmqutils::serializer::Serializable::calcSizeHelper(log.level, log.str_info);
 }
 
 }} // END NAMESPACES.

@@ -49,27 +49,14 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
-#include <iomanip>
-#include <iostream>
-#include <memory>
 #include <cstring>
 #include <mutex>
 #include <type_traits>
-#include <iostream>
-#include <fstream>
-#include <istream>
-#include <sstream>
 // =====================================================================================================================
 
 // ZMQUTILS INCLUDES
 // =====================================================================================================================
-// -----------------------------------------------------------------------
-#include "LibZMQUtils/InternalHelpers/file_helpers.h"
-// WARNING
-// REMEMBER COMMENT THIS INCLUDE TO AVOID CIRCULAR DEPENDENCIES
-// UNCOMMENT ONLY TO HELP THE DEVELOPMENT WITH CLANG
-//#include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
-// -----------------------------------------------------------------------
+#include "LibZMQUtils/Utilities/BinarySerializer/binary_serializer.h"
 // =====================================================================================================================
 
 // ZMQUTILS NAMESPACES
@@ -77,6 +64,50 @@
 namespace zmqutils{
 namespace serializer{
 // =====================================================================================================================
+
+// Type traits for checking existence of external serialize functions
+template <typename T, typename = void>
+struct has_object_size : std::false_type {};
+
+template <typename T>
+struct has_object_size<T,
+                       std::void_t<decltype(objectSerializedSize(std::declval<const T&>()))>>
+    : std::true_type {};
+
+template <typename T>
+constexpr bool has_object_size_v = has_object_size<T>::value;
+
+template <typename T, typename = void>
+struct has_serialize : std::false_type {};
+
+template <typename T>
+struct has_serialize<T, std::void_t<decltype(serialize(std::declval<zmqutils::serializer::BinarySerializer&>(),
+                                                       std::declval<const T&>()))>>
+    : std::true_type {};
+
+template <typename T>
+constexpr bool has_serialize_v = has_serialize<T>::value;
+
+template <typename T, typename = void>
+struct has_deserialize : std::false_type {};
+
+template <typename T>
+struct has_deserialize<T, std::void_t<decltype(deserialize(std::declval<zmqutils::serializer::BinarySerializer&>(),
+                                                           std::declval<T&>()))>>
+    : std::true_type {};
+
+template <typename T>
+constexpr bool has_deserialize_v = has_deserialize<T>::value;
+
+// External serializable functions
+template <typename T>
+zmqutils::serializer::SizeUnit serialize(zmqutils::serializer::BinarySerializer &, const T&);
+
+template <typename T>
+void deserialize(zmqutils::serializer::BinarySerializer &, T&);
+
+template <typename T>
+zmqutils::serializer::SizeUnit objectSerializedSize(const T&);
 
 template<typename T>
 void BinarySerializer::checkTrivial()
@@ -215,13 +246,21 @@ BinarySerializer::serializedSizeSingle(const T& data)
     {
         return sizeof(SizeUnit) + data.size();
     }
-    else if constexpr(std::is_trivially_copyable_v<std::decay_t<T>> && std::is_trivial_v<std::decay_t<T>>)
+    else if constexpr(std::is_trivial_v<std::decay_t<T>>)
     {
         return sizeof(SizeUnit) + sizeof(data);
     }
+    else if constexpr(has_object_size_v<T>)
+    {
+        using zmqutils::serializer::objectSerializedSize;
+        return objectSerializedSize(data);
+    }
     else
+    {
         static_assert(sizeof(T) == 0,
                       "[LibDegorasBase,Serialization,BinarySerializer] Unsupported type for total size calculation.");
+    }
+
 }
 
 template<typename T, size_t L>
@@ -345,18 +384,16 @@ void BinarySerializer::read(T& value, Args&... args)
 
 template<typename T>
 typename std::enable_if_t<
-        !BinarySerializer::is_container<T>::value &&
-        !std::is_base_of_v<Serializable, T> &&
-        !std::is_same_v<std::nullptr_t &&, T> &&
+    !BinarySerializer::is_container<T>::value &&
+    !std::is_base_of_v<Serializable, T> &&
+    !std::is_same_v<std::nullptr_t &&, T> &&
 #if __MINGW64_VERSION_MAJOR > 6
-        !std::is_same_v<std::filesystem::path, T> &&
+    !std::is_same_v<std::filesystem::path, T> &&
 #endif
-        !std::is_pointer_v<T>, void>
+    !std::is_pointer_v<T> &&
+    std::is_trivial_v<T>, void>
 BinarySerializer::writeSingle(const T& data)
 {
-    // Check the types.
-    (BinarySerializer::checkTriviallyCopyable<T>());
-    (BinarySerializer::checkTrivial<T>());
 
     // Get the size of the data.
     constexpr SizeUnit data_size = sizeof(T);
@@ -371,6 +408,24 @@ BinarySerializer::writeSingle(const T& data)
     // Serialize the data.
     BinarySerializer::binarySerialize(&data, data_size, this->data_.get() + this->size_);
     this->size_ += data_size;
+}
+
+template<typename T>
+typename std::enable_if_t<
+    !BinarySerializer::is_container<T>::value &&
+    !std::is_base_of_v<Serializable, T> &&
+    !std::is_same_v<std::nullptr_t &&, T> &&
+#if __MINGW64_VERSION_MAJOR > 6
+    !std::is_same_v<std::filesystem::path, T> &&
+#endif
+    !std::is_pointer_v<T> &&
+    !std::is_trivial_v<T>, void>
+BinarySerializer::writeSingle(const T& data)
+{
+    static_assert(has_serialize_v<T>, "No deserialize function defined for this type.");
+
+    using zmqutils::serializer::serialize;
+    serialize(*this, data);
 }
 
 template<typename T, SizeUnit L>
@@ -523,12 +578,10 @@ typename std::enable_if_t<
 #if __MINGW64_VERSION_MAJOR > 6
     !std::is_same_v<std::filesystem::path, T> &&
 #endif
-    !std::is_pointer_v<T>, void>
+    !std::is_pointer_v<T> &&
+    std::is_trivial_v<T>, void>
 BinarySerializer::readSingle(T& value)
 {
-    // Check the types.
-    (BinarySerializer::checkTriviallyCopyable<T>());
-    (BinarySerializer::checkTrivial<T>());
 
     // Safety mutex.
     std::lock_guard<std::mutex> lock(this->mtx_);
@@ -555,6 +608,24 @@ BinarySerializer::readSingle(T& value)
     // Read the value.
     BinarySerializer::binaryDeserialize(this->data_.get() + this->offset_, size, &value);
     this->offset_ += size;
+}
+
+template<typename T>
+typename std::enable_if_t<
+    !BinarySerializer::is_container<T>::value &&
+    !std::is_base_of_v<Serializable, T> &&
+    !std::is_same_v<std::nullptr_t &&, T> &&
+#if __MINGW64_VERSION_MAJOR > 6
+    !std::is_same_v<std::filesystem::path, T> &&
+#endif
+    !std::is_pointer_v<T> &&
+    !std::is_trivial_v<T>, void>
+BinarySerializer::readSingle(T& value)
+{
+    static_assert(has_deserialize_v<T>, "No deserialize function defined for this type.");
+
+    using zmqutils::serializer::deserialize;
+    deserialize(*this, value);
 }
 
 template<typename T, SizeUnit L>
