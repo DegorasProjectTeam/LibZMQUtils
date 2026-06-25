@@ -62,11 +62,14 @@ using zmqutils::serializer::SizeUnit;
 M_DECLARE_UNIT_TEST(BinarySerializer, Trivial)
 M_DECLARE_UNIT_TEST(BinarySerializer, String)
 M_DECLARE_UNIT_TEST(BinarySerializer, Serializable)
+M_DECLARE_UNIT_TEST(BinarySerializer, ExternalSerialize)
 M_DECLARE_UNIT_TEST(BinarySerializer, ArrayTrivial)
 M_DECLARE_UNIT_TEST(BinarySerializer, VectorTrivial)
 M_DECLARE_UNIT_TEST(BinarySerializer, VectorSerializable)
+M_DECLARE_UNIT_TEST(BinarySerializer, VectorExternalSerialize)
 M_DECLARE_UNIT_TEST(BinarySerializer, VectorVectorTrivial)
 M_DECLARE_UNIT_TEST(BinarySerializer, VectorVectorSerializable)
+M_DECLARE_UNIT_TEST(BinarySerializer, VectorVectorExternalSerialize)
 M_DECLARE_UNIT_TEST(BinarySerializer, File)
 #if __MINGW64_VERSION_MAJOR > 6
 M_DECLARE_UNIT_TEST(BinarySerializer, FileWithFilesystem)
@@ -80,6 +83,47 @@ M_DECLARE_UNIT_TEST(BinarySerializer, TrivialIntensiveParrallel)
 // TODO INTENSIVE SERIALIZATION PARRALLEL WITH VECTORS
 
 // Implementations.
+
+class TestClass
+{
+public:
+
+    TestClass() = default;
+
+    inline TestClass(double number, const std::string& str):
+        number_(number), str_(str)
+    {}
+
+    inline bool operator ==(const TestClass& other) const
+    {
+        static constexpr double epsilon = 1e-9;
+        if (std::abs(number_ - other.number_) > epsilon) return false;
+        return str_ == other.str_;
+    }
+
+    inline bool operator !=(const TestClass& other) const
+    {
+        return !(*this == other);
+    }
+
+    double number_;
+    std::string str_;
+};
+
+size_t serialize(zmqutils::serializer::BinarySerializer& serializer, const TestClass &c)
+{
+    return serializer.write(c.number_, c.str_);
+}
+
+void deserialize(zmqutils::serializer::BinarySerializer& serializer, TestClass &c)
+{
+    serializer.read(c.number_, c.str_);
+}
+
+size_t objectSerializedSize(const TestClass &c)
+{
+    return Serializable::calcSizeHelper(c.number_, c.str_);
+}
 
 M_DEFINE_UNIT_TEST(BinarySerializer, Trivial)
 {
@@ -317,6 +361,31 @@ M_DEFINE_UNIT_TEST(BinarySerializer, Serializable)
     M_EXPECTED_EQ(test_in.serializedSize(), test_out.serializedSize())
 }
 
+M_DEFINE_UNIT_TEST(BinarySerializer, ExternalSerialize)
+{
+    // Serializer.
+    BinarySerializer serializer;
+
+    // Hex result.
+    std::string result("00 00 00 00 00 00 00 08 c0 7c b5 58 e2 19 65 2c 00 00 00 00 00 00 00 1e 2e 2e 2e "
+                       "6f 67 6e 65 76 20 6f 64 6e 61 6c 6f 76 20 79 20 79 6f 76 20 6f 64 6e 61 6c 6f 56");
+
+    // Data.
+    TestClass test_in(-459.3342, "Volando voy y volando vengo...");
+    TestClass test_out;
+
+    // Write, read.
+    serializer.write(test_in);
+    serializer.read(test_out);
+
+    // Checking.
+    M_EXPECTED_EQ(serializer.allReaded(), true)
+    M_EXPECTED_EQ(test_in, test_out)
+    M_EXPECTED_EQ(objectSerializedSize(test_in), serializer.getSize())
+    M_EXPECTED_EQ(result, serializer.getDataHexString())
+    M_EXPECTED_EQ(objectSerializedSize(test_in), objectSerializedSize(test_out))
+}
+
 M_DEFINE_UNIT_TEST(BinarySerializer, ArrayTrivial)
 {
     // Serializer.
@@ -451,6 +520,39 @@ M_DEFINE_UNIT_TEST(BinarySerializer, VectorSerializable)
     M_EXPECTED_EQ(v2, r2)
 }
 
+M_DEFINE_UNIT_TEST(BinarySerializer, VectorExternalSerialize)
+{
+
+    // Serializer.
+    BinarySerializer serializer;
+
+    // Data.
+    const std::vector<TestClass> v1 = {{-459.3342, "Volando voy y volando vengo..."},{0.1,"En un lugar de la Mancha."}};
+    const std::vector<TestClass> v2 = {{0, "0"},{1, "1"},{2, "2"},{3, "3"}};
+    std::vector<TestClass> r1;
+    std::vector<TestClass> r2;
+    // Size 1 = 111.
+    size_t size1 = sizeof(SizeUnit) +
+                   sizeof(SizeUnit) + sizeof(double) + sizeof(SizeUnit) + 30 +
+                   sizeof(SizeUnit) + sizeof(double) + sizeof(SizeUnit) + 25;
+    size_t size2 = sizeof(SizeUnit) +
+                   sizeof(SizeUnit) + sizeof(double) + sizeof(SizeUnit) + 1 +
+                   sizeof(SizeUnit) + sizeof(double) + sizeof(SizeUnit) + 1 +
+                   sizeof(SizeUnit) + sizeof(double) + sizeof(SizeUnit) + 1 +
+                   sizeof(SizeUnit) + sizeof(double) + sizeof(SizeUnit) + 1;
+
+    // Write, read.
+    serializer.write(v1, v2);
+    serializer.read(r1, r2);
+
+    // Checking.
+    M_EXPECTED_EQ(serializer.allReaded(), true)
+    M_EXPECTED_EQ(size1 + size2, serializer.getSize())
+    M_EXPECTED_EQ(serializer.getSize(), BinarySerializer::serializedSize(v1,v2))
+    M_EXPECTED_EQ(v1, r1)
+    M_EXPECTED_EQ(v2, r2)
+}
+
 M_DEFINE_UNIT_TEST(BinarySerializer, VectorVectorTrivial)
 {
     // Alias.
@@ -548,6 +650,45 @@ M_DEFINE_UNIT_TEST(BinarySerializer, VectorVectorSerializable)
     const VectorOfVectors v2 = {{{0, "0"},{1, "1"},{2, "2"}},{{3, "3"}}};
     std::vector<std::vector<TestSer>> r1;
     std::vector<std::vector<TestSer>> r2;
+
+    // Calculate the sizes.
+    size_t size1 = sizeof(SizeUnit) +
+                   sizeof(SizeUnit) +
+                   sizeof(SizeUnit) + sizeof(double) + sizeof(SizeUnit) + 30 +
+                   sizeof(SizeUnit) + sizeof(double) + sizeof(SizeUnit) + 25;
+    size_t size2 = sizeof(SizeUnit) +
+                   sizeof(SizeUnit) +
+                   sizeof(SizeUnit) + sizeof(double) + sizeof(SizeUnit) + 1 +
+                   sizeof(SizeUnit) + sizeof(double) + sizeof(SizeUnit) + 1 +
+                   sizeof(SizeUnit) + sizeof(double) + sizeof(SizeUnit) + 1 +
+                   sizeof(SizeUnit) +
+                   sizeof(SizeUnit) + sizeof(double) + sizeof(SizeUnit) + 1;
+
+    // Write, read.
+    serializer.write(v1, v2);
+    serializer.read(r1, r2);
+
+    // Checking.
+    M_EXPECTED_EQ(serializer.allReaded(), true)
+    M_EXPECTED_EQ(size1 + size2, serializer.getSize())
+    M_EXPECTED_EQ(serializer.getSize(), BinarySerializer::serializedSize(v1,v2))
+    M_EXPECTED_EQ(v1, r1)
+    M_EXPECTED_EQ(v2, r2)
+}
+
+M_DEFINE_UNIT_TEST(BinarySerializer, VectorVectorExternalSerialize)
+{
+    // Alias.
+    using VectorOfVectors = std::vector<std::vector<TestClass>>;
+
+    // Serializer.
+    BinarySerializer serializer;
+
+    // Data.
+    const VectorOfVectors v1 = {{{-459.3342, "Volando voy y volando vengo..."},{0.1,"En un lugar de la Mancha."}}};
+    const VectorOfVectors v2 = {{{0, "0"},{1, "1"},{2, "2"}},{{3, "3"}}};
+    VectorOfVectors r1;
+    VectorOfVectors r2;
 
     // Calculate the sizes.
     size_t size1 = sizeof(SizeUnit) +
@@ -890,11 +1031,14 @@ int main()
     M_REGISTER_UNIT_TEST(BinarySerializer, Trivial)
     M_REGISTER_UNIT_TEST(BinarySerializer, String)
     M_REGISTER_UNIT_TEST(BinarySerializer, Serializable)
+    M_REGISTER_UNIT_TEST(BinarySerializer, ExternalSerialize)
     M_REGISTER_UNIT_TEST(BinarySerializer, ArrayTrivial)
     M_REGISTER_UNIT_TEST(BinarySerializer, VectorTrivial)
     M_REGISTER_UNIT_TEST(BinarySerializer, VectorSerializable)
+    M_REGISTER_UNIT_TEST(BinarySerializer, VectorExternalSerialize)
     M_REGISTER_UNIT_TEST(BinarySerializer, VectorVectorTrivial)
     M_REGISTER_UNIT_TEST(BinarySerializer, VectorVectorSerializable)
+    M_REGISTER_UNIT_TEST(BinarySerializer, VectorVectorExternalSerialize)
     M_REGISTER_UNIT_TEST(BinarySerializer, File)
 #if __MINGW64_VERSION_MAJOR > 6
     M_REGISTER_UNIT_TEST(BinarySerializer, FileWithFilesystem)

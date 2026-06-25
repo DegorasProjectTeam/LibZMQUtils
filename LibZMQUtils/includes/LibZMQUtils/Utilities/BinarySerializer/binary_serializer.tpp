@@ -282,19 +282,20 @@ SizeUnit BinarySerializer::serializedSizeSingle(const std::vector<T>& data)
 
     if constexpr(std::is_base_of_v<Serializable, std::decay_t<T>>)
     {
-        total_size = sizeof(SizeUnit);
-        for(const auto& obj : data)
-            total_size += obj.serializedSize();
+
     }
-    else
+    if constexpr (std::is_trivial_v<T>)
     {
-        // Check the types.
-        (BinarySerializer::checkTriviallyCopyable<T>());
-        (BinarySerializer::checkTrivial<T>());
         // Get the total size.
         const SizeUnit vector_size = data.size();
         constexpr SizeUnit elem_size = sizeof(T);
         total_size = sizeof(SizeUnit) + sizeof(SizeUnit) + elem_size * vector_size;
+    }
+    else
+    {
+        total_size = sizeof(SizeUnit);
+        for(const auto& obj : data)
+            total_size += BinarySerializer::serializedSize(obj);
     }
 
     return total_size;
@@ -305,17 +306,8 @@ SizeUnit BinarySerializer::serializedSizeSingle(const std::vector<std::vector<T>
 {
     SizeUnit total_size = 0;
 
-    if constexpr(std::is_base_of_v<Serializable, std::decay_t<T>>)
+    if constexpr(std::is_trivial_v<T>)
     {
-        total_size = sizeof(SizeUnit);
-        for(const auto& vec : data)
-            total_size += BinarySerializer::serializedSizeSingle(vec);
-    }
-    else
-    {
-        // Check the types.
-        (BinarySerializer::checkTriviallyCopyable<T>());
-        (BinarySerializer::checkTrivial<T>());
 
         // Get the total size.
         constexpr SizeUnit elem_size = sizeof(T);
@@ -331,6 +323,12 @@ SizeUnit BinarySerializer::serializedSizeSingle(const std::vector<std::vector<T>
             total_size += sizeof(SizeUnit);
             total_size += elem_size * subvector_size;
         }
+    }
+    else
+    {
+        total_size = sizeof(SizeUnit);
+        for(const auto& vec : data)
+            total_size += BinarySerializer::serializedSizeSingle(vec);
     }
 
     // Return the total size.
@@ -461,29 +459,10 @@ void BinarySerializer::writeSingle(const std::array<T, L>& arr)
 template<typename T>
 void BinarySerializer::writeSingle(const std::vector<T>& v)
 {
-    if constexpr(std::is_base_of_v<Serializable, std::decay_t<T>>)
+    // If type is trivial, then the size is always the same, so we only store once at the beginning.
+    // For the rest of the types, the size is stored before the data
+    if constexpr(std::is_trivial_v<T>)
     {
-        // Get the size.
-        const SizeUnit vector_size = v.size();
-
-        // Safety mutex block.
-        {
-            std::lock_guard<std::mutex> lock(this->mtx_);
-
-            // Serialize vector size.
-            BinarySerializer::binarySerialize(&vector_size, sizeof(SizeUnit), this->data_.get() + size_);
-            this->size_ += sizeof(SizeUnit);
-        }
-
-        // Write each value of the vector.
-        for(const auto& val : v)
-            val.serialize(*this);
-    }
-    else
-    {
-        // Check the types.
-        BinarySerializer::checkTriviallyCopyable<T>();
-        BinarySerializer::checkTrivial<T>();
 
         // Get the size.
         const SizeUnit vector_size = v.size();
@@ -507,12 +486,7 @@ void BinarySerializer::writeSingle(const std::vector<T>& v)
             this->size_ += elem_size;
         }
     }
-}
-
-template<typename T>
-void BinarySerializer::writeSingle(const std::vector<std::vector<T>>& v)
-{
-    if constexpr(std::is_base_of_v<Serializable, std::decay_t<T>>)
+    else
     {
         // Get the size.
         const SizeUnit vector_size = v.size();
@@ -527,15 +501,19 @@ void BinarySerializer::writeSingle(const std::vector<std::vector<T>>& v)
         }
 
         // Write each value of the vector.
-        for(const auto& vec : v)
-            this->writeSingle(vec);
+        for(const auto& val : v)
+            this->writeSingle(val);
     }
 
-    else
+}
+
+template<typename T>
+void BinarySerializer::writeSingle(const std::vector<std::vector<T>>& v)
+{
+    // If type is trivial, then the size is always the same, so we only store once at the beginning.
+    // For the rest of the types, the size is stored before the data
+    if constexpr(std::is_trivial_v<T>)
     {
-        // Check the types.
-        BinarySerializer::checkTriviallyCopyable<T>();
-        BinarySerializer::checkTrivial<T>();
 
         // Get the size.
         const SizeUnit vector_size = v.size();
@@ -567,6 +545,24 @@ void BinarySerializer::writeSingle(const std::vector<std::vector<T>>& v)
                 this->size_ += elem_size;
             }
         }
+    }
+    else
+    {
+        // Get the size.
+        const SizeUnit vector_size = v.size();
+
+        // Safety mutex block.
+        {
+            std::lock_guard<std::mutex> lock(this->mtx_);
+
+            // Serialize vector size.
+            BinarySerializer::binarySerialize(&vector_size, sizeof(SizeUnit), this->data_.get() + size_);
+            this->size_ += sizeof(SizeUnit);
+        }
+
+        // Write each value of the vector.
+        for(const auto& vec : v)
+            this->writeSingle(vec);
     }
 }
 
@@ -701,19 +697,9 @@ void BinarySerializer::readSingle(std::vector<T>& v)
     if(size_vector == 0)
         return;
 
-    if constexpr(std::is_base_of_v<Serializable, std::decay_t<T>>)
-    {
-        // Prepare the vector.
-        v.clear();
-        v.resize(size_vector);
-
-        for (SizeUnit i = 0; i < size_vector; i++)
-        {
-            this->readSingle(v[i]);
-        }
-    }
-
-    else
+    // If type is trivial, then the size is always the same, so we only store once at the beginning.
+    // For the rest of the types, the size is stored before the data
+    if constexpr(std::is_trivial_v<T>)
     {
         // Ensure that there's enough data left to read the size of each elements.
         if (this->offset_ + sizeof(SizeUnit) > this->size_)
@@ -735,7 +721,6 @@ void BinarySerializer::readSingle(std::vector<T>& v)
             throw std::out_of_range("BinarySerializer: Read vector data beyond the data size.");
 
         // Prepare the vector.
-        v.clear();
         v.resize(size_vector);
 
         // Read all the elements.
@@ -745,6 +730,18 @@ void BinarySerializer::readSingle(std::vector<T>& v)
             this->offset_ += size_elem;
         }
     }
+    else
+    {
+        // Prepare the vector.
+        v.resize(size_vector);
+
+        for (SizeUnit i = 0; i < size_vector; i++)
+        {
+            this->readSingle(v[i]);
+        }
+    }
+
+
 }
 
 template<typename T>
@@ -771,19 +768,10 @@ void BinarySerializer::readSingle(std::vector<std::vector<T>>& v)
     if(size_vector == 0)
         return;
 
-    if constexpr(std::is_base_of_v<Serializable, std::decay_t<T>>)
-    {
-        // Prepare the vector.
-        v.clear();
-        v.resize(size_vector);
+    // If type is trivial, then the size is always the same, so we only store once at the beginning.
+    // For the rest of the types, the size is stored before the data
 
-        for (SizeUnit i = 0; i < size_vector; i++)
-        {
-            this->readSingle(v[i]);
-        }
-    }
-
-    else
+    if constexpr(std::is_trivial_v<T>)
     {
 
         // Ensure that there's enough data left to read the size of each elements.
@@ -802,7 +790,6 @@ void BinarySerializer::readSingle(std::vector<std::vector<T>>& v)
             throw std::out_of_range("BinarySerializer: Unknow size of elements of the vector.");
 
         // Prepare the vector.
-        v.clear();
         v.resize(size_vector);
 
         // Read all the subvectors.
@@ -824,8 +811,7 @@ void BinarySerializer::readSingle(std::vector<std::vector<T>>& v)
                 throw std::out_of_range("BinarySerializer: Read subvector data beyond the data size.");
 
             // Prepare the subvector.
-            std::vector<T> subv;
-            subv.resize(size_subvector);
+            std::vector<T> subv = std::vector<T>(size_subvector);
 
             // Read all the elements of the subvector.
             for(std::uint64_t j = 0; j < size_subvector; j++)
@@ -835,9 +821,22 @@ void BinarySerializer::readSingle(std::vector<std::vector<T>>& v)
             }
 
             // Store the subvector.
-            v[i] = subv;
+            v[i] = std::move(subv);
         }
     }
+
+    else
+    {
+        // Prepare the vector.
+        v.resize(size_vector);
+
+        for (SizeUnit i = 0; i < size_vector; i++)
+        {
+            this->readSingle(v[i]);
+        }
+    }
+
+
 }
 
 template<typename... Args>

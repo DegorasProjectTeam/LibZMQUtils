@@ -649,6 +649,8 @@ protected:
 
     // -----------------------------------------------------------------------------------------------------------------
 
+    // TODO: maybe this trait should be outside to let the user define new container types, and make the methods
+    // for std::vector generic for all kind of containers that fulfils some requirements
     // Type traits.
 
     template <typename T>
